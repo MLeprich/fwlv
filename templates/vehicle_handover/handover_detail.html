@@ -1,0 +1,588 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Übergabe {{ handover.vehicle }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:handover_list' %}" class="text-gray-500 hover:text-gray-700">Übergaben</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Details</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Fahrzeugübergabe {{ handover.vehicle }}</h1>
+            <p class="text-sm text-gray-600 mt-1">
+                {{ handover.handover_date|date:"d.m.Y, H:i" }} Uhr - {{ handover.get_handover_type_display }}
+            </p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'vehicle_handover:handover_pdf_export' handover.pk %}"
+               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                📄 PDF Export
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div class="mb-6">
+        {% if handover.status == 'completed' %}
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <span class="text-green-600 text-xl mr-3">✅</span>
+                <div>
+                    <h3 class="text-sm font-medium text-green-800">Übergabe abgeschlossen</h3>
+                    <p class="mt-1 text-sm text-green-700">Diese Übergabe wurde erfolgreich abgeschlossen.</p>
+                </div>
+            </div>
+        </div>
+        {% elif handover.status == 'defects_noted' %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <span class="text-red-600 text-xl mr-3">⚠️</span>
+                <div>
+                    <h3 class="text-sm font-medium text-red-800">Mängel festgestellt</h3>
+                    <p class="mt-1 text-sm text-red-700">Bei dieser Übergabe wurden {{ handover.defects_count }} Mangel/Mängel dokumentiert.</p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <span class="text-yellow-600 text-xl mr-3">⏳</span>
+                    <div>
+                        <h3 class="text-sm font-medium text-yellow-800">In Bearbeitung</h3>
+                        <p class="mt-1 text-sm text-yellow-700">Diese Übergabe ist noch nicht abgeschlossen.</p>
+                    </div>
+                </div>
+                <a href="{% url 'vehicle_handover:handover_resume' handover.pk %}"
+                   class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium">
+                    ▶️ Fortsetzen
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-3 gap-6">
+        <!-- Hauptinhalte (linke 2/3) -->
+        <div class="col-span-2 space-y-6">
+            <!-- Fahrzeugdaten -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <span class="mr-2">🚗</span>
+                    Fahrzeugdaten
+                </h2>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-600">Fahrzeug:</span>
+                        <span class="ml-2 font-medium text-gray-900">{{ handover.vehicle }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">KM-Stand:</span>
+                        <span class="ml-2 font-medium text-gray-900">{{ handover.odometer_reading }} km</span>
+                    </div>
+                    {% if handover.fuel_level %}
+                    <div>
+                        <span class="text-gray-600">Tankfüllung:</span>
+                        <span class="ml-2 font-medium text-gray-900">{{ handover.fuel_level }}%</span>
+                    </div>
+                    {% endif %}
+                    {% if handover.location %}
+                    <div>
+                        <span class="text-gray-600">Standort:</span>
+                        <span class="ml-2 font-medium text-gray-900">{{ handover.location }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if handover.notes %}
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <p class="text-sm text-gray-600">Bemerkungen:</p>
+                    <p class="mt-1 text-sm text-gray-900">{{ handover.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Checkliste -->
+            {% if checklist_by_category %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <span class="mr-2">✅</span>
+                        Checkliste
+                    </h2>
+                    <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded">
+                        {{ checklist_completion }}% vollständig
+                    </span>
+                </div>
+
+                {% for category, items in checklist_by_category.items %}
+                <div class="mb-4 {% if not forloop.last %}border-b border-gray-200 pb-4{% endif %}">
+                    <h3 class="font-semibold text-gray-900 mb-3">{{ category }}</h3>
+                    <div class="space-y-2">
+                        {% for item in items %}
+                        <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                            <div class="flex items-center flex-1">
+                                <span class="text-2xl mr-3">
+                                    {% if item.checked %}✅{% else %}⬜{% endif %}
+                                </span>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">{{ item.item_name }}</p>
+                                    {% if item.serial_number %}
+                                    <p class="text-xs text-gray-500">SN: {{ item.serial_number }}</p>
+                                    {% endif %}
+                                    {% if item.notes %}
+                                    <p class="text-xs text-gray-600 italic">{{ item.notes }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex gap-3 text-xs">
+                                {% if not item.present %}
+                                <span class="px-2 py-1 bg-red-100 text-red-800 font-medium rounded">Fehlt</span>
+                                {% endif %}
+                                {% if not item.functional %}
+                                <span class="px-2 py-1 bg-orange-100 text-orange-800 font-medium rounded">Defekt</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- 360° Sphärische Ansichten -->
+            {% if vehicle_360_photos %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <span class="mr-2">🎯</span>
+                    360° Innenraum-Ansichten ({{ vehicle_360_photos|length }})
+                </h2>
+
+                <div class="grid grid-cols-2 gap-4">
+                    {% for photo in vehicle_360_photos %}
+                    <a href="{% url 'vehicle_handover:photo_360_detail' photo.pk %}"
+                       class="block bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4 hover:shadow-lg transition-all group">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0">
+                                <div class="w-16 h-16 bg-purple-600 rounded-lg flex items-center justify-center text-3xl">
+                                    {% if photo.photo_type == 'front' %}🚗{% else %}🚐{% endif %}
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-semibold text-gray-900 truncate group-hover:text-purple-700">
+                                    {{ photo.title }}
+                                </h3>
+                                <p class="text-sm text-gray-600">
+                                    {{ photo.get_photo_type_display }}
+                                </p>
+                                <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <span>🎯</span>
+                                        <span class="font-semibold">{{ photo.hotspots.count }}</span>
+                                        <span>Hotspot{{ photo.hotspots.count|pluralize:"s" }}</span>
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <span>📅</span>
+                                        <span>{{ photo.captured_date|date:"d.m.Y" }}</span>
+                                    </span>
+                                </div>
+
+                                <!-- Hotspot Status -->
+                                {% if photo.hotspots.all %}
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    {% for hotspot in photo.hotspots.all|slice:":6" %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                                {% if hotspot.hotspot_type == 'checklist' %}bg-green-100 text-green-800
+                                                {% elif hotspot.hotspot_type == 'images' %}bg-blue-100 text-blue-800
+                                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ hotspot.title|truncatewords:2 }}
+                                    </span>
+                                    {% endfor %}
+                                    {% if photo.hotspots.count > 6 %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                        +{{ photo.hotspots.count|add:"-6" }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mt-3 text-sm text-purple-700 font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
+                            <span>360° Ansicht öffnen</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Fotos -->
+            {% if handover.photos.all %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <span class="mr-2">📷</span>
+                    Fotos ({{ photo_count }})
+                </h2>
+
+                <!-- 360° Viewer -->
+                {% with photos_360=handover.photos.all|dictsort:"photo_type" %}
+                {% if photos_360|length > 0 %}
+                {% if "360" in photos_360.0.photo_type %}
+                <div class="mb-6 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-semibold text-gray-900 flex items-center">
+                            <span class="mr-2">🔄</span>
+                            360°-Ansicht
+                        </h3>
+                        <button onclick="toggle360Viewer()" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                            Viewer öffnen
+                        </button>
+                    </div>
+
+                    <div id="viewer360" class="hidden">
+                        <div class="relative bg-gray-900 rounded-lg overflow-hidden" style="height: 400px;">
+                            <div id="viewer360Container" class="relative w-full h-full cursor-move">
+                                {% for photo in handover.photos.all %}
+                                {% if "360" in photo.photo_type %}
+                                <img src="{{ photo.image.url }}"
+                                     data-position="{{ photo.photo_type }}"
+                                     class="viewer360-image absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+                                     style="opacity: 0;">
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+
+                            <!-- Navigation Overlay -->
+                            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 rounded-lg px-4 py-2 flex gap-2">
+                                <button onclick="rotate360(-1)" class="px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded">← Links</button>
+                                <span class="px-3 py-1 text-white text-sm" id="viewer360Position">Vorne</span>
+                                <button onclick="rotate360(1)" class="px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded">Rechts →</button>
+                            </div>
+
+                            <!-- Touch Instructions -->
+                            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white text-xs px-3 py-1 rounded">
+                                Ziehen zum Drehen | Touch & Swipe auf Mobilgeräten
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+                {% endwith %}
+
+                <!-- Standard Photo Grid -->
+                <div class="grid grid-cols-3 gap-4">
+                    {% for photo in handover.photos.all %}
+                    <div class="relative group">
+                        <img src="{{ photo.image.url }}" alt="{{ photo.get_photo_type_display }}"
+                             class="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                             onclick="openPhotoModal('{{ photo.image.url }}', '{{ photo.get_photo_type_display }}')">
+                        <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white text-xs p-2 rounded-b-lg">
+                            <p class="font-medium">{{ photo.get_photo_type_display }}</p>
+                            {% if photo.description %}
+                            <p class="text-gray-300">{{ photo.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Photo Modal -->
+            <div id="photoModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center" onclick="closePhotoModal()">
+                <div class="relative max-w-7xl max-h-screen p-4">
+                    <button onclick="closePhotoModal()" class="absolute top-6 right-6 text-white text-3xl hover:text-gray-300 z-10">×</button>
+                    <img id="photoModalImg" src="" alt="" class="max-w-full max-h-screen object-contain">
+                    <p id="photoModalCaption" class="text-white text-center mt-4"></p>
+                </div>
+            </div>
+
+            <script>
+                // 360° Viewer
+                const positions360 = [
+                    '360_front', '360_front_right', '360_right', '360_rear_right',
+                    '360_rear', '360_rear_left', '360_left', '360_front_left'
+                ];
+                const positionNames = [
+                    'Vorne', 'Vorne Rechts', 'Rechts', 'Hinten Rechts',
+                    'Hinten', 'Hinten Links', 'Links', 'Vorne Links'
+                ];
+                let currentPosition = 0;
+                let isDragging = false;
+                let startX = 0;
+                let dragThreshold = 50;
+
+                function toggle360Viewer() {
+                    const viewer = document.getElementById('viewer360');
+                    viewer.classList.toggle('hidden');
+                    if (!viewer.classList.contains('hidden')) {
+                        update360View();
+                    }
+                }
+
+                function update360View() {
+                    const images = document.querySelectorAll('.viewer360-image');
+                    const currentPos = positions360[currentPosition];
+
+                    images.forEach(img => {
+                        if (img.dataset.position === currentPos) {
+                            img.style.opacity = '1';
+                        } else {
+                            img.style.opacity = '0';
+                        }
+                    });
+
+                    document.getElementById('viewer360Position').textContent = positionNames[currentPosition];
+                }
+
+                function rotate360(direction) {
+                    currentPosition = (currentPosition + direction + positions360.length) % positions360.length;
+                    update360View();
+                }
+
+                // Mouse drag support
+                const container = document.getElementById('viewer360Container');
+                if (container) {
+                    container.addEventListener('mousedown', (e) => {
+                        isDragging = true;
+                        startX = e.clientX;
+                    });
+
+                    container.addEventListener('mousemove', (e) => {
+                        if (!isDragging) return;
+                        const deltaX = e.clientX - startX;
+                        if (Math.abs(deltaX) > dragThreshold) {
+                            rotate360(deltaX > 0 ? -1 : 1);
+                            startX = e.clientX;
+                        }
+                    });
+
+                    container.addEventListener('mouseup', () => {
+                        isDragging = false;
+                    });
+
+                    container.addEventListener('mouseleave', () => {
+                        isDragging = false;
+                    });
+
+                    // Touch support
+                    let touchStartX = 0;
+                    container.addEventListener('touchstart', (e) => {
+                        touchStartX = e.touches[0].clientX;
+                    });
+
+                    container.addEventListener('touchmove', (e) => {
+                        const deltaX = e.touches[0].clientX - touchStartX;
+                        if (Math.abs(deltaX) > dragThreshold) {
+                            rotate360(deltaX > 0 ? -1 : 1);
+                            touchStartX = e.touches[0].clientX;
+                        }
+                    });
+                }
+
+                // Photo Modal
+                function openPhotoModal(url, caption) {
+                    const modal = document.getElementById('photoModal');
+                    const img = document.getElementById('photoModalImg');
+                    const cap = document.getElementById('photoModalCaption');
+
+                    img.src = url;
+                    cap.textContent = caption;
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                }
+
+                function closePhotoModal() {
+                    const modal = document.getElementById('photoModal');
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }
+
+                // Keyboard navigation
+                document.addEventListener('keydown', (e) => {
+                    const modal = document.getElementById('photoModal');
+                    if (!modal.classList.contains('hidden')) {
+                        if (e.key === 'Escape') closePhotoModal();
+                    }
+
+                    const viewer = document.getElementById('viewer360');
+                    if (!viewer.classList.contains('hidden')) {
+                        if (e.key === 'ArrowLeft') rotate360(-1);
+                        if (e.key === 'ArrowRight') rotate360(1);
+                    }
+                });
+            </script>
+            {% endif %}
+
+            <!-- Mängel -->
+            {% if handover.defects.all %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <span class="mr-2">⚠️</span>
+                    Mängel ({{ handover.defects.count }})
+                </h2>
+                <div class="space-y-4">
+                    {% for defect in handover.defects.all %}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h3 class="font-semibold text-gray-900">{{ defect.title }}</h3>
+                                    {% if defect.severity == 'critical' %}
+                                    <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded">Kritisch</span>
+                                    {% elif defect.severity == 'major' %}
+                                    <span class="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded">Erheblich</span>
+                                    {% else %}
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">Gering</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mb-2">{{ defect.description }}</p>
+                                <div class="flex gap-4 text-xs text-gray-500">
+                                    <span>Kategorie: {{ defect.get_category_display }}</span>
+                                    {% if defect.requires_immediate_action %}
+                                    <span class="text-red-600 font-medium">⚡ Sofortige Maßnahme erforderlich</span>
+                                    {% endif %}
+                                    {% if defect.affects_operational_readiness %}
+                                    <span class="text-red-600 font-medium">🚫 Beeinträchtigt Einsatzbereitschaft</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if defect.repaired %}
+                            <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">Behoben</span>
+                            {% endif %}
+                        </div>
+                        {% if defect.photos.all %}
+                        <div class="mt-3 grid grid-cols-4 gap-2">
+                            {% for photo in defect.photos.all %}
+                            <img src="{{ photo.image.url }}" alt="Mangel-Foto"
+                                 class="w-full h-20 object-cover rounded cursor-pointer hover:opacity-90"
+                                 onclick="window.open('{{ photo.image.url }}', '_blank')">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar (rechte 1/3) -->
+        <div class="space-y-6">
+            <!-- Übergabe-Details -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Übergabe-Details</h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <p class="text-gray-600">Übergabeart</p>
+                        <p class="font-medium text-gray-900">{{ handover.get_handover_type_display }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Übergeben von</p>
+                        <p class="font-medium text-gray-900">{{ handover.handover_from|default:"Erstinbetriebnahme" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Übergeben an</p>
+                        <p class="font-medium text-gray-900">{{ handover.handover_to }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Datum</p>
+                        <p class="font-medium text-gray-900">{{ handover.handover_date|date:"d.m.Y, H:i" }} Uhr</p>
+                    </div>
+                    {% if handover.checklist_template %}
+                    <div>
+                        <p class="text-gray-600">Vorlage</p>
+                        <p class="font-medium text-gray-900">{{ handover.checklist_template }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Bestätigungen -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Bestätigungen</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        {% if handover.confirmed_by_receiver %}
+                        <span class="text-green-600 text-xl mr-2">✅</span>
+                        <span class="text-sm text-green-700 font-medium">Empfänger hat bestätigt</span>
+                        {% else %}
+                        <span class="text-gray-400 text-xl mr-2">⬜</span>
+                        <span class="text-sm text-gray-600">Empfänger ausstehend</span>
+                        {% endif %}
+                    </div>
+                    {% if handover.handover_from %}
+                    <div class="flex items-center">
+                        {% if handover.confirmed_by_giver %}
+                        <span class="text-green-600 text-xl mr-2">✅</span>
+                        <span class="text-sm text-green-700 font-medium">Übergeber hat bestätigt</span>
+                        {% else %}
+                        <span class="text-gray-400 text-xl mr-2">⬜</span>
+                        <span class="text-sm text-gray-600">Übergeber ausstehend</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Statistiken -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Statistiken</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Checkliste</span>
+                        <span class="text-sm font-medium text-blue-600">{{ checklist_completion }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Fotos</span>
+                        <span class="text-sm font-medium text-gray-900">{{ photo_count }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Mängel</span>
+                        <span class="text-sm font-medium {% if handover.has_defects %}text-red-600{% else %}text-gray-900{% endif %}">
+                            {{ handover.defects_count }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metadaten -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Metadaten</h3>
+                <div class="space-y-2 text-xs text-gray-600">
+                    <div>
+                        <p>Erstellt am: {{ handover.created_at|date:"d.m.Y, H:i" }}</p>
+                    </div>
+                    <div>
+                        <p>Erstellt von: {{ handover.created_by }}</p>
+                    </div>
+                    <div>
+                        <p>Letzte Änderung: {{ handover.updated_at|date:"d.m.Y, H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

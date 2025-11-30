@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Artikel löschen - Magazin - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:dashboard' %}" class="text-gray-500 hover:text-gray-700">Magazin</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:item_list' %}" class="text-gray-500 hover:text-gray-700">Artikel</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Löschen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Artikel löschen</h3>
+            <p class="text-sm text-gray-500 mb-6">
+                Sind Sie sicher, dass Sie den Artikel <strong>{{ object.name }}</strong> löschen möchten?
+                Diese Aktion kann nicht rückgängig gemacht werden.
+            </p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex justify-center gap-4">
+                <a href="{% url 'magazine:item_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">
+                    Ja, löschen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

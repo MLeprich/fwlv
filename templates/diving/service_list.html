@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Service-Protokolle - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Service-Protokolle</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">🔧 Service-Protokolle</h1>
+                    <p class="mt-1 text-sm text-gray-600">Alle TÜV-Prüfungen, Wartungen und Servicearbeiten</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'diving:service_management' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                        ← Zurück zur Verwaltung
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service List -->
+        <div class="overflow-x-auto">
+            {% if services %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ausrüstung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service-Art</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Techniker</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ergebnis</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kosten</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nächster Service</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for service in services %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ service.service_date|date:"d.m.Y" }}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <a href="{% url 'diving:device_detail' service.device.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                {{ service.device.inventory_number }}
+                            </a>
+                            <p class="text-xs text-gray-500">{{ service.device.master.name }}</p>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if service.service_type == 'annual' %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">📅 Jahresservice</span>
+                            {% elif service.service_type == 'tuv' %}
+                            <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-semibold">🔍 TÜV-Prüfung</span>
+                            {% elif service.service_type == 'repair' %}
+                            <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full font-semibold">🔧 Reparatur</span>
+                            {% elif service.service_type == 'visual' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">👁️ Sichtprüfung</span>
+                            {% elif service.service_type == 'function_test' %}
+                            <span class="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full font-semibold">⚙️ Funktionstest</span>
+                            {% elif service.service_type == 'cleaning' %}
+                            <span class="px-2 py-1 bg-teal-100 text-teal-700 text-xs rounded-full font-semibold">✨ Reinigung</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">{{ service.get_service_type_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ service.technician.get_full_name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if service.passed %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">✅ Bestanden</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">❌ Nicht bestanden</span>
+                            {% endif %}
+                            {% if service.leak_test_passed == False %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold ml-1">💧 Leck</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {% if service.total_cost > 0 %}
+                                {{ service.total_cost|floatformat:2 }} €
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if service.next_service_due %}
+                                {{ service.next_service_due|date:"d.m.Y" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Zeige
+                            <span class="font-medium">{{ page_obj.start_index }}</span>
+                            bis
+                            <span class="font-medium">{{ page_obj.end_index }}</span>
+                            von
+                            <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                            Service-Protokollen
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                            {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                ←
+                            </a>
+                            {% endif %}
+                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                                Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                            </span>
+                            {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                →
+                            </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">🔧</div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Service-Protokolle vorhanden</h3>
+                <p class="text-gray-600 mb-6">Es wurden noch keine Service-Arbeiten dokumentiert.</p>
+                <a href="{% url 'diving:service_log_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Service dokumentieren
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

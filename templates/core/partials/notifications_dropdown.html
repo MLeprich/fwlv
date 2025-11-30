@@ -1,0 +1,50 @@
+<!-- Notifications Dropdown Partial (HTMX) -->
+{% if notifications %}
+<div class="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+    {% for notification in notifications|slice:":10" %}
+    <a
+        href="{{ notification.url|default:'#' }}"
+        class="block px-4 py-3 hover:bg-gray-50 transition-colors {% if not notification.is_read %}bg-blue-50{% endif %}"
+    >
+        <div class="flex items-start gap-3">
+            <span class="text-xl flex-shrink-0">
+                {% if notification.priority == 'critical' %}🔴
+                {% elif notification.priority == 'high' %}🟠
+                {% elif notification.priority == 'medium' %}🟡
+                {% else %}🔵{% endif %}
+            </span>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900">
+                    {{ notification.title }}
+                </p>
+                {% if notification.message %}
+                <p class="text-xs text-gray-600 mt-1 line-clamp-2">
+                    {{ notification.message }}
+                </p>
+                {% endif %}
+                <p class="text-xs text-gray-500 mt-1">
+                    {{ notification.created_at|timesince }} ago
+                </p>
+            </div>
+            {% if not notification.is_read %}
+            <span class="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-2"></span>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+<div class="px-4 py-3 bg-gray-50 border-t border-gray-200">
+    <a
+        href="{% url 'core:notifications_list' %}"
+        class="text-sm text-primary-600 hover:text-primary-700 font-medium text-center block"
+    >
+        Alle Benachrichtigungen ansehen →
+    </a>
+</div>
+{% else %}
+<div class="px-4 py-8 text-center text-gray-500">
+    <span class="text-4xl block mb-2">🔔</span>
+    <p class="text-sm">Keine neuen Benachrichtigungen</p>
+</div>
+{% endif %}

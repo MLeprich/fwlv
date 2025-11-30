@@ -1,0 +1,789 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ form.instance.pk|yesno:"Person bearbeiten,Neue Person" }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'personnel:dashboard' %}" class="text-gray-500 hover:text-gray-700">Personal</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'personnel:list' %}" class="text-gray-500 hover:text-gray-700">Personalliste</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if form.instance.pk %}Bearbeiten{% else %}Neu{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-6">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">
+            {% if form.instance.pk %}
+                Person bearbeiten: {{ form.instance.get_full_name }}
+            {% else %}
+                Neue Person anlegen
+            {% endif %}
+        </h1>
+        <p class="mt-1 text-sm text-gray-500">
+            {% if form.instance.pk %}
+                Aktualisieren Sie die Stammdaten der Person
+            {% else %}
+                Erfassen Sie die Stammdaten für eine neue Person
+            {% endif %}
+        </p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+            <div class="flex">
+                <span class="text-red-600">❌</span>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Fehler</h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        {{ form.non_field_errors }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Basis-Informationen -->
+        <div class="bg-white rounded-lg shadow" x-data="{ open: true }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">👤</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Basis-Informationen</h2>
+                        <p class="text-sm text-gray-500">Name, Personalnummer, Geburtsdatum</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.first_name.label }} *</label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.first_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.last_name.label }} *</label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.last_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.personnel_number.label }} *</label>
+                        {{ form.personnel_number }}
+                        {% if form.personnel_number.errors %}<p class="mt-1 text-sm text-red-600">{{ form.personnel_number.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.date_of_birth.label }}</label>
+                        {{ form.date_of_birth }}
+                        {% if form.date_of_birth.errors %}<p class="mt-1 text-sm text-red-600">{{ form.date_of_birth.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="flex items-center">
+                            {{ form.is_active }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">{{ form.is_active.label }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dienstliche Kontaktdaten -->
+        <div class="bg-white rounded-lg shadow" x-data="{ open: true }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">🏢</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Dienstliche Kontaktdaten</h2>
+                        <p class="text-sm text-gray-500">Standort, Raum, dienstliche Telefonnummern</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.work_location.label }}</label>
+                        {{ form.work_location }}
+                        {% if form.work_location.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.work_location.help_text }}</p>{% endif %}
+                        {% if form.work_location.errors %}<p class="mt-1 text-sm text-red-600">{{ form.work_location.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.work_room.label }}</label>
+                        {{ form.work_room }}
+                        {% if form.work_room.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.work_room.help_text }}</p>{% endif %}
+                        {% if form.work_room.errors %}<p class="mt-1 text-sm text-red-600">{{ form.work_room.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.work_phone.label }}</label>
+                        {{ form.work_phone }}
+                        {% if form.work_phone.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.work_phone.help_text }}</p>{% endif %}
+                        {% if form.work_phone.errors %}<p class="mt-1 text-sm text-red-600">{{ form.work_phone.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.work_mobile.label }}</label>
+                        {{ form.work_mobile }}
+                        {% if form.work_mobile.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.work_mobile.help_text }}</p>{% endif %}
+                        {% if form.work_mobile.errors %}<p class="mt-1 text-sm text-red-600">{{ form.work_mobile.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Private Kontaktdaten -->
+        <div class="bg-white rounded-lg shadow" x-data="{ open: true }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">📞</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Private Kontaktdaten</h2>
+                        <p class="text-sm text-gray-500">E-Mail, Telefon, Adresse</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}<p class="mt-1 text-sm text-red-600">{{ form.email.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.phone.label }}</label>
+                        {{ form.phone }}
+                        {% if form.phone.errors %}<p class="mt-1 text-sm text-red-600">{{ form.phone.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.mobile.label }}</label>
+                        {{ form.mobile }}
+                        {% if form.mobile.errors %}<p class="mt-1 text-sm text-red-600">{{ form.mobile.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <div class="grid grid-cols-4 gap-4">
+                            <div class="col-span-3">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.street.label }}</label>
+                                {{ form.street }}
+                                {% if form.street.errors %}<p class="mt-1 text-sm text-red-600">{{ form.street.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.house_number.label }}</label>
+                                {{ form.house_number }}
+                                {% if form.house_number.errors %}<p class="mt-1 text-sm text-red-600">{{ form.house_number.errors.0 }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.postal_code.label }}</label>
+                        {{ form.postal_code }}
+                        {% if form.postal_code.errors %}<p class="mt-1 text-sm text-red-600">{{ form.postal_code.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.city.label }}</label>
+                        {{ form.city }}
+                        {% if form.city.errors %}<p class="mt-1 text-sm text-red-600">{{ form.city.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2 flex items-start pt-4 border-t border-gray-200">
+                        <div class="flex items-center h-5">
+                            {{ form.show_private_contact_data }}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="{{ form.show_private_contact_data.id_for_label }}" class="font-medium text-gray-900">
+                                {{ form.show_private_contact_data.label }}
+                            </label>
+                            {% if form.show_private_contact_data.help_text %}<p class="text-gray-500">{{ form.show_private_contact_data.help_text }}</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notfallkontakt -->
+        <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">🚨</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Notfallkontakt</h2>
+                        <p class="text-sm text-gray-500">Kontaktperson für Notfälle</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                <div class="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
+                    <div class="flex">
+                        <span class="text-yellow-600 text-xl mr-3">ℹ️</span>
+                        <div>
+                            <p class="text-sm text-yellow-800">
+                                Diese Person wird im Notfall kontaktiert, falls die Person selbst nicht erreichbar ist.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.emergency_contact_name.label }}</label>
+                        {{ form.emergency_contact_name }}
+                        {% if form.emergency_contact_name.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.emergency_contact_name.help_text }}</p>{% endif %}
+                        {% if form.emergency_contact_name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.emergency_contact_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.emergency_contact_relationship.label }}</label>
+                        {{ form.emergency_contact_relationship }}
+                        {% if form.emergency_contact_relationship.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.emergency_contact_relationship.help_text }}</p>{% endif %}
+                        {% if form.emergency_contact_relationship.errors %}<p class="mt-1 text-sm text-red-600">{{ form.emergency_contact_relationship.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div></div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.emergency_contact_phone.label }}</label>
+                        {{ form.emergency_contact_phone }}
+                        {% if form.emergency_contact_phone.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.emergency_contact_phone.help_text }}</p>{% endif %}
+                        {% if form.emergency_contact_phone.errors %}<p class="mt-1 text-sm text-red-600">{{ form.emergency_contact_phone.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.emergency_contact_mobile.label }}</label>
+                        {{ form.emergency_contact_mobile }}
+                        {% if form.emergency_contact_mobile.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.emergency_contact_mobile.help_text }}</p>{% endif %}
+                        {% if form.emergency_contact_mobile.errors %}<p class="mt-1 text-sm text-red-600">{{ form.emergency_contact_mobile.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.emergency_contact_address.label }}</label>
+                        {{ form.emergency_contact_address }}
+                        {% if form.emergency_contact_address.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.emergency_contact_address.help_text }}</p>{% endif %}
+                        {% if form.emergency_contact_address.errors %}<p class="mt-1 text-sm text-red-600">{{ form.emergency_contact_address.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feuerwehr-Daten -->
+        <div class="bg-white rounded-lg shadow" x-data="{ open: true }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">🚒</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Feuerwehr-Daten</h2>
+                        <p class="text-sm text-gray-500">Abteilung, Dienstgrad, Funktion</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.department.label }}</label>
+                        {{ form.department }}
+                        {% if form.department.errors %}<p class="mt-1 text-sm text-red-600">{{ form.department.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.rank.label }}</label>
+                        {{ form.rank }}
+                        {% if form.rank.errors %}<p class="mt-1 text-sm text-red-600">{{ form.rank.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.activity.label }}</label>
+                        {{ form.activity }}
+                        {% if form.activity.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.activity.help_text }}</p>{% endif %}
+                        {% if form.activity.errors %}<p class="mt-1 text-sm text-red-600">{{ form.activity.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div></div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">{{ form.functions.label }}</label>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {% for checkbox in form.functions %}
+                            <div class="flex items-center">
+                                <label class="flex items-center cursor-pointer">
+                                    {{ checkbox.tag }}
+                                    <span class="ml-2 text-sm text-gray-700">{{ checkbox.choice_label }}</span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.functions.help_text %}
+                        <p class="mt-2 text-sm text-gray-500">{{ form.functions.help_text }}</p>
+                        {% endif %}
+                        {% if form.functions.errors %}<p class="mt-1 text-sm text-red-600">{{ form.functions.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">{{ form.qualification_templates.label }}</label>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {% for checkbox in form.qualification_templates %}
+                            <div class="flex items-center">
+                                <label class="flex items-center cursor-pointer">
+                                    {{ checkbox.tag }}
+                                    <span class="ml-2 text-sm text-gray-700">{{ checkbox.choice_label }}</span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.qualification_templates.help_text %}
+                        <p class="mt-2 text-sm text-gray-500">{{ form.qualification_templates.help_text }}</p>
+                        {% endif %}
+                        {% if form.qualification_templates.errors %}<p class="mt-1 text-sm text-red-600">{{ form.qualification_templates.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.entry_date.label }}</label>
+                        {{ form.entry_date }}
+                        {% if form.entry_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.entry_date.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.exit_date.label }}</label>
+                        {{ form.exit_date }}
+                        {% if form.exit_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.exit_date.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Organisationszugehörigkeit -->
+        <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">🏛️</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Organisationszugehörigkeit</h2>
+                        <p class="text-sm text-gray-500">Jugendfeuerwehr, Freiwillige FW, Berufsfeuerwehr</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                <div class="space-y-6">
+                    <!-- Jugendfeuerwehr -->
+                    <div class="border-l-4 border-yellow-400 pl-4">
+                        <label class="flex items-center mb-3">
+                            {{ form.is_youth_fire_brigade }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">{{ form.is_youth_fire_brigade.label }}</span>
+                        </label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.youth_entry_date.label }}</label>
+                                {{ form.youth_entry_date }}
+                                {% if form.youth_entry_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.youth_entry_date.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.youth_exit_date.label }}</label>
+                                {{ form.youth_exit_date }}
+                                {% if form.youth_exit_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.youth_exit_date.errors.0 }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Freiwillige Feuerwehr -->
+                    <div class="border-l-4 border-blue-400 pl-4">
+                        <label class="flex items-center mb-3">
+                            {{ form.is_volunteer_fire_brigade }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">{{ form.is_volunteer_fire_brigade.label }}</span>
+                        </label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.volunteer_entry_date.label }}</label>
+                                {{ form.volunteer_entry_date }}
+                                {% if form.volunteer_entry_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.volunteer_entry_date.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.volunteer_unit.label }}</label>
+                                {{ form.volunteer_unit }}
+                                {% if form.volunteer_unit.errors %}<p class="mt-1 text-sm text-red-600">{{ form.volunteer_unit.errors.0 }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Berufsfeuerwehr -->
+                    <div class="border-l-4 border-red-600 pl-4">
+                        <label class="flex items-center mb-3">
+                            {{ form.is_professional_fire_brigade }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">{{ form.is_professional_fire_brigade.label }}</span>
+                        </label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.professional_entry_date.label }}</label>
+                                {{ form.professional_entry_date }}
+                                {% if form.professional_entry_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.professional_entry_date.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.watch_crew.label }}</label>
+                                {{ form.watch_crew }}
+                                {% if form.watch_crew.errors %}<p class="mt-1 text-sm text-red-600">{{ form.watch_crew.errors.0 }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vorherige Feuerwehr -->
+                    <div class="border-l-4 border-gray-400 pl-4">
+                        <h3 class="text-sm font-medium text-gray-900 mb-3">Vorherige Feuerwehr</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.previous_fire_department.label }}</label>
+                                {{ form.previous_fire_department }}
+                                {% if form.previous_fire_department.errors %}<p class="mt-1 text-sm text-red-600">{{ form.previous_fire_department.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.previous_fire_department_entry_date.label }}</label>
+                                {{ form.previous_fire_department_entry_date }}
+                                {% if form.previous_fire_department_entry_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.previous_fire_department_entry_date.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.previous_fire_department_exit_date.label }}</label>
+                                {{ form.previous_fire_department_exit_date }}
+                                {% if form.previous_fire_department_exit_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.previous_fire_department_exit_date.errors.0 }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benutzer & Foto -->
+        <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">🔐</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Benutzer & Foto</h2>
+                        <p class="text-sm text-gray-500">Benutzer-Account und Profilfoto</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                <div class="space-y-6">
+                    {% if not form.instance.pk %}
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="flex">
+                            <span class="text-blue-600">ℹ️</span>
+                            <div class="ml-3">
+                                <label class="flex items-center">
+                                    {{ form.create_user }}
+                                    <span class="ml-2 text-sm font-medium text-blue-800">{{ form.create_user.label }}</span>
+                                </label>
+                                <p class="mt-1 text-sm text-blue-700">{{ form.create_user.help_text }}</p>
+                                <div class="mt-3 p-3 bg-blue-100 rounded-lg border border-blue-200">
+                                    <p class="text-xs font-semibold text-blue-900 mb-2">Automatisch generiert:</p>
+                                    <ul class="text-xs text-blue-800 space-y-1">
+                                        <li><strong>• Benutzername:</strong> <code class="bg-white px-1 py-0.5 rounded">vorname.nachname</code> (in Kleinbuchstaben)</li>
+                                        <li><strong>• Passwort:</strong> <code class="bg-white px-1 py-0.5 rounded">Feuerwehr.0112</code></li>
+                                        <li><strong>• Passwortänderung:</strong> Bei erster Anmeldung erforderlich</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.user.label }}</label>
+                        {{ form.user }}
+                        {% if form.user.errors %}<p class="mt-1 text-sm text-red-600">{{ form.user.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- Rollen-Zuweisung -->
+                    {% if form.instance.user or not form.instance.pk %}
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                            Benutzer-Rollen
+                        </h3>
+                        {% if form.instance.user %}
+                        <p class="text-sm text-gray-600 mb-4">
+                            Weisen Sie {{ form.instance.get_full_name }} Rollen für den Benutzer-Account zu
+                        </p>
+                        {% else %}
+                        <p class="text-sm text-gray-600 mb-4">
+                            Wählen Sie die Rollen für den neuen Benutzer-Account
+                        </p>
+                        {% endif %}
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {% for checkbox in form.roles %}
+                            <div class="flex items-start p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors">
+                                <label class="flex items-center cursor-pointer w-full">
+                                    {{ checkbox.tag }}
+                                    <div class="ml-3">
+                                        <span class="text-sm font-medium text-gray-900">{{ checkbox.choice_label }}</span>
+                                    </div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        {% if form.roles.help_text %}
+                        <p class="mt-3 text-sm text-gray-500">{{ form.roles.help_text }}</p>
+                        {% endif %}
+                        {% if form.roles.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.roles.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="{% if form.instance.user or not form.instance.pk %}border-t border-gray-200 pt-6{% endif %}">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.photo.label }}</label>
+                        {{ form.photo }}
+                        {% if form.photo.errors %}<p class="mt-1 text-sm text-red-600">{{ form.photo.errors.0 }}</p>{% endif %}
+                        {% if form.instance.pk and form.instance.photo %}
+                        <div class="mt-4 flex gap-4">
+                            <div>
+                                <p class="text-xs font-medium text-gray-700 mb-2">Original-Foto</p>
+                                <img src="{{ form.instance.photo.url }}" alt="Aktuelles Foto" class="w-32 h-32 rounded-lg object-cover border-2 border-gray-200">
+                            </div>
+                            {% if form.instance.id_card_photo %}
+                            <div>
+                                <p class="text-xs font-medium text-gray-700 mb-2">Dienstausweis-Foto (35x45mm, 300 DPI)</p>
+                                <img src="{{ form.instance.id_card_photo.url }}" alt="Dienstausweis-Foto" class="border-2 border-blue-500 shadow-lg" style="width: 82px; height: 106px;">
+                                <p class="text-xs text-gray-500 mt-1">413x531px @ 300 DPI</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Führerscheindaten -->
+        <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">🚗</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Führerscheindaten</h2>
+                        <p class="text-sm text-gray-500">Welche Führerscheinklassen besitzt die Person?</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                <!-- Hinweis -->
+                <div class="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                    <div class="flex">
+                        <span class="text-blue-600 text-xl mr-3">ℹ️</span>
+                        <div>
+                            <p class="text-sm text-blue-800">
+                                Hier werden nur die Führerscheinklassen erfasst. Alle detaillierten Daten (Gültigkeiten, Überprüfungsdaten, etc.) werden in der
+                                <a href="{% url 'driving_license:check_list' %}" class="underline font-medium hover:text-blue-900">Führerscheinüberprüfung</a> dokumentiert.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Führerscheinklassen -->
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-900 mb-3">Führerscheinklassen</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <label class="flex items-center cursor-pointer">
+                            {{ license_form.has_class_B }}
+                            <span class="ml-2 text-sm text-gray-700">{{ license_form.has_class_B.label }}</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            {{ license_form.has_class_BE }}
+                            <span class="ml-2 text-sm text-gray-700">{{ license_form.has_class_BE.label }}</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            {{ license_form.has_class_C }}
+                            <span class="ml-2 text-sm text-gray-700">{{ license_form.has_class_C.label }}</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            {{ license_form.has_class_CE }}
+                            <span class="ml-2 text-sm text-gray-700">{{ license_form.has_class_CE.label }}</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            {{ license_form.has_class_C1 }}
+                            <span class="ml-2 text-sm text-gray-700">{{ license_form.has_class_C1.label }}</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            {{ license_form.has_class_C1E }}
+                            <span class="ml-2 text-sm text-gray-700">{{ license_form.has_class_C1E.label }}</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            {{ license_form.has_class_D }}
+                            <span class="ml-2 text-sm text-gray-700">{{ license_form.has_class_D.label }}</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            {{ license_form.has_class_A }}
+                            <span class="ml-2 text-sm text-gray-700">{{ license_form.has_class_A.label }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pflichtstunden (nur bei Bearbeitung) -->
+        {% if form.instance.pk %}
+        <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">⏱️</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Pflichtstunden</h2>
+                        <p class="text-sm text-gray-500">Tauchen, Höhenrettung, etc.</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                {% if person_duty_hours_summary %}
+                <div class="space-y-3 mb-4">
+                    {% for category, data in person_duty_hours_summary.items %}
+                    <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium text-gray-900">{{ data.category_display }}</span>
+                            <span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">{{ data.year }}</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-2xl font-bold text-orange-600">{{ data.completed_hours }}</span>
+                                    <span class="text-sm text-gray-500">/ {{ data.required_hours }} Stunden</span>
+                                </div>
+                                <div class="mt-1 bg-gray-200 rounded-full h-2">
+                                    <div class="bg-orange-600 h-2 rounded-full" style="width: {{ data.percentage }}%"></div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                {% if data.percentage >= 100 %}
+                                <span class="text-green-600 font-semibold">✓ Erfüllt</span>
+                                {% else %}
+                                <span class="text-orange-600 font-semibold">{{ data.remaining_hours }}h offen</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-400">
+                    <span class="text-4xl block mb-2">⏱️</span>
+                    <p class="text-sm">Noch keine Pflichtstunden erfasst</p>
+                </div>
+                {% endif %}
+
+                <div class="pt-4 border-t border-gray-200">
+                    <a href="{% url 'personnel:duty_hours' %}?person={{ form.instance.pk }}" class="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium">
+                        <span>➕</span>
+                        <span>Pflichtstunden verwalten</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Qualifikationen (nur bei Bearbeitung) -->
+        {% if form.instance.pk %}
+        <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">🎓</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Qualifikationen</h2>
+                        <p class="text-sm text-gray-500">Lehrgänge, Zertifikate und Ausbildungen</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                {% if person_qualifications %}
+                <div class="space-y-3 mb-4">
+                    {% for qual in person_qualifications %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-900">{{ qual.name }}</span>
+                                <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">{{ qual.get_qualification_type_display }}</span>
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                {% if qual.issue_date %}Ausgestellt: {{ qual.issue_date|date:"d.m.Y" }}{% endif %}
+                                {% if qual.expiry_date %}
+                                    | <span class="{% if qual.is_expired %}text-red-600 font-semibold{% elif qual.is_expiring_soon %}text-yellow-600 font-semibold{% endif %}">
+                                        Gültig bis: {{ qual.expiry_date|date:"d.m.Y" }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <a href="{% url 'personnel:qualification_update' qual.pk %}" class="ml-4 text-blue-600 hover:text-blue-800 text-sm font-medium">Bearbeiten</a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-400">
+                    <span class="text-4xl block mb-2">📚</span>
+                    <p class="text-sm">Noch keine Qualifikationen vorhanden</p>
+                </div>
+                {% endif %}
+
+                <div class="pt-4 border-t border-gray-200">
+                    <a href="{% url 'personnel:qualification_create' form.instance.pk %}" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                        <span>➕</span>
+                        <span>Qualifikation hinzufügen</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Notizen -->
+        <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">📝</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Notizen</h2>
+                        <p class="text-sm text-gray-500">Interne Anmerkungen</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="px-6 pb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>{% endif %}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-end gap-3 pt-6 bg-white rounded-lg shadow p-6">
+            <a href="{% if form.instance.pk %}{% url 'personnel:detail' form.instance.pk %}{% else %}{% url 'personnel:list' %}{% endif %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                Abbrechen
+            </a>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                {% if form.instance.pk %}Änderungen speichern{% else %}Person erstellen{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

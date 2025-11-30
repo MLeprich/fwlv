@@ -1,0 +1,193 @@
+{% comment %}
+HTMX-Partial: Medication Table
+Wird dynamisch bei Suche/Filter-Änderungen geladen
+{% endcomment %}
+
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Medikament
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Wirkstoff
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Bestand
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ablaufdatum
+                </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Aktionen
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for medication in medications %}
+            <tr class="hover:bg-gray-50 transition-colors">
+                <!-- Medikament Name + BTM Badge -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center gap-2">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ medication.name }}
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                {{ medication.item_number }}
+                            </div>
+                        </div>
+                        {% if medication.is_btm %}
+                        {% include 'includes/components/badge.html' with text="BTM" color="critical" icon="⚠️" size="sm" %}
+                        {% endif %}
+                    </div>
+                </td>
+
+                <!-- Wirkstoff -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ medication.active_ingredient|default:"-" }}</div>
+                    {% if medication.dosage %}
+                    <div class="text-xs text-gray-500">{{ medication.dosage }}</div>
+                    {% endif %}
+                </td>
+
+                <!-- Bestand -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">
+                        {{ medication.quantity }} {{ medication.unit }}
+                    </div>
+                    {% if medication.threshold_warning %}
+                    <div class="text-xs text-gray-500">
+                        Min: {{ medication.threshold_warning }} {{ medication.unit }}
+                    </div>
+                    {% endif %}
+                </td>
+
+                <!-- Status -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if medication.quantity == 0 %}
+                        {% include 'includes/components/badge.html' with text="Leer" color="danger" %}
+                    {% elif medication.quantity <= medication.threshold_critical %}
+                        {% include 'includes/components/badge.html' with text="Kritisch" color="danger" %}
+                    {% elif medication.quantity <= medication.threshold_warning %}
+                        {% include 'includes/components/badge.html' with text="Niedrig" color="warning" %}
+                    {% else %}
+                        {% include 'includes/components/badge.html' with text="Verfügbar" color="success" %}
+                    {% endif %}
+                </td>
+
+                <!-- Ablaufdatum -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if medication.expiry_date %}
+                    <div class="text-sm text-gray-900">
+                        {{ medication.expiry_date|date:"d.m.Y" }}
+                    </div>
+                    {% if medication.days_until_expiry <= 30 %}
+                    <div class="text-xs text-red-600 font-medium">
+                        ⚠️ In {{ medication.days_until_expiry }} Tagen
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <span class="text-sm text-gray-400">-</span>
+                    {% endif %}
+                </td>
+
+                <!-- Aktionen -->
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex items-center justify-end gap-2">
+                        <!-- Detail Button -->
+                        <a href="{% url 'medical:medication_detail' medication.pk %}"
+                           class="text-primary-600 hover:text-primary-900"
+                           title="Details anzeigen">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </a>
+
+                        <!-- Edit Button -->
+                        <a href="{% url 'medical:medication_update' medication.pk %}"
+                           class="text-blue-600 hover:text-blue-900"
+                           title="Bearbeiten">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </a>
+
+                        <!-- Stock Movement Button -->
+                        <button
+                            hx-get="{% url 'medical:medication_stock_modal' medication.pk %}"
+                            hx-target="#modal-container"
+                            class="text-green-600 hover:text-green-900"
+                            title="Bestandsbewegung">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                        <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Keine Medikamente gefunden</p>
+                            <p class="text-sm text-gray-500 mt-1">Passen Sie Ihre Suchkriterien an oder fügen Sie ein neues Medikament hinzu.</p>
+                        </div>
+                        <a href="{% url 'medical:medication_create' %}"
+                           class="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+                            + Neues Medikament
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if medications.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-700">
+            Zeige {{ medications.start_index }} bis {{ medications.end_index }} von {{ medications.paginator.count }} Einträgen
+        </div>
+
+        <nav class="flex gap-2">
+            {% if medications.has_previous %}
+            <button
+                hx-get="{% url 'medical:medication_list' %}?page={{ medications.previous_page_number }}"
+                hx-target="#medication-list"
+                hx-include="[name='search'], [name='category'], [name='storage'], [name='btm']"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Zurück
+            </button>
+            {% endif %}
+
+            <span class="px-3 py-1 bg-primary-600 text-white rounded-lg">
+                {{ medications.number }}
+            </span>
+
+            {% if medications.has_next %}
+            <button
+                hx-get="{% url 'medical:medication_list' %}?page={{ medications.next_page_number }}"
+                hx-target="#medication-list"
+                hx-include="[name='search'], [name='category'], [name='storage'], [name='btm']"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Weiter
+            </button>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Container (wird per HTMX befüllt) -->
+<div id="modal-container"></div>

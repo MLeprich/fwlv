@@ -1,0 +1,51 @@
+<!-- Search Results Partial (HTMX) -->
+{% if results %}
+<div class="divide-y divide-gray-200">
+    {% for result in results %}
+    <a
+        href="{{ result.url }}"
+        class="block px-4 py-3 hover:bg-gray-50 transition-colors"
+    >
+        <div class="flex items-start gap-3">
+            <span class="text-2xl flex-shrink-0">{{ result.icon }}</span>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                    <p class="text-sm font-medium text-gray-900 truncate">
+                        {{ result.title }}
+                    </p>
+                    {% if result.match_count and result.match_count > 1 %}
+                    <span class="px-1.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 rounded">
+                        {{ result.match_count }} Treffer
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-gray-500 {% if not result.snippet %}truncate{% endif %}">
+                    {{ result.description }}
+                </p>
+                {% if result.snippet %}
+                <p class="text-xs text-gray-700 bg-yellow-50 px-2 py-1 mt-1 rounded border border-yellow-200 italic">
+                    {{ result.snippet }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+    {% if query %}
+    <div class="px-4 py-8 text-center text-gray-500">
+        <svg class="mx-auto h-12 w-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <p class="text-sm">Keine Ergebnisse für "{{ query }}"</p>
+    </div>
+    {% else %}
+    <div class="px-4 py-8 text-center text-gray-500">
+        <svg class="mx-auto h-12 w-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <p class="text-sm">Mindestens 2 Zeichen eingeben</p>
+    </div>
+    {% endif %}
+{% endif %}

@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'disinfection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Desinfektion</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'disinfection:plan_list' %}" class="text-gray-500 hover:text-gray-700">Pläne</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">📋</span>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+                <p class="text-sm text-gray-600">Planen Sie regelmäßige Desinfektionen für Fahrzeuge und Objekte</p>
+            </div>
+        </div>
+        <a href="{% url 'disinfection:plan_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm">
+            ← Zurück zur Liste
+        </a>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <!-- Grundinformationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Grundinformationen</h2>
+
+                <div class="space-y-4">
+                    <!-- Plan-Name -->
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Plan-Name <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.name.help_text }}</p>
+                        {% endif %}
+                        {% if form.name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Fahrzeug mit Suchfeld -->
+                    <div x-data="{ open: false, search: '', selected: null, vehicles: [] }" x-init="
+                        vehicles = Array.from(document.querySelectorAll('#id_vehicle option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(vehicle => vehicle.value);
+                        const currentValue = document.getElementById('id_vehicle').value;
+                        if (currentValue) {
+                            selected = vehicles.find(vehicle => vehicle.value === currentValue);
+                        }
+
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_vehicle').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Fahrzeug
+                        </label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.vehicle }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Fahrzeug auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="🔍 Fahrzeug suchen (Funkrufname, Kennzeichen)..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="vehicle in vehicles.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="vehicle.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = vehicle; document.getElementById('id_vehicle').value = vehicle.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === vehicle.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="vehicle.text"
+                                        ></button>
+                                    </template>
+                                    <!-- No results message -->
+                                    <div x-show="vehicles.filter(v => v.text.toLowerCase().includes(search.toLowerCase())).length === 0" class="px-4 py-8 text-center text-gray-500 text-sm">
+                                        Keine Fahrzeuge gefunden
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.vehicle.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.vehicle.help_text }}</p>
+                        {% endif %}
+                        {% if form.vehicle.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.vehicle.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Objekt-Typ und Beschreibung -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.object_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                Objekt-Typ
+                            </label>
+                            {{ form.object_type }}
+                            {% if form.object_type.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ form.object_type.help_text }}</p>
+                            {% endif %}
+                            {% if form.object_type.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.object_type.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.object_description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                Objekt-Beschreibung
+                            </label>
+                            {{ form.object_description }}
+                            {% if form.object_description.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ form.object_description.help_text }}</p>
+                            {% endif %}
+                            {% if form.object_description.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.object_description.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Häufigkeit & Zeitplan -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Häufigkeit & Zeitplan</h2>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Häufigkeit -->
+                        <div>
+                            <label for="{{ form.frequency.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                Häufigkeit <span class="text-red-600">*</span>
+                            </label>
+                            {{ form.frequency }}
+                            {% if form.frequency.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.frequency.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Individuelles Intervall -->
+                        <div>
+                            <label for="{{ form.custom_interval_days.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                Individuelles Intervall (Tage)
+                            </label>
+                            {{ form.custom_interval_days }}
+                            {% if form.custom_interval_days.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ form.custom_interval_days.help_text }}</p>
+                            {% endif %}
+                            {% if form.custom_interval_days.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.custom_interval_days.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Start-Datum -->
+                        <div>
+                            <label for="{{ form.start_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                Start-Datum <span class="text-red-600">*</span>
+                            </label>
+                            {{ form.start_date }}
+                            {% if form.start_date.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ form.start_date.help_text }}</p>
+                            {% endif %}
+                            {% if form.start_date.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.start_date.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- End-Datum -->
+                        <div>
+                            <label for="{{ form.end_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                End-Datum
+                            </label>
+                            {{ form.end_date }}
+                            {% if form.end_date.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ form.end_date.help_text }}</p>
+                            {% endif %}
+                            {% if form.end_date.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.end_date.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Durchführung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Durchführung</h2>
+
+                <div class="space-y-4">
+                    <!-- Beschreibung -->
+                    <div>
+                        <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Beschreibung / Anweisungen
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.description.help_text }}</p>
+                        {% endif %}
+                        {% if form.description.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Benötigte Desinfektionsmittel -->
+                    <div>
+                        <label for="{{ form.required_items.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Benötigte Desinfektionsmittel
+                        </label>
+                        {{ form.required_items }}
+                        <p class="mt-1 text-sm text-gray-500">Halten Sie Strg/Cmd gedrückt, um mehrere auszuwählen</p>
+                        {% if form.required_items.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.required_items.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Einwirkzeit -->
+                    <div>
+                        <label for="{{ form.contact_time_minutes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Einwirkzeit (Minuten)
+                        </label>
+                        {{ form.contact_time_minutes }}
+                        {% if form.contact_time_minutes.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.contact_time_minutes.help_text }}</p>
+                        {% endif %}
+                        {% if form.contact_time_minutes.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.contact_time_minutes.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Verantwortliche Person -->
+                    <div>
+                        <label for="{{ form.responsible_person.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Verantwortliche Person
+                        </label>
+                        {{ form.responsible_person }}
+                        {% if form.responsible_person.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.responsible_person.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status & Erinnerungen -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Status & Erinnerungen</h2>
+
+                <div class="space-y-4">
+                    <!-- Erinnerung Tage vorher -->
+                    <div>
+                        <label for="{{ form.reminder_days_before.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Dashboard-Erinnerung (Tage vorher)
+                        </label>
+                        {{ form.reminder_days_before }}
+                        <p class="mt-1 text-sm text-gray-500">Anzeige im Dashboard wie viele Tage vor der Fälligkeit</p>
+                        {% if form.reminder_days_before.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.reminder_days_before.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Aktiv -->
+                    <div class="flex items-center">
+                        {{ form.is_active }}
+                        <label for="{{ form.is_active.id_for_label }}" class="ml-2 text-sm text-gray-700">
+                            Plan ist aktiv
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'disinfection:plan_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    {% if plan %}Änderungen speichern{% else %}Plan erstellen{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

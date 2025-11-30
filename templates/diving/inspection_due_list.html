@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Fällige Prüfungen - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Fällige Prüfungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">🔍 Fällige Prüfungen</h1>
+                    <p class="mt-1 text-sm text-gray-600">Übersicht aller Geräte mit fälligen oder demnächst fälligen Wartungen</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'diving:service_management' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                        ⚙️ Wartungsverwaltung
+                    </a>
+                    <a href="{% url 'diving:dashboard' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                        ← Zurück zum Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="p-6 bg-gray-50 border-b border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white rounded-lg p-4 border border-red-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Überfällig</p>
+                            <p class="text-2xl font-bold text-red-600">{{ overdue_count }}</p>
+                        </div>
+                        <div class="text-3xl">🚨</div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-4 border border-yellow-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Fällig in 30 Tagen</p>
+                            <p class="text-2xl font-bold text-yellow-600">{{ due_soon_count }}</p>
+                        </div>
+                        <div class="text-3xl">⚠️</div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-4 border border-blue-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Fällig in 31-60 Tagen</p>
+                            <p class="text-2xl font-bold text-blue-600">{{ upcoming_count }}</p>
+                        </div>
+                        <div class="text-3xl">📅</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item List -->
+        <div class="overflow-x-auto">
+            {% if items %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ausrüstung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nächste Prüfung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tage</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Letzte Wartung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Techniker</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for device in devices %}
+                    {% with days_until=device.next_service_date|timesince:today %}
+                    <tr class="hover:bg-gray-50 {% if device.next_service_date < today %}bg-red-50{% elif device.next_service_date <= today|date:'Y-m-d'|add:'30 days' %}bg-yellow-50{% endif %}">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if device.next_service_date < today %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">🚨 Überfällig</span>
+                            {% elif device.next_service_date <= today|date:'Y-m-d'|add:'14 days' %}
+                            <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full font-semibold">⚠️ Dringend</span>
+                            {% elif device.next_service_date <= today|date:'Y-m-d'|add:'30 days' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-semibold">📅 Bald fällig</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">ℹ️ Geplant</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <a href="{% url 'diving:device_detail' device.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                {{ device.inventory_number }}
+                            </a>
+                            {% if device.serial_number %}
+                            <p class="text-xs text-gray-500">SN: {{ device.serial_number }}</p>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ device.master.name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium {% if device.next_service_date < today %}text-red-600{% else %}text-gray-900{% endif %}">
+                            {{ device.next_service_date|date:"d.m.Y" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if device.next_service_date < today %}
+                            <span class="text-red-600 font-semibold">
+                                {{ device.next_service_date|timesince }} überfällig
+                            </span>
+                            {% else %}
+                            <span class="text-gray-600">
+                                in {{ device.next_service_date|timeuntil }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if device.last_service_date %}
+                                {{ device.last_service_date|date:"d.m.Y" }}
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if device.last_service_technician %}
+                                {{ device.last_service_technician.get_full_name }}
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <div class="flex flex-col gap-1">
+                                <a href="{% url 'diving:device_service_assignments' pk=device.pk %}" class="text-cyan-600 hover:text-cyan-800 font-medium">
+                                    ✅ Checklisten-Wartung
+                                </a>
+                                <a href="{% url 'diving:service_log_create' %}?item={{ device.pk }}" class="text-gray-500 hover:text-gray-700 text-xs">
+                                    🔧 Einfache Wartung
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Zeige
+                            <span class="font-medium">{{ page_obj.start_index }}</span>
+                            bis
+                            <span class="font-medium">{{ page_obj.end_index }}</span>
+                            von
+                            <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                            Geräten
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                            {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                ←
+                            </a>
+                            {% endif %}
+                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                                Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                            </span>
+                            {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                →
+                            </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">✅</div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Keine fälligen Prüfungen</h3>
+                <p class="text-gray-600 mb-6">Alle Geräte sind auf dem aktuellen Stand - keine Wartungen in den nächsten 60 Tagen fällig.</p>
+                <a href="{% url 'diving:dashboard' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ← Zurück zum Dashboard
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

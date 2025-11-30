@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Personal - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Personal</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Module Header (Gradient) -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 mb-6 text-white">
+        <div class="flex items-start gap-6">
+            <div class="flex-shrink-0">
+                <div class="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                    <span class="text-5xl">👥</span>
+                </div>
+            </div>
+            <div class="flex-1">
+                <h1 class="text-3xl font-bold mb-2">Personal-Verwaltung</h1>
+                <p class="text-blue-100 text-lg">
+                    Stammdaten, Qualifikationen, Prüfungen und Schulungen für alle Einsatzkräfte
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats (4er Grid) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <!-- Gesamt-Personal -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Gesamt-Personal</p>
+                <span class="text-3xl">👥</span>
+            </div>
+            <p class="text-4xl font-bold text-gray-900 mb-1">{{ stats.total_personnel }}</p>
+            <p class="text-sm text-gray-600">
+                <span class="text-green-600 font-semibold">{{ stats.active_personnel }}</span> aktiv
+            </p>
+            <a href="{% url 'personnel:list' %}" class="text-sm text-blue-600 hover:text-blue-800 font-medium mt-2 inline-block">
+                Alle ansehen →
+            </a>
+        </div>
+
+        <!-- Prüfungen fällig -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Prüfungen fällig</p>
+                <span class="text-3xl">⚠️</span>
+            </div>
+            <p class="text-4xl font-bold text-gray-900 mb-1">{{ stats.due_inspections }}</p>
+            <p class="text-sm text-gray-600">in den nächsten 30 Tagen</p>
+            <a href="{% url 'personnel:inspections_calendar' %}" class="text-sm text-red-600 hover:text-red-800 font-medium mt-2 inline-block">
+                Kalender ansehen →
+            </a>
+        </div>
+
+        <!-- Qualifikationen erworben -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Qualifikationen</p>
+                <span class="text-3xl">📜</span>
+            </div>
+            <p class="text-4xl font-bold text-gray-900 mb-1">{{ stats.new_qualifications_this_month }}</p>
+            <p class="text-sm text-gray-600">erworben diesen Monat</p>
+            <a href="{% url 'personnel:qualifications_overview' %}" class="text-sm text-green-600 hover:text-green-800 font-medium mt-2 inline-block">
+                Übersicht →
+            </a>
+        </div>
+
+        <!-- Ablaufende Qualifikationen -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Laufen bald ab</p>
+                <span class="text-3xl">⏰</span>
+            </div>
+            <p class="text-4xl font-bold text-gray-900 mb-1">{{ stats.expiring_qualifications }}</p>
+            <p class="text-sm text-gray-600">Qualifikationen in 90 Tagen</p>
+            <a href="{% url 'personnel:list' %}?expiring=true" class="text-sm text-yellow-600 hover:text-yellow-800 font-medium mt-2 inline-block">
+                Details →
+            </a>
+        </div>
+    </div>
+
+    <!-- Bereiche (3er Grid Kacheln) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Personal-Übersicht -->
+        <div class="bg-white rounded-lg shadow hover:shadow-xl transition-shadow duration-200 overflow-hidden group">
+            <a href="{% url 'personnel:list' %}" class="block p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-200">
+                        👤
+                    </div>
+                    <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
+                        {{ stats.total_personnel }}
+                    </span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Personal-Übersicht</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Stammdaten aller Einsatzkräfte verwalten, filtern und durchsuchen
+                </p>
+                <div class="flex items-center text-blue-600 font-medium text-sm group-hover:translate-x-2 transition-transform duration-200">
+                    Zur Übersicht
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+            </a>
+        </div>
+
+        <!-- Qualifikationen -->
+        <div class="bg-white rounded-lg shadow hover:shadow-xl transition-shadow duration-200 overflow-hidden group">
+            <a href="{% url 'personnel:qualifications_overview' %}" class="block p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-200">
+                        📜
+                    </div>
+                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                        {{ stats.total_qualifications }}
+                    </span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Qualifikationen</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Lehrgänge, Zertifikate und Lizenzen verwalten und überwachen
+                </p>
+                <div class="flex items-center text-green-600 font-medium text-sm group-hover:translate-x-2 transition-transform duration-200">
+                    Zur Verwaltung
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+            </a>
+        </div>
+
+        <!-- Prüfungskalender -->
+        <div class="bg-white rounded-lg shadow hover:shadow-xl transition-shadow duration-200 overflow-hidden group">
+            <a href="{% url 'personnel:inspections_calendar' %}" class="block p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-200">
+                        📅
+                    </div>
+                    <span class="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">
+                        {{ stats.due_inspections }}
+                    </span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Prüfungskalender</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Fällige und anstehende Prüfungen im Kalender verwalten
+                </p>
+                <div class="flex items-center text-red-600 font-medium text-sm group-hover:translate-x-2 transition-transform duration-200">
+                    Zum Kalender
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+            </a>
+        </div>
+
+        <!-- Schulungen -->
+        <div class="bg-white rounded-lg shadow hover:shadow-xl transition-shadow duration-200 overflow-hidden group">
+            <a href="{% url 'personnel:trainings' %}" class="block p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-200">
+                        🎓
+                    </div>
+                    <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+                        {{ stats.upcoming_trainings }}
+                    </span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Schulungen</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Anstehende und vergangene Schulungen planen und dokumentieren
+                </p>
+                <div class="flex items-center text-purple-600 font-medium text-sm group-hover:translate-x-2 transition-transform duration-200">
+                    Zur Verwaltung
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+            </a>
+        </div>
+
+        <!-- Pflichtstunden -->
+        <div class="bg-white rounded-lg shadow hover:shadow-xl transition-shadow duration-200 overflow-hidden group">
+            <a href="{% url 'personnel:duty_hours' %}" class="block p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-200">
+                        ⏱️
+                    </div>
+                    <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">
+                        {{ stats.personnel_below_duty_hours }}
+                    </span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Pflichtstunden</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Erfüllung der Pflichtstunden-Anforderungen überwachen
+                </p>
+                <div class="flex items-center text-orange-600 font-medium text-sm group-hover:translate-x-2 transition-transform duration-200">
+                    Zur Übersicht
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+            </a>
+        </div>
+
+        <!-- Import/Export -->
+        <div class="bg-white rounded-lg shadow hover:shadow-xl transition-shadow duration-200 overflow-hidden group">
+            <a href="{% url 'personnel:import' %}" class="block p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-200">
+                        📥
+                    </div>
+                    <span class="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-full">
+                        NEU
+                    </span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Import / Export</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Personal-Daten per Excel importieren oder exportieren
+                </p>
+                <div class="flex items-center text-gray-600 font-medium text-sm group-hover:translate-x-2 transition-transform duration-200">
+                    Zur Verwaltung
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Wichtige Hinweise (Alert Box) -->
+    {% if alerts %}
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg p-6 shadow mb-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <span class="text-3xl">⚠️</span>
+            </div>
+            <div class="ml-4 flex-1">
+                <h3 class="text-lg font-bold text-yellow-900 mb-3">Wichtige Hinweise</h3>
+                <ul class="space-y-2">
+                    {% for alert in alerts %}
+                    <li class="flex items-start">
+                        <span class="text-yellow-600 mr-2">•</span>
+                        <a href="{{ alert.link }}" class="text-yellow-800 hover:text-yellow-900 font-medium">
+                            {{ alert.message }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions (optional) -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <button
+                hx-get="{% url 'personnel:create' %}"
+                hx-target="body"
+                hx-swap="beforeend"
+                class="flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
+            >
+                <span class="mr-2">➕</span> Neue Person anlegen
+            </button>
+            <a href="{% url 'personnel:list' %}" class="flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                <span class="mr-2">👥</span> Personal-Liste
+            </a>
+            <a href="{% url 'personnel:import' %}" class="flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                <span class="mr-2">📥</span> Excel importieren
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

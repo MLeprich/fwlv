@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load mptt_tags %}
+{% load documents_tags %}
+
+{% block title %}Kategorieverwaltung | FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'documents:document_list' %}" class="text-gray-500 hover:text-gray-700">Dokumente</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Kategorien verwalten</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-gray-600 to-gray-800 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold">📂 Kategorien verwalten</h1>
+                <p class="text-gray-200 text-lg mt-1">
+                    Organisieren Sie Ihre Dokumente in Kategorien und Unterkategorien
+                </p>
+            </div>
+            <a href="{% url 'documents:category_create' %}"
+               class="px-4 py-2 bg-white text-gray-800 rounded-lg hover:bg-gray-100 font-medium">
+                + Neue Kategorie
+            </a>
+        </div>
+    </div>
+
+    <!-- Kategorien-Baum -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        {% if categories %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategorie</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Beschreibung</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dokumente</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% recursetree categories %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center" style="padding-left: {{ node.level|mul:20 }}px;">
+                            {% if node.icon %}
+                            <span class="mr-2">{{ node.icon }}</span>
+                            {% else %}
+                            <span class="mr-2">📁</span>
+                            {% endif %}
+                            <span class="text-sm font-medium text-gray-900">{{ node.name }}</span>
+                            {% if node.get_children.count > 0 %}
+                            <span class="ml-2 text-xs text-gray-500">({{ node.get_children.count }} Unterkategorien)</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ node.description|truncatewords:10|default:"—" }}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-semibold">
+                            {{ node.document_count }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if node.is_active %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            Aktiv
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                            Inaktiv
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right text-sm font-medium">
+                        <a href="{% url 'documents:category_update' node.pk %}"
+                           class="text-blue-600 hover:text-blue-900 mr-3">
+                            Bearbeiten
+                        </a>
+                        <a href="{% url 'documents:category_delete' node.pk %}"
+                           class="text-red-600 hover:text-red-900">
+                            Löschen
+                        </a>
+                    </td>
+                </tr>
+                {{ children }}
+                {% endrecursetree %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Keine Kategorien vorhanden</h3>
+            <p class="mt-1 text-sm text-gray-500">
+                Erstellen Sie Ihre erste Dokumentenkategorie.
+            </p>
+            <div class="mt-6">
+                <a href="{% url 'documents:category_create' %}"
+                   class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    + Kategorie erstellen
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Info-Box -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div>
+                <h3 class="font-bold text-blue-900 mb-2">Hinweise zur Kategorieverwaltung</h3>
+                <ul class="text-sm text-blue-800 space-y-1">
+                    <li>• Kategorien können hierarchisch verschachtelt werden (Unterkategorien)</li>
+                    <li>• Dokumente werden der Kategorie im Dropdown beim Upload zugeordnet</li>
+                    <li>• Kategorien mit zugeordneten Dokumenten können nicht gelöscht werden</li>
+                    <li>• Icons können als Emoji oder Text eingegeben werden (z.B. 📄)</li>
+                    <li>• Farben verwenden Tailwind CSS Klassen (z.B. blue-500, red-600)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="mt-6">
+        <a href="{% url 'documents:document_list' %}"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+            ← Zurück zur Dokumentenliste
+        </a>
+    </div>
+
+</div>
+
+<style>
+    /* Helper für MPTT Level-Einrückung */
+    [style*="padding-left"] {
+        position: relative;
+    }
+</style>
+{% endblock %}

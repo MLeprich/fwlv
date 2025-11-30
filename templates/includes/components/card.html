@@ -1,0 +1,60 @@
+{% comment %}
+Wiederverwendbare Card-Component
+Usage:
+    {% include 'includes/components/card.html' with title="Titel" subtitle="Untertitel" %}
+        Content hier
+    {% include 'includes/components/card.html' %}
+
+Params:
+    - title (optional): Card-Titel
+    - subtitle (optional): Card-Untertitel
+    - icon (optional): Icon-Emoji oder SVG
+    - badge (optional): Badge-Text
+    - badge_color (optional): Badge-Farbe (success, warning, danger, info)
+    - actions (optional): Action-Buttons (HTML)
+{% endcomment %}
+
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+    {% if title or actions %}
+    <!-- Card Header -->
+    <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            {% if icon %}
+            <span class="text-2xl">{{ icon }}</span>
+            {% endif %}
+
+            <div>
+                {% if title %}
+                <h3 class="text-lg font-semibold text-gray-900">{{ title }}</h3>
+                {% endif %}
+
+                {% if subtitle %}
+                <p class="text-sm text-gray-500 mt-0.5">{{ subtitle }}</p>
+                {% endif %}
+            </div>
+
+            {% if badge %}
+            <span class="px-2 py-1 text-xs font-medium rounded-full
+                {% if badge_color == 'success' %}bg-green-100 text-green-800
+                {% elif badge_color == 'warning' %}bg-yellow-100 text-yellow-800
+                {% elif badge_color == 'danger' %}bg-red-100 text-red-800
+                {% elif badge_color == 'info' %}bg-blue-100 text-blue-800
+                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                {{ badge }}
+            </span>
+            {% endif %}
+        </div>
+
+        {% if actions %}
+        <div class="flex items-center gap-2">
+            {{ actions }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Card Body -->
+    <div class="p-5">
+        {{ content|default:"" }}
+    </div>
+</div>

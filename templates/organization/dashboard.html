@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Organisation - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Organisation</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Organisationsstruktur</h1>
+        <p class="mt-1 text-sm text-gray-500">Verwaltung der Organisationseinheiten</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Abteilungen -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <span class="text-3xl mr-3">🏢</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Abteilungen</h2>
+                        <p class="text-sm text-gray-500">{{ departments_count }} aktiv</p>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <a href="{% url 'organization:department_list' %}" class="block w-full px-4 py-2 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                    Abteilungen verwalten
+                </a>
+                <a href="{% url 'organization:department_create' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                    + Neue Abteilung
+                </a>
+            </div>
+        </div>
+
+        <!-- FF-Einheiten -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <span class="text-3xl mr-3">🚒</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">FF-Einheiten</h2>
+                        <p class="text-sm text-gray-500">{{ volunteer_units_count }} aktiv</p>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <a href="{% url 'organization:volunteer_unit_list' %}" class="block w-full px-4 py-2 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                    FF-Einheiten verwalten
+                </a>
+                <a href="{% url 'organization:volunteer_unit_create' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                    + Neue FF-Einheit
+                </a>
+            </div>
+        </div>
+
+        <!-- Wachmannschaften -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <span class="text-3xl mr-3">👨‍🚒</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Wachmannschaften</h2>
+                        <p class="text-sm text-gray-500">{{ watch_crews_count }} aktiv</p>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <a href="{% url 'organization:watch_crew_list' %}" class="block w-full px-4 py-2 bg-red-600 text-white text-center rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                    Wachmannschaften verwalten
+                </a>
+                <a href="{% url 'organization:watch_crew_create' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                    + Neue Wachmannschaft
+                </a>
+            </div>
+        </div>
+
+        <!-- Funktionen -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <span class="text-3xl mr-3">⚙️</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Funktionen</h2>
+                        <p class="text-sm text-gray-500">{{ functions_count }} aktiv</p>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <a href="{% url 'organization:function_list' %}" class="block w-full px-4 py-2 bg-purple-600 text-white text-center rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
+                    Funktionen verwalten
+                </a>
+                <a href="{% url 'organization:function_create' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                    + Neue Funktion
+                </a>
+            </div>
+        </div>
+
+        <!-- Qualifikations-Vorlagen -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <span class="text-3xl mr-3">🎓</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Qualifikationen</h2>
+                        <p class="text-sm text-gray-500">{{ qualification_templates_count }} Vorlagen</p>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <a href="{% url 'organization:qualification_template_list' %}" class="block w-full px-4 py-2 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                    Vorlagen verwalten
+                </a>
+                <a href="{% url 'organization:qualification_template_create' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                    + Neue Vorlage
+                </a>
+            </div>
+        </div>
+
+
+        <!-- Pflichtstunden -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <span class="text-3xl mr-3">⏱️</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Pflichtstunden</h2>
+                        <p class="text-sm text-gray-500">{{ duty_hours_requirements_count }} Anforderungen</p>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <a href="{% url 'organization:duty_hours_requirement_list' %}" class="block w-full px-4 py-2 bg-orange-600 text-white text-center rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium">
+                    Anforderungen verwalten
+                </a>
+                <a href="{% url 'organization:duty_hours_requirement_create' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                    + Neue Anforderung
+                </a>
+            </div>
+        </div>
+
+        <!-- Lieferanten & Hersteller -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <span class="text-3xl mr-3">🏭</span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Lieferanten/Hersteller</h2>
+                        <p class="text-sm text-gray-500">{{ suppliers_count }} aktiv</p>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <a href="{% url 'organization:supplier_list' %}" class="block w-full px-4 py-2 bg-teal-600 text-white text-center rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium">
+                    Lieferanten verwalten
+                </a>
+                <a href="{% url 'organization:supplier_create' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                    + Neuer Lieferant
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Boxen -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+            <div class="flex">
+                <span class="text-blue-600 text-xl mr-3">ℹ️</span>
+                <div>
+                    <h3 class="text-sm font-medium text-blue-900">Abteilungen</h3>
+                    <p class="mt-1 text-sm text-blue-700">
+                        Organisatorische Einheiten wie Einsatzabteilung, Technik, Verwaltung.
+                        Diese werden in den Personalstammdaten referenziert.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
+            <div class="flex">
+                <span class="text-green-600 text-xl mr-3">ℹ️</span>
+                <div>
+                    <h3 class="text-sm font-medium text-green-900">FF-Einheiten</h3>
+                    <p class="mt-1 text-sm text-green-700">
+                        Einheiten der Freiwilligen Feuerwehr wie Löschzüge und Löschgruppen.
+                        Diese können Standorten zugeordnet werden.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+            <div class="flex">
+                <span class="text-red-600 text-xl mr-3">ℹ️</span>
+                <div>
+                    <h3 class="text-sm font-medium text-red-900">Wachmannschaften</h3>
+                    <p class="mt-1 text-sm text-red-700">
+                        Schichtmannschaften der Berufsfeuerwehr (A-Schicht, B-Schicht, etc.)
+                        pro Wachenstandort.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-purple-50 border-l-4 border-purple-400 p-4 rounded-r-lg">
+            <div class="flex">
+                <span class="text-purple-600 text-xl mr-3">ℹ️</span>
+                <div>
+                    <h3 class="text-sm font-medium text-purple-900">Funktionen</h3>
+                    <p class="mt-1 text-sm text-purple-700">
+                        Feuerwehr-Funktionen wie Gruppenführer, Taucher, Höhenretter, Atemschutzgeräteträger.
+                        Personal kann mehrere Funktionen innehaben.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
+            <div class="flex">
+                <span class="text-green-600 text-xl mr-3">ℹ️</span>
+                <div>
+                    <h3 class="text-sm font-medium text-green-900">Qualifikations-Vorlagen</h3>
+                    <p class="mt-1 text-sm text-green-700">
+                        Vorlagen für Lehrgänge, Zertifikate und Qualifikationen (z.B. AGT, Truppmannausbildung).
+                        Können bei Personaldaten wiederverwendet werden.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-lg">
+            <div class="flex">
+                <span class="text-orange-600 text-xl mr-3">ℹ️</span>
+                <div>
+                    <h3 class="text-sm font-medium text-orange-900">Pflichtstunden-Anforderungen</h3>
+                    <p class="mt-1 text-sm text-orange-700">
+                        Definieren Sie Pflichtstunden-Anforderungen pro Kategorie und Jahr
+                        (z.B. Tauchen: 20h/Jahr, Höhenrettung: 30h/Jahr).
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+            <div class="flex">
+                <span class="text-yellow-600 text-xl mr-3">⚠️</span>
+                <div>
+                    <h3 class="text-sm font-medium text-yellow-900">Hinweis</h3>
+                    <p class="mt-1 text-sm text-yellow-700">
+                        Diese Organisationseinheiten werden in der Personalverwaltung zur
+                        Strukturierung und Zuordnung verwendet.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

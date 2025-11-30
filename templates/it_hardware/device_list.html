@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Geräte-Instanzen - IT-Hardware - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'it_hardware:dashboard' %}" class="text-gray-500 hover:text-gray-700">IT-Hardware</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Geräte-Instanzen</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6">
+    <!-- Context Actions Bar (Sticky) -->
+    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'it_hardware:device_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Neues Gerät
+                </a>
+                <a href="{% url 'it_hardware:master_list' %}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    📋 Stammdaten
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-6 mt-6">
+    <div class="flex gap-6">
+
+        <!-- Filter-Sidebar (20% / 250px) -->
+        <aside class="w-64 flex-shrink-0">
+            <div class="bg-white rounded-lg shadow p-6 sticky top-28">
+                <h3 class="text-sm font-bold text-gray-900 mb-4">Filter</h3>
+
+                <form method="get" class="space-y-6">
+                    <!-- Suche -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">🔍 Suche</label>
+                        <input
+                            type="text"
+                            name="search"
+                            value="{{ request.GET.search }}"
+                            placeholder="Asset-Tag, Serien-Nr..."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <!-- Stammdaten -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Stammdaten</label>
+                        <select name="master" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">Alle Geräte</option>
+                            {% for master in masters %}
+                            <option value="{{ master.pk }}" {% if request.GET.master == master.pk|stringformat:"s" %}selected{% endif %}>
+                                {{ master.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Lagerort -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Lagerort</label>
+                        <select name="location" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">Alle Orte</option>
+                            {% for location in locations %}
+                            <option value="{{ location.pk }}" {% if request.GET.location == location.pk|stringformat:"s" %}selected{% endif %}>
+                                {{ location.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Zustand -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Zustand</label>
+                        <select name="condition" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">Alle Zustände</option>
+                            <option value="new" {% if request.GET.condition == 'new' %}selected{% endif %}>Neu</option>
+                            <option value="good" {% if request.GET.condition == 'good' %}selected{% endif %}>Gut</option>
+                            <option value="fair" {% if request.GET.condition == 'fair' %}selected{% endif %}>Befriedigend</option>
+                            <option value="poor" {% if request.GET.condition == 'poor' %}selected{% endif %}>Schlecht</option>
+                            <option value="defective" {% if request.GET.condition == 'defective' %}selected{% endif %}>Defekt</option>
+                        </select>
+                    </div>
+
+                    <!-- Einsatzbereit -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Status</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="radio" name="operational" value="" {% if not request.GET.operational %}checked{% endif %} class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-700">Alle</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="operational" value="1" {% if request.GET.operational == '1' %}checked{% endif %} class="rounded-full border-gray-300 text-green-600 focus:ring-green-500">
+                                <span class="ml-2 text-sm text-gray-700">Einsatzbereit</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="operational" value="0" {% if request.GET.operational == '0' %}checked{% endif %} class="rounded-full border-gray-300 text-red-600 focus:ring-red-500">
+                                <span class="ml-2 text-sm text-gray-700">Nicht einsatzbereit</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Wartung fällig -->
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="maintenance_due" value="1" {% if request.GET.maintenance_due %}checked{% endif %} class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                            <span class="ml-2 text-sm text-gray-700">⚠️ Wartung fällig</span>
+                        </label>
+                    </div>
+
+                    <!-- Prüfung fällig -->
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="inspection_due" value="1" {% if request.GET.inspection_due %}checked{% endif %} class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                            <span class="ml-2 text-sm text-gray-700">⚠️ Prüfung fällig</span>
+                        </label>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="pt-4 border-t border-gray-200 space-y-2">
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                            Filter anwenden
+                        </button>
+                        <a href="{% url 'it_hardware:device_list' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                            Zurücksetzen
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Content Area (80%) -->
+        <main class="flex-1 min-w-0">
+
+            <!-- Toolbar über Tabelle -->
+            <div class="bg-white rounded-t-lg border border-gray-200 px-6 py-3 flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    <span class="font-semibold text-gray-900">{{ devices|length }}</span> Geräte gefunden
+                </div>
+                <div class="flex items-center gap-3">
+                    <select class="px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
+                        <option>25 pro Seite</option>
+                        <option>50 pro Seite</option>
+                        <option>100 pro Seite</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabelle -->
+            <div class="bg-white border-x border-b border-gray-200 rounded-b-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left">
+                                    <input type="checkbox" id="select-all" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Asset-Tag
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Name (Stammdaten)
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Seriennummer
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Lagerort
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Zustand
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Aktionen
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for device in devices %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <input type="checkbox" class="device-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="{{ device.pk }}">
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-mono font-semibold text-gray-900">{{ device.asset_tag }}</div>
+                                </td>
+                                <td class="px-4 py-4">
+                                    <a href="{% url 'it_hardware:master_detail' device.master.pk %}" class="text-sm text-gray-900 hover:text-blue-600">
+                                        {{ device.master.name }}
+                                    </a>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-mono text-gray-900">{{ device.serial_number|default:"-" }}</div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {% if device.location %}{{ device.location.name }}{% else %}-{% endif %}
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    {% if device.condition == 'new' %}
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Neu</span>
+                                    {% elif device.condition == 'good' %}
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Gut</span>
+                                    {% elif device.condition == 'fair' %}
+                                    <span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">Befriedigend</span>
+                                    {% elif device.condition == 'poor' %}
+                                    <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Schlecht</span>
+                                    {% elif device.condition == 'defective' %}
+                                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Defekt</span>
+                                    {% else %}
+                                    <span class="text-gray-400">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="space-y-1">
+                                        {% if device.is_operational %}
+                                        <span class="block px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold text-center">✅ Einsatzbereit</span>
+                                        {% else %}
+                                        <span class="block px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold text-center">❌ Nicht einsatzbereit</span>
+                                        {% endif %}
+                                        {% if device.is_maintenance_due %}
+                                        <span class="block px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold text-center">⚠️ Wartung fällig</span>
+                                        {% endif %}
+                                        {% if device.is_inspection_due %}
+                                        <span class="block px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold text-center">⚠️ Prüfung fällig</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <a href="{% url 'it_hardware:device_detail' device.pk %}" class="text-blue-600 hover:text-blue-800" title="Details ansehen">
+                                            👁️
+                                        </a>
+                                        <a href="{% url 'it_hardware:device_edit' device.pk %}" class="text-gray-600 hover:text-gray-800" title="Bearbeiten">
+                                            ✏️
+                                        </a>
+                                        <a href="{% url 'it_hardware:device_qrcode' device.pk %}" target="_blank" class="text-gray-600 hover:text-gray-800" title="QR-Code">
+                                            📱
+                                        </a>
+                                        <a href="{% url 'it_hardware:device_barcode' device.pk %}" target="_blank" class="text-gray-600 hover:text-gray-800" title="Barcode">
+                                            🏷️
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="px-4 py-12 text-center text-gray-500">
+                                    <div class="text-4xl mb-4">🔧</div>
+                                    <p class="text-lg font-medium text-gray-900 mb-2">Keine Geräte gefunden</p>
+                                    <p class="text-sm">Versuchen Sie, Ihre Filter anzupassen oder ein neues Gerät anzulegen.</p>
+                                    <a href="{% url 'it_hardware:device_create' %}" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                                        ➕ Neues Gerät anlegen
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                    </div>
+                    <div class="flex gap-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            ◀ Zurück
+                        </a>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                        <a href="?page={{ num }}" class="px-3 py-1 border {% if num == page_obj.number %}bg-blue-600 text-white border-blue-600{% else %}border-gray-300 hover:bg-gray-100{% endif %} rounded text-sm">
+                            {{ num }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            Weiter ▶
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+    </div>
+</div>
+
+<script>
+// Select all checkboxes
+document.getElementById('select-all').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.device-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

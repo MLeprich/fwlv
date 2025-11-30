@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bewegungen | FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'it_hardware:dashboard' %}" class="text-gray-500 hover:text-gray-700">IT-Hardware</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Bewegungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Bewegungen</h1>
+            <p class="mt-1 text-sm text-gray-600">
+                Zuweisungen, Wartungen und Software-Updates
+            </p>
+        </div>
+        <a href="{% url 'it_hardware:movement_create' %}"
+           class="inline-flex items-center px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-150">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Neue Bewegung
+        </a>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <input type="text"
+                       name="search"
+                       value="{{ request.GET.search }}"
+                       placeholder="Suche nach Gerät, Asset-Tag..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <div>
+                <select name="movement_type"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500">
+                    <option value="">Alle Bewegungsarten</option>
+                    <option value="assignment" {% if request.GET.movement_type == 'assignment' %}selected{% endif %}>Zuweisung</option>
+                    <option value="return" {% if request.GET.movement_type == 'return' %}selected{% endif %}>Rücknahme</option>
+                    <option value="transfer" {% if request.GET.movement_type == 'transfer' %}selected{% endif %}>Umlagerung</option>
+                    <option value="maintenance" {% if request.GET.movement_type == 'maintenance' %}selected{% endif %}>Wartung</option>
+                    <option value="software_update" {% if request.GET.movement_type == 'software_update' %}selected{% endif %}>Software-Update</option>
+                    <option value="configuration" {% if request.GET.movement_type == 'configuration' %}selected{% endif %}>Konfiguration</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit"
+                        class="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors duration-150">
+                    Filtern
+                </button>
+                <a href="{% url 'it_hardware:movement_list' %}"
+                   class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors duration-150">
+                    Zurücksetzen
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bewegungs-Liste -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        {% if movements %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gerät</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bewegungsart</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Von → Nach</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Erstellt von</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for movement in movements %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm text-gray-900">{{ movement.created_at|date:"d.m.Y H:i" }}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-gray-900">{{ movement.item.name }}</div>
+                        <div class="text-sm text-gray-500">{{ movement.item.asset_tag|default:"-" }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800">
+                            {{ movement.get_movement_type_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if movement.assigned_to %}
+                            <div class="text-sm text-gray-900">
+                                {% if movement.from_location %}{{ movement.from_location.name }}{% else %}-{% endif %}
+                                →
+                                {% if movement.assigned_to %}{{ movement.assigned_to.get_full_name }}{% elif movement.to_location %}{{ movement.to_location.name }}{% else %}-{% endif %}
+                            </div>
+                        {% elif movement.from_location or movement.to_location %}
+                            <div class="text-sm text-gray-900">
+                                {{ movement.from_location.name|default:"-" }} → {{ movement.to_location.name|default:"-" }}
+                            </div>
+                        {% else %}
+                            <span class="text-sm text-gray-500">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm text-gray-900">{{ movement.created_by.get_full_name }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{% url 'it_hardware:movement_detail' movement.pk %}"
+                           class="text-cyan-600 hover:text-cyan-900">
+                            Details
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div class="flex-1 flex justify-between sm:hidden">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Zurück</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Weiter</a>
+                {% endif %}
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Zeige <span class="font-medium">{{ page_obj.start_index }}</span> bis <span class="font-medium">{{ page_obj.end_index }}</span> von <span class="font-medium">{{ paginator.count }}</span> Bewegungen
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">Zurück</a>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">Weiter</a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Keine Bewegungen gefunden</h3>
+            <p class="mt-1 text-sm text-gray-500">Erfassen Sie die erste Bewegung.</p>
+            <div class="mt-6">
+                <a href="{% url 'it_hardware:movement_create' %}"
+                   class="inline-flex items-center px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-150">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Bewegung erfassen
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

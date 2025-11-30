@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if form.instance.pk %}Dokument bearbeiten{% else %}Dokument hochladen{% endif %} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'documents:document_list' %}" class="text-gray-500 hover:text-gray-700">Dokumente</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if form.instance.pk %}Bearbeiten{% else %}Hochladen{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center gap-3">
+            <span class="text-5xl">{% if form.instance.pk %}✏️{% else %}📤{% endif %}</span>
+            <div>
+                <h1 class="text-3xl font-bold">{% if form.instance.pk %}Dokument bearbeiten{% else %}Dokument hochladen{% endif %}</h1>
+                <p class="text-blue-100 text-lg mt-1">
+                    {% if form.instance.pk %}Metadaten aktualisieren{% else %}Neues Dokument ins System hochladen{% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Basis-Informationen -->
+            <div class="mb-6 pb-6 border-b border-gray-200">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Basis-Informationen</h3>
+                <div class="space-y-4">
+                    {{ form.title|as_crispy_field }}
+                    {{ form.document_number|as_crispy_field }}
+                    {{ form.category|as_crispy_field }}
+                    {{ form.description|as_crispy_field }}
+                    {{ form.tags|as_crispy_field }}
+                </div>
+            </div>
+
+            <!-- Datei Upload -->
+            {% if not form.instance.pk %}
+            <div class="mb-6 pb-6 border-b border-gray-200">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Datei hochladen</h3>
+                <div class="space-y-4">
+                    {{ form.file|as_crispy_field }}
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-blue-800">
+                            <strong>Erlaubte Dateitypen:</strong> PDF, Word, Excel, Bilder (JPG, PNG), Text, CSV, ZIP<br>
+                            <strong>Maximale Dateigröße:</strong> 50 MB<br>
+                            <strong>OCR-Texterkennung:</strong> Bei PDFs und Bildern wird automatisch Text extrahiert
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Gültigkeit -->
+            <div class="mb-6 pb-6 border-b border-gray-200">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Gültigkeit</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {{ form.valid_from|as_crispy_field }}
+                    {{ form.valid_until|as_crispy_field }}
+                </div>
+            </div>
+
+            <!-- Weitere Informationen -->
+            <div class="mb-6 pb-6 border-b border-gray-200">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Weitere Informationen</h3>
+                <div class="space-y-4">
+                    {{ form.author|as_crispy_field }}
+                    {{ form.review_date|as_crispy_field }}
+                    {% if form.instance.pk %}
+                    {{ form.status|as_crispy_field }}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex items-center gap-3 pt-6">
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                    💾 {% if form.instance.pk %}Speichern{% else %}Hochladen{% endif %}
+                </button>
+                <a href="{% if form.instance.pk %}{% url 'documents:document_detail' form.instance.pk %}{% else %}{% url 'documents:document_list' %}{% endif %}"
+                   class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Abbrechen
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Hinweise -->
+    {% if not form.instance.pk %}
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div>
+                <h3 class="font-bold text-blue-900 mb-2">Hinweise zum Dokument-Upload</h3>
+                <ul class="text-sm text-blue-800 space-y-1">
+                    <li>• Nach dem Upload wird das Dokument automatisch auf OCR-Text geprüft</li>
+                    <li>• OCR-Text macht Dokumente durchsuchbar</li>
+                    <li>• Sie können später weitere Versionen des Dokuments hochladen</li>
+                    <li>• Ablaufende Dokumente werden automatisch erkannt</li>
+                    <li>• Prüfungszyklen können konfiguriert werden</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Flatpickr for date fields -->
+<link rel="stylesheet" href="{% static 'vendor/flatpickr/css/flatpickr.min.css' %}">
+<script src="{% static 'vendor/flatpickr/js/flatpickr.min.js' %}"></script>
+<script src="{% static 'vendor/flatpickr/js/de.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    dateInputs.forEach(input => {
+        flatpickr(input, {
+            locale: 'de',
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd.m.Y',
+        });
+    });
+});
+</script>
+{% endblock %}

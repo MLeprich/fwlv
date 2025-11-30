@@ -1,0 +1,170 @@
+<!-- Benachrichtigungen Section -->
+<div x-show="activeSection === 'notifications'" x-cloak class="p-6">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">Benachrichtigungen</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="section" value="notifications">
+
+        <!-- E-Mail-Benachrichtigungen -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                E-Mail-Benachrichtigungen
+            </h3>
+            <div class="space-y-4">
+                <div class="flex items-start">
+                    {{ notification_form.email_notifications }}
+                    <div class="ml-3">
+                        <label for="{{ notification_form.email_notifications.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ notification_form.email_notifications.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Erhalten Sie E-Mails zu wichtigen System-Ereignissen</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    {{ notification_form.email_critical_alerts }}
+                    <div class="ml-3">
+                        <label for="{{ notification_form.email_critical_alerts.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ notification_form.email_critical_alerts.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Sofortige Benachrichtigung bei kritischen Ereignissen</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    {{ notification_form.email_weekly_summary }}
+                    <div class="ml-3">
+                        <label for="{{ notification_form.email_weekly_summary.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ notification_form.email_weekly_summary.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Wöchentliche Übersicht aller Aktivitäten</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Push-Benachrichtigungen -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                Push-Benachrichtigungen
+            </h3>
+            <div class="space-y-4">
+                <div class="flex items-start">
+                    {{ notification_form.push_enabled }}
+                    <div class="ml-3">
+                        <label for="{{ notification_form.push_enabled.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            Push-Benachrichtigungen aktivieren
+                        </label>
+                        <p class="text-sm text-gray-500">Browser-Benachrichtigungen für wichtige Ereignisse</p>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                        </svg>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-700">
+                                Ihr Browser muss Push-Benachrichtigungen erlauben. Klicken Sie auf "Erlauben" wenn Ihr Browser danach fragt.
+                            </p>
+                            <button type="button" class="mt-2 text-sm text-blue-700 font-medium hover:text-blue-800">
+                                Browser-Berechtigung anfordern →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benachrichtigungs-Kanäle -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                Benachrichtigungs-Kategorien
+            </h3>
+            <p class="text-sm text-gray-500 mb-4">Wählen Sie aus, zu welchen Ereignissen Sie benachrichtigt werden möchten.</p>
+
+            <div class="space-y-3">
+                <div class="flex items-start">
+                    {{ notification_form.notify_critical_stock }}
+                    <div class="ml-3">
+                        <label for="{{ notification_form.notify_critical_stock.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ notification_form.notify_critical_stock.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Benachrichtigung bei Unterschreitung von Mindestbeständen</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    {{ notification_form.notify_expiring_items }}
+                    <div class="ml-3">
+                        <label for="{{ notification_form.notify_expiring_items.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ notification_form.notify_expiring_items.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Warnung bei Medikamenten/Produkten die bald ablaufen</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    {{ notification_form.notify_upcoming_inspections }}
+                    <div class="ml-3">
+                        <label for="{{ notification_form.notify_upcoming_inspections.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ notification_form.notify_upcoming_inspections.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Erinnerung an fällige Geräteprüfungen und Wartungen</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    {{ notification_form.notify_orders }}
+                    <div class="ml-3">
+                        <label for="{{ notification_form.notify_orders.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ notification_form.notify_orders.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Updates zu Bestellungen und Wareneingängen</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    {{ notification_form.notify_vehicle_handover }}
+                    <div class="ml-3">
+                        <label for="{{ notification_form.notify_vehicle_handover.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ notification_form.notify_vehicle_handover.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Benachrichtigung bei Fahrzeugübergaben</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Email -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                E-Mail Konfiguration testen
+            </h3>
+            <p class="text-sm text-gray-500 mb-4">
+                Senden Sie eine Test-E-Mail an <strong>{{ user.email }}</strong>, um zu überprüfen, ob Ihre E-Mail-Konfiguration korrekt funktioniert.
+            </p>
+            <form method="post" action="{% url 'core:send_test_email' %}" style="display: inline;">
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                    📧 Test-E-Mail senden
+                </button>
+            </form>
+        </div>
+
+        <!-- Submit -->
+        <div class="flex justify-end pt-4 border-t border-gray-200">
+            <button
+                type="submit"
+                class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+            >
+                Änderungen speichern
+            </button>
+        </div>
+    </form>
+</div>

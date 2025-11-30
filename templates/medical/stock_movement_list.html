@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lagerbewegungen - Medical{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Lagerbewegungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">📦 Lagerbewegungen</h1>
+                    <p class="mt-1 text-sm text-gray-600">Alle Ein- und Ausgänge, Umlagerungen und Entsorgungen</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'medical:stock_movement_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                        ➕ Neue Lagerbewegung
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="p-6 border-b border-gray-200 bg-gray-50">
+            <form method="get" class="flex items-center gap-4">
+                <div class="flex-1">
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request.GET.search }}"
+                        placeholder="Suche nach Artikel, Referenz, Notizen..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                </div>
+                <select name="type" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle Bewegungsarten</option>
+                    <option value="incoming" {% if type_filter == 'incoming' %}selected{% endif %}>📥 Wareneingang</option>
+                    <option value="outgoing" {% if type_filter == 'outgoing' %}selected{% endif %}>📤 Warenausgang</option>
+                    <option value="transfer" {% if type_filter == 'transfer' %}selected{% endif %}>🔄 Umlagerung</option>
+                    <option value="disposal" {% if type_filter == 'disposal' %}selected{% endif %}>🗑️ Entsorgung</option>
+                    <option value="inventory" {% if type_filter == 'inventory' %}selected{% endif %}>📊 Inventur</option>
+                </select>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    🔍 Filtern
+                </button>
+                {% if request.GET.search or request.GET.type %}
+                <a href="{% url 'medical:stock_movements' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm">
+                    ✖ Zurücksetzen
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Movements List -->
+        <div class="overflow-x-auto">
+            {% if movements %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artikel</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Menge</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Von → Nach</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referenz</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Erstellt von</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for movement in movements %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ movement.movement_date|date:"d.m.Y H:i" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if movement.movement_type == 'incoming' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">📥 Eingang</span>
+                            {% elif movement.movement_type == 'outgoing' %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">📤 Ausgang</span>
+                            {% elif movement.movement_type == 'transfer' %}
+                            <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-semibold">🔄 Umlagerung</span>
+                            {% elif movement.movement_type == 'disposal' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">🗑️ Entsorgung</span>
+                            {% elif movement.movement_type == 'inventory' %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">📊 Inventur</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">{{ movement.get_movement_type_display }}</span>
+                            {% endif %}
+                            {% if movement.item.is_btm %}
+                            <span class="ml-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">☢️ BTM</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <a href="{% url 'medical:item_detail' movement.item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                {{ movement.item.name }}
+                            </a>
+                            {% if movement.batch_number %}
+                            <p class="text-xs text-gray-500 font-mono">Charge: {{ movement.batch_number }}</p>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                            {% if movement.movement_type == 'outgoing' or movement.movement_type == 'disposal' %}
+                            <span class="text-red-600">-{{ movement.quantity }}</span>
+                            {% else %}
+                            <span class="text-green-600">+{{ movement.quantity }}</span>
+                            {% endif %}
+                            {{ movement.unit }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {% if movement.from_location %}
+                            <span class="text-gray-900">{{ movement.from_location.name }}</span>
+                            {% endif %}
+                            {% if movement.from_location and movement.to_location %}
+                            <span class="mx-1">→</span>
+                            {% endif %}
+                            {% if movement.to_location %}
+                            <span class="text-gray-900">{{ movement.to_location.name }}</span>
+                            {% endif %}
+                            {% if not movement.from_location and not movement.to_location %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {% if movement.reference_number %}
+                            <span class="font-mono">{{ movement.reference_number }}</span>
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {{ movement.created_by.get_full_name|default:movement.created_by.username }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <a href="{% url 'medical:stock_movement_detail' movement.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                👁️ Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} Bewegungen)
+                    </div>
+                    <div class="flex gap-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            « Erste
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            ‹ Zurück
+                        </a>
+                        {% endif %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            Weiter ›
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            Letzte »
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">📦</div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Lagerbewegungen vorhanden</h3>
+                <p class="text-gray-600 mb-6">Erfassen Sie Ihre erste Lagerbewegung.</p>
+                <a href="{% url 'medical:quick_incoming' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    ➕ Erste Bewegung erfassen
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}

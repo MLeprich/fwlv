@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Anforderung löschen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'organization:dashboard' %}" class="text-gray-500 hover:text-gray-700">Organisation</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'organization:duty_hours_requirement_list' %}" class="text-gray-500 hover:text-gray-700">Pflichtstunden</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Löschen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6">
+            <!-- Warning Icon -->
+            <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
+                <span class="text-4xl">⚠️</span>
+            </div>
+
+            <!-- Title -->
+            <h1 class="text-2xl font-bold text-gray-900 text-center mb-2">
+                Pflichtstunden-Anforderung löschen?
+            </h1>
+
+            <p class="text-center text-gray-600 mb-6">
+                Möchten Sie die Anforderung <strong>"{{ object }}"</strong> wirklich löschen?
+            </p>
+
+            <!-- Warning Message -->
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                <div class="flex">
+                    <span class="text-yellow-600 text-xl mr-3">ℹ️</span>
+                    <div>
+                        <h3 class="text-sm font-medium text-yellow-900">Achtung</h3>
+                        <p class="mt-1 text-sm text-yellow-700">
+                            Diese Aktion kann nicht rückgängig gemacht werden. Bereits erfasste Pflichtstunden-Einträge bleiben erhalten.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="flex items-center justify-center gap-3">
+                    <a href="{% url 'organization:duty_hours_requirement_list' %}" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+                        Abbrechen
+                    </a>
+                    <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+                        Ja, löschen
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

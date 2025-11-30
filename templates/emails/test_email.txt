@@ -1,0 +1,18 @@
+TEST-EMAIL - FLVS
+================================================================================
+
+Glückwunsch! Ihre E-Mail-Konfiguration funktioniert einwandfrei.
+
+Diese Test-Email wurde von Ihrem FLVS-System gesendet, um die E-Mail-Konfiguration zu überprüfen.
+
+Konfigurationsdetails:
+- Empfänger: {{ user.email }}
+- Benutzer: {{ user.get_full_name }} ({{ user.username }})
+- Zeitpunkt: {{ current_time|date:"d.m.Y H:i:s" }} Uhr
+
+Hinweis: Sie können die Benachrichtigungseinstellungen jederzeit in Ihrem Benutzerprofil anpassen.
+
+Einstellungen: https://lager.resqware.de/settings/
+
+================================================================================
+Feuerwehr Lagerverwaltungssystem (FLVS)

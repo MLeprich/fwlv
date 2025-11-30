@@ -1,0 +1,89 @@
+<div id="templates-list" class="p-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for template in templates %}
+        <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex-1">
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">{{ template.name }}</h3>
+                    <span class="inline-block px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">
+                        {{ template.get_qualification_type_display }}
+                    </span>
+                </div>
+                <div class="flex items-center gap-1">
+                    {% if template.is_active %}
+                    <span class="text-green-500 text-xl" title="Aktiv">●</span>
+                    {% else %}
+                    <span class="text-gray-300 text-xl" title="Inaktiv">●</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if template.description %}
+            <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ template.description }}</p>
+            {% endif %}
+
+            <div class="space-y-2 mb-4 text-sm">
+                {% if template.default_validity_days %}
+                <div class="flex items-center text-gray-700">
+                    <span class="mr-2">⏱</span>
+                    <span>Gültig: {{ template.default_validity_days }} Tage</span>
+                </div>
+                {% else %}
+                <div class="flex items-center text-gray-500">
+                    <span class="mr-2">⏱</span>
+                    <span>Unbefristet gültig</span>
+                </div>
+                {% endif %}
+
+                {% if template.default_issuing_authority %}
+                <div class="flex items-center text-gray-700">
+                    <span class="mr-2">🏛</span>
+                    <span>{{ template.default_issuing_authority }}</span>
+                </div>
+                {% endif %}
+
+                <div class="flex items-center text-gray-600">
+                    <span class="mr-2">📊</span>
+                    <span>{{ template.qualifications.count }} mal verwendet</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-3 border-t border-gray-100">
+                <button
+                    hx-get="{% url 'personnel:template_edit' template.pk %}"
+                    hx-target="#template-modal"
+                    hx-swap="innerHTML"
+                    class="flex-1 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                >
+                    Bearbeiten
+                </button>
+                <button
+                    hx-delete="{% url 'personnel:template_delete' template.pk %}"
+                    hx-confirm="Möchten Sie diese Vorlage wirklich löschen? Bereits erfasste Qualifikationen bleiben erhalten."
+                    hx-target="#templates-list"
+                    hx-swap="outerHTML"
+                    class="px-3 py-2 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                >
+                    Löschen
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12">
+            <div class="text-6xl mb-4">📝</div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Noch keine Vorlagen vorhanden</h3>
+            <p class="text-gray-600 mb-6">
+                Erstellen Sie Vorlagen für häufig genutzte Qualifikationen, um Zeit zu sparen.
+            </p>
+            <button
+                hx-get="{% url 'personnel:template_create' %}"
+                hx-target="#template-modal"
+                hx-swap="innerHTML"
+                class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+            >
+                <span class="mr-2">+</span> Erste Vorlage erstellen
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</div>

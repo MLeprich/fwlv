@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Ausrüstung bearbeiten{% else %}Neue Ausrüstung{% endif %} - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:item_list' %}" class="text-gray-500 hover:text-gray-700">Ausrüstung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neue Ausrüstung{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">
+            {% if object %}
+                Ausrüstung bearbeiten: {{ object.name }}
+            {% else %}
+                Neue Tauchausrüstung anlegen
+            {% endif %}
+        </h1>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600">❌</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🤿 Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.name.label }} *</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.item_type.label }} *</label>
+                        {{ form.item_type }}
+                        {% if form.item_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.item_type.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.item_number.label }} *</label>
+                        {{ form.item_number }}
+                        {% if form.item_number.errors %}<p class="mt-1 text-sm text-red-600">{{ form.item_number.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Eindeutige Artikelnummer</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.category.label }}</label>
+                        {{ form.category }}
+                        {% if form.category.errors %}<p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.unit.label }}</label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}<p class="mt-1 text-sm text-red-600">{{ form.unit.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Einheit für Bestandsverwaltung (z.B. Stück, Paar)</p>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}<p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hersteller & Seriennummer -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🏭 Hersteller & Identifikation</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.manufacturer.label }}</label>
+                        {{ form.manufacturer }}
+                        {% if form.manufacturer.errors %}<p class="mt-1 text-sm text-red-600">{{ form.manufacturer.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.manufacturer_part_number.label }}</label>
+                        {{ form.manufacturer_part_number }}
+                        {% if form.manufacturer_part_number.errors %}<p class="mt-1 text-sm text-red-600">{{ form.manufacturer_part_number.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.serial_number.label }}</label>
+                        {{ form.serial_number }}
+                        {% if form.serial_number.errors %}<p class="mt-1 text-sm text-red-600">{{ form.serial_number.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Eindeutige Seriennummer des Geräts</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.manufacturing_date.label }}</label>
+                        {{ form.manufacturing_date }}
+                        {% if form.manufacturing_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.manufacturing_date.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Wichtig für Alterungsberechnung</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tauchflaschen-spezifische Felder -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🧊 Tauchflaschen-Spezifikationen</h2>
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg mb-4">
+                    <div class="flex">
+                        <span class="text-blue-600">💡</span>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-800">
+                                <strong>Hinweis:</strong> Diese Felder sind nur für Tauchflaschen relevant.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.tank_type.label }}</label>
+                        {{ form.tank_type }}
+                        {% if form.tank_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.tank_type.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.volume_liters.label }}</label>
+                        {{ form.volume_liters }}
+                        {% if form.volume_liters.errors %}<p class="mt-1 text-sm text-red-600">{{ form.volume_liters.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Flaschenvolumen in Litern</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.working_pressure_bar.label }}</label>
+                        {{ form.working_pressure_bar }}
+                        {% if form.working_pressure_bar.errors %}<p class="mt-1 text-sm text-red-600">{{ form.working_pressure_bar.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Betriebsdruck in bar (z.B. 200, 232, 300)</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.test_pressure_bar.label }}</label>
+                        {{ form.test_pressure_bar }}
+                        {% if form.test_pressure_bar.errors %}<p class="mt-1 text-sm text-red-600">{{ form.test_pressure_bar.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Prüfdruck bei TÜV-Prüfung</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technische Spezifikationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">⚙️ Technische Spezifikationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.max_depth_m.label }}</label>
+                        {{ form.max_depth_m }}
+                        {% if form.max_depth_m.errors %}<p class="mt-1 text-sm text-red-600">{{ form.max_depth_m.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Maximale Einsatztiefe in Metern</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.weight_kg.label }}</label>
+                        {{ form.weight_kg }}
+                        {% if form.weight_kg.errors %}<p class="mt-1 text-sm text-red-600">{{ form.weight_kg.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Gewicht in Kilogramm</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.size.label }}</label>
+                        {{ form.size }}
+                        {% if form.size.errors %}<p class="mt-1 text-sm text-red-600">{{ form.size.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. S/M/L oder EU-Schuhgröße</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.material.label }}</label>
+                        {{ form.material }}
+                        {% if form.material.errors %}<p class="mt-1 text-sm text-red-600">{{ form.material.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. Neopren 5mm, Trilaminat</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bestandsverwaltung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📦 Bestandsverwaltung</h2>
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg mb-4">
+                    <div class="flex">
+                        <span class="text-blue-600">💡</span>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-800">
+                                <strong>Hinweis:</strong> Lagerort und Bestand werden über Lagerbewegungen (Wareneingang) verwaltet.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.min_quantity.label }}</label>
+                        {{ form.min_quantity }}
+                        {% if form.min_quantity.errors %}<p class="mt-1 text-sm text-red-600">{{ form.min_quantity.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">⚠️ Warnbestand - bei Unterschreitung erfolgt Warnung</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.service_interval_months.label }}</label>
+                        {{ form.service_interval_months }}
+                        {% if form.service_interval_months.errors %}<p class="mt-1 text-sm text-red-600">{{ form.service_interval_months.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Wartungsintervall (Standard: 12 Monate für Atemregler)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TÜV & Wartung Info -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔍 TÜV-Prüfung & Wartung</h2>
+                <div class="bg-purple-50 border-l-4 border-purple-400 p-4 rounded-r-lg">
+                    <div class="flex">
+                        <span class="text-purple-600">💡</span>
+                        <div class="ml-3">
+                            <p class="text-sm text-purple-800">
+                                <strong>Hinweis:</strong> TÜV-Prüfungen (Tauchflaschen: alle 2,5 Jahre) und Wartungen (Atemregler: jährlich) werden über Lagerbewegungen und Service-Logs dokumentiert.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dokumenten-Upload -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📄 Serviceanleitung / Dokumentation</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.service_manual.label }}</label>
+
+                        {% if object.service_manual %}
+                        <div class="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="flex items-center gap-2">
+                                <span class="text-green-600">📄</span>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-green-900">Aktuelles Dokument:</p>
+                                    <a href="{{ object.service_manual.url }}" target="_blank" class="text-sm text-green-700 hover:text-green-800 underline">
+                                        {{ object.service_manual.name }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {{ form.service_manual }}
+                        {% if form.service_manual.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.service_manual.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.service_manual.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.service_manual.help_text }}</p>
+                        {% endif %}
+
+                        <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-600">💡</span>
+                                <div class="text-xs text-blue-800">
+                                    <p class="font-semibold mb-1">Unterstützte Formate:</p>
+                                    <ul class="list-disc list-inside space-y-0.5">
+                                        <li>PDF-Dokumente (.pdf)</li>
+                                        <li>Bilder (.jpg, .jpeg, .png, .tiff, .bmp)</li>
+                                    </ul>
+                                    <p class="mt-2">
+                                        📌 <strong>OCR-Funktion:</strong> Hochgeladene Dokumente werden automatisch per OCR verarbeitet und der Text wird durchsuchbar gemacht.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notizen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📝 Notizen</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'diving:item_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    {% if object %}💾 Änderungen speichern{% else %}✅ Ausrüstung erstellen{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    input[type="text"], input[type="number"], input[type="date"], select, textarea {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+    }
+    input:focus, select:focus, textarea:focus {
+        outline: none;
+        ring: 2px;
+        ring-color: #3b82f6;
+    }
+    textarea {
+        min-height: 100px;
+        font-family: inherit;
+    }
+</style>
+{% endblock %}

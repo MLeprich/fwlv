@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}Monitor-Profile - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'info_monitors:dashboard_list' %}" class="text-gray-500 hover:text-gray-700">Info-Monitore</a></li>
+            <li class="text-gray-400">/</li>
+            <li><span class="text-gray-900 font-semibold">Profile</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">📁 Monitor-Profile</h1>
+                <p class="mt-2 text-gray-600">Verwalten Sie Ihre Dashboard-Profile</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'info_monitors:dashboard_list' %}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Zurück zu Dashboards
+                </a>
+                {% if perms.info_monitors.add_monitorprofile %}
+                <a href="{% url 'info_monitors:profile_create' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Neues Profil
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiken -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-100 rounded-lg">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">Profile gesamt</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ profiles.count }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-green-100 rounded-lg">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">Aktive Profile</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ profiles|length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-purple-100 rounded-lg">
+                    <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">Dashboards gesamt</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_dashboards }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for profile in profiles %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+            <!-- Profile Header -->
+            <div class="p-6 border-b border-gray-200"
+                 {% if profile.color %}style="background: linear-gradient(135deg, {{ profile.color }}15 0%, {{ profile.color }}05 100%);"{% endif %}>
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start gap-3 flex-1">
+                        <div class="text-4xl">{{ profile.icon|default:"📁" }}</div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-lg font-semibold text-gray-900 truncate">{{ profile.name }}</h3>
+                            {% if profile.description %}
+                            <p class="text-sm text-gray-600 mt-1 line-clamp-2">{{ profile.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 ml-2">
+                        {% if profile.is_default %}
+                        <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded" title="Standard-Profil">⭐</span>
+                        {% endif %}
+                        {% if profile.is_active %}
+                        <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded">Aktiv</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">Inaktiv</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Stats -->
+            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-2 text-gray-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                        </svg>
+                        <span>{{ profile.dashboards.count }} Dashboard{{ profile.dashboards.count|pluralize }}</span>
+                    </div>
+                    <div class="text-gray-500 text-xs">
+                        #{{ profile.display_order }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="p-4 flex gap-2">
+                <a href="{% url 'info_monitors:dashboard_list' %}?profile={{ profile.id }}" class="flex-1 inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                    </svg>
+                    Dashboards
+                </a>
+                {% if perms.info_monitors.change_monitorprofile %}
+                <a href="{% url 'info_monitors:profile_update' profile.pk %}" class="flex-1 inline-flex items-center justify-center px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Bearbeiten
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-3 text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <p class="mt-2 text-sm text-gray-500">Noch keine Profile vorhanden</p>
+            {% if perms.info_monitors.add_monitorprofile %}
+            <a href="{% url 'info_monitors:profile_create' %}" class="mt-4 inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+                Erstes Profil erstellen
+            </a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

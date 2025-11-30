@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Werkstatts-Stammdaten - Werkstatt - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'workshop:dashboard' %}" class="text-gray-500 hover:text-gray-700">Werkstatt</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Werkstatts-Stammdaten</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6">
+    <!-- Context Actions Bar (Sticky) -->
+    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'workshop:master_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Neue Werkstatts-Stammdaten
+                </a>
+                <a href="{% url 'workshop:tool_list' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                    💾 Werkzeug-Instanzen
+                </a>
+                <a href="{% url 'workshop:movement_list' %}" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                    🔄 Lagerbewegungen
+                </a>
+                <a href="{% url 'workshop:type_management' %}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-sm">
+                    🔧 Werkzeug-/Artikeltypen
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-6 mt-6">
+    <div class="flex gap-6">
+
+        <!-- Filter-Sidebar (20% / 250px) -->
+        <aside class="w-64 flex-shrink-0">
+            <div class="bg-white rounded-lg shadow p-6 sticky top-28">
+                <h3 class="text-sm font-bold text-gray-900 mb-4">Filter</h3>
+
+                <form method="get" class="space-y-6">
+                    <!-- Suche -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">🔍 Suche</label>
+                        <input
+                            type="text"
+                            name="search"
+                            value="{{ request.GET.search }}"
+                            placeholder="Name, Hersteller, Modell..."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <!-- Hardware-Typ -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Hardware-Typ</label>
+                        <select name="hardware_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">Alle Typen</option>
+                            <option value="laptop" {% if request.GET.hardware_type == 'laptop' %}selected{% endif %}>Laptop</option>
+                            <option value="desktop" {% if request.GET.hardware_type == 'desktop' %}selected{% endif %}>Desktop-PC</option>
+                            <option value="server" {% if request.GET.hardware_type == 'server' %}selected{% endif %}>Server</option>
+                            <option value="tablet" {% if request.GET.hardware_type == 'tablet' %}selected{% endif %}>Tablet</option>
+                            <option value="smartphone" {% if request.GET.hardware_type == 'smartphone' %}selected{% endif %}>Smartphone</option>
+                            <option value="monitor" {% if request.GET.hardware_type == 'monitor' %}selected{% endif %}>Monitor</option>
+                            <option value="printer" {% if request.GET.hardware_type == 'printer' %}selected{% endif %}>Drucker</option>
+                            <option value="scanner" {% if request.GET.hardware_type == 'scanner' %}selected{% endif %}>Scanner</option>
+                            <option value="network" {% if request.GET.hardware_type == 'network' %}selected{% endif %}>Netzwerk</option>
+                            <option value="storage" {% if request.GET.hardware_type == 'storage' %}selected{% endif %}>Speicher</option>
+                            <option value="peripheral" {% if request.GET.hardware_type == 'peripheral' %}selected{% endif %}>Peripherie</option>
+                            <option value="other" {% if request.GET.hardware_type == 'other' %}selected{% endif %}>Sonstiges</option>
+                        </select>
+                    </div>
+
+                    <!-- Hersteller -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Hersteller</label>
+                        <input
+                            type="text"
+                            name="manufacturer"
+                            value="{{ request.GET.manufacturer }}"
+                            placeholder="z.B. Lenovo, Dell, HP..."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <!-- Betriebssystem -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Betriebssystem</label>
+                        <select name="operating_system" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">Alle</option>
+                            <option value="windows" {% if request.GET.operating_system == 'windows' %}selected{% endif %}>Windows</option>
+                            <option value="linux" {% if request.GET.operating_system == 'linux' %}selected{% endif %}>Linux</option>
+                            <option value="macos" {% if request.GET.operating_system == 'macos' %}selected{% endif %}>macOS</option>
+                            <option value="android" {% if request.GET.operating_system == 'android' %}selected{% endif %}>Android</option>
+                            <option value="ios" {% if request.GET.operating_system == 'ios' %}selected{% endif %}>iOS</option>
+                            <option value="other" {% if request.GET.operating_system == 'other' %}selected{% endif %}>Sonstiges</option>
+                            <option value="none" {% if request.GET.operating_system == 'none' %}selected{% endif %}>Kein OS</option>
+                        </select>
+                    </div>
+
+                    <!-- Nur aktive -->
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="active_only" value="1" {% if request.GET.active_only %}checked{% endif %} class="rounded border-gray-300 text-green-600 focus:ring-green-500">
+                            <span class="ml-2 text-sm text-gray-700 font-medium">✅ Nur aktive</span>
+                        </label>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="pt-4 border-t border-gray-200 space-y-2">
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                            Filter anwenden
+                        </button>
+                        <a href="{% url 'workshop:master_list' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                            Zurücksetzen
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Content Area (80%) -->
+        <main class="flex-1 min-w-0">
+
+            <!-- Toolbar über Tabelle -->
+            <div class="bg-white rounded-t-lg border border-gray-200 px-6 py-3 flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    <span class="font-semibold text-gray-900">{{ masters|length }}</span> Stammdaten gefunden
+                </div>
+                <div class="flex items-center gap-3">
+                    <select class="px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
+                        <option>25 pro Seite</option>
+                        <option>50 pro Seite</option>
+                        <option>100 pro Seite</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabelle -->
+            <div class="bg-white border-x border-b border-gray-200 rounded-b-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left">
+                                    <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Stammdaten-Nr.
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Name
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Hardware-Typ
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Hersteller / Modell
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Anzahl Geräte
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Aktionen
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for master in masters %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-mono text-gray-900">{{ master.master_number }}</div>
+                                </td>
+                                <td class="px-4 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex-1 min-w-0">
+                                            <a href="{% url 'workshop:master_detail' master.pk %}" class="text-sm font-medium text-gray-900 hover:text-blue-600">
+                                                {{ master.name }}
+                                            </a>
+                                            {% if master.description %}
+                                            <p class="text-xs text-gray-500 mt-1 truncate">
+                                                {{ master.description|truncatewords:10 }}
+                                            </p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                                        {{ master.get_hardware_type_display }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="text-sm">
+                                        {% if master.manufacturer %}
+                                            <div class="text-gray-900 font-medium">{{ master.manufacturer }}</div>
+                                        {% endif %}
+                                        {% if master.model %}
+                                            <div class="text-gray-600 text-xs">{{ master.model }}</div>
+                                        {% endif %}
+                                        {% if not master.manufacturer and not master.model %}
+                                            <span class="text-gray-400">-</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="text-sm">
+                                        <span class="font-semibold text-gray-900">{{ master.get_total_stock }}</span>
+                                        <span class="text-gray-600">Geräte</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    {% if master.is_active %}
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                        ✅ Aktiv
+                                    </span>
+                                    {% else %}
+                                    <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">
+                                        ❌ Inaktiv
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <a href="{% url 'workshop:master_detail' master.pk %}" class="text-blue-600 hover:text-blue-800" title="Details ansehen">
+                                            👁️
+                                        </a>
+                                        <a href="{% url 'workshop:master_update' master.pk %}" class="text-gray-600 hover:text-gray-800" title="Bearbeiten">
+                                            ✏️
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="px-4 py-12 text-center text-gray-500">
+                                    <div class="text-4xl mb-4">💻</div>
+                                    <p class="text-lg font-medium text-gray-900 mb-2">Keine Werkstatts-Stammdaten gefunden</p>
+                                    <p class="text-sm">Legen Sie neue Werkstatts-Stammdaten an, um zu beginnen.</p>
+                                    <a href="{% url 'workshop:master_create' %}" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                                        ➕ Neue Werkstatts-Stammdaten anlegen
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                    </div>
+                    <div class="flex gap-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            ◀ Zurück
+                        </a>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                        <a href="?page={{ num }}" class="px-3 py-1 border {% if num == page_obj.number %}bg-blue-600 text-white border-blue-600{% else %}border-gray-300 hover:bg-gray-100{% endif %} rounded text-sm">
+                            {{ num }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            Weiter ▶
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Niedrige Bestände - Rettungsdienst - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Niedrige Bestände</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Context Actions Bar -->
+<div class="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <a href="#" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                🛒 Sammelbestellung erstellen
+            </a>
+            <a href="#" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                📤 Export
+            </a>
+            <a href="#" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                📧 Email-Alarm
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Alert Box -->
+    <div class="bg-amber-50 border-l-4 border-amber-400 p-6 rounded-r-lg mb-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">⚠️</span>
+            <div>
+                <h3 class="text-amber-900 font-bold mb-2">Niedrige Bestände erkannt</h3>
+                <p class="text-amber-800 text-sm mb-3">
+                    {{ items.count }} Artikel haben einen Bestand unter dem Mindestwert erreicht.
+                </p>
+                <ul class="text-amber-700 text-sm space-y-1 list-disc list-inside">
+                    <li>Kritische Artikel werden automatisch zur Bestellung vorgemerkt</li>
+                    <li>BTM-Artikel erfordern spezielle Bestellverfahren</li>
+                    <li>Kühlpflichtige Artikel benötigen besondere Logistik</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Niedrige Bestände</p>
+            <p class="text-3xl font-bold text-gray-900">{{ low_stock_count|default:0 }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Leer</p>
+            <p class="text-3xl font-bold text-gray-900">{{ out_of_stock_count|default:0 }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">BTM betroffen</p>
+            <p class="text-3xl font-bold text-gray-900">{{ btm_low_stock|default:0 }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Geschätzter Wert</p>
+            <p class="text-3xl font-bold text-gray-900">{{ estimated_value|default:"0" }}€</p>
+        </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 bg-amber-50 border-b border-amber-100">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-bold text-amber-900">
+                    Artikel mit niedrigem Bestand ({{ items|length }})
+                </h2>
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center text-sm text-gray-700">
+                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2">
+                        Nur kritisch
+                    </label>
+                    <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                        <option>Sortierung ▾</option>
+                        <option>Bestand (niedrig → hoch)</option>
+                        <option>% vom Minimum</option>
+                        <option>Priorität</option>
+                        <option>Name A-Z</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Artikel
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Bestand
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Minimum
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            % vom Minimum
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Lagerort
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Priorität
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Aktionen
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in items %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div>
+                                    <a href="{% url 'medical:item_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-blue-600">
+                                        {{ item.name }}
+                                    </a>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        {% if item.is_btm %}
+                                        <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                            ☢️ BTM
+                                        </span>
+                                        {% endif %}
+                                        {% if item.requires_cold_chain %}
+                                        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                                            ❄️ Kühlpflichtig
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">{{ item.active_ingredient|default:"-" }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm">
+                                <span class="font-bold {% if item.quantity == 0 %}text-red-600{% elif item.is_low_stock %}text-amber-600{% else %}text-gray-900{% endif %}">
+                                    {{ item.quantity }}
+                                </span>
+                                <span class="text-gray-600">{{ item.unit }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ item.min_quantity }} {{ item.unit }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% widthratio item.quantity 1 item.min_quantity as percentage %}
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 bg-gray-200 rounded-full h-2 w-20">
+                                    <div class="{% if percentage <= 25 %}bg-red-500{% elif percentage <= 50 %}bg-amber-500{% else %}bg-green-500{% endif %} h-2 rounded-full" style="width: {{ percentage }}%"></div>
+                                </div>
+                                <span class="text-sm font-medium text-gray-900">{{ percentage }}%</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ item.location.name|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if item.quantity == 0 %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                🔴 Kritisch
+                            </span>
+                            {% elif item.is_low_stock %}
+                            <span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-semibold">
+                                🟡 Hoch
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                🟢 Normal
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="{% url 'medical:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                    👁️
+                                </a>
+                                <a href="#" class="text-green-600 hover:text-green-800 font-medium">
+                                    🛒
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                            <div class="text-4xl mb-4">✅</div>
+                            <p class="text-lg font-medium text-gray-900 mb-2">Keine Artikel mit niedrigem Bestand</p>
+                            <p class="text-sm">Alle Artikel haben ausreichende Bestände.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Action Footer -->
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                <span class="font-semibold text-gray-900">0</span> Artikel ausgewählt
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    🛒 Ausgewählte bestellen
+                </button>
+                <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    📧 Meldung senden
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

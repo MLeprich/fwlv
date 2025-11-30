@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Personal-Übersicht - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'personnel:dashboard' %}" class="text-gray-500 hover:text-gray-700">Personal</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Übersicht</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6">
+
+    <!-- Context Actions Bar -->
+    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm mt-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'personnel:dashboard' %}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    ← Dashboard
+                </a>
+                <a
+                    href="{% url 'personnel:create' %}"
+                    class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
+                >
+                    ➕ Neue Person
+                </a>
+                <a href="{% url 'personnel:export' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                    📤 CSV Export
+                </a>
+                <a href="{% url 'personnel:import_template' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    📥 CSV-Vorlage
+                </a>
+                <a href="{% url 'personnel:import_readme' %}" class="inline-flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm">
+                    📖 Import-Anleitung
+                </a>
+                <a href="{% url 'personnel:import' %}" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                    📥 CSV Import
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-6">
+
+        <!-- Main Content -->
+        <div class="lg:flex gap-6">
+
+            <!-- Filter Sidebar (Hidden on Mobile) -->
+            <aside class="hidden lg:block w-64 flex-shrink-0">
+                <div class="bg-white rounded-lg shadow p-6 sticky top-28">
+                    <h3 class="font-semibold text-gray-900 mb-4">Filter</h3>
+
+                    <form method="get" class="space-y-4">
+                        <!-- Search -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Suche</label>
+                            <input
+                                type="text"
+                                name="search"
+                                value="{{ search_query }}"
+                                placeholder="Name, Nummer..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                            >
+                        </div>
+
+                        <!-- Status -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                            <select name="is_active" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                <option value="">Alle</option>
+                                <option value="true" {% if is_active_filter == 'true' %}selected{% endif %}>Aktiv</option>
+                                <option value="false" {% if is_active_filter == 'false' %}selected{% endif %}>Inaktiv</option>
+                            </select>
+                        </div>
+
+                        <!-- Department -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Abteilung</label>
+                            <select name="department" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                <option value="">Alle Abteilungen</option>
+                                {% for dept in departments %}
+                                {% if dept %}
+                                <option value="{{ dept }}" {% if department_filter == dept %}selected{% endif %}>{{ dept }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="flex gap-2 pt-4">
+                            <button type="submit" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                                Anwenden
+                            </button>
+                            <a href="{% url 'personnel:list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                                ✕
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </aside>
+
+            <!-- Person List -->
+            <div class="flex-1">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                        <h2 class="text-lg font-bold text-gray-900">Personal ({{ page_obj.paginator.count }})</h2>
+                    </div>
+
+                    <!-- Desktop: List View / Mobile: Card View -->
+                    <div class="divide-y divide-gray-100 hidden md:block">
+                        {% if persons %}
+                            {% for person in persons %}
+                            <div class="p-4 hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center gap-4">
+                                    <!-- Photo -->
+                                    <div class="flex-shrink-0">
+                                        {% if person.photo %}
+                                        <img src="{{ person.photo.url }}" alt="{{ person.get_full_name }}" class="w-16 h-16 rounded-full object-cover border-2 border-gray-200">
+                                        {% else %}
+                                        <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center border-2 border-gray-200">
+                                            <span class="text-2xl text-red-600 font-bold">{{ person.first_name.0 }}{{ person.last_name.0 }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Info -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <a href="{% url 'personnel:detail' person.pk %}" class="font-semibold text-gray-900 hover:text-red-600 transition-colors">
+                                                {{ person.get_full_name }}
+                                            </a>
+                                            {% if not person.is_active %}
+                                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full font-semibold">
+                                                Inaktiv
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex items-center gap-3 text-sm text-gray-600">
+                                            <span class="font-mono bg-gray-100 px-2 py-0.5 rounded">{{ person.personnel_number }}</span>
+                                            {% if person.department %}
+                                            <span>{{ person.department }}</span>
+                                            {% endif %}
+                                            {% if person.rank %}
+                                            <span>{{ person.rank }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                                            {% if person.qualification_count > 0 %}
+                                            <span>📜 {{ person.qualification_count }} Qualifikation{{ person.qualification_count|pluralize:"en" }}</span>
+                                            {% endif %}
+                                            {% if person.email %}
+                                            <span class="hidden lg:inline">📧 {{ person.email }}</span>
+                                            {% endif %}
+                                            {% if person.mobile %}
+                                            <span class="hidden lg:inline">📱 {{ person.mobile }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div class="flex items-center gap-2">
+                                        <a
+                                            href="{% url 'personnel:update' person.pk %}"
+                                            class="px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded text-sm font-medium transition-colors"
+                                        >
+                                            ✏️ Bearbeiten
+                                        </a>
+                                        <a href="{% url 'personnel:detail' person.pk %}" class="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded text-sm font-medium transition-colors">
+                                            Details →
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="text-center py-12">
+                            <div class="text-4xl mb-4">👥</div>
+                            <p class="text-lg font-medium text-gray-900 mb-2">Kein Personal gefunden</p>
+                            <p class="text-sm text-gray-600 mb-4">
+                                {% if search_query or is_active_filter or department_filter %}
+                                Keine Ergebnisse für die gewählten Filter.
+                                {% else %}
+                                Legen Sie die erste Person an.
+                                {% endif %}
+                            </p>
+                            {% if not search_query and not is_active_filter and not department_filter %}
+                            <a href="{% url 'personnel:create' %}" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                                ➕ Erste Person anlegen
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Mobile: Card View (shown on small screens) -->
+                    <div class="grid grid-cols-1 gap-4 p-4 md:hidden">
+                        {% if persons %}
+                            {% for person in persons %}
+                            <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+                                <div class="flex items-start gap-3 mb-3">
+                                    <!-- Photo -->
+                                    {% if person.photo %}
+                                    <img src="{{ person.photo.url }}" alt="{{ person.get_full_name }}" class="w-16 h-16 rounded-full object-cover border-2 border-gray-200">
+                                    {% else %}
+                                    <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center border-2 border-gray-200">
+                                        <span class="text-2xl text-red-600 font-bold">{{ person.first_name.0 }}{{ person.last_name.0 }}</span>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Info -->
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="font-semibold text-gray-900 mb-1">
+                                            {{ person.get_full_name }}
+                                        </h3>
+                                        <p class="text-sm font-mono bg-white px-2 py-0.5 rounded inline-block text-gray-700 mb-1">
+                                            {{ person.personnel_number }}
+                                        </p>
+                                        {% if not person.is_active %}
+                                        <span class="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full font-semibold ml-2">
+                                            Inaktiv
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Details -->
+                                <div class="space-y-1 text-sm text-gray-600 mb-3">
+                                    {% if person.rank %}
+                                    <p><strong>Dienstgrad:</strong> {{ person.rank }}</p>
+                                    {% endif %}
+                                    {% if person.department %}
+                                    <p><strong>Abteilung:</strong> {{ person.department }}</p>
+                                    {% endif %}
+                                    {% if person.qualification_count > 0 %}
+                                    <p><strong>Qualifikationen:</strong> {{ person.qualification_count }}</p>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Contact -->
+                                {% if person.email or person.mobile %}
+                                <div class="border-t border-gray-200 pt-2 mb-3 space-y-1 text-sm">
+                                    {% if person.email %}
+                                    <p class="text-gray-600">📧 {{ person.email }}</p>
+                                    {% endif %}
+                                    {% if person.mobile %}
+                                    <p class="text-gray-600">📱 {{ person.mobile }}</p>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                <!-- Actions -->
+                                <div class="flex gap-2">
+                                    <a href="{% url 'personnel:detail' person.pk %}" class="flex-1 text-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                                        Details ansehen
+                                    </a>
+                                    <a
+                                        href="{% url 'personnel:update' person.pk %}"
+                                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+                                    >
+                                        ✏️
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="text-center py-12">
+                            <div class="text-4xl mb-4">👥</div>
+                            <p class="text-lg font-medium text-gray-900 mb-2">Kein Personal gefunden</p>
+                            <p class="text-sm text-gray-600 mb-4">
+                                {% if search_query or is_active_filter or department_filter %}
+                                Keine Ergebnisse für die gewählten Filter.
+                                {% else %}
+                                Legen Sie die erste Person an.
+                                {% endif %}
+                            </p>
+                            {% if not search_query and not is_active_filter and not department_filter %}
+                            <a href="{% url 'personnel:create' %}" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                                ➕ Erste Person anlegen
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-600">
+                                Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                            </div>
+                            <div class="flex gap-2">
+                                {% if page_obj.has_previous %}
+                                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if is_active_filter %}&is_active={{ is_active_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}" class="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                                    ← Zurück
+                                </a>
+                                {% endif %}
+                                {% if page_obj.has_next %}
+                                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if is_active_filter %}&is_active={{ is_active_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}" class="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                                    Weiter →
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

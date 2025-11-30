@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Fahrzeugübernahme - Dashboard - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Fahrzeugübernahme</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">🚒</span>
+                    <h1 class="text-3xl font-bold">Fahrzeugübernahme</h1>
+                </div>
+                <p class="text-blue-100 text-lg">
+                    Digitale Fahrzeugübergabe mit Checklisten, 360°-Fotos und Mängelerfassung
+                </p>
+            </div>
+            <div class="hidden lg:block">
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20">
+                    <p class="text-blue-100 text-sm mb-1">Gesamt-Übergaben</p>
+                    <p class="text-4xl font-bold">{{ handover_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Templates -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Checklisten-Vorlagen</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ template_count }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <span class="text-3xl">📝</span>
+                </div>
+            </div>
+            <a href="{% url 'vehicle_handover:template_list' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium mt-4 inline-block">
+                Vorlagen anzeigen →
+            </a>
+        </div>
+
+        <!-- Übergaben gesamt -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Übergaben gesamt</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ handover_count }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <span class="text-3xl">✅</span>
+                </div>
+            </div>
+            <a href="{% url 'vehicle_handover:handover_list' %}" class="text-green-600 hover:text-green-700 text-sm font-medium mt-4 inline-block">
+                Alle anzeigen →
+            </a>
+        </div>
+
+        <!-- Offene Übergaben -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 {% if pending_handovers > 0 %}border-yellow-500{% else %}border-gray-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Offene Übergaben</p>
+                    <p class="text-3xl font-bold {% if pending_handovers > 0 %}text-yellow-600{% else %}text-gray-900{% endif %} mt-2">
+                        {{ pending_handovers }}
+                    </p>
+                </div>
+                <div class="{% if pending_handovers > 0 %}bg-yellow-100{% else %}bg-gray-100{% endif %} rounded-full p-3">
+                    <span class="text-3xl">{% if pending_handovers > 0 %}⏳{% else %}✅{% endif %}</span>
+                </div>
+            </div>
+            <a href="{% url 'vehicle_handover:handover_list' %}?status=in_progress" class="{% if pending_handovers > 0 %}text-yellow-600 hover:text-yellow-700{% else %}text-gray-600 hover:text-gray-700{% endif %} text-sm font-medium mt-4 inline-block">
+                Details anzeigen →
+            </a>
+        </div>
+
+        <!-- Mit Mängeln -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 {% if defects_handovers > 0 %}border-red-500{% else %}border-green-500{% endif %}">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Mit Mängeln</p>
+                    <p class="text-3xl font-bold {% if defects_handovers > 0 %}text-red-600{% else %}text-green-600{% endif %} mt-2">
+                        {{ defects_handovers }}
+                    </p>
+                </div>
+                <div class="{% if defects_handovers > 0 %}bg-red-100{% else %}bg-green-100{% endif %} rounded-full p-3">
+                    <span class="text-3xl">{% if defects_handovers > 0 %}⚠️{% else %}✅{% endif %}</span>
+                </div>
+            </div>
+            <a href="{% url 'vehicle_handover:handover_list' %}?status=defects_noted" class="{% if defects_handovers > 0 %}text-red-600 hover:text-red-700{% else %}text-green-600 hover:text-green-700{% endif %} text-sm font-medium mt-4 inline-block">
+                Details anzeigen →
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Bereiche -->
+        <div class="lg:col-span-2">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">📂 Bereiche</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <!-- Übergaben -->
+                <a href="{% url 'vehicle_handover:handover_list' %}" class="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg hover:shadow-xl transition-shadow p-6 text-white">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">✅</span>
+                        <h3 class="font-bold">Übergaben</h3>
+                    </div>
+                    <p class="text-green-100 text-sm mb-3">
+                        Alle Fahrzeugübergaben verwalten
+                    </p>
+                    <div class="text-3xl font-bold">{{ handover_count|default:0 }}</div>
+                    <p class="text-xs text-green-100 mt-2">Zur Übersicht →</p>
+                </a>
+
+                <!-- Checklisten -->
+                <a href="{% url 'vehicle_handover:template_list' %}" class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg hover:shadow-xl transition-shadow p-6 text-white">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">📝</span>
+                        <h3 class="font-bold">Checklisten</h3>
+                    </div>
+                    <p class="text-blue-100 text-sm mb-3">
+                        Vorlagen für Fahrzeugtypen
+                    </p>
+                    <div class="text-3xl font-bold">{{ template_count|default:0 }}</div>
+                    <p class="text-xs text-blue-100 mt-2">{{ template_count }} aktive Vorlagen</p>
+                </a>
+
+                <!-- 360° Verwaltung -->
+                <a href="{% url 'vehicle_handover:photo_360_list' %}" class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg hover:shadow-xl transition-shadow p-6 text-white">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">🎯</span>
+                        <h3 class="font-bold">360° Ansichten</h3>
+                    </div>
+                    <p class="text-purple-100 text-sm mb-3">
+                        Fahrzeuginnenraum verwalten
+                    </p>
+                    <div class="text-3xl font-bold">{{ photos_360_count|default:0 }}</div>
+                    <p class="text-xs text-purple-100 mt-2">360° Fotos & Hotspots</p>
+                </a>
+
+                <!-- Neue Übergabe -->
+                <a href="{% url 'vehicle_handover:handover_create' %}" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 hover:border-green-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">➕</span>
+                        <h3 class="font-bold text-gray-900">Neue Übergabe</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        6-Schritt-Wizard starten
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Jetzt starten →
+                    </p>
+                </a>
+            </div>
+
+            <!-- Letzte Übergaben -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <span>📋</span>
+                        <span>Letzte Übergaben</span>
+                    </h3>
+                    <a href="{% url 'vehicle_handover:handover_list' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        Alle anzeigen →
+                    </a>
+                </div>
+
+                {% if recent_handovers %}
+                <div class="space-y-3">
+                    {% for handover in recent_handovers %}
+                    <div class="border-l-4 {% if handover.status == 'completed' %}border-green-500{% elif handover.status == 'defects_noted' %}border-red-500{% else %}border-yellow-500{% endif %} pl-4 py-2">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    {% if handover.status == 'completed' %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full font-semibold">✅ Abgeschlossen</span>
+                                    {% elif handover.status == 'defects_noted' %}
+                                    <span class="px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full font-semibold">⚠️ Mängel</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full font-semibold">⏳ Offen</span>
+                                    {% endif %}
+                                </div>
+                                <p class="font-medium text-gray-900">
+                                    {{ handover.vehicle }}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {% if handover.handover_from %}{{ handover.handover_from }} → {% endif %}{{ handover.handover_to }}
+                                    | {{ handover.get_handover_type_display }}
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-500">{{ handover.handover_date|date:"d.m.Y" }}</p>
+                                <p class="text-xs text-gray-400">{{ handover.handover_date|time:"H:i" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <span class="text-4xl block mb-2">📋</span>
+                    <p>Noch keine Übergaben vorhanden</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column: Quick Actions -->
+        <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-4">⚡ Schnellaktionen</h2>
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-3">
+                <a href="{% url 'vehicle_handover:handover_create' %}" class="block w-full bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    ➕ Neue Übergabe
+                </a>
+                <a href="{% url 'vehicle_handover:template_create' %}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    📝 Neue Vorlage
+                </a>
+                <a href="{% url 'vehicle_handover:handover_list' %}" class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    📋 Alle Übergaben
+                </a>
+                <a href="{% url 'vehicle_handover:template_list' %}" class="block w-full bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    📚 Vorlagen verwalten
+                </a>
+            </div>
+
+            <!-- Offene Übergaben Widget -->
+            {% if pending_handovers > 0 %}
+            <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                <h3 class="font-bold text-yellow-900 mb-4 flex items-center gap-2">
+                    <span>⏳</span>
+                    <span>Offene Übergaben ({{ pending_handovers }})</span>
+                </h3>
+                <p class="text-sm text-yellow-800 mb-3">
+                    {{ pending_handovers }} Übergabe{% if pending_handovers > 1 %}n sind{% else %} ist{% endif %} noch nicht abgeschlossen.
+                </p>
+                <a href="{% url 'vehicle_handover:handover_list' %}?status=in_progress"
+                   class="text-sm text-yellow-700 hover:text-yellow-900 font-medium">
+                    Details anzeigen →
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Mängel Widget -->
+            {% if defects_handovers > 0 %}
+            <div class="mt-6 bg-red-50 border border-red-200 rounded-lg p-6">
+                <h3 class="font-bold text-red-900 mb-4 flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Übergaben mit Mängeln</span>
+                </h3>
+                <p class="text-sm text-red-800 mb-3">
+                    {{ defects_handovers }} Übergabe{% if defects_handovers > 1 %}n haben{% else %} hat{% endif %} festgestellte Mängel.
+                </p>
+                <a href="{% url 'vehicle_handover:handover_list' %}?status=defects_noted"
+                   class="text-sm text-red-700 hover:text-red-900 font-medium">
+                    Details anzeigen →
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Help Box -->
+            <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">💡</span>
+                    <div>
+                        <h3 class="font-bold text-blue-900 mb-2">Wichtige Hinweise</h3>
+                        <ul class="text-sm text-blue-800 space-y-1">
+                            <li>• 360°-Fotos für vollständige Dokumentation</li>
+                            <li>• Mängel sofort erfassen und dokumentieren</li>
+                            <li>• Checklisten-Vorlagen für Fahrzeugtypen</li>
+                            <li>• PDF-Export für Archivierung nutzen</li>
+                            <li>• QR-Code im PDF für schnellen Zugriff</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

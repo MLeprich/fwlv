@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Import/Export - Lagerorte{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'locations:list' %}" class="text-gray-500 hover:text-gray-700">Lagerorte</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Import/Export</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">📤</span>
+                    <h1 class="text-3xl font-bold">Import/Export</h1>
+                </div>
+                <p class="text-indigo-100 text-lg">
+                    Lagerorte importieren, exportieren und sichern
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Section -->
+    <div class="bg-white rounded-lg shadow mb-8">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="text-3xl">📥</span>
+                <h2 class="text-2xl font-bold text-gray-900">Daten exportieren</h2>
+            </div>
+            <p class="text-gray-600">
+                Exportieren Sie Ihre Lagerorte als Excel-Datei (.xlsx) für Berichte, Analysen oder Backups.
+            </p>
+        </div>
+
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Alle Lagerorte Export -->
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-indigo-100 rounded-full p-3">
+                            <span class="text-3xl">📍</span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900">Alle Lagerorte</h3>
+                            <p class="text-sm text-gray-500">{{ total_locations }} Einträge</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4">
+                        Exportiert alle Lagerorte mit vollständiger Hierarchie, Typen, Adressen und Kapazitäten.
+                    </p>
+                    <a href="{% url 'locations:export' %}" class="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm">
+                        📥 Excel herunterladen
+                    </a>
+                </div>
+
+                <!-- Aktive Lagerorte -->
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-green-100 rounded-full p-3">
+                            <span class="text-3xl">✅</span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900">Nur aktive</h3>
+                            <p class="text-sm text-gray-500">{{ active_locations }} Einträge</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4">
+                        Exportiert nur aktive Lagerorte (is_active=True) ohne deaktivierte Standorte.
+                    </p>
+                    <a href="{% url 'locations:export' %}?active_only=true" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm">
+                        📥 Excel herunterladen
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Section -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="text-3xl">📤</span>
+                <h2 class="text-2xl font-bold text-gray-900">Daten importieren</h2>
+            </div>
+            <p class="text-gray-600">
+                Importieren Sie Lagerorte aus CSV-Dateien. Laden Sie zuerst die Vorlage herunter und füllen Sie diese aus.
+            </p>
+        </div>
+
+        <div class="p-6">
+            <!-- Schritt-für-Schritt Anleitung -->
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-r-lg mb-6">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">📋</span>
+                    <div>
+                        <h3 class="font-bold text-blue-900 mb-2">So funktioniert der Import:</h3>
+                        <ol class="text-sm text-blue-800 space-y-2 list-decimal list-inside">
+                            <li><strong>Vorlage herunterladen:</strong> Klicken Sie auf "📥 Vorlage herunterladen" um die CSV-Vorlage zu erhalten</li>
+                            <li><strong>Daten eintragen:</strong> Füllen Sie die CSV-Datei mit Ihren Lagerort-Daten (Beispieldaten sind enthalten)</li>
+                            <li><strong>Datei hochladen:</strong> Wählen Sie die ausgefüllte CSV-Datei und klicken Sie auf "📤 Importieren"</li>
+                            <li><strong>Vorschau prüfen:</strong> Kontrollieren Sie die Vorschau und bestätigen Sie den Import</li>
+                            <li><strong>Ergebnis prüfen:</strong> Nach dem Import erhalten Sie eine Zusammenfassung über erfolgreiche und fehlerhafte Einträge</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="max-w-2xl mx-auto">
+                <!-- Lagerorte Import -->
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-indigo-100 rounded-full p-3">
+                            <span class="text-3xl">📍</span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900">Lagerorte importieren</h3>
+                            <p class="text-sm text-gray-500">CSV-Import mit Hierarchie-Unterstützung</p>
+                        </div>
+                    </div>
+
+                    <!-- Vorlage Download -->
+                    <a href="{% url 'locations:import_template' %}" class="block w-full text-center bg-indigo-100 hover:bg-indigo-200 text-indigo-800 rounded-lg px-4 py-2 font-medium transition-colors text-sm mb-3">
+                        📥 Vorlage herunterladen
+                    </a>
+
+                    <!-- Upload Form -->
+                    <form method="post" action="{% url 'locations:import' %}" enctype="multipart/form-data" class="space-y-3">
+                        {% csrf_token %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">CSV-Datei auswählen:</label>
+                            <input type="file" name="import_file" accept=".csv" required class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50">
+                            <p class="mt-1 text-xs text-gray-500">Erlaubtes Format: nur .csv (max. 10 MB)</p>
+                        </div>
+                        <button type="submit" class="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm">
+                            📤 Importieren
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hilfe & Hinweise -->
+    <div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div>
+                <h3 class="font-bold text-yellow-900 mb-2">Wichtige Hinweise</h3>
+                <ul class="text-sm text-yellow-800 space-y-1">
+                    <li>• Export-Dateien (Excel) enthalten alle Lagerorte zum Zeitpunkt des Exports</li>
+                    <li>• Import-Vorlage (CSV) enthält Beispieldaten und Typ-Übersicht am Ende der Datei</li>
+                    <li>• <strong>Nur CSV-Import erlaubt</strong> - Excel-Import aus Sicherheitsgründen deaktiviert</li>
+                    <li>• Lassen Sie die ID-Spalte leer für neue Lagerorte, bestehende IDs aktualisieren vorhandene Einträge</li>
+                    <li>• Der übergeordnete Standort muss als <strong>Name</strong> (nicht ID) angegeben werden</li>
+                    <li>• Verwenden Sie die korrekten Typ-Bezeichnungen aus der Vorlage (z.B. "Standort/Wache", "Gebäude", "Raum")</li>
+                    <li>• CSV-Dateien können mit Microsoft Excel, LibreOffice Calc oder Google Sheets geöffnet werden</li>
+                    <li>• Bei Fehlern erhalten Sie eine detaillierte Fehlermeldung mit Zeilennummer</li>
+                    <li>• Exportierte Daten regelmäßig als Backup sichern</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technische Informationen -->
+    <div class="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">🔧</span>
+            <div>
+                <h3 class="font-bold text-gray-900 mb-2">Technische Informationen</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+                    <div>
+                        <p class="font-semibold mb-1">Export-Format (Excel):</p>
+                        <ul class="space-y-1">
+                            <li>• Dateiformat: Excel 2007+ (.xlsx)</li>
+                            <li>• Zeichenkodierung: UTF-8</li>
+                            <li>• Header: Beschreibende Spaltennamen</li>
+                            <li>• Hierarchie: Parent als Name statt ID</li>
+                            <li>• Typ: Lesbarer Name (z.B. "Standort/Wache")</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p class="font-semibold mb-1">Import-Format (nur CSV):</p>
+                        <ul class="space-y-1">
+                            <li>• Dateiformat: CSV (.csv) - Excel aus Sicherheitsgründen nicht erlaubt</li>
+                            <li>• Zeichenkodierung: UTF-8</li>
+                            <li>• Pflichtfelder: name, typ</li>
+                            <li>• Optionale Felder: parent, description, address, capacity</li>
+                            <li>• Vorlage enthält alle verfügbaren Typen</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verfügbare Lagerort-Typen -->
+    <div class="mt-8 bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">🏷️</span>
+            <div class="w-full">
+                <h3 class="font-bold text-indigo-900 mb-3">Verfügbare Lagerort-Typen</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">🏛️ Standort/Wache</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">🏢 Gebäude</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">🅿️ Stellfläche/Außenbereich</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">🚪 Raum</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">🅿️ Stellplatz</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">📚 Regal/Schrank</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">🗄️ Schrank</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">📋 Regalboden/Fach</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">📁 Schublade</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">📦 Box/Kiste</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">🚗 Fahrzeug</span>
+                    </div>
+                    <div class="bg-white rounded px-3 py-2">
+                        <span class="font-medium text-gray-900">📦 Container</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}

@@ -1,0 +1,672 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ dashboard.name }} bearbeiten - Info-Monitore - FLVS{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Canvas Editor Styles */
+    #canvas-editor {
+        position: relative;
+        background: #f9fafb;
+        background-image:
+            linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px);
+        background-size: 20px 20px;
+        min-height: 400px;
+    }
+
+    #grid-editor {
+        position: relative;
+        background: #f9fafb;
+        background-image:
+            linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px);
+        background-size: calc(100% / 12) 40px;
+        min-height: 600px;
+        padding: 1rem;
+    }
+
+    .widget-box {
+        position: absolute;
+        background: white;
+        border: 2px solid #3b82f6;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        cursor: move;
+        overflow: hidden;
+        transition: box-shadow 0.2s;
+    }
+
+    .grid-widget {
+        background: white;
+        border: 2px solid #3b82f6;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        cursor: move;
+        overflow: hidden;
+        transition: all 0.2s;
+    }
+
+    .widget-box:hover, .grid-widget:hover {
+        box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        border-color: #10b981;
+    }
+
+    .widget-box.dragging, .grid-widget.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+
+    .widget-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: move;
+    }
+
+    .resize-handle {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 20px;
+        height: 20px;
+        background: #3b82f6;
+        cursor: nwse-resize;
+        border-radius: 0 0 0.375rem 0;
+    }
+
+    .resize-handle::after {
+        content: '⋱';
+        color: white;
+        font-size: 12px;
+        position: absolute;
+        right: 2px;
+        bottom: 0;
+    }
+
+    .widget-palette-item {
+        cursor: grab;
+        transition: all 0.2s;
+    }
+
+    .widget-palette-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .widget-palette-item:active {
+        cursor: grabbing;
+    }
+
+    .drop-zone.drag-over {
+        background-color: rgba(59, 130, 246, 0.1);
+        border: 2px dashed #3b82f6;
+    }
+
+    .grid-drop-zone {
+        border: 2px dashed transparent;
+        min-height: 100px;
+        transition: all 0.2s;
+    }
+
+    .grid-drop-zone.drag-over {
+        border-color: #3b82f6;
+        background-color: rgba(59, 130, 246, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'info_monitors:dashboard_list' %}" class="text-gray-500 hover:text-gray-700">Info-Monitore</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'info_monitors:dashboard_detail' dashboard.pk %}" class="text-gray-500 hover:text-gray-700">{{ dashboard.name }}</a></li>
+            <li class="text-gray-400">/</li>
+            <li><span class="text-gray-900 font-semibold">Bearbeiten</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="h-screen flex flex-col">
+    <!-- Toolbar -->
+    <div class="bg-white border-b border-gray-200 px-6 py-4">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">✏️ {{ dashboard.name }} bearbeiten</h1>
+                <p class="text-sm text-gray-600 mt-1">
+                    {{ dashboard.profile.name }} •
+                    {% if dashboard.use_canvas_layout %}
+                    🎨 Canvas-Modus ({{ dashboard.canvas_width }}×{{ dashboard.canvas_height }}px)
+                    {% else %}
+                    📐 Grid-Modus (12 Spalten)
+                    {% endif %}
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'info_monitors:dashboard_detail' dashboard.pk %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Vorschau
+                </a>
+                {% if dashboard.use_canvas_layout %}
+                <button onclick="saveAllWidgets()" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                    </svg>
+                    Speichern
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Editor Layout -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Widget Palette (Sidebar) -->
+        <div class="w-64 bg-gray-50 border-r border-gray-200 overflow-y-auto">
+            <div class="p-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Widget-Palette</h3>
+                <p class="text-xs text-gray-500 mb-4">Ziehen Sie Widgets in den Editor</p>
+
+                <div class="space-y-2">
+                    <!-- Clock Widget -->
+                    <div class="widget-palette-item bg-white rounded-lg p-3 border-2 border-gray-200 cursor-grab"
+                         draggable="true"
+                         data-widget-type="clock"
+                         data-widget-title="Uhr">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">🕐</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm text-gray-900">Uhr</div>
+                                <div class="text-xs text-gray-500">Live-Zeit & Datum</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Text Widget -->
+                    <div class="widget-palette-item bg-white rounded-lg p-3 border-2 border-gray-200 cursor-grab"
+                         draggable="true"
+                         data-widget-type="text"
+                         data-widget-title="Text">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">📝</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm text-gray-900">Text</div>
+                                <div class="text-xs text-gray-500">Freitext-Feld</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PDF Widget -->
+                    <div class="widget-palette-item bg-white rounded-lg p-3 border-2 border-gray-200 cursor-grab"
+                         draggable="true"
+                         data-widget-type="pdf"
+                         data-widget-title="PDF">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">📄</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm text-gray-900">PDF</div>
+                                <div class="text-xs text-gray-500">PDF-Anzeige</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Announcements Widget -->
+                    <div class="widget-palette-item bg-white rounded-lg p-3 border-2 border-gray-200 cursor-grab"
+                         draggable="true"
+                         data-widget-type="announcements"
+                         data-widget-title="Bekanntmachungen">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">📢</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm text-gray-900">Bekanntmachungen</div>
+                                <div class="text-xs text-gray-500">Aktuelle Infos</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Events Widget -->
+                    <div class="widget-palette-item bg-white rounded-lg p-3 border-2 border-gray-200 cursor-grab"
+                         draggable="true"
+                         data-widget-type="events"
+                         data-widget-title="Termine">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">📅</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm text-gray-900">Termine</div>
+                                <div class="text-xs text-gray-500">Kalender</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPI Widget -->
+                    <div class="widget-palette-item bg-white rounded-lg p-3 border-2 border-gray-200 cursor-grab"
+                         draggable="true"
+                         data-widget-type="kpi"
+                         data-widget-title="KPI">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">📊</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm text-gray-900">KPI</div>
+                                <div class="text-xs text-gray-500">Kennzahl</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart Widget -->
+                    <div class="widget-palette-item bg-white rounded-lg p-3 border-2 border-gray-200 cursor-grab"
+                         draggable="true"
+                         data-widget-type="chart"
+                         data-widget-title="Diagramm">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">📈</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm text-gray-900">Diagramm</div>
+                                <div class="text-xs text-gray-500">Charts</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weather Widget -->
+                    <div class="widget-palette-item bg-white rounded-lg p-3 border-2 border-gray-200 cursor-grab"
+                         draggable="true"
+                         data-widget-type="weather"
+                         data-widget-title="Wetter">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">🌤️</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm text-gray-900">Wetter</div>
+                                <div class="text-xs text-gray-500">Wetteranzeige</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor Area -->
+        <div class="flex-1 overflow-auto p-6 bg-gray-100">
+            {% if dashboard.use_canvas_layout %}
+            <!-- Canvas Editor -->
+            <div class="flex justify-center">
+                <div id="canvas-editor"
+                     class="border-2 border-gray-300 rounded-lg shadow-lg bg-white drop-zone"
+                     style="width: {{ dashboard.canvas_width }}px; height: {{ dashboard.canvas_height }}px;">
+                    {% for widget in widgets %}
+                    <div class="widget-box"
+                         data-widget-id="{{ widget.id }}"
+                         style="left: {{ widget.x_position }}px; top: {{ widget.y_position }}px; width: {{ widget.canvas_width }}px; height: {{ widget.height }}px;">
+                        <div class="widget-header">
+                            <span>{{ widget.get_widget_type_display }}: {{ widget.title }}</span>
+                            <div class="flex gap-2">
+                                <a href="{% url 'info_monitors:widget_edit' widget.id %}" class="px-2 py-1 bg-white bg-opacity-20 rounded hover:bg-opacity-30 text-xs" title="Inhalt bearbeiten">
+                                    ✏️
+                                </a>
+                                <button onclick="deleteWidget({{ widget.id }})" class="px-2 py-1 bg-white bg-opacity-20 rounded hover:bg-opacity-30 text-xs" title="Widget löschen">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-3 text-sm text-gray-600">
+                            <strong>Position:</strong> ({{ widget.x_position }}, {{ widget.y_position }})<br>
+                            <strong>Größe:</strong> {{ widget.canvas_width }}×{{ widget.height }}px
+                        </div>
+                        <div class="resize-handle"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <!-- Grid Editor -->
+            <div id="grid-editor" class="max-w-7xl mx-auto border-2 border-gray-300 rounded-lg shadow-lg bg-white drop-zone">
+                <div id="grid-container" class="grid grid-cols-12 gap-4 p-4">
+                    {% for widget in widgets %}
+                    <div class="grid-widget"
+                         data-widget-id="{{ widget.id }}"
+                         data-row="{{ widget.row }}"
+                         data-column="{{ widget.column }}"
+                         style="grid-column: span {{ widget.width|default:'3' }};">
+                        <div class="widget-header">
+                            <span>{{ widget.get_widget_type_display }}: {{ widget.title }}</span>
+                            <div class="flex gap-2">
+                                <a href="{% url 'info_monitors:widget_edit' widget.id %}" class="px-2 py-1 bg-white bg-opacity-20 rounded hover:bg-opacity-30 text-xs" title="Inhalt bearbeiten">
+                                    ✏️
+                                </a>
+                                <button onclick="changeGridSize({{ widget.id }})" class="px-2 py-1 bg-white bg-opacity-20 rounded hover:bg-opacity-30 text-xs" title="Größe ändern">
+                                    ↔️
+                                </button>
+                                <button onclick="deleteWidget({{ widget.id }})" class="px-2 py-1 bg-white bg-opacity-20 rounded hover:bg-opacity-30 text-xs" title="Widget löschen">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-3 text-sm text-gray-600">
+                            <strong>Breite:</strong> {{ widget.width|default:'3' }}/12 Spalten
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if not widgets %}
+                <div class="text-center py-12 text-gray-400">
+                    <div class="text-4xl mb-3">📐</div>
+                    <p class="font-medium">Ziehen Sie Widgets hierher</p>
+                    <p class="text-sm mt-1">Widgets werden automatisch im 12-Spalten-Grid platziert</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// State
+let draggedWidget = null;
+let draggedPaletteItem = null;
+let resizingWidget = null;
+let offsetX = 0;
+let offsetY = 0;
+
+// Drag & Drop von Palette
+document.querySelectorAll('.widget-palette-item').forEach(item => {
+    item.addEventListener('dragstart', function(e) {
+        draggedPaletteItem = this;
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+        this.style.opacity = '0.5';
+    });
+
+    item.addEventListener('dragend', function(e) {
+        this.style.opacity = '1';
+        draggedPaletteItem = null;
+    });
+});
+
+// Drop Zones
+const dropZones = document.querySelectorAll('.drop-zone');
+dropZones.forEach(zone => {
+    zone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        this.classList.add('drag-over');
+    });
+
+    zone.addEventListener('dragleave', function(e) {
+        this.classList.remove('drag-over');
+    });
+
+    zone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+
+        if (draggedPaletteItem) {
+            const widgetType = draggedPaletteItem.dataset.widgetType;
+            const widgetTitle = draggedPaletteItem.dataset.widgetTitle;
+
+            {% if dashboard.use_canvas_layout %}
+            // Canvas-Modus: Position aus Drop-Event
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            createWidget(widgetType, widgetTitle, x, y);
+            {% else %}
+            // Grid-Modus: Automatische Platzierung
+            createWidget(widgetType, widgetTitle);
+            {% endif %}
+        }
+    });
+});
+
+// Widget erstellen
+function createWidget(type, title, x = null, y = null) {
+    {% if dashboard.use_canvas_layout %}
+    const widgetData = {
+        widget_type: type,
+        title: title,
+        x_position: Math.max(0, Math.min(x || 50, {{ dashboard.canvas_width }} - 400)),
+        y_position: Math.max(0, Math.min(y || 50, {{ dashboard.canvas_height }} - 300)),
+        canvas_width: 400,
+        height: 300
+    };
+    {% else %}
+    // Grid-Modus: Berechne nächste freie Position
+    const widgets = document.querySelectorAll('.grid-widget');
+    const row = Math.floor(widgets.length / 4);
+
+    const widgetData = {
+        widget_type: type,
+        title: title,
+        row: row,
+        column: 0,
+        width: '3'
+    };
+    {% endif %}
+
+    fetch("{% url 'info_monitors:widget_create' dashboard.pk %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(widgetData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Fehler: ' + data.error);
+        }
+    });
+}
+
+// Widget löschen
+function deleteWidget(widgetId) {
+    if (!confirm('Widget wirklich löschen?')) return;
+
+    fetch(`/monitors/widgets/${widgetId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Fehler: ' + data.error);
+        }
+    });
+}
+
+// Grid-Größe ändern
+function changeGridSize(widgetId) {
+    const width = prompt('Breite in Spalten (1-12):', '3');
+    if (!width) return;
+
+    fetch(`/monitors/widgets/${widgetId}/update/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            width: width.toString()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Fehler: ' + data.error);
+        }
+    });
+}
+
+{% if dashboard.use_canvas_layout %}
+// Canvas: Drag & Resize für existierende Widgets
+document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.getElementById('canvas-editor');
+    if (!canvas) return;
+
+    let dragOffsetX, dragOffsetY;
+    let resizeStartX, resizeStartY;
+
+    // Widget Dragging & Resizing
+    canvas.addEventListener('mousedown', function(e) {
+        if (e.target.closest('.resize-handle')) {
+            const widget = e.target.closest('.widget-box');
+            resizingWidget = widget;
+            resizeStartX = e.clientX;
+            resizeStartY = e.clientY;
+            e.preventDefault();
+        } else if (e.target.closest('.widget-header')) {
+            const widget = e.target.closest('.widget-box');
+            const widgetRect = widget.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+
+            draggedWidget = widget;
+            // Berechne Offset vom Mausklick zur Widget-Position
+            dragOffsetX = e.clientX - widgetRect.left;
+            dragOffsetY = e.clientY - widgetRect.top;
+            widget.classList.add('dragging');
+            e.preventDefault();
+        }
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (draggedWidget) {
+            const canvasRect = canvas.getBoundingClientRect();
+            // Neue Position = Mausposition - Offset
+            let newX = e.clientX - canvasRect.left - dragOffsetX;
+            let newY = e.clientY - canvasRect.top - dragOffsetY;
+
+            // Begrenzung auf Canvas
+            newX = Math.max(0, Math.min(newX, canvas.clientWidth - draggedWidget.offsetWidth));
+            newY = Math.max(0, Math.min(newY, canvas.clientHeight - draggedWidget.offsetHeight));
+
+            draggedWidget.style.left = newX + 'px';
+            draggedWidget.style.top = newY + 'px';
+        } else if (resizingWidget) {
+            const deltaX = e.clientX - resizeStartX;
+            const deltaY = e.clientY - resizeStartY;
+
+            let newWidth = parseInt(resizingWidget.style.width) + deltaX;
+            let newHeight = parseInt(resizingWidget.style.height) + deltaY;
+
+            newWidth = Math.max(200, Math.min(newWidth, canvas.clientWidth - parseInt(resizingWidget.style.left)));
+            newHeight = Math.max(150, Math.min(newHeight, canvas.clientHeight - parseInt(resizingWidget.style.top)));
+
+            resizingWidget.style.width = newWidth + 'px';
+            resizingWidget.style.height = newHeight + 'px';
+
+            resizeStartX = e.clientX;
+            resizeStartY = e.clientY;
+        }
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (draggedWidget) {
+            draggedWidget.classList.remove('dragging');
+        }
+        draggedWidget = null;
+        resizingWidget = null;
+    });
+});
+
+// Alle Widgets speichern (Canvas)
+function saveAllWidgets() {
+    const widgets = document.querySelectorAll('.widget-box');
+    const promises = [];
+
+    widgets.forEach(widget => {
+        const widgetId = widget.dataset.widgetId;
+
+        const data = {
+            x_position: parseInt(widget.style.left),
+            y_position: parseInt(widget.style.top),
+            canvas_width: parseInt(widget.style.width),
+            height: parseInt(widget.style.height)
+        };
+
+        promises.push(
+            fetch(`/monitors/widgets/${widgetId}/update/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(data)
+            })
+        );
+    });
+
+    Promise.all(promises)
+        .then(() => {
+            alert('✓ Alle Widgets gespeichert!');
+        })
+        .catch(error => {
+            alert('Fehler beim Speichern: ' + error);
+        });
+}
+{% else %}
+// Grid: Drag & Drop Sortierung
+document.addEventListener('DOMContentLoaded', function() {
+    const gridWidgets = document.querySelectorAll('.grid-widget');
+
+    gridWidgets.forEach(widget => {
+        widget.setAttribute('draggable', 'true');
+
+        widget.addEventListener('dragstart', function(e) {
+            draggedWidget = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        widget.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            draggedWidget = null;
+        });
+
+        widget.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        widget.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (draggedWidget && draggedWidget !== this) {
+                // Swap positions
+                const container = this.parentNode;
+                const draggedIndex = Array.from(container.children).indexOf(draggedWidget);
+                const targetIndex = Array.from(container.children).indexOf(this);
+
+                if (draggedIndex < targetIndex) {
+                    container.insertBefore(draggedWidget, this.nextSibling);
+                } else {
+                    container.insertBefore(draggedWidget, this);
+                }
+            }
+        });
+    });
+});
+{% endif %}
+</script>
+{% endblock %}

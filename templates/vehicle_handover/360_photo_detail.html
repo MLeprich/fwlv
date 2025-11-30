@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ object.title }} - 360° Ansicht{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:photo_360_list' %}" class="text-gray-500 hover:text-gray-700">360° Ansichten</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ object.title|truncatewords:3 }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.css"/>
+<style>
+    #viewer-container {
+        width: 100%;
+        height: 70vh;
+        min-height: 500px;
+    }
+    .psv-button {
+        background: rgba(0, 0, 0, 0.5);
+    }
+    .custom-hotspot {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .custom-hotspot:hover {
+        transform: scale(1.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <a href="{% url 'vehicle_handover:photo_360_list' %}"
+                   class="text-gray-600 hover:text-gray-900">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                </a>
+                <h1 class="text-3xl font-bold text-gray-900">{{ object.title }}</h1>
+                {% if object.is_active %}
+                    <span class="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold">✓ Aktiv</span>
+                {% else %}
+                    <span class="bg-gray-500 text-white px-3 py-1 rounded-full text-xs font-semibold">Inaktiv</span>
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-4 text-gray-600">
+                <span class="flex items-center gap-2">
+                    <span>🚒</span>
+                    <span class="font-medium">{{ object.vehicle.name }}</span>
+                </span>
+                <span class="flex items-center gap-2">
+                    {% if object.photo_type == 'front' %}
+                        <span>🚗</span>
+                        <span>Vorne (Fahrerkabine)</span>
+                    {% else %}
+                        <span>🚐</span>
+                        <span>Hinten (Laderaum)</span>
+                    {% endif %}
+                </span>
+                <span class="flex items-center gap-2">
+                    <span>📅</span>
+                    <span>{{ object.captured_date|date:"d.m.Y" }}</span>
+                </span>
+                <span class="flex items-center gap-2">
+                    <span>🎯</span>
+                    <span class="font-semibold">{{ object.hotspots.count }} Hotspot{{ object.hotspots.count|pluralize:"s" }}</span>
+                </span>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'vehicle_handover:photo_360_editor' object.pk %}"
+               class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                Bearbeiten
+            </a>
+            <a href="{% url 'vehicle_handover:photo_360_update' object.pk %}"
+               class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                Einstellungen
+            </a>
+        </div>
+    </div>
+
+    {% if object.description %}
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+            <p class="text-gray-700">{{ object.description }}</p>
+        </div>
+    {% endif %}
+
+    <!-- 360° Viewer -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+        <div id="viewer-container"></div>
+    </div>
+
+    <!-- Hotspot Details -->
+    {% if object.hotspots.all %}
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span>🎯</span>
+                <span>Hotspots ({{ object.hotspots.count }})</span>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for hotspot in object.hotspots.all %}
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                         onclick="focusHotspot('{{ hotspot.id }}')">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl">
+                                    {% if hotspot.icon == 'drawer' %}📦
+                                    {% elif hotspot.icon == 'cabinet' %}🗄️
+                                    {% elif hotspot.icon == 'box' %}📋
+                                    {% elif hotspot.icon == 'tool' %}🔧
+                                    {% elif hotspot.icon == 'medical' %}⚕️
+                                    {% elif hotspot.icon == 'fire' %}🔥
+                                    {% elif hotspot.icon == 'radio' %}📻
+                                    {% elif hotspot.icon == 'equipment' %}⚙️
+                                    {% else %}📍
+                                    {% endif %}
+                                </span>
+                                <h3 class="font-semibold text-gray-900">{{ hotspot.title }}</h3>
+                            </div>
+                            {% if not hotspot.is_active %}
+                                <span class="bg-gray-400 text-white px-2 py-1 rounded text-xs">Inaktiv</span>
+                            {% endif %}
+                        </div>
+
+                        {% if hotspot.description %}
+                            <p class="text-gray-600 text-sm mb-3">{{ hotspot.description }}</p>
+                        {% endif %}
+
+                        <!-- Type Badge -->
+                        <div class="mb-3">
+                            {% if hotspot.hotspot_type == 'checklist' %}
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">
+                                    ✓ Checkliste
+                                </span>
+                            {% elif hotspot.hotspot_type == 'images' %}
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
+                                    🖼️ Bilder ({{ hotspot.images.count }})
+                                </span>
+                            {% elif hotspot.hotspot_type == 'info' %}
+                                <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">
+                                    ℹ️ Info
+                                </span>
+                            {% elif hotspot.hotspot_type == 'mixed' %}
+                                <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold">
+                                    📋 Gemischt
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Checklist Link -->
+                        {% if hotspot.checklist_template %}
+                            <div class="mb-2 text-sm">
+                                <span class="text-gray-600">Checkliste:</span>
+                                <a href="{% url 'vehicle_handover:template_detail' hotspot.checklist_template.pk %}"
+                                   class="text-blue-600 hover:text-blue-800 font-medium">
+                                    {{ hotspot.checklist_template.name }}
+                                </a>
+                            </div>
+                        {% endif %}
+
+                        <!-- Image Gallery Preview -->
+                        {% if hotspot.images.all %}
+                            <div class="grid grid-cols-3 gap-1 mt-3">
+                                {% for img in hotspot.images.all|slice:":3" %}
+                                    <img src="{{ img.image.url }}" alt="{{ img.caption }}"
+                                         class="w-full h-16 object-cover rounded">
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Actions -->
+                        <div class="flex gap-2 mt-3">
+                            <a href="{% url 'vehicle_handover:hotspot_update' hotspot.pk %}"
+                               class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded text-center text-sm font-medium transition-colors">
+                                Bearbeiten
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-sm p-8 text-center">
+            <span class="text-6xl inline-block mb-3">🎯</span>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Keine Hotspots vorhanden</h3>
+            <p class="text-gray-600 mb-4">Fügen Sie Hotspots hinzu, um Bereiche im 360° Foto zu markieren.</p>
+            <a href="{% url 'vehicle_handover:photo_360_editor' object.pk %}"
+               class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-semibold inline-flex items-center gap-2 transition-colors">
+                <span>+</span>
+                <span>Hotspots hinzufügen</span>
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- Metadata -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="font-bold text-gray-900 mb-4">Informationen</h3>
+            <dl class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <dt class="text-gray-600">Auflösung:</dt>
+                    <dd class="font-medium text-gray-900">{{ object.resolution_width }}x{{ object.resolution_height }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-600">Erstellt:</dt>
+                    <dd class="font-medium text-gray-900">{{ object.created_at|date:"d.m.Y H:i" }} Uhr</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-600">Erstellt von:</dt>
+                    <dd class="font-medium text-gray-900">{{ object.created_by.get_full_name|default:object.created_by.username }}</dd>
+                </div>
+                {% if object.updated_at != object.created_at %}
+                    <div class="flex justify-between">
+                        <dt class="text-gray-600">Aktualisiert:</dt>
+                        <dd class="font-medium text-gray-900">{{ object.updated_at|date:"d.m.Y H:i" }} Uhr</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-gray-600">Aktualisiert von:</dt>
+                        <dd class="font-medium text-gray-900">{{ object.updated_by.get_full_name|default:object.updated_by.username }}</dd>
+                    </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="font-bold text-gray-900 mb-4">Aktionen</h3>
+            <div class="space-y-2">
+                <a href="{% url 'vehicle_handover:photo_360_editor' object.pk %}"
+                   class="block w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-center font-medium transition-colors">
+                    Hotspots bearbeiten
+                </a>
+                <a href="{% url 'vehicle_handover:photo_360_update' object.pk %}"
+                   class="block w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-center font-medium transition-colors">
+                    Foto-Details bearbeiten
+                </a>
+                <a href="{% url 'vehicle_handover:photo_360_delete' object.pk %}"
+                   class="block w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-center font-medium transition-colors">
+                    Foto löschen
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/three/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.js"></script>
+
+<script>
+    // Hotspot data from Django
+    const hotspots = {{ hotspots_json|safe }};
+
+    // Initialize Photo Sphere Viewer
+    const viewer = new PhotoSphereViewer.Viewer({
+        container: document.getElementById('viewer-container'),
+        panorama: '{{ object.image.url }}',
+        size: {
+            width: '100%',
+            height: '70vh',
+        },
+        navbar: [
+            'zoom',
+            'move',
+            'fullscreen',
+        ],
+        defaultZoomLvl: 50,
+        fisheye: false,
+        mousewheel: true,
+        mousemove: true,
+        touchmove: true,
+        plugins: [
+            [PhotoSphereViewer.MarkersPlugin, {
+                markers: hotspots.map(h => ({
+                    id: h.id.toString(),
+                    position: {
+                        pitch: (h.pitch * Math.PI) / 180,
+                        yaw: (h.yaw * Math.PI) / 180
+                    },
+                    html: createHotspotHTML(h),
+                    tooltip: {
+                        content: h.title,
+                        position: 'top center',
+                    },
+                    data: h,
+                }))
+            }]
+        ]
+    });
+
+    // Get markers plugin
+    const markersPlugin = viewer.getPlugin(PhotoSphereViewer.MarkersPlugin);
+
+    // Handle marker clicks
+    markersPlugin.addEventListener('select-marker', ({ marker }) => {
+        const hotspot = marker.data;
+        showHotspotDetails(hotspot);
+    });
+
+    // Create HTML for hotspot marker
+    function createHotspotHTML(hotspot) {
+        const iconMap = {
+            'drawer': '📦',
+            'cabinet': '🗄️',
+            'box': '📋',
+            'tool': '🔧',
+            'medical': '⚕️',
+            'fire': '🔥',
+            'radio': '📻',
+            'equipment': '⚙️',
+            'default': '📍'
+        };
+
+        const colorMap = {
+            'red': '#EF4444',
+            'blue': '#3B82F6',
+            'green': '#10B981',
+            'yellow': '#F59E0B',
+            'purple': '#8B5CF6',
+            'orange': '#F97316',
+            'gray': '#6B7280'
+        };
+
+        const icon = iconMap[hotspot.icon] || iconMap['default'];
+        const bgColor = colorMap[hotspot.color] || colorMap['blue'];
+
+        return `
+            <div class="custom-hotspot" style="
+                background: ${bgColor};
+                color: white;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                border: 3px solid white;
+            ">
+                ${icon}
+            </div>
+        `;
+    }
+
+    // Show hotspot details in modal or panel
+    function showHotspotDetails(hotspot) {
+        // For now, just scroll to the hotspot card
+        const hotspotCard = document.querySelector(`[onclick="focusHotspot('${hotspot.id}')"]`);
+        if (hotspotCard) {
+            hotspotCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            hotspotCard.classList.add('ring-4', 'ring-blue-500');
+            setTimeout(() => {
+                hotspotCard.classList.remove('ring-4', 'ring-blue-500');
+            }, 2000);
+        }
+    }
+
+    // Focus on specific hotspot from card
+    function focusHotspot(hotspotId) {
+        const marker = markersPlugin.getMarker(hotspotId.toString());
+        if (marker) {
+            viewer.animate({
+                position: marker.state.position,
+                zoom: 80,
+                speed: '2rpm',
+            });
+        }
+    }
+</script>
+{% endblock %}

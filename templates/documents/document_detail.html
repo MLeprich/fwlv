@@ -1,0 +1,433 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ document.title }} - Dokument | FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'documents:document_list' %}" class="text-gray-500 hover:text-gray-700">Dokumente</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ document.title|truncatewords:5 }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+
+    <!-- Header with Actions -->
+    <div class="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex justify-between items-start">
+            <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">📄</span>
+                    <div>
+                        <h1 class="text-3xl font-bold">{{ document.title }}</h1>
+                        {% if document.document_number %}
+                        <p class="text-blue-100 text-lg mt-1">Nr: {{ document.document_number }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Status Badge -->
+                <div class="mt-4">
+                    {% if document.status == 'draft' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-gray-200 text-gray-800">
+                        Entwurf
+                    </span>
+                    {% elif document.status == 'review_pending' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-200 text-yellow-900">
+                        Prüfung ausstehend
+                    </span>
+                    {% elif document.status == 'active' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-green-200 text-green-900">
+                        Aktiv
+                    </span>
+                    {% elif document.status == 'archived' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-red-200 text-red-900">
+                        Archiviert
+                    </span>
+                    {% endif %}
+
+                    {% if document.is_expired %}
+                    <span class="ml-2 px-3 py-1 text-sm font-semibold rounded-full bg-red-200 text-red-900">
+                        ⚠️ Abgelaufen
+                    </span>
+                    {% elif document.is_expiring_soon %}
+                    <span class="ml-2 px-3 py-1 text-sm font-semibold rounded-full bg-yellow-200 text-yellow-900">
+                        ⚠️ Läuft bald ab
+                    </span>
+                    {% endif %}
+
+                    {% if review_due %}
+                    <span class="ml-2 px-3 py-1 text-sm font-semibold rounded-full bg-orange-200 text-orange-900">
+                        Prüfung fällig
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-2">
+                <a href="{% url 'documents:document_download' document.pk %}"
+                   class="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-gray-100 font-medium">
+                    ⬇️ Download
+                </a>
+                {% if perms.documents.change_document %}
+                <a href="{% url 'documents:document_update' document.pk %}"
+                   class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-400 font-medium">
+                    ✏️ Bearbeiten
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Beschreibung -->
+            {% if document.description %}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Beschreibung</h2>
+                <p class="text-gray-700 whitespace-pre-wrap">{{ document.description }}</p>
+            </div>
+            {% endif %}
+
+            <!-- OCR Text -->
+            {% if document.ocr_processed and document.ocr_text %}
+            <div class="bg-white rounded-lg shadow-sm p-6" id="ocr-text-section">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-bold text-gray-900">🔍 Erkannter Text</h2>
+                    <div id="match-navigation" class="hidden flex items-center gap-2">
+                        <span id="match-counter" class="text-sm text-gray-600"></span>
+                        <button id="prev-match" class="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">
+                            ← Zurück
+                        </button>
+                        <button id="next-match" class="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">
+                            Weiter →
+                        </button>
+                    </div>
+                </div>
+                <div id="ocr-text-content" class="text-sm text-gray-700 bg-gray-50 p-4 rounded border border-gray-200 whitespace-pre-wrap" style="max-height: 600px; overflow-y: auto;">{{ document.ocr_text }}</div>
+            </div>
+
+            <script>
+            (function() {
+                // Hole highlight-Parameter aus URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const highlightTerm = urlParams.get('highlight');
+
+                if (!highlightTerm) return;
+
+                const ocrTextContent = document.getElementById('ocr-text-content');
+                const matchNavigation = document.getElementById('match-navigation');
+                const matchCounter = document.getElementById('match-counter');
+                const prevButton = document.getElementById('prev-match');
+                const nextButton = document.getElementById('next-match');
+
+                if (!ocrTextContent) return;
+
+                let currentMatchIndex = 0;
+                let matchElements = [];
+
+                // Funktion zum Highlighten des Texts
+                function highlightText() {
+                    const originalText = ocrTextContent.textContent;
+                    const regex = new RegExp(`(${escapeRegex(highlightTerm)})`, 'gi');
+
+                    // Ersetze Übereinstimmungen mit span-Tags
+                    const highlightedText = originalText.replace(regex, '<mark class="bg-yellow-300 px-1 rounded" data-match-index="">$1</mark>');
+
+                    ocrTextContent.innerHTML = highlightedText;
+
+                    // Sammle alle Mark-Elemente
+                    matchElements = Array.from(ocrTextContent.querySelectorAll('mark'));
+
+                    // Nummeriere die Matches
+                    matchElements.forEach((el, idx) => {
+                        el.setAttribute('data-match-index', idx);
+                    });
+
+                    if (matchElements.length > 0) {
+                        matchNavigation.classList.remove('hidden');
+                        matchNavigation.classList.add('flex');
+                        updateMatchCounter();
+                        scrollToMatch(0);
+                    }
+                }
+
+                function escapeRegex(string) {
+                    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                }
+
+                function updateMatchCounter() {
+                    if (matchElements.length > 0) {
+                        matchCounter.textContent = `Treffer ${currentMatchIndex + 1} von ${matchElements.length}`;
+                    }
+                }
+
+                function scrollToMatch(index) {
+                    if (matchElements.length === 0) return;
+
+                    // Entferne Hervorhebung vom aktuellen Match
+                    matchElements.forEach(el => {
+                        el.classList.remove('bg-orange-400', 'font-bold');
+                        el.classList.add('bg-yellow-300');
+                    });
+
+                    // Hebe aktuellen Match hervor
+                    const currentMatch = matchElements[index];
+                    currentMatch.classList.remove('bg-yellow-300');
+                    currentMatch.classList.add('bg-orange-400', 'font-bold');
+
+                    // Scrolle zum Match
+                    currentMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    currentMatchIndex = index;
+                    updateMatchCounter();
+                }
+
+                // Navigation Event Listeners
+                prevButton.addEventListener('click', function() {
+                    const newIndex = currentMatchIndex > 0 ? currentMatchIndex - 1 : matchElements.length - 1;
+                    scrollToMatch(newIndex);
+                });
+
+                nextButton.addEventListener('click', function() {
+                    const newIndex = currentMatchIndex < matchElements.length - 1 ? currentMatchIndex + 1 : 0;
+                    scrollToMatch(newIndex);
+                });
+
+                // Tastatur-Navigation (Alt+N für nächsten, Alt+P für vorherigen)
+                document.addEventListener('keydown', function(e) {
+                    if (e.altKey && e.key === 'n') {
+                        e.preventDefault();
+                        nextButton.click();
+                    } else if (e.altKey && e.key === 'p') {
+                        e.preventDefault();
+                        prevButton.click();
+                    }
+                });
+
+                // Initialisiere Highlighting
+                highlightText();
+            })();
+            </script>
+            {% endif %}
+
+            <!-- Versionen -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-900">📦 Versionen</h2>
+                    {% if perms.documents.change_document %}
+                    <a href="{% url 'documents:document_version_create' document.pk %}"
+                       class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                        + Neue Version
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if versions %}
+                <div class="space-y-3">
+                    {% for version in versions %}
+                    <div class="border border-gray-200 rounded-lg p-4 {% if version.version_number == document.version_number %}bg-blue-50 border-blue-300{% endif %}">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-semibold text-gray-900">
+                                    Version {{ version.version_number }}
+                                    {% if version.version_number == document.version_number %}
+                                    <span class="ml-2 px-2 py-0.5 text-xs bg-blue-600 text-white rounded">Aktuell</span>
+                                    {% endif %}
+                                    <span class="ml-2 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded">{{ version.get_change_type_display }}</span>
+                                </div>
+                                {% if version.change_summary %}
+                                <p class="text-sm text-gray-600 mt-1">{{ version.change_summary }}</p>
+                                {% endif %}
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Hochgeladen am {{ version.created_at|date:"d.m.Y H:i" }} von {{ version.created_by.get_full_name }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm">Keine Versionen vorhanden.</p>
+                {% endif %}
+            </div>
+
+            <!-- Prüfungen -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-900">✓ Prüfungen</h2>
+                    {% if perms.documents.add_documentreview %}
+                    <a href="{% url 'documents:document_review_create' document.pk %}"
+                       class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                        + Neue Prüfung
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if reviews %}
+                <div class="space-y-3">
+                    {% for review in reviews %}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-semibold text-gray-900">
+                                    {% if review.review_status == 'approved' %}
+                                    <span class="text-green-600">✓ Genehmigt</span>
+                                    {% elif review.review_status == 'rejected' %}
+                                    <span class="text-red-600">✗ Abgelehnt</span>
+                                    {% elif review.review_status == 'revision' %}
+                                    <span class="text-orange-600">⚠ Überarbeitung erforderlich</span>
+                                    {% elif review.review_status == 'pending' %}
+                                    <span class="text-yellow-600">⏳ Ausstehend</span>
+                                    {% endif %}
+                                </div>
+                                {% if review.comments %}
+                                <p class="text-sm text-gray-600 mt-1">{{ review.comments }}</p>
+                                {% endif %}
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {% if review.review_date %}
+                                    Geprüft am {{ review.review_date|date:"d.m.Y H:i" }} von {{ review.reviewer.get_full_name }}
+                                    {% else %}
+                                    Zugewiesen an {{ review.reviewer.get_full_name }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm">Keine Prüfungen vorhanden.</p>
+                {% endif %}
+            </div>
+
+            <!-- Zugriffslogs -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">📊 Letzte Zugriffe</h2>
+
+                {% if recent_access %}
+                <div class="space-y-2">
+                    {% for access in recent_access %}
+                    <div class="text-sm text-gray-600 flex justify-between items-center py-2 border-b border-gray-100">
+                        <div>
+                            <span class="font-medium">{{ access.accessed_by.get_full_name }}</span>
+                            <span class="text-gray-400">•</span>
+                            <span>{{ access.get_action_display }}</span>
+                        </div>
+                        <span class="text-gray-400">{{ access.accessed_at|date:"d.m.Y H:i" }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm">Keine Zugriffe protokolliert.</p>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+
+            <!-- Metadaten -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">📋 Metadaten</h3>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Kategorie</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.category.name|default:"—" }}</dd>
+                    </div>
+                    {% if document.tags %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Tags</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.tags }}</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Dateityp</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.mime_type|default:"—" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Dateigröße</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.file_size|filesizeformat }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Version</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.version_number|default:"1.0" }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Gültigkeit -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">📅 Gültigkeit</h3>
+                <dl class="space-y-3">
+                    {% if document.valid_from %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Gültig ab</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.valid_from|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if document.valid_until %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Gültig bis</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.valid_until|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if document.review_date %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Nächste Prüfung</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.review_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+
+            <!-- Upload-Info -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">👤 Upload-Informationen</h3>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Erstellt von</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.created_by.get_full_name }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Erstellt am</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.created_at|date:"d.m.Y H:i" }}</dd>
+                    </div>
+                    {% if document.updated_by and document.updated_at != document.created_at %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">Zuletzt aktualisiert</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ document.updated_at|date:"d.m.Y H:i" }} von {{ document.updated_by.get_full_name }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+
+            <!-- Aktionen -->
+            {% if perms.documents.delete_document %}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">⚠️ Weitere Aktionen</h3>
+                <a href="{% url 'documents:document_delete' document.pk %}"
+                   class="block w-full px-4 py-2 bg-red-600 text-white text-center rounded-lg hover:bg-red-700 font-medium">
+                    Archivieren
+                </a>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

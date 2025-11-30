@@ -1,0 +1,442 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Neue Übergabe - Schritt 1: Grunddaten - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Neue Übergabe</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <!-- Fortschrittsanzeige -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-700">Schritt {{ current_step }} von {{ total_steps }}</span>
+            <span class="text-sm font-medium text-gray-700">{{ step_progress }}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: {{ step_progress }}%"></div>
+        </div>
+        <div class="flex justify-between mt-3 text-xs text-gray-500">
+            <span class="font-medium text-blue-600">1. Grunddaten</span>
+            <span>2. Fahrzeugdaten</span>
+            <span>3. Checkliste</span>
+            <span>4. Fotos</span>
+            <span>5. Mängel</span>
+            <span>6. Bestätigung</span>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center mb-6">
+            <span class="text-4xl mr-4">📋</span>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Grunddaten erfassen</h1>
+                <p class="text-sm text-gray-600 mt-1">Fahrzeug, Personen und Übergabe-Details</p>
+            </div>
+        </div>
+
+        <form method="post" class="space-y-6" id="step1-form" onsubmit="return validateStep1()">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg mb-4">
+                <div class="flex">
+                    <span class="text-red-600">❌</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if form.errors %}
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg mb-4">
+                <div class="flex">
+                    <span class="text-yellow-600">⚠️</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Formular-Fehler gefunden:</h3>
+                        <div class="mt-2 text-sm text-yellow-700">
+                            <ul class="list-disc list-inside space-y-1">
+                                {% for field, errors in form.errors.items %}
+                                    {% if field != '__all__' %}
+                                        <li><strong>{{ field }}:</strong>
+                                            {% for error in errors %}
+                                                {{ error }}{% if not forloop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Fahrzeug -->
+            <div x-data="{ open: false, search: '', selected: null, vehicles: [] }" x-init="
+                vehicles = Array.from(document.querySelectorAll('#id_vehicle option')).map(opt => ({
+                    value: opt.value,
+                    text: opt.text
+                })).filter(v => v.value);
+                const currentValue = document.getElementById('id_vehicle').value;
+                if (currentValue) {
+                    selected = vehicles.find(v => v.value === currentValue);
+                }
+            ">
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.vehicle.label }} *</label>
+
+                <!-- Hidden Original Select -->
+                <div class="hidden">{{ form.vehicle }}</div>
+
+                <!-- Custom Searchable Dropdown -->
+                <div class="relative">
+                    <button
+                        type="button"
+                        @click="open = !open"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                    >
+                        <span x-text="selected ? selected.text : '🚒 Fahrzeug auswählen...'" class="truncate"></span>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+
+                    <div
+                        x-show="open"
+                        @click.away="open = false"
+                        x-cloak
+                        class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                    >
+                        <!-- Search Input -->
+                        <div class="p-2 border-b border-gray-200">
+                            <input
+                                type="text"
+                                x-model="search"
+                                @click.stop
+                                placeholder="Fahrzeug suchen..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                        </div>
+
+                        <!-- Options List -->
+                        <div class="overflow-y-auto max-h-64">
+                            <template x-for="vehicle in vehicles.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="vehicle.value">
+                                <button
+                                    type="button"
+                                    @click="selected = vehicle; document.getElementById('id_vehicle').value = vehicle.value; open = false"
+                                    class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                    :class="selected && selected.value === vehicle.value ? 'bg-blue-100 font-medium' : ''"
+                                    x-text="vehicle.text"
+                                ></button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                {% if form.vehicle.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.vehicle.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">Wählen Sie das Fahrzeug aus, das übergeben wird</p>
+            </div>
+
+            <!-- Checklisten-Template -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.checklist_template.label }}
+                </label>
+                {{ form.checklist_template }}
+                {% if form.checklist_template.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.checklist_template.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">Optional: Wählen Sie eine Checklisten-Vorlage für die Prüfung</p>
+            </div>
+
+            <!-- Übergabeart -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.handover_type.label }} *
+                </label>
+                {{ form.handover_type }}
+                {% if form.handover_type.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.handover_type.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Datum und Uhrzeit -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.handover_date.label }} *
+                </label>
+                {{ form.handover_date }}
+                {% if form.handover_date.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.handover_date.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Personen -->
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Übergeben von -->
+                <div x-data="{ open: false, search: '', selected: null, persons: [] }" x-init="
+                    persons = Array.from(document.querySelectorAll('#id_handover_from option')).map(opt => ({
+                        value: opt.value,
+                        text: opt.text
+                    })).filter(p => p.value);
+                    const currentValue = document.getElementById('id_handover_from').value;
+                    if (currentValue) {
+                        selected = persons.find(p => p.value === currentValue);
+                    }
+                ">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.handover_from.label }}</label>
+
+                    <!-- Hidden Original Select -->
+                    <div class="hidden">{{ form.handover_from }}</div>
+
+                    <!-- Custom Searchable Dropdown -->
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                        >
+                            <span x-text="selected ? selected.text : '👤 Übergeben von auswählen...'" class="truncate"></span>
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                        >
+                            <!-- Search Input -->
+                            <div class="p-2 border-b border-gray-200">
+                                <input
+                                    type="text"
+                                    x-model="search"
+                                    @click.stop
+                                    placeholder="Person suchen..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                >
+                            </div>
+
+                            <!-- Options List -->
+                            <div class="overflow-y-auto max-h-64">
+                                <template x-for="person in persons.filter(p => p.text.toLowerCase().includes(search.toLowerCase()))" :key="person.value">
+                                    <button
+                                        type="button"
+                                        @click="selected = person; document.getElementById('id_handover_from').value = person.value; open = false"
+                                        class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                        :class="selected && selected.value === person.value ? 'bg-blue-100 font-medium' : ''"
+                                        x-text="person.text"
+                                    ></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if form.handover_from.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.handover_from.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">Leer bei erster Inbetriebnahme</p>
+                </div>
+
+                <!-- Übergeben an -->
+                <div x-data="{ open: false, search: '', selected: null, persons: [] }" x-init="
+                    persons = Array.from(document.querySelectorAll('#id_handover_to option')).map(opt => ({
+                        value: opt.value,
+                        text: opt.text
+                    })).filter(p => p.value);
+                    const currentValue = document.getElementById('id_handover_to').value;
+                    if (currentValue) {
+                        selected = persons.find(p => p.value === currentValue);
+                    }
+                    document.getElementById('id_handover_to').removeAttribute('required');
+                ">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.handover_to.label }} *</label>
+
+                    <!-- Hidden Original Select -->
+                    <div class="hidden">{{ form.handover_to }}</div>
+
+                    <!-- Custom Searchable Dropdown -->
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                        >
+                            <span x-text="selected ? selected.text : '👤 Übergeben an auswählen...'" class="truncate"></span>
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                        >
+                            <!-- Search Input -->
+                            <div class="p-2 border-b border-gray-200">
+                                <input
+                                    type="text"
+                                    x-model="search"
+                                    @click.stop
+                                    placeholder="Person suchen..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                >
+                            </div>
+
+                            <!-- Options List -->
+                            <div class="overflow-y-auto max-h-64">
+                                <template x-for="person in persons.filter(p => p.text.toLowerCase().includes(search.toLowerCase()))" :key="person.value">
+                                    <button
+                                        type="button"
+                                        @click="selected = person; document.getElementById('id_handover_to').value = person.value; open = false"
+                                        class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                        :class="selected && selected.value === person.value ? 'bg-blue-100 font-medium' : ''"
+                                        x-text="person.text"
+                                    ></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if form.handover_to.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.handover_to.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Standort -->
+            <div x-data="{ open: false, search: '', selected: null, locations: [] }" x-init="
+                locations = Array.from(document.querySelectorAll('#id_location option')).map(opt => ({
+                    value: opt.value,
+                    text: opt.text
+                })).filter(l => l.value);
+                const currentValue = document.getElementById('id_location').value;
+                if (currentValue) {
+                    selected = locations.find(l => l.value === currentValue);
+                }
+            ">
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.location.label }}</label>
+
+                <!-- Hidden Original Select -->
+                <div class="hidden">{{ form.location }}</div>
+
+                <!-- Custom Searchable Dropdown -->
+                <div class="relative">
+                    <button
+                        type="button"
+                        @click="open = !open"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                    >
+                        <span x-text="selected ? selected.text : '📍 Standort auswählen...'" class="truncate"></span>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+
+                    <div
+                        x-show="open"
+                        @click.away="open = false"
+                        x-cloak
+                        class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                    >
+                        <!-- Search Input -->
+                        <div class="p-2 border-b border-gray-200">
+                            <input
+                                type="text"
+                                x-model="search"
+                                @click.stop
+                                placeholder="Standort suchen..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                        </div>
+
+                        <!-- Options List -->
+                        <div class="overflow-y-auto max-h-64">
+                            <template x-for="location in locations.filter(l => l.text.toLowerCase().includes(search.toLowerCase()))" :key="location.value">
+                                <button
+                                    type="button"
+                                    @click="selected = location; document.getElementById('id_location').value = location.value; open = false"
+                                    class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                    :class="selected && selected.value === location.value ? 'bg-blue-100 font-medium' : ''"
+                                    x-text="location.text"
+                                ></button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                {% if form.location.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.location.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% url 'vehicle_handover:dashboard' %}"
+                   class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                    Weiter zu Schritt 2 →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function validateStep1() {
+    // Prüfe Fahrzeug
+    const vehicleSelect = document.getElementById('id_vehicle');
+    if (!vehicleSelect.value) {
+        alert('Bitte wählen Sie ein Fahrzeug aus.');
+        return false;
+    }
+
+    // Prüfe Übergabe von
+    const handoverFromSelect = document.getElementById('id_handover_from');
+    if (!handoverFromSelect.value) {
+        alert('Bitte wählen Sie aus, von wem das Fahrzeug übergeben wird.');
+        return false;
+    }
+
+    // Prüfe Übergabe an
+    const handoverToSelect = document.getElementById('id_handover_to');
+    if (!handoverToSelect.value) {
+        alert('Bitte wählen Sie aus, an wen das Fahrzeug übergeben wird.');
+        return false;
+    }
+
+    // Prüfe Übergabe-Datum
+    const handoverDateInput = document.getElementById('id_handover_date');
+    if (!handoverDateInput.value) {
+        alert('Bitte geben Sie ein Übergabe-Datum ein.');
+        return false;
+    }
+
+    // Alle Validierungen bestanden
+    return true;
+}
+</script>
+{% endblock %}

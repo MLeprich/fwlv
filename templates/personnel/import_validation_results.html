@@ -1,0 +1,177 @@
+<!-- Validation Results Partial (loaded via HTMX) -->
+
+{% if validation_passed %}
+<!-- Success: No Errors -->
+<div class="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+    <div class="flex items-start gap-4">
+        <div class="text-4xl">✅</div>
+        <div class="flex-1">
+            <h3 class="text-lg font-bold text-green-900 mb-2">Validierung erfolgreich!</h3>
+            <p class="text-green-800 mb-4">
+                Alle {{ total_rows }} Datensätze wurden erfolgreich validiert und können importiert werden.
+            </p>
+            <div class="grid grid-cols-3 gap-4 text-sm">
+                <div class="bg-white rounded-lg p-3">
+                    <p class="text-gray-600">Gesamt</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_rows }}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3">
+                    <p class="text-gray-600">Neue Einträge</p>
+                    <p class="text-2xl font-bold text-green-600">{{ new_records }}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3">
+                    <p class="text-gray-600">Aktualisierungen</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ updates }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Errors Found -->
+<div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+    <div class="flex items-start gap-4">
+        <div class="text-4xl">❌</div>
+        <div class="flex-1">
+            <h3 class="text-lg font-bold text-red-900 mb-2">Validierung fehlgeschlagen</h3>
+            <p class="text-red-800 mb-4">
+                Es wurden {{ error_count }} Fehler in {{ rows_with_errors }} Zeilen gefunden. Bitte korrigieren Sie die Fehler und laden Sie die Datei erneut hoch.
+            </p>
+            <div class="grid grid-cols-3 gap-4 text-sm">
+                <div class="bg-white rounded-lg p-3">
+                    <p class="text-gray-600">Gesamt</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_rows }}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3">
+                    <p class="text-gray-600">Gültig</p>
+                    <p class="text-2xl font-bold text-green-600">{{ valid_rows }}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3">
+                    <p class="text-gray-600">Fehler</p>
+                    <p class="text-2xl font-bold text-red-600">{{ rows_with_errors }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Data Preview -->
+<div class="mb-6">
+    <h3 class="font-semibold text-gray-900 mb-4">📋 Datenvorschau</h3>
+    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zeile</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Personalnummer</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">E-Mail</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Abteilung</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for row in preview_data %}
+                <tr class="{% if row.has_errors %}bg-red-50{% elif row.is_update %}bg-blue-50{% else %}bg-white{% endif %} hover:bg-gray-50">
+                    <td class="px-4 py-3 text-gray-900 font-mono text-xs">{{ row.row_number }}</td>
+                    <td class="px-4 py-3">
+                        {% if row.errors.personnel_number %}
+                        <span class="text-red-600 font-medium">{{ row.personnel_number }}</span>
+                        <p class="text-xs text-red-600 mt-1">{{ row.errors.personnel_number }}</p>
+                        {% else %}
+                        <span class="font-mono text-gray-900">{{ row.personnel_number }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if row.errors.first_name or row.errors.last_name %}
+                        <span class="text-red-600 font-medium">{{ row.first_name }} {{ row.last_name }}</span>
+                        {% if row.errors.first_name %}<p class="text-xs text-red-600 mt-1">{{ row.errors.first_name }}</p>{% endif %}
+                        {% if row.errors.last_name %}<p class="text-xs text-red-600 mt-1">{{ row.errors.last_name }}</p>{% endif %}
+                        {% else %}
+                        <span class="text-gray-900">{{ row.first_name }} {{ row.last_name }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if row.errors.email %}
+                        <span class="text-red-600">{{ row.email }}</span>
+                        <p class="text-xs text-red-600 mt-1">{{ row.errors.email }}</p>
+                        {% else %}
+                        <span class="text-gray-700">{{ row.email|default:"-" }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-700">{{ row.department|default:"-" }}</td>
+                    <td class="px-4 py-3">
+                        {% if row.has_errors %}
+                        <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                            ❌ Fehler
+                        </span>
+                        {% elif row.is_update %}
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                            🔄 Update
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                            ✓ Neu
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if total_rows > preview_data|length %}
+    <p class="text-sm text-gray-600 mt-2 text-center">
+        Zeige {{ preview_data|length }} von {{ total_rows }} Zeilen
+    </p>
+    {% endif %}
+</div>
+
+<!-- Error Summary -->
+{% if not validation_passed %}
+<div class="mb-6">
+    <h3 class="font-semibold text-gray-900 mb-4">⚠️ Fehlerzusammenfassung</h3>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <ul class="space-y-2 text-sm text-red-800">
+            {% for error in error_summary %}
+            <li class="flex items-start gap-2">
+                <span class="text-red-600">•</span>
+                <span><strong>Zeile {{ error.row }}:</strong> {{ error.message }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+<div class="flex items-center gap-3">
+    {% if validation_passed %}
+    <button
+        hx-post="{% url 'personnel:import_execute' %}"
+        hx-vals='{"session_key": "{{ session_key }}"}'
+        hx-target="#validation-results"
+        hx-swap="innerHTML"
+        @htmx:after-request="if($event.detail.successful) { step = 3; }"
+        class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+    >
+        ✓ {{ total_rows }} Datensätze importieren
+    </button>
+    {% else %}
+    <button
+        @click="step = 1"
+        class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+    >
+        ← Neue Datei hochladen
+    </button>
+    {% endif %}
+
+    <button
+        @click="step = 1; validationResults = null"
+        class="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+    >
+        Abbrechen
+    </button>
+</div>

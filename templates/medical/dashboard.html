@@ -1,0 +1,405 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rettungsdienst - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Rettungsdienst</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-red-600 to-red-800 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">🚑</span>
+                    <h1 class="text-3xl font-bold">Rettungsdienst</h1>
+                </div>
+                <p class="text-red-100 text-lg">
+                    Medikamente, Medizintechnik & BTM-Verwaltung mit Chargenrückverfolgung
+                </p>
+            </div>
+            <div class="hidden lg:block">
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20">
+                    <p class="text-red-100 text-sm mb-1">Gesamt-Artikel</p>
+                    <p class="text-4xl font-bold">{{ total_items }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Gesamtbestand -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Gesamtbestand</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_items }}</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <span class="text-3xl">💊</span>
+                </div>
+            </div>
+            <a href="{% url 'medical:master_list' %}" class="text-gray-600 hover:text-gray-900 text-sm font-medium mt-4 inline-block">
+                Alle anzeigen →
+            </a>
+        </div>
+
+        <!-- BTM-Artikel -->
+        <div class="bg-white rounded-lg shadow-sm border {% if btm_items > 0 %}border-red-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">BTM-Artikel</p>
+                    <p class="text-3xl font-bold {% if btm_items > 0 %}text-red-600{% else %}text-gray-900{% endif %} mt-2">
+                        {{ btm_items }}
+                    </p>
+                </div>
+                <div class="{% if btm_items > 0 %}bg-red-50{% else %}bg-gray-50{% endif %} rounded-lg p-3">
+                    <span class="text-3xl">☢️</span>
+                </div>
+            </div>
+            <a href="{% url 'medical:btm_list' %}" class="{% if btm_items > 0 %}text-red-600 hover:text-red-700{% else %}text-gray-600 hover:text-gray-900{% endif %} text-sm font-medium mt-4 inline-block">
+                Details anzeigen →
+            </a>
+        </div>
+
+        <!-- Niedrige Bestände -->
+        <div class="bg-white rounded-lg shadow-sm border {% if low_stock_count > 0 %}border-amber-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Niedrige Bestände</p>
+                    <p class="text-3xl font-bold {% if low_stock_count > 0 %}text-amber-600{% else %}text-gray-900{% endif %} mt-2">
+                        {{ low_stock_count }}
+                    </p>
+                </div>
+                <div class="{% if low_stock_count > 0 %}bg-amber-50{% else %}bg-gray-50{% endif %} rounded-lg p-3">
+                    <span class="text-3xl">{% if low_stock_count > 0 %}⚠️{% else %}✅{% endif %}</span>
+                </div>
+            </div>
+            <a href="{% url 'medical:low_stock' %}" class="{% if low_stock_count > 0 %}text-amber-600 hover:text-amber-700{% else %}text-gray-600 hover:text-gray-900{% endif %} text-sm font-medium mt-4 inline-block">
+                Details anzeigen →
+            </a>
+        </div>
+
+        <!-- Ablaufende Chargen -->
+        <div class="bg-white rounded-lg shadow-sm border {% if expiring_batches_30 > 0 %}border-orange-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Ablauf in 30 Tagen</p>
+                    <p class="text-3xl font-bold {% if expiring_batches_30 > 0 %}text-orange-600{% else %}text-gray-900{% endif %} mt-2">
+                        {{ expiring_batches_30 }}
+                    </p>
+                </div>
+                <div class="{% if expiring_batches_30 > 0 %}bg-orange-50{% else %}bg-gray-50{% endif %} rounded-lg p-3">
+                    <span class="text-3xl">{% if expiring_batches_30 > 0 %}⏰{% else %}✅{% endif %}</span>
+                </div>
+            </div>
+            <a href="{% url 'medical:expiring_batches' %}" class="{% if expiring_batches_30 > 0 %}text-orange-600 hover:text-orange-700{% else %}text-gray-600 hover:text-gray-900{% endif %} text-sm font-medium mt-4 inline-block">
+                Details anzeigen →
+            </a>
+        </div>
+    </div>
+
+    <!-- Critical Alerts -->
+    {% if critical_alerts %}
+    <div class="bg-red-50 border-l-4 border-red-500 rounded-lg shadow p-6 mb-8">
+        <div class="flex items-start gap-3">
+            <span class="text-3xl">🚨</span>
+            <div class="flex-1">
+                <h3 class="text-lg font-bold text-red-900 mb-3">Kritische Warnungen</h3>
+                <div class="space-y-2">
+                    {% for alert in critical_alerts %}
+                    <div class="bg-white rounded p-3 flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-red-700">{{ alert.title }}</p>
+                            <p class="text-xs text-gray-600 mt-1">{{ alert.description }}</p>
+                        </div>
+                        <a href="{{ alert.url }}" class="text-red-600 hover:text-red-800 font-medium text-sm">
+                            Details →
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Bereiche -->
+        <div class="lg:col-span-2">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">📂 Bereiche</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <!-- Stammdaten (Master Data) -->
+                <a href="{% url 'medical:master_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">📘</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Stammdaten</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Produktdefinitionen, PZN, ATC-Code
+                    </p>
+                    <div class="text-2xl font-bold text-gray-900">{{ total_masters|default:0 }}</div>
+                    <p class="text-xs text-gray-500 mt-2">Stammdaten verwalten →</p>
+                </a>
+
+                <!-- Medizintechnik-Instanzen -->
+                <a href="{% url 'medical:device_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">🏥</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Medizintechnik</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Geräte mit Inventarnummern
+                    </p>
+                    <div class="text-2xl font-bold text-gray-900">{{ total_devices|default:0 }}</div>
+                    <p class="text-xs text-gray-500 mt-2">{{ operational_devices|default:0 }} einsatzbereit</p>
+                </a>
+
+                <!-- BTM-Bereich -->
+                <a href="{% url 'medical:btm_list' %}" class="bg-white rounded-lg shadow-sm border border-red-200 hover:shadow-md hover:border-red-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-red-50 rounded-lg p-2">
+                            <span class="text-2xl">☢️</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">BTM-Bereich</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Betäubungsmittel & Vier-Augen-Prinzip
+                    </p>
+                    <div class="text-2xl font-bold text-red-600">{{ btm_items }}</div>
+                </a>
+
+                <!-- Chargen-Rückverfolgung -->
+                <a href="{% url 'medical:batch_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">📋</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Chargen</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Batch-Tracking & Ablaufdatum
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Zur Übersicht →
+                    </p>
+                </a>
+
+                <!-- Import/Export -->
+                <a href="{% url 'medical:import_export' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">📤</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Import/Export</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Daten importieren & exportieren
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Zur Übersicht →
+                    </p>
+                </a>
+
+                <!-- Lagerbewegungen -->
+                <a href="{% url 'medical:stock_movements' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">📦</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Bewegungen</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Ein- und Ausgänge, BTM-Freigaben
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Zur Übersicht →
+                    </p>
+                </a>
+
+                <!-- Inventur -->
+                <a href="{% url 'medical:inventory_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">🔍</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Inventur</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Physische Bestandsaufnahme & Abgleich
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">Zur Übersicht →</p>
+                </a>
+
+                <!-- Personal-Verwaltung -->
+                <a href="{% url 'medical:staff_management' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">👥</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Personal</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Bearbeiter & Lesende verwalten
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Zur Verwaltung →
+                    </p>
+                </a>
+            </div>
+
+            <!-- Letzte Bewegungen -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <span>📋</span>
+                        <span>Letzte Bewegungen</span>
+                    </h3>
+                    <a href="{% url 'medical:stock_movements' %}" class="text-gray-600 hover:text-gray-900 text-sm font-medium">
+                        Alle anzeigen →
+                    </a>
+                </div>
+
+                {% if recent_movements %}
+                <div class="space-y-3">
+                    {% for movement in recent_movements %}
+                    <div class="border-l-2 border-gray-300 pl-4 py-2">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    {% if movement.requires_approval %}
+                                    <span class="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded font-semibold border border-red-200">☢️ BTM</span>
+                                    {% elif movement.movement_type == 'incoming' %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-medium">📥 Eingang</span>
+                                    {% elif movement.movement_type == 'outgoing' %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-medium">📤 Ausgang</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-medium">{{ movement.get_movement_type_display }}</span>
+                                    {% endif %}
+                                </div>
+                                <p class="font-medium text-gray-900">
+                                    {{ movement.item.name }}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {{ movement.quantity }} {{ movement.unit }}
+                                    {% if movement.created_by %} | {{ movement.created_by.get_full_name }}{% endif %}
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-500">{{ movement.movement_date|date:"d.m.Y" }}</p>
+                                <p class="text-xs text-gray-400">{{ movement.movement_date|time:"H:i" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <span class="text-4xl block mb-2">📋</span>
+                    <p>Noch keine Lagerbewegungen vorhanden</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column: Quick Actions -->
+        <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-4">⚡ Schnellaktionen</h2>
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-2">
+                <a href="{% url 'medical:master_create' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    ➕ Neue Stammdaten
+                </a>
+                <a href="{% url 'medical:device_create' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    🏥 Neues Gerät
+                </a>
+                <a href="{% url 'medical:btm_approvals' %}" class="block w-full bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    ☢️ BTM-Freigaben
+                </a>
+                <a href="{% url 'medical:batch_list' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    📋 Chargen verwalten
+                </a>
+                <a href="{% url 'medical:import_export' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    📤 Import/Export
+                </a>
+                <a href="{% url 'medical:inventory_list' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    🔍 Inventur
+                </a>
+                <a href="{% url 'medical:staff_management' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    👥 Personal verwalten
+                </a>
+            </div>
+
+            <!-- BTM Niedrige Bestände -->
+            {% if btm_low_stock %}
+            <div class="mt-6 bg-red-50 border border-red-200 rounded-lg p-6">
+                <h3 class="font-bold text-red-900 mb-4 flex items-center gap-2">
+                    <span>☢️</span>
+                    <span>BTM - Niedrige Bestände</span>
+                </h3>
+                <div class="space-y-2">
+                    {% for item in btm_low_stock %}
+                    <div class="flex items-center justify-between text-sm bg-white rounded p-2">
+                        <span class="text-red-800">{{ item.name }}</span>
+                        <span class="font-bold text-red-900">{{ item.quantity }} {{ item.unit }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Ablaufende Chargen Widget -->
+            {% if expiring_batches %}
+            <div class="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-6">
+                <h3 class="font-bold text-orange-900 mb-4 flex items-center gap-2">
+                    <span>⏰</span>
+                    <span>Ablaufende Chargen</span>
+                </h3>
+                <div class="space-y-2">
+                    {% for batch in expiring_batches|slice:":5" %}
+                    <div class="bg-white rounded p-2 text-sm">
+                        <p class="font-medium text-gray-900">{{ batch.item.name }}</p>
+                        <p class="text-xs text-orange-600 mt-1">{{ batch.expiry_date|date:"d.m.Y" }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Help Box -->
+            <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">⚠️</span>
+                    <div>
+                        <h3 class="font-bold text-yellow-900 mb-2">Wichtige Hinweise</h3>
+                        <ul class="text-sm text-yellow-800 space-y-1">
+                            <li>• BTM: Vier-Augen-Prinzip beachten</li>
+                            <li>• Chargen vor Ablauf verbrauchen</li>
+                            <li>• Mindestbestände im Blick behalten</li>
+                            <li>• Regelmäßige Datenbackups durchführen</li>
+                            <li>• Import/Export für Berichterstattung nutzen</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

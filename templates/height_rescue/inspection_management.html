@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Prüfungsverwaltung - Höhenrettung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'height_rescue:dashboard' %}" class="text-gray-500 hover:text-gray-700">Höhenrettung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Prüfungsverwaltung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">⚙️</span>
+                    <h1 class="text-3xl font-bold">Prüfungsverwaltung</h1>
+                </div>
+                <p class="text-purple-100 text-lg">
+                    Zentrale Verwaltung für Prüfungen und Inspektionen nach DGUV
+                </p>
+            </div>
+            <div class="hidden lg:block">
+                <a href="{% url 'height_rescue:dashboard' %}" class="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-3 border border-white/20 hover:bg-white/20 transition-colors">
+                    <span class="text-white font-medium">← Zurück zum Dashboard</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Prüfungstypen</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_types }}</p>
+                </div>
+                <div class="bg-purple-100 rounded-full p-3">
+                    <span class="text-3xl">📋</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Aktive Zuweisungen</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_assignments }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <span class="text-3xl">🔗</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Durchgeführte Prüfungen</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_records }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <span class="text-3xl">✅</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prüfungsarten Management -->
+    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span class="text-2xl">🔍</span>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Prüfungsarten verwalten</h2>
+                    <p class="text-sm text-gray-600">Individuelle Prüfungen erstellen und Ausrüstung zuweisen</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Prüfungstypen Liste -->
+            <a href="{% url 'height_rescue:inspection_type_list' %}" class="bg-white rounded-lg p-4 border-2 border-blue-200 hover:border-blue-400 transition-all group">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-2xl">📋</span>
+                    <h3 class="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">Prüfungstypen</h3>
+                </div>
+                <p class="text-sm text-gray-600 mb-2">Sichtprüfung, Belastungsprüfung, Jahresprüfung nach EN-Normen</p>
+                <div class="flex items-center justify-between mt-3">
+                    <span class="text-sm font-medium text-blue-600 group-hover:underline">Verwalten →</span>
+                    <span class="text-lg font-bold text-blue-600">{{ total_types }}</span>
+                </div>
+            </a>
+
+            <!-- Neuen Prüfungstyp erstellen -->
+            <a href="{% url 'height_rescue:inspection_type_create' %}" class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-lg p-4 border-2 border-blue-600 hover:from-blue-700 hover:to-indigo-800 transition-all group">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-2xl">➕</span>
+                    <h3 class="font-bold">Neuen Prüfungstyp erstellen</h3>
+                </div>
+                <p class="text-sm text-blue-100 mb-2">Eigene Prüfungsart mit individuellen Prüfpunkten anlegen</p>
+                <span class="text-sm font-medium group-hover:underline">Jetzt erstellen →</span>
+            </a>
+        </div>
+
+        <!-- Prüfungstypen Übersicht -->
+        {% if inspection_types %}
+        <div class="mt-6">
+            <h3 class="font-bold text-gray-900 mb-3">📊 Vorhandene Prüfungstypen</h3>
+            <div class="bg-white rounded-lg border border-blue-200 overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Standard</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Intervall</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zuweisungen</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for type in inspection_types %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="font-medium text-gray-900">{{ type.name }}</div>
+                                {% if type.is_mandatory %}
+                                <span class="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">Pflicht</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ type.inspection_standard|default:"-" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ type.interval_months|default:"-" }} Monate
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                                {{ type.assignment_count }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <a href="{% url 'height_rescue:inspection_type_edit' type.pk %}" class="text-blue-600 hover:text-blue-900 mr-3">Bearbeiten</a>
+                                <a href="{% url 'height_rescue:inspection_type_delete' type.pk %}" class="text-red-600 hover:text-red-900">Löschen</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="mt-6 bg-white rounded-lg p-8 text-center border-2 border-dashed border-blue-300">
+            <span class="text-5xl block mb-3">📋</span>
+            <p class="text-gray-600 font-medium mb-2">Noch keine Prüfungstypen angelegt</p>
+            <p class="text-sm text-gray-500 mb-4">Erstellen Sie Ihren ersten Prüfungstyp, um loszulegen</p>
+            <a href="{% url 'height_rescue:inspection_type_create' %}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                ➕ Ersten Prüfungstyp erstellen
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Hilfe-Box -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-3xl">💡</span>
+            <div>
+                <h3 class="font-bold text-yellow-900 mb-2">Wie funktioniert die Prüfungsverwaltung?</h3>
+                <ul class="text-sm text-yellow-800 space-y-1">
+                    <li><strong>1. Prüfungstyp erstellen:</strong> Definieren Sie, was geprüft werden soll (z.B. "Sichtprüfung nach EN 365")</li>
+                    <li><strong>2. Prüfpunkte festlegen:</strong> Legen Sie eine Checkliste an (z.B. "Seil auf Beschädigungen prüfen")</li>
+                    <li><strong>3. Ausrüstung zuweisen:</strong> Weisen Sie den Prüfungstyp der jeweiligen Ausrüstung zu</li>
+                    <li><strong>4. Prüfungen durchführen:</strong> Dokumentieren Sie durchgeführte Prüfungen mit Protokoll</li>
+                    <li>• Intervalle werden automatisch berechnet (Standard: 12 Monate nach DGUV)</li>
+                    <li>• Individuelle Messfelder können pro Prüfungstyp definiert werden</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

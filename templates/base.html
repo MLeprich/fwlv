@@ -1,0 +1,400 @@
+{% load static %}
+{% load permission_tags %}
+<!DOCTYPE html>
+<html lang="de" class="h-full bg-gray-50 {% if current_theme == 'dark' %}dark{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FLVS - Feuerwehr Lagerverwaltung{% endblock %}</title>
+
+    <!-- Tailwind CSS (local) -->
+    <script src="{% static 'js/tailwind.min.js' %}"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+
+    <!-- Alpine.js Collapse Plugin (local) -->
+    <script defer src="{% static 'js/alpine-collapse.min.js' %}"></script>
+
+    <!-- Alpine.js (local) -->
+    <script defer src="{% static 'js/alpine.min.js' %}"></script>
+
+    <!-- HTMX (local) -->
+    <script src="{% static 'js/htmx.min.js' %}"></script>
+
+    <!-- Alpine Store - Initialize BEFORE Alpine loads -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('sidebar', {
+                expanded: true
+            });
+        });
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F3F4F6;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #1F2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #9CA3AF;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6B7280;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4B5563;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #6B7280;
+        }
+
+        /* Smooth transitions */
+        * {
+            transition-property: color, background-color, border-color;
+            transition-duration: 150ms;
+            transition-timing-function: ease;
+        }
+
+        /* Focus styles */
+        *:focus {
+            outline: 2px solid #DC2626;
+            outline-offset: 2px;
+        }
+        .dark *:focus {
+            outline-color: #EF4444;
+        }
+
+        /* Dark Mode Colors */
+        .dark {
+            color-scheme: dark;
+        }
+        .dark body {
+            background-color: #111827;
+            color: #F9FAFB;
+        }
+
+        /* Compact Mode */
+        {% if compact_mode %}
+        body {
+            font-size: 0.875rem;
+        }
+        h1 { font-size: 1.5rem; }
+        h2 { font-size: 1.25rem; }
+        h3 { font-size: 1.125rem; }
+        {% endif %}
+
+        /* Table Density */
+        {% if table_density == 'compact' %}
+        table td, table th {
+            padding: 0.25rem 0.5rem !important;
+        }
+        {% elif table_density == 'comfortable' %}
+        table td, table th {
+            padding: 1rem 1.5rem !important;
+        }
+        {% endif %}
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="h-full" x-data="{
+    showNotifications: false,
+    showProfile: false
+}" x-init="
+    // Initialize sidebar state from user preferences
+    $store.sidebar.expanded = '{{ sidebar_behavior }}' === 'expanded' || ('{{ sidebar_behavior }}' === 'auto' && window.innerWidth >= 1024);
+
+    // Auto theme detection
+    {% if current_theme == 'auto' %}
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+    {% endif %}
+">
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50">
+        <div class="h-full px-4 flex items-center justify-between">
+
+            <!-- Left: Logo + Sidebar Toggle -->
+            <div class="flex items-center gap-4">
+                <button
+                    @click="$store.sidebar.expanded = !$store.sidebar.expanded"
+                    class="p-2 rounded-lg hover:bg-gray-100"
+                    aria-label="Menü"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+
+                <a href="{% url 'core:dashboard' %}" class="flex items-center gap-2">
+                    <span class="text-2xl">🚒</span>
+                    <span class="text-xl font-bold text-gray-900 hidden sm:block">FLVS</span>
+                </a>
+            </div>
+
+            <!-- Center: Global Search -->
+            <div class="flex-1 max-w-2xl mx-4">
+                <form class="relative">
+                    <input
+                        type="search"
+                        name="q"
+                        placeholder="Suche... (Strg+K)"
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        hx-get="{% url 'core:global_search' %}"
+                        hx-trigger="keyup changed delay:300ms"
+                        hx-target="#search-results"
+                        hx-include="[name='q']"
+                    />
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+
+                    <!-- Search Results Dropdown -->
+                    <div id="search-results" class="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg hidden"></div>
+                </form>
+            </div>
+
+            <!-- Right: Notifications + Settings + Profile -->
+            <div class="flex items-center gap-2">
+
+                <!-- Notifications -->
+                <div class="relative" x-data="{ count: {{ notification_count|default:0 }} }">
+                    <button
+                        @click="showNotifications = !showNotifications"
+                        class="relative p-2 rounded-lg hover:bg-gray-100"
+                        aria-label="Benachrichtigungen"
+                    >
+                        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <span
+                            x-show="count > 0"
+                            class="absolute -top-1 -right-1 w-5 h-5 bg-primary-600 text-white text-xs rounded-full flex items-center justify-center"
+                            x-text="count > 9 ? '9+' : count"
+                        ></span>
+                    </button>
+
+                    <!-- Notifications Dropdown -->
+                    <div
+                        x-show="showNotifications"
+                        @click.away="showNotifications = false"
+                        x-transition
+                        class="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg"
+                        hx-get="{% url 'notifications:dropdown' %}"
+                        hx-trigger="revealed"
+                    >
+                        <div class="p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-900">Benachrichtigungen</h3>
+                                <a href="{% url 'notifications:list' %}" class="text-sm text-primary-600 hover:text-primary-700">Alle ansehen</a>
+                            </div>
+                            <!-- Content loaded via HTMX -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings (optional) -->
+                <a
+                    href="{% url 'core:settings' %}"
+                    class="p-2 rounded-lg hover:bg-gray-100"
+                    aria-label="Einstellungen"
+                >
+                    <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </a>
+
+                <!-- Profile Menu -->
+                <div class="relative">
+                    <button
+                        @click="showProfile = !showProfile"
+                        class="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100"
+                    >
+                        <div class="w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center font-semibold">
+                            {% if request.user.first_name %}{{ request.user.first_name|first }}{% else %}{{ request.user.username|first }}{% endif %}{% if request.user.last_name %}{{ request.user.last_name|first }}{% endif %}
+                        </div>
+                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Profile Dropdown -->
+                    <div
+                        x-show="showProfile"
+                        @click.away="showProfile = false"
+                        x-transition
+                        class="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg"
+                    >
+                        <div class="p-3 border-b border-gray-200">
+                            <p class="font-semibold text-gray-900">{{ request.user.get_full_name }}</p>
+                            <p class="text-sm text-gray-500">{{ request.user.email }}</p>
+                        </div>
+                        <div class="p-2">
+                            <a href="{% url 'core:profile' %}" class="block px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
+                                👤 Mein Profil
+                            </a>
+                            <a href="{% url 'core:settings' %}" class="block px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
+                                ⚙️ Einstellungen
+                            </a>
+                            {% if request.user|has_role:'Administrator' %}
+                            <a href="{% url 'core:user_list' %}" class="block px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
+                                🔐 Administration
+                            </a>
+                            {% endif %}
+                            <hr class="my-2">
+                            <form method="post" action="{% url 'core:logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 text-red-600">
+                                    🚪 Abmelden
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside
+        class="fixed left-0 top-16 bottom-0 bg-white border-r border-gray-200 z-30 transition-all duration-200"
+        :class="$store.sidebar.expanded ? 'w-64' : 'w-16'"
+    >
+        <nav class="h-full overflow-y-auto py-4">
+            {% include 'includes/sidebar_nav.html' %}
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main
+        class="pt-16 transition-all duration-200 relative z-10"
+        :class="$store.sidebar.expanded ? 'pl-64' : 'pl-16'"
+    >
+
+        <!-- Breadcrumb -->
+        {% block breadcrumb %}
+        <div class="bg-white border-b border-gray-200 px-6 py-3">
+            <nav class="flex" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-2 text-sm">
+                    <li>
+                        <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+                    </li>
+                    <!-- Additional breadcrumb items in child templates -->
+                </ol>
+            </nav>
+        </div>
+        {% endblock %}
+
+        <!-- Context Actions (optional) -->
+        {% block context_actions %}{% endblock %}
+
+        <!-- Page Content -->
+        <div class="p-6">
+            <!-- Messages/Toasts -->
+            <div id="messages-container" class="mb-4">
+                {% for message in messages %}
+                <div class="p-4 rounded-lg border {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800{% elif message.tags == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}"
+                     x-data="{ show: true }"
+                     x-show="show"
+                     x-init="setTimeout(() => show = false, 5000)"
+                >
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Toast Container (for HTMX notifications) -->
+    <div id="toast-container" class="fixed top-20 right-4 z-50 space-y-2"></div>
+
+    <!-- Alpine.js Store Setup -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            // Sidebar store
+            Alpine.store('sidebar', {
+                expanded: true
+            });
+        });
+    </script>
+
+    <!-- Global HTMX Event Handlers -->
+    <script>
+        // Show loading indicator
+        document.body.addEventListener('htmx:beforeRequest', function() {
+            document.body.classList.add('cursor-wait');
+        });
+
+        document.body.addEventListener('htmx:afterRequest', function() {
+            document.body.classList.remove('cursor-wait');
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+K: Focus search
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                document.querySelector('input[type="search"]').focus();
+            }
+        });
+
+        // Search results visibility
+        document.addEventListener('htmx:afterSwap', function(e) {
+            if (e.detail.target.id === 'search-results') {
+                const searchResults = document.getElementById('search-results');
+                const searchInput = document.querySelector('input[name="q"]');
+
+                if (searchInput && searchInput.value.length >= 2) {
+                    searchResults.classList.remove('hidden');
+                } else {
+                    searchResults.classList.add('hidden');
+                }
+            }
+        });
+
+        // Hide search results when clicking outside
+        document.addEventListener('click', function(e) {
+            const searchResults = document.getElementById('search-results');
+            const searchInput = document.querySelector('input[name="q"]');
+
+            if (searchResults && searchInput &&
+                !searchResults.contains(e.target) &&
+                !searchInput.contains(e.target)) {
+                searchResults.classList.add('hidden');
+            }
+        });
+
+        // Clear search on escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const searchInput = document.querySelector('input[name="q"]');
+                const searchResults = document.getElementById('search-results');
+                if (searchInput) searchInput.value = '';
+                if (searchResults) searchResults.classList.add('hidden');
+            }
+        });
+    </script>
+
+    <!-- Global Barcode Scanner Support -->
+    <script src="{% static 'js/barcode-scanner.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

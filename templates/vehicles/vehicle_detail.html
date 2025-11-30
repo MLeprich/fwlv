@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ vehicle.name }} - Fahrzeuge - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'core:dashboard' %}" class="text-gray-700 hover:text-primary-600">
+                    🏠 Dashboard
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <a href="{% url 'vehicles:list' %}" class="ml-1 text-gray-700 hover:text-primary-600">
+                        🚒 Fahrzeuge
+                    </a>
+                </div>
+            </li>
+            <li aria-current="page">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="ml-1 text-gray-500 font-medium">{{ vehicle.call_sign }}</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Header with Photo -->
+    <div class="mb-8">
+        <div class="flex items-start gap-6">
+            <!-- Vehicle Photo -->
+            {% if vehicle.photo %}
+            <img src="{{ vehicle.photo.url }}" alt="{{ vehicle.name }}" class="w-48 h-48 rounded-lg object-cover shadow-lg">
+            {% else %}
+            <div class="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center shadow-lg">
+                <span class="text-8xl">🚒</span>
+            </div>
+            {% endif %}
+
+            <!-- Header Info -->
+            <div class="flex-1">
+                <div class="flex items-center gap-3 mb-3">
+                    <h1 class="text-3xl font-bold text-gray-900">{{ vehicle.name }}</h1>
+
+                    <!-- Status Badge -->
+                    {% if vehicle.status == 'operational' %}
+                        {% include 'includes/components/badge.html' with text="Einsatzbereit" color="success" %}
+                    {% elif vehicle.status == 'in_use' %}
+                        {% include 'includes/components/badge.html' with text="Im Einsatz" color="info" %}
+                    {% elif vehicle.status == 'maintenance' %}
+                        {% include 'includes/components/badge.html' with text="In Wartung" color="warning" %}
+                    {% elif vehicle.status == 'repair' %}
+                        {% include 'includes/components/badge.html' with text="In Reparatur" color="danger" %}
+                    {% elif vehicle.status == 'out_of_service' %}
+                        {% include 'includes/components/badge.html' with text="Außer Dienst" color="gray" %}
+                    {% elif vehicle.status == 'reserved' %}
+                        {% include 'includes/components/badge.html' with text="Reserviert" color="primary" %}
+                    {% endif %}
+
+                    {% if vehicle.is_mobile_storage %}
+                        {% include 'includes/components/badge.html' with text="Mobiles Lager" color="info" icon="📦" %}
+                    {% endif %}
+                </div>
+
+                <div class="flex items-center gap-6 text-sm text-gray-600 mb-4">
+                    <span>📞 {{ vehicle.call_sign }}</span>
+                    <span>🚗 {{ vehicle.license_plate }}</span>
+                    {% if vehicle.current_mileage %}
+                    <span>📊 {{ vehicle.current_mileage|stringformat:"d" }} km</span>
+                    {% endif %}
+                </div>
+
+                <!-- Warning Badges -->
+                <div class="flex gap-2">
+                    {% if vehicle.is_inspection_due %}
+                        {% include 'includes/components/badge.html' with text="HU fällig" color="danger" icon="⚠️" %}
+                    {% endif %}
+                    {% if vehicle.is_safety_check_due %}
+                        {% include 'includes/components/badge.html' with text="UVV fällig" color="danger" icon="⚠️" %}
+                    {% endif %}
+                    {% if vehicle.is_insurance_expiring %}
+                        {% include 'includes/components/badge.html' with text="Versicherung läuft ab" color="warning" icon="⚠️" %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col gap-3">
+                <a href="{% url 'vehicle_handover:handover_create' %}"
+                   class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-center">
+                    📋 Fahrzeugübernahme
+                </a>
+
+                <button
+                    hx-get="{% url 'vehicles:inspection_modal' vehicle.pk %}"
+                    hx-target="#modal-container"
+                    class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium">
+                    🔧 Prüfung eintragen
+                </button>
+
+                <a href="{% url 'vehicles:update' vehicle.pk %}"
+                   class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-center">
+                    ✏️ Bearbeiten
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left Column: Main Info -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Basic Information -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Fahrzeugdaten</h2>
+                </div>
+                <div class="p-6">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Funkrufname</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.call_sign }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Kennzeichen</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.license_plate }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Fahrzeugtyp</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.get_vehicle_type_display }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Hersteller</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.manufacturer|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Modell</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.model|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Baujahr</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.year_of_manufacture|default:"-" }}</dd>
+                        </div>
+                        {% if vehicle.vin %}
+                        <div class="md:col-span-2">
+                            <dt class="text-sm font-medium text-gray-500">Fahrzeug-Identifikationsnummer (FIN)</dt>
+                            <dd class="mt-1 text-sm text-gray-900 font-mono">{{ vehicle.vin }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if vehicle.engine_number %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Motornummer</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.engine_number }}</dd>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Kraftstoffart</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.fuel_type|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Kilometerstand</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.current_mileage|stringformat:"d" }} km</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Heimatstandort</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.home_location.name|default:"-" }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Inspections & Checks -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Prüfungen & Checks</h2>
+                </div>
+                <div class="p-6">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Nächste HU</dt>
+                            <dd class="mt-1">
+                                {% if vehicle.next_inspection_date %}
+                                    <span class="text-sm {% if vehicle.is_inspection_due %}text-red-600 font-medium{% else %}text-gray-900{% endif %}">
+                                        {{ vehicle.next_inspection_date|date:"d.m.Y" }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-sm text-gray-400">Nicht geplant</span>
+                                {% endif %}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Nächste UVV</dt>
+                            <dd class="mt-1">
+                                {% if vehicle.next_safety_check_date %}
+                                    <span class="text-sm {% if vehicle.is_safety_check_due %}text-red-600 font-medium{% else %}text-gray-900{% endif %}">
+                                        {{ vehicle.next_safety_check_date|date:"d.m.Y" }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-sm text-gray-400">Nicht geplant</span>
+                                {% endif %}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Versicherungspolice</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.insurance_policy_number|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Versicherung gültig bis</dt>
+                            <dd class="mt-1">
+                                {% if vehicle.insurance_expires %}
+                                    <span class="text-sm {% if vehicle.is_insurance_expiring %}text-yellow-600 font-medium{% else %}text-gray-900{% endif %}">
+                                        {{ vehicle.insurance_expires|date:"d.m.Y" }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-sm text-gray-400">-</span>
+                                {% endif %}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Inspection History -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">Prüfungshistorie</h2>
+                    <button
+                        hx-get="{% url 'vehicles:inspection_modal' vehicle.pk %}"
+                        hx-target="#modal-container"
+                        class="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                        + Prüfung erfassen
+                    </button>
+                </div>
+                <div class="divide-y divide-gray-200">
+                    {% for inspection in vehicle.inspections.all|slice:":5" %}
+                    <div class="px-6 py-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-medium text-gray-900">
+                                        {{ inspection.get_inspection_type_display }}
+                                    </span>
+                                    {% if inspection.status == 'passed' %}
+                                        {% include 'includes/components/badge.html' with text="Bestanden" color="success" size="sm" %}
+                                    {% elif inspection.status == 'passed_defects' %}
+                                        {% include 'includes/components/badge.html' with text="Bestanden (Mängel)" color="warning" size="sm" %}
+                                    {% elif inspection.status == 'failed' %}
+                                        {% include 'includes/components/badge.html' with text="Nicht bestanden" color="danger" size="sm" %}
+                                    {% elif inspection.status == 'in_progress' %}
+                                        {% include 'includes/components/badge.html' with text="In Bearbeitung" color="info" size="sm" %}
+                                    {% endif %}
+                                </div>
+                                <div class="text-sm text-gray-500 mt-1">
+                                    {{ inspection.inspection_date|date:"d.m.Y" }}
+                                    {% if inspection.organization %}
+                                        | {{ inspection.organization }}
+                                    {% endif %}
+                                    {% if inspection.inspector %}
+                                        | {{ inspection.inspector.get_full_name }}
+                                    {% endif %}
+                                </div>
+                                {% if inspection.findings %}
+                                <div class="text-sm text-gray-600 mt-2">
+                                    {{ inspection.findings|truncatewords:20 }}
+                                </div>
+                                {% endif %}
+                                {% if inspection.cost %}
+                                <div class="text-sm text-gray-500 mt-1">
+                                    Kosten: {{ inspection.cost }} €
+                                </div>
+                                {% endif %}
+                            </div>
+                            <a href="{% url 'vehicles:inspection_detail' inspection.pk %}"
+                               class="text-primary-600 hover:text-primary-900 text-sm">
+                                Details →
+                            </a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="px-6 py-8 text-center text-sm text-gray-500">
+                        Noch keine Prüfungen erfasst
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if vehicle.inspections.count > 5 %}
+                <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-center">
+                    <a href="{% url 'vehicles:inspection_list' %}?vehicle={{ vehicle.pk }}"
+                       class="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                        Alle {{ vehicle.inspections.count }} Prüfungen anzeigen →
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Assigned Equipment -->
+            {% if vehicle.is_mobile_storage %}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Zugeordnete Ausrüstung</h2>
+                </div>
+                <div class="divide-y divide-gray-200">
+                    {% for item in vehicle.assigned_equipment.all|slice:":10" %}
+                    <div class="px-6 py-3 flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">{{ item.name }}</div>
+                            <div class="text-sm text-gray-500">{{ item.item_number }}</div>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            {{ item.quantity }} {{ item.unit }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="px-6 py-8 text-center text-sm text-gray-500">
+                        Keine Ausrüstung zugeordnet
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if vehicle.assigned_equipment.count > 10 %}
+                <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-center">
+                    <a href="{% url 'equipment:equipment_list' %}?vehicle={{ vehicle.pk }}"
+                       class="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                        Alle {{ vehicle.assigned_equipment.count }} Artikel anzeigen →
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Right Column: Sidebar -->
+        <div class="space-y-6">
+
+            <!-- Responsible Person -->
+            {% if vehicle.responsible_person %}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Verantwortlich</h3>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">👤</span>
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ vehicle.responsible_person.get_full_name }}
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                Fahrzeugwart
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Actions -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Schnellaktionen</h3>
+                </div>
+                <div class="p-6 space-y-3">
+                    <a href="{% url 'vehicle_handover:handover_create' %}"
+                       class="block w-full px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 text-center font-medium">
+                        📋 Fahrzeugübernahme
+                    </a>
+                    <button
+                        hx-get="{% url 'vehicles:mileage_modal' vehicle.pk %}"
+                        hx-target="#modal-container"
+                        class="block w-full px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 font-medium">
+                        📊 Kilometerstand aktualisieren
+                    </button>
+                    <button
+                        hx-get="{% url 'vehicles:status_modal' vehicle.pk %}"
+                        hx-target="#modal-container"
+                        class="block w-full px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 font-medium">
+                        🔄 Status ändern
+                    </button>
+                </div>
+            </div>
+
+            <!-- Documents -->
+            {% if vehicle.vehicle_documents %}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Dokumente</h3>
+                </div>
+                <div class="p-6">
+                    <a href="{{ vehicle.vehicle_documents.url }}"
+                       target="_blank"
+                       class="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Fahrzeugdokumente herunterladen
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if vehicle.notes %}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Notizen</h3>
+                </div>
+                <div class="p-6">
+                    <p class="text-sm text-gray-600">{{ vehicle.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Metadata -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Metadaten</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3 text-sm">
+                        <div>
+                            <dt class="font-medium text-gray-500">Erstellt am</dt>
+                            <dd class="mt-1 text-gray-900">{{ vehicle.created_at|date:"d.m.Y H:i" }} Uhr</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-500">Erstellt von</dt>
+                            <dd class="mt-1 text-gray-900">{{ vehicle.created_by.get_full_name }}</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-500">Zuletzt geändert</dt>
+                            <dd class="mt-1 text-gray-900">{{ vehicle.updated_at|date:"d.m.Y H:i" }} Uhr</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal Container -->
+<div id="modal-container"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Keyboard Shortcut: E für Bearbeiten
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'e' && !e.ctrlKey && !e.metaKey) {
+            const activeElement = document.activeElement;
+            if (activeElement.tagName !== 'INPUT' && activeElement.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                window.location.href = '{% url "vehicles:update" vehicle.pk %}';
+            }
+        }
+    });
+
+    // Keyboard Shortcut: H für Handover
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'h' && !e.ctrlKey && !e.metaKey) {
+            const activeElement = document.activeElement;
+            if (activeElement.tagName !== 'INPUT' && activeElement.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                window.location.href = '{% url "vehicle_handover:handover_create" %}';
+            }
+        }
+    });
+</script>
+{% endblock %}

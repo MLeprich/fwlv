@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lagerbewegungen - Kleiderkammer - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'clothing:dashboard' %}" class="text-gray-500 hover:text-gray-700">Kleiderkammer</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Lagerbewegungen</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    📦 Lagerbewegungen
+                </h1>
+                <p class="mt-1 text-sm text-gray-500">Übersicht aller Warenbewegungen</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'clothing:movement_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Neue Lagerbewegung
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Movement Type Filter -->
+            <div>
+                <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Bewegungstyp</label>
+                <select name="type" id="type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onchange="this.form.submit()">
+                    <option value="">Alle Typen</option>
+                    <option value="incoming" {% if request.GET.type == 'incoming' %}selected{% endif %}>Wareneingang</option>
+                    <option value="outgoing" {% if request.GET.type == 'outgoing' %}selected{% endif %}>Warenausgang</option>
+                    <option value="transfer" {% if request.GET.type == 'transfer' %}selected{% endif %}>Umlagerung</option>
+                    <option value="return" {% if request.GET.type == 'return' %}selected{% endif %}>Rückgabe</option>
+                    <option value="damage" {% if request.GET.type == 'damage' %}selected{% endif %}>Beschädigung/Schwund</option>
+                    <option value="adjustment" {% if request.GET.type == 'adjustment' %}selected{% endif %}>Korrektur</option>
+                </select>
+            </div>
+
+            <!-- Person Filter -->
+            <div>
+                <label for="person" class="block text-sm font-medium text-gray-700 mb-1">Person</label>
+                <select name="person" id="person" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onchange="this.form.submit()">
+                    <option value="">Alle Personen</option>
+                    {% for person in all_persons %}
+                    <option value="{{ person.id }}" {% if request.GET.person|add:"0" == person.id %}selected{% endif %}>
+                        {{ person.first_name }} {{ person.last_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Reset Button -->
+            <div class="flex items-end">
+                <a href="{% url 'clothing:movement_list' %}" class="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    🔄 Filter zurücksetzen
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Gesamt Bewegungen</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ movements|length }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <span class="text-2xl">📦</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Wareneingang</p>
+                    <p class="text-3xl font-bold text-green-600 mt-2">
+                        {{ movements|length }}
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <span class="text-2xl">📥</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Warenausgang</p>
+                    <p class="text-3xl font-bold text-orange-600 mt-2">
+                        {{ movements|length }}
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <span class="text-2xl">📤</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Umlagerungen</p>
+                    <p class="text-3xl font-bold text-blue-600 mt-2">
+                        {{ movements|length }}
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <span class="text-2xl">🔄</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Movements Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Alle Lagerbewegungen</h2>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Datum
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Typ
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Artikel
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Menge
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Von / Nach
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Person
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Erstellt von
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Aktionen
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for movement in movements %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ movement.movement_date|date:"d.m.Y" }}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                {{ movement.movement_date|date:"H:i" }} Uhr
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if movement.movement_type == 'incoming' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                📥 Wareneingang
+                            </span>
+                            {% elif movement.movement_type == 'outgoing' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                📤 Warenausgang
+                            </span>
+                            {% elif movement.movement_type == 'transfer' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                🔄 Umlagerung
+                            </span>
+                            {% elif movement.movement_type == 'return' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                ↩️ Rückgabe
+                            </span>
+                            {% elif movement.movement_type == 'damage' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                ⚠️ Beschädigung/Schwund
+                            </span>
+                            {% elif movement.movement_type == 'adjustment' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                ✏️ Korrektur
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ movement.item.name }}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                {{ movement.item.item_number|default:"–" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ movement.quantity }} {{ movement.get_unit_display }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm">
+                                {% if movement.from_location %}
+                                <div class="text-gray-600">
+                                    <span class="font-medium">Von:</span> {{ movement.from_location.name }}
+                                </div>
+                                {% endif %}
+                                {% if movement.to_location %}
+                                <div class="text-gray-600">
+                                    <span class="font-medium">Nach:</span> {{ movement.to_location.name }}
+                                </div>
+                                {% endif %}
+                                {% if not movement.from_location and not movement.to_location %}
+                                <span class="text-gray-400">–</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if movement.person %}
+                            <div class="text-sm text-gray-900">
+                                {{ movement.person.first_name }} {{ movement.person.last_name }}
+                            </div>
+                            {% else %}
+                            <span class="text-sm text-gray-400">–</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                {{ movement.created_by.get_full_name|default:movement.created_by.username }}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                {{ movement.created_at|date:"d.m.Y H:i" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="{% url 'clothing:movement_detail' movement.pk %}" class="text-blue-600 hover:text-blue-900">
+                                Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center">
+                            <div class="text-gray-400">
+                                <p class="text-lg font-medium mb-2">Keine Lagerbewegungen vorhanden</p>
+                                <p class="text-sm">Erstellen Sie Lagerbewegungen, um den Bestand zu verwalten.</p>
+                                <a href="{% url 'clothing:movement_create' %}" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                                    ➕ Erste Lagerbewegung erstellen
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div class="flex-1 flex justify-between sm:hidden">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Zurück
+                </a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Weiter
+                </a>
+                {% endif %}
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Zeige <span class="font-medium">{{ page_obj.start_index }}</span> bis <span class="font-medium">{{ page_obj.end_index }}</span> von <span class="font-medium">{{ page_obj.paginator.count }}</span> Ergebnissen
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            ‹
+                        </a>
+                        {% endif %}
+
+                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                            Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                        </span>
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            ›
+                        </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

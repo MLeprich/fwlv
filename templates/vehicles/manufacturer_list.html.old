@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Hersteller - Fahrzeugverwaltung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'vehicles:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugverwaltung</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Hersteller</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6">
+    <!-- Context Actions Bar (Sticky) -->
+    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'vehicles:manufacturer_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Neuer Hersteller
+                </a>
+                <a href="{% url 'vehicles:model_list' %}" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                    🚗 Modelle verwalten
+                </a>
+                <a href="{% url 'vehicles:dashboard' %}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    ← Zurück zum Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-6 mt-6">
+    <div class="flex gap-6">
+
+        <!-- Filter-Sidebar (20% / 250px) -->
+        <aside class="w-64 flex-shrink-0">
+            <div class="bg-white rounded-lg shadow p-6 sticky top-28">
+                <h3 class="text-sm font-bold text-gray-900 mb-4">Filter</h3>
+
+                <form method="get" class="space-y-6">
+                    <!-- Suche -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">🔍 Suche</label>
+                        <input
+                            type="text"
+                            name="search"
+                            value="{{ search_query }}"
+                            placeholder="Name, Land..."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <!-- Aktiv-Status -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Status</label>
+                        <select name="is_active" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">Alle</option>
+                            <option value="true" {% if is_active_filter == 'true' %}selected{% endif %}>Aktiv</option>
+                            <option value="false" {% if is_active_filter == 'false' %}selected{% endif %}>Inaktiv</option>
+                        </select>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="pt-4 border-t border-gray-200 space-y-2">
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                            Filter anwenden
+                        </button>
+                        <a href="{% url 'vehicles:manufacturer_list' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                            Zurücksetzen
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Content Area (80%) -->
+        <main class="flex-1 min-w-0">
+
+            <!-- Toolbar über Tabelle -->
+            <div class="bg-white rounded-t-lg border border-gray-200 px-6 py-3 flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    <span class="font-semibold text-gray-900">{{ page_obj.paginator.count|default:manufacturers.count }}</span> Hersteller gefunden
+                </div>
+            </div>
+
+            <!-- Tabelle -->
+            <div class="bg-white border-x border-b border-gray-200 rounded-b-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Name
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Kontakt
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Ort
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Modelle
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Fahrzeuge
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Aktionen
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for manufacturer in manufacturers %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-4">
+                                    <div class="text-sm font-medium text-gray-900 mb-1">
+                                        {{ manufacturer.name }}
+                                    </div>
+                                    {% if manufacturer.country %}
+                                        <div class="text-xs text-gray-500">
+                                            {{ manufacturer.country }}
+                                        </div>
+                                    {% endif %}
+                                    {% if manufacturer.website %}
+                                        <div class="mt-1">
+                                            <a href="{{ manufacturer.website }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800">
+                                                🌐 Website
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4">
+                                    {% if manufacturer.contact_person or manufacturer.contact_email or manufacturer.contact_phone %}
+                                        <div class="text-sm space-y-1">
+                                            {% if manufacturer.contact_person %}
+                                                <div class="text-gray-900 font-medium">
+                                                    👤 {{ manufacturer.contact_person }}
+                                                </div>
+                                            {% endif %}
+                                            {% if manufacturer.contact_email %}
+                                                <div class="text-gray-600 text-xs">
+                                                    ✉️ <a href="mailto:{{ manufacturer.contact_email }}" class="hover:text-blue-600">{{ manufacturer.contact_email }}</a>
+                                                </div>
+                                            {% endif %}
+                                            {% if manufacturer.contact_phone %}
+                                                <div class="text-gray-600 text-xs">
+                                                    📞 <a href="tel:{{ manufacturer.contact_phone }}" class="hover:text-blue-600">{{ manufacturer.contact_phone }}</a>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-sm text-gray-400">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4">
+                                    {% if manufacturer.address_city %}
+                                        <div class="text-sm text-gray-900">
+                                            {% if manufacturer.address_postal_code %}{{ manufacturer.address_postal_code }}{% endif %} {{ manufacturer.address_city }}
+                                        </div>
+                                        {% if manufacturer.address_street %}
+                                            <div class="text-xs text-gray-500 mt-1">
+                                                {{ manufacturer.address_street }}
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-sm text-gray-400">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-gray-900 font-semibold">
+                                        {{ manufacturer.models.count }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-gray-900 font-semibold">
+                                        {{ manufacturer.vehicle_count }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    {% if manufacturer.is_active %}
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                        ✅ Aktiv
+                                    </span>
+                                    {% else %}
+                                    <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">
+                                        ⏸️ Inaktiv
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <a href="{% url 'vehicles:manufacturer_update' manufacturer.pk %}" class="text-gray-600 hover:text-gray-800" title="Bearbeiten">
+                                            ✏️
+                                        </a>
+                                        <a href="{% url 'vehicles:manufacturer_delete' manufacturer.pk %}" class="text-red-600 hover:text-red-800" title="Löschen">
+                                            🗑️
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="px-4 py-12 text-center text-gray-500">
+                                    <div class="text-4xl mb-4">🏭</div>
+                                    <p class="text-lg font-medium text-gray-900 mb-2">Keine Hersteller gefunden</p>
+                                    <p class="text-sm">Versuchen Sie, Ihre Filter anzupassen oder einen neuen Hersteller anzulegen.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                    </div>
+                    <div class="flex gap-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if is_active_filter %}&is_active={{ is_active_filter }}{% endif %}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            « Erste
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if is_active_filter %}&is_active={{ is_active_filter }}{% endif %}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            ◀ Zurück
+                        </a>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if num == page_obj.number %}
+                            <span class="px-3 py-1 bg-blue-600 text-white border border-blue-600 rounded text-sm">
+                                {{ num }}
+                            </span>
+                            {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                            <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if is_active_filter %}&is_active={{ is_active_filter }}{% endif %}" class="px-3 py-1 border border-gray-300 hover:bg-gray-100 rounded text-sm">
+                                {{ num }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if is_active_filter %}&is_active={{ is_active_filter }}{% endif %}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            Weiter ▶
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if is_active_filter %}&is_active={{ is_active_filter }}{% endif %}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            Letzte »
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+    </div>
+</div>
+{% endblock %}

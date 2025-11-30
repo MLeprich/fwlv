@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Vorlage bearbeiten{% else %}Neue Vorlage{% endif %} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'organization:dashboard' %}" class="text-gray-500 hover:text-gray-700">Organisation</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'organization:qualification_template_list' %}" class="text-gray-500 hover:text-gray-700">Qualifikations-Vorlagen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if form.instance.pk %}Bearbeiten{% else %}Neu{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="text-3xl">🎓</span>
+            <h1 class="text-2xl font-bold text-gray-900">
+                {% if form.instance.pk %}Qualifikations-Vorlage bearbeiten{% else %}Neue Qualifikations-Vorlage anlegen{% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-lg shadow">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <!-- Error Messages -->
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600 text-xl mr-3">⚠️</span>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-medium text-red-900">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Name -->
+            <div>
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.name.label }} *
+                </label>
+                {{ form.name }}
+                {% if form.name.help_text %}<p class="mt-1 text-sm text-gray-500">{{ form.name.help_text }}</p>{% endif %}
+                {% if form.name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>{% endif %}
+            </div>
+
+            <!-- Typ -->
+            <div>
+                <label for="{{ form.qualification_type.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.qualification_type.label }}
+                </label>
+                {{ form.qualification_type }}
+                {% if form.qualification_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.qualification_type.errors.0 }}</p>{% endif %}
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.description.label }}
+                </label>
+                {{ form.description }}
+                {% if form.description.errors %}<p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>{% endif %}
+            </div>
+
+            <!-- Related Module -->
+            <div>
+                <label for="{{ form.related_module.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.related_module.label }}
+                </label>
+                {{ form.related_module }}
+                {% if form.related_module.help_text %}<p class="mt-1 text-sm text-gray-500">{{ form.related_module.help_text }}</p>{% endif %}
+                {% if form.related_module.errors %}<p class="mt-1 text-sm text-red-600">{{ form.related_module.errors.0 }}</p>{% endif %}
+            </div>
+
+            <!-- Grid für Gültigkeit und ausstellende Stelle -->
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label for="{{ form.default_validity_days.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                        {{ form.default_validity_days.label }}
+                    </label>
+                    {{ form.default_validity_days }}
+                    {% if form.default_validity_days.help_text %}<p class="mt-1 text-sm text-gray-500">{{ form.default_validity_days.help_text }}</p>{% endif %}
+                    {% if form.default_validity_days.errors %}<p class="mt-1 text-sm text-red-600">{{ form.default_validity_days.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.default_issuing_authority.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                        {{ form.default_issuing_authority.label }}
+                    </label>
+                    {{ form.default_issuing_authority }}
+                    {% if form.default_issuing_authority.help_text %}<p class="mt-1 text-sm text-gray-500">{{ form.default_issuing_authority.help_text }}</p>{% endif %}
+                    {% if form.default_issuing_authority.errors %}<p class="mt-1 text-sm text-red-600">{{ form.default_issuing_authority.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Notizen -->
+            <div>
+                <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.notes.label }}
+                </label>
+                {{ form.notes }}
+                {% if form.notes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>{% endif %}
+                <p class="mt-1 text-sm text-amber-600">💡 Hinweis: Um diese Vorlage mit Funktionen zu verknüpfen, bearbeiten Sie die gewünschte Funktion unter <a href="{% url 'organization:function_list' %}" class="underline font-medium">Funktionen</a>.</p>
+            </div>
+
+            <!-- Pflichtstunden-Kategorien -->
+            <div>
+                <label class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.required_duty_hour_categories.label }}
+                </label>
+                {% if form.required_duty_hour_categories.help_text %}
+                <p class="text-sm text-gray-500 mb-3">{{ form.required_duty_hour_categories.help_text }}</p>
+                {% endif %}
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    {% for checkbox in form.required_duty_hour_categories %}
+                    <div class="flex items-center">
+                        <label class="flex items-center cursor-pointer">
+                            {{ checkbox.tag }}
+                            <span class="ml-2 text-sm text-gray-700">{{ checkbox.choice_label }}</span>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if form.required_duty_hour_categories.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.required_duty_hour_categories.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Aktiv Checkbox -->
+            <div class="flex items-start">
+                <div class="flex items-center h-5">
+                    {{ form.is_active }}
+                </div>
+                <div class="ml-3 text-sm">
+                    <label for="{{ form.is_active.id_for_label }}" class="font-medium text-gray-900">
+                        {{ form.is_active.label }}
+                    </label>
+                    {% if form.is_active.help_text %}<p class="text-gray-500">{{ form.is_active.help_text }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'organization:qualification_template_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                    {% if form.instance.pk %}Änderungen speichern{% else %}Vorlage erstellen{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

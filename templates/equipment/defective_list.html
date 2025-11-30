@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Defekte Geräte - Ausrüstung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'equipment:dashboard' %}" class="text-gray-500 hover:text-gray-700">Ausrüstung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Defekte Geräte</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">🔴 Defekte Geräte</h1>
+                    <p class="mt-1 text-sm text-gray-600">Übersicht aller als defekt markierten Geräte und Ausrüstung</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'equipment:item_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                        ← Zurück zu Geräten
+                    </a>
+                    <a href="{% url 'equipment:item_list' %}?status=operational" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                        ✅ Einsatzbereite Geräte
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-red-50 to-orange-50">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Gesamt defekt</p>
+                            <p class="text-2xl font-bold text-red-600 mt-1">{{ items|length }}</p>
+                        </div>
+                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">🔴</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">In Reparatur</p>
+                            <p class="text-2xl font-bold text-orange-600 mt-1">
+                                {{ items|length|add:"0" }}
+                                {% comment %}TODO: Filter für in Reparatur{% endcomment %}
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">🔧</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Nicht reparierbar</p>
+                            <p class="text-2xl font-bold text-gray-600 mt-1">
+                                {{ items|length|add:"0" }}
+                                {% comment %}TODO: Filter für nicht reparierbar{% endcomment %}
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">❌</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Auf Fahrzeugen</p>
+                            <p class="text-2xl font-bold text-blue-600 mt-1">
+                                {{ items|length|add:"0" }}
+                                {% comment %}TODO: Filter für auf Fahrzeugen{% endcomment %}
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">🚒</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="p-6 border-b border-gray-200 bg-gray-50">
+            <form method="get" class="flex items-center gap-4">
+                <div class="flex-1">
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request.GET.search }}"
+                        placeholder="Suche nach Gerät, Seriennummer, Hersteller..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    >
+                </div>
+                <select name="type" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
+                    <option value="">Alle Gerätetypen</option>
+                    <option value="pump" {% if request.GET.type == 'pump' %}selected{% endif %}>🚰 Pumpe</option>
+                    <option value="generator" {% if request.GET.type == 'generator' %}selected{% endif %}>⚡ Generator</option>
+                    <option value="hose" {% if request.GET.type == 'hose' %}selected{% endif %}>💧 Schlauch</option>
+                    <option value="breathing_apparatus" {% if request.GET.type == 'breathing_apparatus' %}selected{% endif %}>😷 Atemschutz</option>
+                    <option value="ladder" {% if request.GET.type == 'ladder' %}selected{% endif %}>🪜 Leiter</option>
+                    <option value="tool" {% if request.GET.type == 'tool' %}selected{% endif %}>🔧 Werkzeug</option>
+                    <option value="other" {% if request.GET.type == 'other' %}selected{% endif %}>📦 Sonstiges</option>
+                </select>
+                <select name="vehicle" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
+                    <option value="">Alle Fahrzeuge</option>
+                    <option value="unassigned">🚫 Nicht zugeordnet</option>
+                    <!-- Fahrzeuge werden dynamisch geladen -->
+                </select>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                    🔍 Filtern
+                </button>
+                {% if request.GET.search or request.GET.type or request.GET.vehicle %}
+                <a href="{% url 'equipment:defective_list' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm">
+                    ✖ Zurücksetzen
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Items List -->
+        <div class="overflow-x-auto">
+            {% if items %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gerät</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fahrzeug/Lagerort</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Defekt seit</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Defektbeschreibung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Maßnahmen</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in items %}
+                    <tr class="hover:bg-red-50">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                    <span class="text-red-600 text-xl">🔴</span>
+                                </div>
+                                <div>
+                                    <a href="{% url 'equipment:item_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-red-600">
+                                        {{ item.name }}
+                                    </a>
+                                    <p class="text-xs text-gray-500">
+                                        {% if item.item_number %}{{ item.item_number }}{% endif %}
+                                        {% if item.serial_number %} • SN: {{ item.serial_number }}{% endif %}
+                                    </p>
+                                    {% if item.manufacturer %}
+                                    <p class="text-xs text-gray-500">{{ item.manufacturer }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm text-gray-900">{{ item.get_equipment_type_display }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            {% if item.assigned_vehicle %}
+                            <div class="flex items-center gap-1 text-blue-600">
+                                <span>🚒</span>
+                                <span class="font-medium">{{ item.assigned_vehicle.license_plate }}</span>
+                            </div>
+                            <p class="text-xs text-gray-500">{{ item.assigned_vehicle.vehicle_type }}</p>
+                            {% elif item.location %}
+                            <div class="flex items-center gap-1 text-gray-900">
+                                <span>📍</span>
+                                <span>{{ item.location.name }}</span>
+                            </div>
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {% if item.updated_at %}
+                            {{ item.updated_at|date:"d.m.Y" }}
+                            <p class="text-xs text-gray-500">{{ item.updated_at|timesince }}</p>
+                            {% else %}
+                            <span class="text-gray-400">Unbekannt</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            {% if item.notes %}
+                            <div class="max-w-xs">
+                                <p class="text-gray-900 line-clamp-2">{{ item.notes|truncatewords:15 }}</p>
+                            </div>
+                            {% else %}
+                            <span class="text-gray-400 italic">Keine Beschreibung</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex flex-col gap-1">
+                                <button class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-medium hover:bg-orange-200 transition-colors">
+                                    🔧 Reparatur beauftragen
+                                </button>
+                                <button class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium hover:bg-gray-200 transition-colors">
+                                    ❌ Ausmustern
+                                </button>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="{% url 'equipment:item_detail' item.pk %}" class="text-red-600 hover:text-red-800 font-medium">
+                                    👁️ Details
+                                </a>
+                                <a href="{% url 'equipment:item_update' item.pk %}" class="text-gray-600 hover:text-gray-800">
+                                    ✏️
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} defekte Geräte)
+                    </div>
+                    <div class="flex gap-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.vehicle %}&vehicle={{ request.GET.vehicle }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            « Erste
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.vehicle %}&vehicle={{ request.GET.vehicle }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            ‹ Zurück
+                        </a>
+                        {% endif %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.vehicle %}&vehicle={{ request.GET.vehicle }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            Weiter ›
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.vehicle %}&vehicle={{ request.GET.vehicle }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            Letzte »
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">✅</div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine defekten Geräte</h3>
+                <p class="text-gray-600 mb-6">Sehr gut! Es sind derzeit keine Geräte als defekt markiert.</p>
+                <a href="{% url 'equipment:item_list' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    Zur Geräteübersicht
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Hinweis-Banner -->
+{% if items %}
+<div class="max-w-7xl mx-auto px-6 mt-6">
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <span class="text-yellow-600 text-xl">💡</span>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">Wichtiger Hinweis</h3>
+                <div class="mt-2 text-sm text-yellow-700">
+                    <p>Defekte Geräte sollten umgehend aus dem aktiven Dienst genommen werden. Bitte:</p>
+                    <ul class="list-disc list-inside mt-1 space-y-1">
+                        <li>Fahrzeugführer über defekte Geräte informieren</li>
+                        <li>Geräte deutlich als "Defekt" kennzeichnen</li>
+                        <li>Reparatur beauftragen oder Ausmusterung einleiten</li>
+                        <li>Bei sicherheitsrelevanten Defekten: Sofortige Außerbetriebnahme</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

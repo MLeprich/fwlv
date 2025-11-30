@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ module_name }} - Inventuren - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url module_dashboard_url %}" class="text-gray-500 hover:text-gray-700">{{ module_name }}</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Inventuren</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header mit Modul-Branding -->
+    <div class="bg-gradient-to-br {{ module_color_from }} {{ module_color_to }} rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">{{ module_icon }}</span>
+                    <div>
+                        <h1 class="text-3xl font-bold">{{ module_name }} - Inventuren</h1>
+                        <p class="text-white/80 text-lg mt-1">
+                            Physische Bestandsaufnahme und Abgleich
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="hidden lg:flex items-center gap-4">
+                <div class="text-center bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3">
+                    <div class="text-2xl font-bold">{{ stats.in_progress }}</div>
+                    <div class="text-xs opacity-80">Laufend</div>
+                </div>
+                <div class="text-center bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3">
+                    <div class="text-2xl font-bold">{{ stats.planned }}</div>
+                    <div class="text-xs opacity-80">Geplant</div>
+                </div>
+                <div class="text-center bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3">
+                    <div class="text-2xl font-bold">{{ stats.completed_this_year }}</div>
+                    <div class="text-xs opacity-80">Dieses Jahr</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Actions Bar -->
+    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url inventory_create_url %}"
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Neue Inventur
+                </a>
+            </div>
+
+            <!-- Search & Filters -->
+            <div class="flex items-center gap-3">
+                <form method="get" class="flex items-center gap-2" id="inventory-filters">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ request.GET.q }}"
+                        placeholder="Suche..."
+                        class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                    <select name="status"
+                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="">Alle Status</option>
+                        <option value="planned" {% if request.GET.status == 'planned' %}selected{% endif %}>Geplant</option>
+                        <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>In Bearbeitung</option>
+                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Abgeschlossen</option>
+                    </select>
+                    <select name="type"
+                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="">Alle Arten</option>
+                        <option value="full" {% if request.GET.type == 'full' %}selected{% endif %}>Vollinventur</option>
+                        <option value="partial" {% if request.GET.type == 'partial' %}selected{% endif %}>Teilinventur</option>
+                        <option value="spot_check" {% if request.GET.type == 'spot_check' %}selected{% endif %}>Stichprobe</option>
+                        <option value="cycle_count" {% if request.GET.type == 'cycle_count' %}selected{% endif %}>Zykluszählung</option>
+                        <option value="annual" {% if request.GET.type == 'annual' %}selected{% endif %}>Jahresinventur</option>
+                    </select>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                        Suchen
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory List -->
+    {% if checks %}
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Inventur-Nr. / Titel
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Typ
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Fortschritt
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Zeitraum
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Verantwortlich
+                    </th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Aktionen
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for check in checks %}
+                <tr class="hover:bg-gray-50 {% if check.is_overdue %}bg-red-50{% endif %}">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">
+                                    <a href="{% url inventory_detail_url check.pk %}" class="hover:text-blue-600">
+                                        {{ check.check_number }}
+                                    </a>
+                                </div>
+                                <div class="text-sm text-gray-500">{{ check.title }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                            {% if check.check_type == 'full' %}bg-purple-100 text-purple-800
+                            {% elif check.check_type == 'annual' %}bg-indigo-100 text-indigo-800
+                            {% elif check.check_type == 'partial' %}bg-blue-100 text-blue-800
+                            {% elif check.check_type == 'spot_check' %}bg-yellow-100 text-yellow-800
+                            {% elif check.check_type == 'cycle_count' %}bg-green-100 text-green-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ check.get_check_type_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                            {% if check.status == 'planned' %}bg-yellow-100 text-yellow-800
+                            {% elif check.status == 'in_progress' %}bg-blue-100 text-blue-800
+                            {% elif check.status == 'counting_complete' %}bg-indigo-100 text-indigo-800
+                            {% elif check.status == 'completed' %}bg-green-100 text-green-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ check.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="h-2.5 rounded-full transition-all duration-300
+                                {% if check.get_progress_percentage == 100 %}bg-green-600
+                                {% elif check.get_progress_percentage >= 75 %}bg-blue-600
+                                {% elif check.get_progress_percentage >= 50 %}bg-yellow-500
+                                {% else %}bg-red-500{% endif %}"
+                                style="width: {{ check.get_progress_percentage }}%">
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            {{ check.counted_items }} / {{ check.total_items }} Artikel
+                            {% if check.items_with_discrepancies > 0 %}
+                            <span class="text-red-600">• {{ check.items_with_discrepancies }} Abweichungen</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div>{{ check.scheduled_start_date|date:"d.m.Y" }}</div>
+                        <div class="text-xs">bis {{ check.scheduled_end_date|date:"d.m.Y" }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ check.responsible_person.get_full_name }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{% url inventory_detail_url check.pk %}"
+                               class="text-gray-600 hover:text-gray-900"
+                               title="Details anzeigen">
+                                👁️
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if checks.has_other_pages %}
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4">
+        <div class="flex-1 flex justify-between sm:hidden">
+            {% if checks.has_previous %}
+            <a href="?page={{ checks.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Zurück
+            </a>
+            {% endif %}
+            {% if checks.has_next %}
+            <a href="?page={{ checks.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Weiter
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="bg-white rounded-lg shadow p-12 text-center">
+        <div class="text-6xl mb-4">📋</div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Inventuren vorhanden</h3>
+        <p class="text-sm text-gray-500 mb-6">
+            Legen Sie Ihre erste Inventur an, um mit der Bestandsaufnahme zu beginnen.
+        </p>
+        <a href="{% url inventory_create_url %}"
+           class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            ➕ Erste Inventur anlegen
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

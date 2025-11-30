@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Gerät bearbeiten{% else %}Neues Gerät{% endif %} - Ausrüstung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'equipment:dashboard' %}" class="text-gray-500 hover:text-gray-700">Ausrüstung</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'equipment:item_list' %}" class="text-gray-500 hover:text-gray-700">Geräte</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neues Gerät{% endif %}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">
+            {% if object %}
+                Gerät bearbeiten: {{ object.name }}
+            {% else %}
+                Neues Gerät anlegen
+            {% endif %}
+        </h1>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <span class="text-red-600">❌</span>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔧 Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.name.label }} *</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.name.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.name.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.equipment_type.label }} *</label>
+                        {{ form.equipment_type }}
+                        {% if form.equipment_type.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.equipment_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.equipment_status.label }} *</label>
+                        {{ form.equipment_status }}
+                        {% if form.equipment_status.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.equipment_status.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.item_number.label }} *</label>
+                        {{ form.item_number }}
+                        {% if form.item_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.item_number.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.item_number.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.item_number.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.serial_number.label }}</label>
+                        {{ form.serial_number }}
+                        {% if form.serial_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.serial_number.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.serial_number.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.serial_number.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.category.label }}</label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.supplier.label }}</label>
+                        {{ form.supplier }}
+                        {% if form.supplier.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.supplier.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technische Details -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">⚙️ Technische Details</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.manufacturer.label }}</label>
+                        {{ form.manufacturer }}
+                        {% if form.manufacturer.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.manufacturer.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.manufacturer_part_number.label }}</label>
+                        {{ form.manufacturer_part_number }}
+                        {% if form.manufacturer_part_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.manufacturer_part_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.model_year.label }}</label>
+                        {{ form.model_year }}
+                        {% if form.model_year.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.model_year.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.power_source.label }}</label>
+                        {{ form.power_source }}
+                        {% if form.power_source.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.power_source.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.weight_kg.label }}</label>
+                        {{ form.weight_kg }}
+                        {% if form.weight_kg.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.weight_kg.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.dimensions.label }}</label>
+                        {{ form.dimensions }}
+                        {% if form.dimensions.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.dimensions.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.dimensions.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.dimensions.help_text }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lagerung & Standort Info -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📍 Lagerung & Standort</h2>
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                    <div class="flex">
+                        <span class="text-blue-600">💡</span>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-800">
+                                <strong>Hinweis:</strong> Lagerort und Bestand werden über Lagerbewegungen (Wareneingang) verwaltet.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bestandsangaben -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📊 Bestandsangaben</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.unit.label }} *</label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.unit.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.min_quantity.label }}</label>
+                        {{ form.min_quantity }}
+                        {% if form.min_quantity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.min_quantity.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">⚠️ Warnbestand - bei Unterschreitung erfolgt Warnung</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.max_quantity.label }}</label>
+                        {{ form.max_quantity }}
+                        {% if form.max_quantity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.max_quantity.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Maximaler Bestand (optional)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wartung & Prüfung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔧 Wartung & Prüfung</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.requires_maintenance }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.requires_maintenance.label }}</span>
+                        </label>
+                        {% if form.requires_maintenance.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.requires_maintenance.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.requires_inspection }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.requires_inspection.label }}</span>
+                        </label>
+                        {% if form.requires_inspection.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.requires_inspection.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.requires_certification }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.requires_certification.label }}</span>
+                        </label>
+                        {% if form.requires_certification.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.requires_certification.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dokumenten-Upload -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📄 Handbuch / Dokumentation</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.manual_document.label }}</label>
+
+                        {% if object.manual_document %}
+                        <div class="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="flex items-center gap-2">
+                                <span class="text-green-600">📄</span>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-green-900">Aktuelles Dokument:</p>
+                                    <a href="{{ object.manual_document.url }}" target="_blank" class="text-sm text-green-700 hover:text-green-800 underline">
+                                        {{ object.manual_document.name }}
+                                    </a>
+                                    {% if object.manual_ocr_text %}
+                                    <p class="text-xs text-green-600 mt-1">✓ OCR-Text verfügbar ({{ object.manual_ocr_text|length }} Zeichen)</p>
+                                    {% else %}
+                                    <p class="text-xs text-gray-500 mt-1">⏳ OCR-Verarbeitung läuft...</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {{ form.manual_document }}
+                        {% if form.manual_document.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.manual_document.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.manual_document.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.manual_document.help_text }}</p>
+                        {% endif %}
+
+                        <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-600">💡</span>
+                                <div class="text-xs text-amber-800">
+                                    <p class="font-semibold mb-1">Unterstützte Formate:</p>
+                                    <ul class="list-disc list-inside space-y-0.5">
+                                        <li>PDF-Dokumente (.pdf)</li>
+                                        <li>Bilder (.jpg, .jpeg, .png, .tiff, .bmp)</li>
+                                    </ul>
+                                    <p class="mt-2">Der Text wird automatisch mittels OCR extrahiert und durchsuchbar gemacht.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notizen -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'equipment:item_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm">
+                    {% if object %}Änderungen speichern{% else %}Gerät erstellen{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}

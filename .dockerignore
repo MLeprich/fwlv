@@ -1,0 +1,68 @@
+# =============================================================================
+# Docker Ignore File
+# =============================================================================
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env
+*.egg-info/
+.eggs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+logs/
+*.log
+
+# Local data
+*.sqlite3
+db.sqlite3
+
+# Media (will be mounted as volume)
+media/
+
+# Static (will be collected during build)
+staticfiles/
+
+# Docker
+docker/backup/*.sql
+docker/backup/*.gz
+docker/certbot/conf/
+docker/certbot/www/
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# Misc
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp

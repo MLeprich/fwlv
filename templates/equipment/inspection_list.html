@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Prüfungen - Ausrüstung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'equipment:dashboard' %}" class="text-gray-500 hover:text-gray-700">Ausrüstung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Prüfungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">🔍 Prüfpflichtige Geräte</h1>
+                    <p class="mt-1 text-sm text-gray-600">Übersicht aller Geräte mit geplanten Prüfintervallen (z.B. UVV, DGUV)</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'equipment:item_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                        ← Zurück zu Geräten
+                    </a>
+                    <a href="{% url 'equipment:inspection_due' %}" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                        ⚠️ Fällige Prüfungen
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Gesamt</p>
+                            <p class="text-2xl font-bold text-gray-900 mt-1">{{ items|length }}</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">🔍</span>
+                        </div>
+                    </div>
+                </div>
+
+                {% now "Y-m-d" as today %}
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Überfällig</p>
+                            <p class="text-2xl font-bold text-red-600 mt-1">
+                                {{ items|length|add:"0" }}
+                                {% comment %}TODO: Filter für überfällige{% endcomment %}
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">🚨</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Nächste 30 Tage</p>
+                            <p class="text-2xl font-bold text-orange-600 mt-1">
+                                {{ items|length|add:"0" }}
+                                {% comment %}TODO: Filter für nächste 30 Tage{% endcomment %}
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">📅</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Kein Termin</p>
+                            <p class="text-2xl font-bold text-gray-600 mt-1">
+                                {{ items|length|add:"0" }}
+                                {% comment %}TODO: Filter für ohne Termin{% endcomment %}
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">❓</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="p-6 border-b border-gray-200 bg-gray-50">
+            <form method="get" class="flex items-center gap-4">
+                <div class="flex-1">
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request.GET.search }}"
+                        placeholder="Suche nach Gerät, Seriennummer, Hersteller..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                </div>
+                <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle Status</option>
+                    <option value="overdue" {% if request.GET.status == 'overdue' %}selected{% endif %}>🚨 Überfällig</option>
+                    <option value="due_soon" {% if request.GET.status == 'due_soon' %}selected{% endif %}>📅 Demnächst fällig</option>
+                    <option value="scheduled" {% if request.GET.status == 'scheduled' %}selected{% endif %}>✅ Geplant</option>
+                    <option value="no_date" {% if request.GET.status == 'no_date' %}selected{% endif %}>❓ Kein Termin</option>
+                </select>
+                <select name="vehicle" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle Fahrzeuge</option>
+                    <option value="unassigned">🚫 Nicht zugeordnet</option>
+                    <!-- Fahrzeuge werden dynamisch geladen -->
+                </select>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    🔍 Filtern
+                </button>
+                {% if request.GET.search or request.GET.status or request.GET.vehicle %}
+                <a href="{% url 'equipment:inspection_list' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm">
+                    ✖ Zurücksetzen
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Items List -->
+        <div class="overflow-x-auto">
+            {% if items %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gerät</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fahrzeug</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Letzte Prüfung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nächste Prüfung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Intervall</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfart</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in items %}
+                    {% now "Y-m-d" as today %}
+                    <tr class="hover:bg-gray-50 {% if item.next_inspection_date and item.next_inspection_date|date:'Y-m-d' < today %}bg-red-50{% endif %}">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div>
+                                    <a href="{% url 'equipment:item_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-blue-600">
+                                        {{ item.name }}
+                                    </a>
+                                    <p class="text-xs text-gray-500">
+                                        {% if item.item_number %}{{ item.item_number }}{% endif %}
+                                        {% if item.serial_number %} • SN: {{ item.serial_number }}{% endif %}
+                                    </p>
+                                    {% if item.requires_certification %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
+                                        📜 Zertifizierung erforderlich
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {% if item.assigned_vehicle %}
+                            <div class="flex items-center gap-1">
+                                <span>🚒</span>
+                                <span class="font-medium">{{ item.assigned_vehicle.license_plate }}</span>
+                            </div>
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {% if item.last_inspection_date %}
+                            {{ item.last_inspection_date|date:"d.m.Y" }}
+                            {% else %}
+                            <span class="text-gray-400">Keine Daten</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if item.next_inspection_date %}
+                            <div class="{% if item.next_inspection_date|date:'Y-m-d' < today %}text-red-600 font-bold{% elif item.next_inspection_date|date:'Y-m-d' <= today|add:'30 days' %}text-orange-600 font-semibold{% else %}text-gray-900{% endif %}">
+                                {{ item.next_inspection_date|date:"d.m.Y" }}
+                            </div>
+                            {% else %}
+                            <span class="text-gray-400">Nicht geplant</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {% if item.inspection_interval_months %}
+                            {{ item.inspection_interval_months }} Monate
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                {% if item.equipment_type == 'breathing_apparatus' %}
+                                DGUV 3
+                                {% elif item.equipment_type == 'ladder' %}
+                                UVV Leitern
+                                {% elif item.equipment_type == 'hose' %}
+                                DIN 14811
+                                {% else %}
+                                UVV/DGUV
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if not item.next_inspection_date %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">
+                                ❓ Kein Termin
+                            </span>
+                            {% elif item.next_inspection_date|date:'Y-m-d' < today %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                🚨 Überfällig
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                ✅ Geplant
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="{% url 'equipment:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                    👁️ Details
+                                </a>
+                                <a href="{% url 'equipment:item_update' item.pk %}" class="text-gray-600 hover:text-gray-800">
+                                    ✏️
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} Geräte)
+                    </div>
+                    <div class="flex gap-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.vehicle %}&vehicle={{ request.GET.vehicle }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            « Erste
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.vehicle %}&vehicle={{ request.GET.vehicle }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            ‹ Zurück
+                        </a>
+                        {% endif %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.vehicle %}&vehicle={{ request.GET.vehicle }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            Weiter ›
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.vehicle %}&vehicle={{ request.GET.vehicle }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            Letzte »
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">🔍</div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine prüfpflichtigen Geräte</h3>
+                <p class="text-gray-600 mb-6">Es sind derzeit keine Geräte mit Prüfpflicht erfasst.</p>
+                <a href="{% url 'equipment:item_list' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Zur Geräteübersicht
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

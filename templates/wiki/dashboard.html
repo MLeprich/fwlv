@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}Wiki - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li class="text-gray-400">/</li>
+            <li><span class="text-gray-900 font-semibold">Wiki</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">📚 Wiki</h1>
+                <p class="mt-2 text-gray-600">Interne Wissensdatenbank</p>
+            </div>
+            <div class="flex gap-3">
+                {% if perms.wiki.change_wikicategory %}
+                <a href="{% url 'wiki:category_list' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                    Kategorieverwaltung
+                </a>
+                {% endif %}
+                {% if perms.wiki.add_wikipage %}
+                <a href="{% url 'wiki:page_create' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Neue Seite
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiken -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-100 rounded-lg">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">Seiten gesamt</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_pages }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-green-100 rounded-lg">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">Kategorien</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_categories }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-purple-100 rounded-lg">
+                    <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">Artikel</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ pages|length }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Kategorien -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Kategorien</h2>
+                <div class="space-y-2">
+                    {% for category in categories %}
+                    <a href="{% url 'wiki:category' category.slug %}" class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                        <span class="text-xl">{{ category.icon }}</span>
+                        <span class="text-sm text-gray-700">{{ category.name }}</span>
+                        <span class="ml-auto text-xs text-gray-500">{{ category.pages.count }}</span>
+                    </a>
+                    {% empty %}
+                    <p class="text-sm text-gray-500 text-center py-4">Keine Kategorien vorhanden</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Seiten -->
+        <div class="lg:col-span-3">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Letzte Artikel</h2>
+                </div>
+                <div class="divide-y divide-gray-200">
+                    {% for page in pages %}
+                    <a href="{% url 'wiki:page_detail' page.slug %}" class="block p-4 hover:bg-gray-50 transition-colors">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-base font-medium text-gray-900">{{ page.title }}</h3>
+                                    {% if page.status == 'draft' %}
+                                    <span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">Entwurf</span>
+                                    {% elif page.status == 'review' %}
+                                    <span class="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 rounded">In Prüfung</span>
+                                    {% elif page.status == 'published' %}
+                                    <span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">Veröffentlicht</span>
+                                    {% elif page.status == 'archived' %}
+                                    <span class="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded">Archiviert</span>
+                                    {% endif %}
+                                </div>
+                                {% if page.description %}
+                                <p class="mt-1 text-sm text-gray-600">{{ page.description|truncatewords:20 }}</p>
+                                {% endif %}
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span>{{ page.created_by.get_full_name }}</span>
+                                    <span>•</span>
+                                    <span>{{ page.updated_at|date:"d.m.Y" }}</span>
+                                    {% if page.category %}
+                                    <span>•</span>
+                                    <span class="inline-flex items-center gap-1">
+                                        <span>{{ page.category.icon }}</span>
+                                        <span>{{ page.category.name }}</span>
+                                    </span>
+                                    {% endif %}
+                                    <span>•</span>
+                                    <span>{{ page.view_count }} Aufrufe</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="p-8 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <p class="mt-2 text-sm text-gray-500">Noch keine Wiki-Seiten vorhanden</p>
+                        {% if perms.wiki.add_wikipage %}
+                        <a href="{% url 'wiki:page_create' %}" class="mt-4 inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                            Erste Seite erstellen
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

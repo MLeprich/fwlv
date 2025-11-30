@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Produkttyp löschen - Kleiderkammer - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'clothing:dashboard' %}" class="text-gray-500 hover:text-gray-700">Kleiderkammer</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'clothing:producttype_list' %}" class="text-gray-500 hover:text-gray-700">Produkttypen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Löschen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+
+    <div class="bg-white rounded-lg shadow-sm border border-red-200 p-6">
+        <div class="flex items-center gap-3 mb-6">
+            <span class="text-3xl">🗑️</span>
+            <h1 class="text-2xl font-bold text-gray-900">Produkttyp löschen</h1>
+        </div>
+
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p class="text-red-800 font-medium">
+                Sind Sie sicher, dass Sie diesen Produkttyp löschen möchten?
+            </p>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <dl class="space-y-2">
+                <div class="flex items-center">
+                    <dt class="w-24 text-sm font-medium text-gray-500">Icon:</dt>
+                    <dd class="text-2xl">{{ object.icon }}</dd>
+                </div>
+                <div class="flex">
+                    <dt class="w-24 text-sm font-medium text-gray-500">Name:</dt>
+                    <dd class="text-sm text-gray-900 font-medium">{{ object.name }}</dd>
+                </div>
+                <div class="flex">
+                    <dt class="w-24 text-sm font-medium text-gray-500">Code:</dt>
+                    <dd class="text-sm text-gray-900 font-mono">{{ object.code }}</dd>
+                </div>
+                {% if object.is_psa_typical %}
+                <div class="flex">
+                    <dt class="w-24 text-sm font-medium text-gray-500">PSA:</dt>
+                    <dd class="text-sm text-orange-600 font-medium">Typischerweise PSA</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        {% with master_count=object.masters.count %}
+        {% if master_count > 0 %}
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <p class="text-yellow-800 font-medium">
+                Dieser Produkttyp wird von {{ master_count }} Stammdaten verwendet.
+            </p>
+            <p class="text-yellow-700 text-sm mt-1">
+                Der Produkttyp kann nicht gelöscht werden, solange er noch verwendet wird.
+            </p>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <form method="post" class="flex justify-end gap-3">
+            {% csrf_token %}
+            <a href="{% url 'clothing:producttype_list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium transition-colors">
+                Abbrechen
+            </a>
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                Endgültig löschen
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,799 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load json_filters %}
+
+{% block title %}{{ page.title }} - Block-Editor{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'wiki:dashboard' %}" class="text-gray-500 hover:text-gray-700">Wiki</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'wiki:page_detail' page.slug %}" class="text-gray-500 hover:text-gray-700">{{ page.title }}</a></li>
+            <li class="text-gray-400">/</li>
+            <li><span class="text-gray-900 font-semibold">Editor</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6" x-data="blockEditor()" x-init="init()">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex-1">
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-bold text-gray-900">Block-Editor</h1>
+                    {% if page.status == 'draft' %}
+                    <span class="px-3 py-1 text-sm font-medium bg-gray-100 text-gray-700 rounded-full">📝 Entwurf</span>
+                    {% elif page.status == 'review' %}
+                    <span class="px-3 py-1 text-sm font-medium bg-yellow-100 text-yellow-700 rounded-full">🔍 In Prüfung</span>
+                    {% elif page.status == 'published' %}
+                    <span class="px-3 py-1 text-sm font-medium bg-green-100 text-green-700 rounded-full">✅ Veröffentlicht</span>
+                    {% elif page.status == 'archived' %}
+                    <span class="px-3 py-1 text-sm font-medium bg-red-100 text-red-700 rounded-full">📦 Archiviert</span>
+                    {% endif %}
+                </div>
+                <p class="text-sm text-gray-600 mt-1">{{ page.title }}</p>
+                <p class="text-xs text-gray-500 mt-1">💾 Alle Änderungen werden automatisch gespeichert</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'wiki:page_detail' page.slug %}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    👁️ Vorschau
+                </a>
+                {% if page.status == 'draft' %}
+                <form method="post" action="{% url 'wiki:page_publish' page.slug %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        📢 Veröffentlichen
+                    </button>
+                </form>
+                {% elif page.status == 'published' %}
+                <form method="post" action="{% url 'wiki:page_unpublish' page.slug %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                        📝 Zurück zum Entwurf
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Block-Editor -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+
+        <!-- Blocks Container -->
+        <div id="blocks-container" class="space-y-4 min-h-[400px]">
+
+            {% for block in blocks %}
+            <script id="block-data-{{ block.id }}" type="application/json">
+            {
+                "content": {{ block.content|tojson_safe }},
+                "styleOptions": {{ block.style_options|tojson_safe }}
+            }
+            </script>
+            <div class="block-item group relative bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-blue-400 transition-colors"
+                 data-block-id="{{ block.id }}"
+                 x-data="(function() {
+                     const data = JSON.parse(document.getElementById('block-data-{{ block.id }}').textContent);
+                     return blockItem({{ block.id }}, '{{ block.block_type }}', data.content, data.styleOptions);
+                 })()"
+                 x-init="delete document.getElementById('block-data-{{ block.id }}')"
+            >
+
+                <!-- Drag Handle & Controls -->
+                <div class="absolute -left-2 top-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="drag-handle w-8 h-8 bg-gray-100 rounded hover:bg-gray-200 flex items-center justify-center cursor-move" title="Verschieben">
+                        <span>⋮⋮</span>
+                    </button>
+                </div>
+
+                <div class="absolute -right-2 top-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button @click="deleteBlock({{ block.id }})" class="w-8 h-8 bg-red-100 rounded hover:bg-red-200 flex items-center justify-center" title="Löschen">
+                        <span>🗑️</span>
+                    </button>
+                </div>
+
+                <!-- Block Content Editor -->
+                <div class="pl-2">
+                    <!-- Dynamic Block Editor based on type -->
+                    <template x-if="blockType === 'heading_1'">
+                        <input type="text" x-model="content.text" @input="debouncedSave()" placeholder="Überschrift 1" class="w-full text-3xl font-bold border-0 focus:ring-0 p-2 bg-transparent">
+                    </template>
+
+                    <template x-if="blockType === 'heading_2'">
+                        <input type="text" x-model="content.text" @input="debouncedSave()" placeholder="Überschrift 2" class="w-full text-2xl font-bold border-0 focus:ring-0 p-2 bg-transparent">
+                    </template>
+
+                    <template x-if="blockType === 'heading_3'">
+                        <input type="text" x-model="content.text" @input="debouncedSave()" placeholder="Überschrift 3" class="w-full text-xl font-semibold border-0 focus:ring-0 p-2 bg-transparent">
+                    </template>
+
+                    <template x-if="blockType === 'paragraph'">
+                        <textarea x-model="content.text" @input="debouncedSave()" placeholder="Text eingeben..." rows="3" class="w-full border-0 focus:ring-0 p-2 bg-transparent resize-y"></textarea>
+                    </template>
+
+                    <template x-if="blockType === 'quote'">
+                        <div class="border-l-4 border-gray-300 pl-4">
+                            <textarea x-model="content.text" @input="debouncedSave()" placeholder="Zitat..." rows="2" class="w-full border-0 focus:ring-0 italic bg-transparent resize-y"></textarea>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'checklist'">
+                        <div class="space-y-3">
+                            <div class="text-xs text-gray-500 mb-2 font-medium">✓ Checklisten-Elemente</div>
+                            <template x-for="(item, index) in content.items" :key="index">
+                                <div class="flex items-start gap-3 p-2 hover:bg-gray-50 rounded group">
+                                    <input type="checkbox" x-model="item.checked" @change="debouncedSave()" class="mt-1.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <input type="text" x-model="item.text" @input="debouncedSave()" placeholder="Geben Sie hier den Text für das Listenelement ein..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                    <button @click="removeChecklistItem(index)" class="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded" title="Element entfernen">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                            <button @click="addChecklistItem()" class="w-full mt-3 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg hover:bg-blue-100 hover:border-blue-400 transition-colors inline-flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Weiteres Element hinzufügen
+                            </button>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'wiki_link'">
+                        <div class="space-y-3" x-data="{ availablePages: [], loading: false }">
+                            <div class="text-xs text-gray-500 mb-2 font-medium">🔗 Wiki-Link</div>
+
+                            <!-- Link-Text -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Link-Text (optional)</label>
+                                <input type="text" x-model="content.linkText" @input="debouncedSave()" placeholder="Angezeigter Text (leer = Seitentitel)" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
+                                <p class="text-xs text-gray-500 mt-1">Wenn leer, wird der Titel der verlinkten Seite angezeigt</p>
+                            </div>
+
+                            <!-- Wiki-Seiten Auswahl -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Ziel-Seite *</label>
+                                <select x-model="content.pageSlug" @change="updatePageInfo(); debouncedSave()" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
+                                        x-init="
+                                            loading = true;
+                                            fetch('/wiki/api/pages/')
+                                                .then(r => r.json())
+                                                .then(data => {
+                                                    availablePages = data.pages;
+                                                    loading = false;
+                                                })
+                                                .catch(e => { console.error(e); loading = false; });
+                                        ">
+                                    <option value="">-- Seite auswählen --</option>
+                                    <template x-for="page in availablePages" :key="page.slug">
+                                        <option :value="page.slug" x-text="page.category ? `${page.category}: ${page.title}` : page.title"></option>
+                                    </template>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1" x-show="loading">Lade verfügbare Seiten...</p>
+                            </div>
+
+                            <!-- Preview -->
+                            <div x-show="content.pageSlug" class="bg-blue-50 border-l-4 border-blue-400 p-3 rounded">
+                                <p class="text-sm text-blue-800">
+                                    <span class="font-medium">Link-Vorschau:</span>
+                                    <span x-text="content.linkText || findPageTitle(content.pageSlug, availablePages)"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'table'">
+                        <div class="overflow-x-auto">
+                            <div class="mb-2 flex gap-2">
+                                <button @click="addTableRow()" class="text-xs px-2 py-1 bg-blue-100 rounded hover:bg-blue-200">+ Zeile</button>
+                                <button @click="addTableColumn()" class="text-xs px-2 py-1 bg-blue-100 rounded hover:bg-blue-200">+ Spalte</button>
+                            </div>
+                            <table class="min-w-full border border-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <template x-for="(header, index) in content.headers" :key="index">
+                                            <th class="border p-2">
+                                                <input type="text" x-model="content.headers[index]" @input="debouncedSave()" placeholder="Spalte" class="w-full text-xs font-medium border-0 focus:ring-0 bg-transparent">
+                                            </th>
+                                        </template>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(row, rowIndex) in content.rows" :key="rowIndex">
+                                        <tr>
+                                            <template x-for="(cell, cellIndex) in row" :key="cellIndex">
+                                                <td class="border p-2">
+                                                    <input type="text" x-model="content.rows[rowIndex][cellIndex]" @input="debouncedSave()" class="w-full text-sm border-0 focus:ring-0 bg-transparent">
+                                                </td>
+                                            </template>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'code'">
+                        <textarea x-model="content.code" @input="debouncedSave()" placeholder="Code eingeben..." rows="5" class="w-full font-mono text-sm bg-gray-900 text-gray-100 p-4 rounded-lg border-0 focus:ring-2 focus:ring-blue-500 resize-y"></textarea>
+                    </template>
+
+                    <template x-if="blockType === 'image'">
+                        <div>
+                            <input type="url" x-model="content.url" @input="debouncedSave()" placeholder="Bild-URL eingeben..." class="w-full border border-gray-300 rounded p-2 mb-2">
+                            <input type="text" x-model="content.alt" @input="debouncedSave()" placeholder="Alt-Text" class="w-full border border-gray-300 rounded p-2 mb-2">
+                            <input type="text" x-model="content.caption" @input="debouncedSave()" placeholder="Bildunterschrift (optional)" class="w-full border border-gray-300 rounded p-2">
+                            <template x-if="content.url">
+                                <img :src="content.url" :alt="content.alt" class="mt-4 max-w-full rounded-lg">
+                            </template>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'divider'">
+                        <hr class="my-4 border-gray-300">
+                    </template>
+
+                    <template x-if="blockType === 'callout'">
+                        <div :class="`p-4 rounded-lg ${getCalloutClass()}`">
+                            <div class="flex gap-3">
+                                <input type="text" x-model="content.icon" @input="debouncedSave()" placeholder="Icon" class="w-12 text-2xl text-center border-0 focus:ring-0 bg-transparent">
+                                <div class="flex-1">
+                                    <input type="text" x-model="content.title" @input="debouncedSave()" placeholder="Titel" class="w-full font-semibold border-0 focus:ring-0 bg-transparent mb-2">
+                                    <textarea x-model="content.text" @input="debouncedSave()" placeholder="Text..." rows="2" class="w-full text-sm border-0 focus:ring-0 bg-transparent resize-y"></textarea>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex gap-2">
+                                <button @click="styleOptions.color = 'blue'; debouncedSave()" class="w-6 h-6 bg-blue-200 rounded hover:ring-2 ring-blue-500"></button>
+                                <button @click="styleOptions.color = 'yellow'; debouncedSave()" class="w-6 h-6 bg-yellow-200 rounded hover:ring-2 ring-yellow-500"></button>
+                                <button @click="styleOptions.color = 'red'; debouncedSave()" class="w-6 h-6 bg-red-200 rounded hover:ring-2 ring-red-500"></button>
+                                <button @click="styleOptions.color = 'green'; debouncedSave()" class="w-6 h-6 bg-green-200 rounded hover:ring-2 ring-green-500"></button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'alert'">
+                        <div :class="`p-4 rounded-lg ${getAlertClass()}`">
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <input type="text" x-model="content.title" @input="debouncedSave()" placeholder="Titel" class="w-full font-semibold border-0 focus:ring-0 bg-transparent mb-2">
+                                    <textarea x-model="content.text" @input="debouncedSave()" placeholder="Text..." rows="2" class="w-full text-sm border-0 focus:ring-0 bg-transparent resize-y"></textarea>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex gap-2 text-xs">
+                                <button @click="content.type = 'info'; debouncedSave()" class="px-3 py-1 bg-blue-100 rounded hover:bg-blue-200">Info</button>
+                                <button @click="content.type = 'warning'; debouncedSave()" class="px-3 py-1 bg-yellow-100 rounded hover:bg-yellow-200">Warnung</button>
+                                <button @click="content.type = 'error'; debouncedSave()" class="px-3 py-1 bg-red-100 rounded hover:bg-red-200">Fehler</button>
+                                <button @click="content.type = 'success'; debouncedSave()" class="px-3 py-1 bg-green-100 rounded hover:bg-green-200">Erfolg</button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'accordion'">
+                        <div class="border border-gray-200 rounded-lg">
+                            <input type="text" x-model="content.title" @input="debouncedSave()" placeholder="Akkordeon-Titel" class="w-full font-medium p-4 border-0 focus:ring-0 bg-gray-50 rounded-t-lg">
+                            <textarea x-model="content.text" @input="debouncedSave()" placeholder="Inhalt..." rows="3" class="w-full p-4 border-0 focus:ring-0 bg-transparent resize-y"></textarea>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'video'">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Video-Plattform</label>
+                                <select x-model="content.platform" @change="debouncedSave()" class="w-full border border-gray-300 rounded p-2">
+                                    <option value="youtube">YouTube</option>
+                                    <option value="vimeo">Vimeo</option>
+                                    <option value="dailymotion">Dailymotion</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Video-ID oder URL</label>
+                                <input type="text" x-model="content.videoId" @input="debouncedSave()" placeholder="z.B. dQw4w9WgXcQ oder vollständige URL" class="w-full border border-gray-300 rounded p-2">
+                                <p class="text-xs text-gray-500 mt-1">Bei YouTube: Die ID aus der URL (z.B. dQw4w9WgXcQ)</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Titel (optional)</label>
+                                <input type="text" x-model="content.title" @input="debouncedSave()" placeholder="Video-Titel" class="w-full border border-gray-300 rounded p-2">
+                            </div>
+                            <template x-if="content.videoId && content.platform === 'youtube'">
+                                <div class="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                                    <iframe :src="`https://www.youtube.com/embed/${content.videoId}`" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+                                </div>
+                            </template>
+                            <template x-if="content.videoId && content.platform === 'vimeo'">
+                                <div class="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                                    <iframe :src="`https://player.vimeo.com/video/${content.videoId}`" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'file'">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Datei-URL</label>
+                                <input type="url" x-model="content.url" @input="debouncedSave()" placeholder="https://example.com/document.pdf" class="w-full border border-gray-300 rounded p-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Dateiname</label>
+                                <input type="text" x-model="content.filename" @input="debouncedSave()" placeholder="Dokument.pdf" class="w-full border border-gray-300 rounded p-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Dateigröße (optional)</label>
+                                <input type="text" x-model="content.filesize" @input="debouncedSave()" placeholder="z.B. 2.5 MB" class="w-full border border-gray-300 rounded p-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung (optional)</label>
+                                <textarea x-model="content.description" @input="debouncedSave()" placeholder="Kurze Beschreibung der Datei" rows="2" class="w-full border border-gray-300 rounded p-2 resize-y"></textarea>
+                            </div>
+                            <template x-if="content.url && content.filename">
+                                <div class="flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <div class="w-12 h-12 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+                                        <span class="text-2xl">📄</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-900" x-text="content.filename"></p>
+                                        <p class="text-sm text-gray-500" x-text="content.filesize || 'Unbekannte Größe'"></p>
+                                    </div>
+                                    <a :href="content.url" target="_blank" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Download</a>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'columns'">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-sm font-medium text-gray-700">Spalten-Layout</label>
+                                <select x-model="content.columnCount" @change="updateColumns(); debouncedSave()" class="border border-gray-300 rounded p-1 text-sm">
+                                    <option value="2">2 Spalten</option>
+                                    <option value="3">3 Spalten</option>
+                                    <option value="4">4 Spalten</option>
+                                </select>
+                            </div>
+                            <div class="grid gap-4" :class="`grid-cols-${content.columnCount || 2}`">
+                                <template x-for="(column, index) in content.columns" :key="index">
+                                    <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                                        <label class="block text-xs font-medium text-gray-600 mb-2" x-text="`Spalte ${index + 1}`"></label>
+                                        <textarea x-model="content.columns[index]" @input="debouncedSave()" placeholder="Spalteninhalt..." rows="4" class="w-full border border-gray-300 rounded p-2 text-sm resize-y bg-white"></textarea>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'embed'">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Embed-Typ</label>
+                                <select x-model="content.embedType" @change="debouncedSave()" class="w-full border border-gray-300 rounded p-2">
+                                    <option value="iframe">iFrame (Allgemein)</option>
+                                    <option value="twitter">Twitter/X Post</option>
+                                    <option value="maps">Google Maps</option>
+                                    <option value="custom">Custom HTML</option>
+                                </select>
+                            </div>
+
+                            <template x-if="content.embedType === 'iframe' || content.embedType === 'maps'">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                                    <input type="url" x-model="content.url" @input="debouncedSave()" placeholder="https://example.com" class="w-full border border-gray-300 rounded p-2">
+                                </div>
+                            </template>
+
+                            <template x-if="content.embedType === 'twitter'">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tweet-URL</label>
+                                    <input type="url" x-model="content.tweetUrl" @input="debouncedSave()" placeholder="https://twitter.com/user/status/..." class="w-full border border-gray-300 rounded p-2">
+                                </div>
+                            </template>
+
+                            <template x-if="content.embedType === 'custom'">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Custom HTML/Embed Code</label>
+                                    <textarea x-model="content.htmlCode" @input="debouncedSave()" placeholder="<iframe src=...></iframe>" rows="4" class="w-full border border-gray-300 rounded p-2 font-mono text-sm resize-y"></textarea>
+                                </div>
+                            </template>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Höhe (optional)</label>
+                                <input type="text" x-model="content.height" @input="debouncedSave()" placeholder="z.B. 400px oder 50vh" class="w-full border border-gray-300 rounded p-2">
+                            </div>
+
+                            <template x-if="content.url && content.embedType === 'iframe'">
+                                <div class="bg-gray-100 rounded-lg overflow-hidden" :style="`height: ${content.height || '400px'}`">
+                                    <iframe :src="content.url" class="w-full h-full" frameborder="0"></iframe>
+                                </div>
+                            </template>
+
+                            <template x-if="content.url && content.embedType === 'maps'">
+                                <div class="bg-gray-100 rounded-lg overflow-hidden" :style="`height: ${content.height || '400px'}`">
+                                    <iframe :src="content.url" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Block Type Label -->
+                <div class="mt-2 text-xs text-gray-500">
+                    <span x-text="getBlockTypeLabel()"></span>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+
+        <!-- Add Block Button -->
+        <div class="mt-6" x-data="{ showMenu: false }">
+            <button @click="showMenu = !showMenu" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors text-gray-500 hover:text-blue-600 font-medium">
+                + Block hinzufügen
+            </button>
+
+            <!-- Block Type Menu -->
+            <div x-show="showMenu" @click.away="showMenu = false" x-transition class="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 grid grid-cols-2 md:grid-cols-4 gap-2">
+                <button @click="addBlock('heading_1'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="font-bold text-lg">H1</div>
+                    <div class="text-xs text-gray-500">Überschrift 1</div>
+                </button>
+                <button @click="addBlock('heading_2'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="font-bold text-base">H2</div>
+                    <div class="text-xs text-gray-500">Überschrift 2</div>
+                </button>
+                <button @click="addBlock('heading_3'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="font-bold text-sm">H3</div>
+                    <div class="text-xs text-gray-500">Überschrift 3</div>
+                </button>
+                <button @click="addBlock('paragraph'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">¶</div>
+                    <div class="text-xs text-gray-500">Paragraph</div>
+                </button>
+                <button @click="addBlock('quote'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">"</div>
+                    <div class="text-xs text-gray-500">Zitat</div>
+                </button>
+                <button @click="addBlock('checklist'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">☑</div>
+                    <div class="text-xs text-gray-500">Checkliste</div>
+                </button>
+                <button @click="addBlock('wiki_link'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">🔗</div>
+                    <div class="text-xs text-gray-500">Wiki-Link</div>
+                </button>
+                <button @click="addBlock('table'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">⊞</div>
+                    <div class="text-xs text-gray-500">Tabelle</div>
+                </button>
+                <button @click="addBlock('code'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">&lt;/&gt;</div>
+                    <div class="text-xs text-gray-500">Code</div>
+                </button>
+                <button @click="addBlock('image'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">🖼️</div>
+                    <div class="text-xs text-gray-500">Bild</div>
+                </button>
+                <button @click="addBlock('divider'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">—</div>
+                    <div class="text-xs text-gray-500">Trennlinie</div>
+                </button>
+                <button @click="addBlock('callout'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">💡</div>
+                    <div class="text-xs text-gray-500">Callout</div>
+                </button>
+                <button @click="addBlock('alert'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">⚠️</div>
+                    <div class="text-xs text-gray-500">Alert</div>
+                </button>
+                <button @click="addBlock('accordion'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">▼</div>
+                    <div class="text-xs text-gray-500">Akkordeon</div>
+                </button>
+                <button @click="addBlock('video'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">🎥</div>
+                    <div class="text-xs text-gray-500">Video</div>
+                </button>
+                <button @click="addBlock('file'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">📎</div>
+                    <div class="text-xs text-gray-500">Datei</div>
+                </button>
+                <button @click="addBlock('columns'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">▥</div>
+                    <div class="text-xs text-gray-500">Spalten</div>
+                </button>
+                <button @click="addBlock('embed'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">🔗</div>
+                    <div class="text-xs text-gray-500">Embed</div>
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Sortable.js for Drag & Drop (local) -->
+<script src="{% static 'js/sortable.min.js' %}"></script>
+
+<script>
+// Alpine.js Block Editor Component
+function blockEditor() {
+    return {
+        pageSlug: '{{ page.slug }}',
+        csrfToken: '{{ csrf_token }}',
+        sortable: null,
+
+        init() {
+            // Initialize Sortable for drag & drop
+            const container = document.getElementById('blocks-container');
+            this.sortable = new Sortable(container, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'bg-blue-100',
+                onEnd: (evt) => {
+                    this.reorderBlocks();
+                }
+            });
+        },
+
+        async addBlock(blockType) {
+            const defaultContent = this.getDefaultContent(blockType);
+
+            try {
+                const response = await fetch(`/wiki/page/${this.pageSlug}/blocks/create/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    },
+                    body: JSON.stringify({
+                        block_type: blockType,
+                        content: defaultContent,
+                        style_options: {}
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Reload page to show new block
+                    window.location.reload();
+                } else {
+                    alert('Fehler beim Erstellen des Blocks: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error creating block:', error);
+                alert('Fehler beim Erstellen des Blocks');
+            }
+        },
+
+        async deleteBlock(blockId) {
+            if (!confirm('Block wirklich löschen?')) return;
+
+            try {
+                const response = await fetch(`/wiki/page/${this.pageSlug}/blocks/${blockId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.csrfToken
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Remove block from DOM
+                    document.querySelector(`[data-block-id="${blockId}"]`).remove();
+                } else {
+                    alert('Fehler beim Löschen: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error deleting block:', error);
+                alert('Fehler beim Löschen');
+            }
+        },
+
+        async reorderBlocks() {
+            const blockElements = document.querySelectorAll('.block-item');
+            const blockOrder = Array.from(blockElements).map(el => el.getAttribute('data-block-id'));
+
+            try {
+                const response = await fetch(`/wiki/page/${this.pageSlug}/blocks/reorder/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    },
+                    body: JSON.stringify({
+                        block_order: blockOrder
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert('Fehler beim Sortieren: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error reordering blocks:', error);
+            }
+        },
+
+        getDefaultContent(blockType) {
+            const defaults = {
+                'heading_1': { text: '' },
+                'heading_2': { text: '' },
+                'heading_3': { text: '' },
+                'paragraph': { text: '' },
+                'quote': { text: '' },
+                'checklist': { items: [{ text: '', checked: false }] },
+                'wiki_link': { pageSlug: '', linkText: '', pageTitle: '' },
+                'table': { headers: ['Spalte 1', 'Spalte 2'], rows: [['', '']] },
+                'code': { code: '' },
+                'image': { url: '', alt: '', caption: '' },
+                'divider': {},
+                'callout': { icon: '💡', title: '', text: '' },
+                'alert': { type: 'info', title: '', text: '' },
+                'accordion': { title: '', text: '' },
+                'video': { platform: 'youtube', videoId: '', title: '' },
+                'file': { url: '', filename: '', filesize: '', description: '' },
+                'columns': { columnCount: 2, columns: ['', ''] },
+                'embed': { embedType: 'iframe', url: '', height: '400px' }
+            };
+            return defaults[blockType] || {};
+        }
+    };
+}
+
+// Alpine.js Block Item Component
+function blockItem(blockId, blockType, content, styleOptions) {
+    return {
+        blockId: blockId,
+        blockType: blockType,
+        content: content || {},
+        styleOptions: styleOptions || {},
+        saveTimeout: null,
+
+        debouncedSave() {
+            clearTimeout(this.saveTimeout);
+            this.saveTimeout = setTimeout(() => {
+                this.saveBlock();
+            }, 500);
+        },
+
+        async saveBlock() {
+            try {
+                const response = await fetch(`/wiki/page/{{ page.slug }}/blocks/${this.blockId}/update/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        content: this.content,
+                        style_options: this.styleOptions
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.error('Error saving block:', data.error);
+                }
+            } catch (error) {
+                console.error('Error saving block:', error);
+            }
+        },
+
+        addChecklistItem() {
+            if (!this.content.items) this.content.items = [];
+            this.content.items.push({ text: '', checked: false });
+            this.debouncedSave();
+        },
+
+        removeChecklistItem(index) {
+            this.content.items.splice(index, 1);
+            this.debouncedSave();
+        },
+
+        addTableRow() {
+            if (!this.content.rows) this.content.rows = [];
+            const colCount = this.content.headers ? this.content.headers.length : 2;
+            this.content.rows.push(new Array(colCount).fill(''));
+            this.debouncedSave();
+        },
+
+        addTableColumn() {
+            if (!this.content.headers) this.content.headers = [];
+            if (!this.content.rows) this.content.rows = [];
+
+            this.content.headers.push('Neue Spalte');
+            this.content.rows.forEach(row => row.push(''));
+            this.debouncedSave();
+        },
+
+        getCalloutClass() {
+            const color = this.styleOptions.color || 'gray';
+            const classes = {
+                'blue': 'bg-blue-50 border-l-4 border-blue-400',
+                'yellow': 'bg-yellow-50 border-l-4 border-yellow-400',
+                'red': 'bg-red-50 border-l-4 border-red-400',
+                'green': 'bg-green-50 border-l-4 border-green-400',
+                'gray': 'bg-gray-50 border-l-4 border-gray-400'
+            };
+            return classes[color] || classes['gray'];
+        },
+
+        getAlertClass() {
+            const type = this.content.type || 'info';
+            const classes = {
+                'info': 'bg-blue-50 border border-blue-200',
+                'warning': 'bg-yellow-50 border border-yellow-200',
+                'error': 'bg-red-50 border border-red-200',
+                'success': 'bg-green-50 border border-green-200'
+            };
+            return classes[type] || classes['info'];
+        },
+
+        getBlockTypeLabel() {
+            const labels = {
+                'heading_1': 'Überschrift 1',
+                'heading_2': 'Überschrift 2',
+                'heading_3': 'Überschrift 3',
+                'paragraph': 'Paragraph',
+                'quote': 'Zitat',
+                'checklist': 'Checkliste',
+                'wiki_link': 'Wiki-Link',
+                'table': 'Tabelle',
+                'code': 'Code',
+                'image': 'Bild',
+                'divider': 'Trennlinie',
+                'callout': 'Callout',
+                'alert': 'Alert',
+                'accordion': 'Akkordeon',
+                'video': 'Video',
+                'file': 'Datei',
+                'columns': 'Spalten',
+                'embed': 'Embed'
+            };
+            return labels[this.blockType] || this.blockType;
+        },
+
+        updatePageInfo() {
+            // Called when page selection changes in wiki_link block
+            this.debouncedSave();
+        },
+
+        findPageTitle(slug, pages) {
+            // Find page title by slug from available pages
+            if (!pages || !slug) return '';
+            const page = pages.find(p => p.slug === slug);
+            return page ? page.title : slug;
+        },
+
+        updateColumns() {
+            // Update columns array when columnCount changes
+            const count = parseInt(this.content.columnCount) || 2;
+            const currentLength = this.content.columns ? this.content.columns.length : 0;
+
+            if (!this.content.columns) {
+                this.content.columns = [];
+            }
+
+            if (count > currentLength) {
+                // Add more columns
+                for (let i = currentLength; i < count; i++) {
+                    this.content.columns.push('');
+                }
+            } else if (count < currentLength) {
+                // Remove columns
+                this.content.columns = this.content.columns.slice(0, count);
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

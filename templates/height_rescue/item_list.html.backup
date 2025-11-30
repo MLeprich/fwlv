@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Alle Ausrüstung - Höhenrettung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'height_rescue:dashboard' %}" class="text-gray-500 hover:text-gray-700">Höhenrettung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Alle Ausrüstung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">🧗 Alle Höhenrettungsausrüstung</h1>
+        <a href="{% url 'height_rescue:dashboard' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+            ← Zurück zum Dashboard
+        </a>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-6 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Suche</label>
+                <input type="text" name="search" value="{{ request.GET.search }}"
+                       placeholder="Name, Seriennummer, Hersteller..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Typ</label>
+                <select name="item_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle Typen</option>
+                    {% for value, label in item_types %}
+                    <option value="{{ value }}" {% if request.GET.item_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Prüfstatus</label>
+                <select name="inspection_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle Status</option>
+                    {% for value, label in inspection_statuses %}
+                    <option value="{{ value }}" {% if request.GET.inspection_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="md:col-span-3 flex gap-2">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                    🔍 Filtern
+                </button>
+                <a href="{% url 'height_rescue:item_list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium transition-colors">
+                    Zurücksetzen
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Liste -->
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        {% if items %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seriennummer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nächste Prüfung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in items %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ item.get_item_type_display }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{% url 'height_rescue:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                {{ item.name }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ item.serial_number|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {% if item.next_inspection_date %}
+                                {{ item.next_inspection_date|date:"d.m.Y" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if item.inspection_status == 'passed' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-semibold">✅ Bestanden</span>
+                            {% elif item.inspection_status == 'overdue' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full font-semibold">🔴 Überfällig</span>
+                            {% elif item.inspection_status == 'due_soon' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-semibold">⚠️ Fällig</span>
+                            {% elif item.inspection_status == 'retired' %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full font-semibold">🚫 Ausgemustert</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold">{{ item.get_inspection_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <a href="{% url 'height_rescue:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800">
+                                Details →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div class="text-sm text-gray-700">
+                Zeige {{ page_obj.start_index }} bis {{ page_obj.end_index }} von {{ paginator.count }} Einträgen
+            </div>
+            <div class="flex gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50">◀ Zurück</a>
+                {% endif %}
+                <span class="px-3 py-1 bg-blue-600 text-white rounded">{{ page_obj.number }}</span>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50">Weiter ▶</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-12">
+            <span class="text-6xl block mb-4">🧗</span>
+            <p class="text-gray-500 text-lg mb-4">Keine Ausrüstung gefunden</p>
+            <p class="text-gray-400 text-sm">
+                {% if request.GET.search or request.GET.item_type or request.GET.inspection_status %}
+                Versuche andere Filterkriterien
+                {% else %}
+                Noch keine Höhenrettungsausrüstung angelegt
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

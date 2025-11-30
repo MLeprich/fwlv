@@ -1,0 +1,138 @@
+<!-- Darstellung Section -->
+<div x-show="activeSection === 'appearance'" x-cloak class="p-6">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">Darstellung</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="section" value="appearance">
+
+        <!-- Theme -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                {{ appearance_form.theme.label }}
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" x-data="{ selectedTheme: '{{ appearance_form.theme.value|default:'light' }}' }">
+                {% for value, label in appearance_form.theme.field.choices %}
+                <label class="relative block cursor-pointer group" @click="selectedTheme = '{{ value }}'">
+                    <input
+                        type="radio"
+                        name="theme"
+                        value="{{ value }}"
+                        {% if appearance_form.theme.value == value %}checked{% endif %}
+                        class="sr-only"
+                        x-model="selectedTheme"
+                    >
+                    <div
+                        class="border-2 rounded-lg p-4 transition-all"
+                        :class="selectedTheme === '{{ value }}' ? 'border-primary-600 ring-2 ring-primary-200' : 'border-gray-200 hover:border-gray-300'"
+                    >
+                        <div class="{% if value == 'light' %}bg-white border border-gray-200{% elif value == 'dark' %}bg-gray-800{% endif %} rounded-lg p-4 mb-3 shadow-sm" {% if value == 'auto' %}style="background: linear-gradient(to right, white 50%, #1f2937 50%);"{% endif %}>
+                            <div class="space-y-2">
+                                <div class="h-2 {% if value == 'light' %}bg-gray-300{% elif value == 'dark' %}bg-gray-600{% else %}bg-gray-400{% endif %} rounded w-3/4"></div>
+                                <div class="h-2 {% if value == 'light' %}bg-gray-200{% elif value == 'dark' %}bg-gray-700{% else %}bg-gray-500{% endif %} rounded w-1/2"></div>
+                            </div>
+                        </div>
+                        <div class="font-medium text-center text-gray-900">{{ label }}</div>
+                        <div
+                            class="absolute top-2 right-2 transition-opacity"
+                            :class="selectedTheme === '{{ value }}' ? 'opacity-100' : 'opacity-0'"
+                        >
+                            <svg class="w-6 h-6 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                {{ appearance_form.sidebar_behavior.label }}
+            </h3>
+            <div class="space-y-3">
+                {% for value, label in appearance_form.sidebar_behavior.field.choices %}
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="sidebar_behavior" value="{{ value }}" {% if appearance_form.sidebar_behavior.value == value %}checked{% endif %} class="text-primary-600 focus:ring-primary-500">
+                    <span class="ml-3 text-gray-700">{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="text-sm text-gray-500 mt-2">Legt fest, ob die Navigation standardmäßig ein- oder ausgeklappt ist.</p>
+        </div>
+
+        <!-- Listen-Darstellung -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                Listen-Darstellung
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ appearance_form.items_per_page.label }}
+                    </label>
+                    {{ appearance_form.items_per_page }}
+                    <p class="text-sm text-gray-500 mt-1">Anzahl der Einträge, die in Tabellen angezeigt werden</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ appearance_form.table_density.label }}
+                    </label>
+                    {{ appearance_form.table_density }}
+                    <p class="text-sm text-gray-500 mt-1">Abstände zwischen Zeilen in Tabellen</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ansichts-Präferenzen -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                Ansichts-Präferenzen
+            </h3>
+            <div class="space-y-3">
+                <div class="flex items-start">
+                    {{ appearance_form.show_hints }}
+                    <div class="ml-3">
+                        <label for="{{ appearance_form.show_hints.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ appearance_form.show_hints.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Erklärungs-Tooltips bei wichtigen Funktionen anzeigen</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    {{ appearance_form.show_breadcrumbs }}
+                    <div class="ml-3">
+                        <label for="{{ appearance_form.show_breadcrumbs.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ appearance_form.show_breadcrumbs.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Brotkrumen-Navigation am oberen Seitenrand</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    {{ appearance_form.compact_mode }}
+                    <div class="ml-3">
+                        <label for="{{ appearance_form.compact_mode.id_for_label }}" class="font-medium text-gray-700 cursor-pointer">
+                            {{ appearance_form.compact_mode.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Reduzierte Abstände und kleinere Schriftgrößen für mehr Inhalt auf dem Bildschirm</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="flex justify-end pt-4 border-t border-gray-200">
+            <button
+                type="submit"
+                class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+            >
+                Änderungen speichern
+            </button>
+        </div>
+    </form>
+</div>

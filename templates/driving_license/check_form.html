@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ title }}</h1>
+        <form method="post">
+            {% csrf_token %}
+            <div class="border-b pb-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Basis-Informationen</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Person mit Suchfeld -->
+                    <div x-data="{ open: false, search: '', selected: null, persons: [] }" x-init="
+                        persons = Array.from(document.querySelectorAll('#id_person option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(p => p.value);
+                        const currentValue = document.getElementById('id_person').value;
+                        if (currentValue) {
+                            selected = persons.find(p => p.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_person').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium mb-2">{{ form.person.label }} *</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.person }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Person auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Person suchen (Name, Personalnummer)..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="person in persons.filter(p => p.text.toLowerCase().includes(search.toLowerCase()))" :key="person.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = person; document.getElementById('id_person').value = person.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === person.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="person.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.person.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.person.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div><label class="block text-sm font-medium mb-2">{{ form.check_date.label }}</label>{{ form.check_date }}{% if form.check_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.check_date.errors.0 }}</p>{% endif %}</div>
+                    <div class="col-span-2"><label class="flex items-center">{{ form.license_presented }}<span class="ml-2 text-sm">{{ form.license_presented.label }}</span></label></div>
+                </div>
+            </div>
+            <div class="border-b pb-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Fuehrerscheinklassen</h2>
+                <div class="grid grid-cols-4 gap-4">
+                    <label class="flex items-center">{{ form.has_class_B }}<span class="ml-2 text-sm">B</span></label>
+                    <label class="flex items-center">{{ form.has_class_BE }}<span class="ml-2 text-sm">BE</span></label>
+                    <label class="flex items-center">{{ form.has_class_C }}<span class="ml-2 text-sm">C</span></label>
+                    <label class="flex items-center">{{ form.has_class_CE }}<span class="ml-2 text-sm">CE</span></label>
+                    <label class="flex items-center">{{ form.has_class_C1 }}<span class="ml-2 text-sm">C1</span></label>
+                    <label class="flex items-center">{{ form.has_class_C1E }}<span class="ml-2 text-sm">C1E</span></label>
+                    <label class="flex items-center">{{ form.has_class_D }}<span class="ml-2 text-sm">D</span></label>
+                    <label class="flex items-center">{{ form.has_class_A }}<span class="ml-2 text-sm">A</span></label>
+                </div>
+            </div>
+            <div class="border-b pb-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Gueltigkeitsdaten</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="col-span-2"><label class="block text-sm font-medium mb-2">{{ form.license_expiry_date.label }}</label>{{ form.license_expiry_date }}</div>
+                </div>
+            </div>
+            <div class="border-b pb-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Klasse C/C1</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div><label class="block text-sm font-medium mb-2">{{ form.class_c_expiry_date.label }}</label>{{ form.class_c_expiry_date }}</div>
+                    <div><label class="block text-sm font-medium mb-2">{{ form.class_c_medical_check_date.label }}</label>{{ form.class_c_medical_check_date }}</div>
+                    <div class="col-span-2"><label class="block text-sm font-medium mb-2">{{ form.class_c_medical_expiry_date.label }}</label>{{ form.class_c_medical_expiry_date }}</div>
+                </div>
+            </div>
+            <div class="border-b pb-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Klasse CE/C1E</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div><label class="block text-sm font-medium mb-2">{{ form.class_ce_expiry_date.label }}</label>{{ form.class_ce_expiry_date }}</div>
+                    <div><label class="block text-sm font-medium mb-2">{{ form.class_ce_medical_check_date.label }}</label>{{ form.class_ce_medical_check_date }}</div>
+                    <div class="col-span-2"><label class="block text-sm font-medium mb-2">{{ form.class_ce_medical_expiry_date.label }}</label>{{ form.class_ce_medical_expiry_date }}</div>
+                </div>
+            </div>
+            <div class="border-b pb-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Klasse D/D1</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div><label class="block text-sm font-medium mb-2">{{ form.class_d_expiry_date.label }}</label>{{ form.class_d_expiry_date }}</div>
+                    <div><label class="block text-sm font-medium mb-2">{{ form.class_d_medical_check_date.label }}</label>{{ form.class_d_medical_check_date }}</div>
+                    <div class="col-span-2"><label class="block text-sm font-medium mb-2">{{ form.class_d_medical_expiry_date.label }}</label>{{ form.class_d_medical_expiry_date }}</div>
+                </div>
+            </div>
+            <div class="mb-6"><label class="block text-sm font-medium mb-2">{{ form.notes.label }}</label>{{ form.notes }}</div>
+            <div class="flex justify-end gap-3 pt-6 border-t">
+                <a href="{% url 'driving_license:check_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Abbrechen</a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{{ submit_text }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

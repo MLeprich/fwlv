@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Fahrzeugübergabeprotokoll - {{ handover.vehicle }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @bottom-right {
+                content: "Seite " counter(page) " von " counter(pages);
+                font-size: 9pt;
+                color: #666;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .header {
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24pt;
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+
+        .header .meta {
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .qr-section {
+            float: right;
+            text-align: center;
+            margin-left: 20px;
+        }
+
+        .qr-section img {
+            width: 100px;
+            height: 100px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .qr-section p {
+            font-size: 8pt;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #1e40af;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        .info-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .info-row {
+            display: table-row;
+        }
+
+        .info-label {
+            display: table-cell;
+            width: 40%;
+            padding: 6px 10px 6px 0;
+            font-weight: bold;
+            color: #4b5563;
+        }
+
+        .info-value {
+            display: table-cell;
+            padding: 6px 0;
+            color: #111827;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+
+        .status-completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-defects {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-progress {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .checklist {
+            margin-top: 15px;
+        }
+
+        .checklist-category {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .checklist-category h4 {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #374151;
+            background-color: #f3f4f6;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+        }
+
+        .checklist-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            display: table;
+            width: 100%;
+        }
+
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .check-icon {
+            display: table-cell;
+            width: 30px;
+            font-size: 14pt;
+            vertical-align: middle;
+        }
+
+        .check-name {
+            display: table-cell;
+            vertical-align: middle;
+            font-weight: 500;
+        }
+
+        .check-status {
+            display: table-cell;
+            text-align: right;
+            vertical-align: middle;
+            font-size: 8pt;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 8px;
+            margin-left: 5px;
+        }
+
+        .badge-red {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-orange {
+            background-color: #fed7aa;
+            color: #9a3412;
+        }
+
+        .defects-list {
+            margin-top: 15px;
+        }
+
+        .defect-item {
+            border: 1px solid #e5e7eb;
+            padding: 12px;
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+        }
+
+        .defect-header {
+            margin-bottom: 8px;
+        }
+
+        .defect-title {
+            font-weight: bold;
+            font-size: 11pt;
+            color: #111827;
+        }
+
+        .severity-critical {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .severity-major {
+            background-color: #fed7aa;
+            color: #9a3412;
+        }
+
+        .severity-minor {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .defect-description {
+            color: #4b5563;
+            margin-top: 5px;
+            font-size: 9pt;
+        }
+
+        .defect-meta {
+            margin-top: 8px;
+            font-size: 8pt;
+            color: #6b7280;
+        }
+
+        .photo-grid {
+            display: table;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .photo-row {
+            display: table-row;
+        }
+
+        .photo-cell {
+            display: table-cell;
+            width: 33.33%;
+            padding: 5px;
+            text-align: center;
+        }
+
+        .photo-cell img {
+            width: 100%;
+            max-width: 150px;
+            height: auto;
+            border: 1px solid #e5e7eb;
+        }
+
+        .photo-caption {
+            font-size: 8pt;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .signatures {
+            margin-top: 40px;
+            page-break-inside: avoid;
+        }
+
+        .signature-box {
+            display: inline-block;
+            width: 45%;
+            border-top: 2px solid #333;
+            padding-top: 10px;
+            margin-top: 50px;
+        }
+
+        .signature-box:first-child {
+            margin-right: 8%;
+        }
+
+        .signature-label {
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .signature-name {
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 8pt;
+            color: #666;
+            text-align: center;
+        }
+
+        .warning-box {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 12px;
+            margin: 15px 0;
+        }
+
+        .warning-box strong {
+            color: #92400e;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        {% if qr_code %}
+        <div class="qr-section">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="QR-Code">
+            <p>Protokoll-ID: #{{ handover.pk }}</p>
+        </div>
+        {% endif %}
+
+        <h1>🚒 Fahrzeugübergabeprotokoll</h1>
+        <div class="meta">
+            <strong>{{ handover.vehicle }}</strong> |
+            {{ handover.handover_date|date:"d.m.Y, H:i" }} Uhr |
+            {{ handover.get_handover_type_display }}
+        </div>
+    </div>
+
+    <!-- Status -->
+    <div class="section">
+        <div class="section-title">Status</div>
+        <p>
+            {% if handover.status == 'completed' %}
+            <span class="status-badge status-completed">✓ Abgeschlossen</span>
+            {% elif handover.status == 'defects_noted' %}
+            <span class="status-badge status-defects">⚠ Mängel festgestellt</span>
+            {% else %}
+            <span class="status-badge status-progress">⏳ In Bearbeitung</span>
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Übergabe-Details -->
+    <div class="section">
+        <div class="section-title">Übergabe-Details</div>
+        <div class="info-grid">
+            <div class="info-row">
+                <div class="info-label">Fahrzeug:</div>
+                <div class="info-value">{{ handover.vehicle }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Übergeben von:</div>
+                <div class="info-value">{{ handover.handover_from|default:"Erstinbetriebnahme" }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Übergeben an:</div>
+                <div class="info-value">{{ handover.handover_to }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Übergabeart:</div>
+                <div class="info-value">{{ handover.get_handover_type_display }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Datum & Uhrzeit:</div>
+                <div class="info-value">{{ handover.handover_date|date:"d.m.Y, H:i" }} Uhr</div>
+            </div>
+            {% if handover.location %}
+            <div class="info-row">
+                <div class="info-label">Standort:</div>
+                <div class="info-value">{{ handover.location }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Fahrzeugdaten -->
+    <div class="section">
+        <div class="section-title">Fahrzeugdaten</div>
+        <div class="info-grid">
+            <div class="info-row">
+                <div class="info-label">KM-Stand:</div>
+                <div class="info-value">{{ handover.odometer_reading }} km</div>
+            </div>
+            {% if handover.fuel_level %}
+            <div class="info-row">
+                <div class="info-label">Tankfüllung:</div>
+                <div class="info-value">{{ handover.fuel_level }}%</div>
+            </div>
+            {% endif %}
+        </div>
+        {% if handover.notes %}
+        <p style="margin-top: 10px; font-style: italic; color: #4b5563;">
+            Bemerkungen: {{ handover.notes }}
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Checkliste -->
+    {% if checklist_by_category %}
+    <div class="section">
+        <div class="section-title">Checkliste ({{ checklist_completion }}% vollständig)</div>
+        <div class="checklist">
+            {% for category, items in checklist_by_category.items %}
+            <div class="checklist-category">
+                <h4>{{ category }}</h4>
+                {% for item in items %}
+                <div class="checklist-item">
+                    <span class="check-icon">{% if item.checked %}✅{% else %}⬜{% endif %}</span>
+                    <span class="check-name">
+                        {{ item.item_name }}
+                        {% if item.serial_number %}
+                        <span style="font-size: 8pt; color: #666;">(SN: {{ item.serial_number }})</span>
+                        {% endif %}
+                    </span>
+                    <span class="check-status">
+                        {% if not item.present %}
+                        <span class="badge badge-red">Fehlt</span>
+                        {% endif %}
+                        {% if not item.functional %}
+                        <span class="badge badge-orange">Defekt</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if item.notes %}
+                <div style="padding-left: 42px; font-size: 8pt; color: #666; font-style: italic;">
+                    → {{ item.notes }}
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Mängel -->
+    {% if handover.defects.all %}
+    <div class="section">
+        <div class="section-title">Festgestellte Mängel ({{ handover.defects.count }})</div>
+
+        {% if handover.has_defects %}
+        <div class="warning-box">
+            <strong>⚠ Achtung:</strong> Es wurden {{ handover.defects.count }} Mangel/Mängel dokumentiert.
+        </div>
+        {% endif %}
+
+        <div class="defects-list">
+            {% for defect in handover.defects.all %}
+            <div class="defect-item">
+                <div class="defect-header">
+                    <span class="defect-title">{{ defect.title }}</span>
+                    <span class="status-badge
+                        {% if defect.severity == 'critical' %}severity-critical
+                        {% elif defect.severity == 'major' %}severity-major
+                        {% else %}severity-minor{% endif %}">
+                        {% if defect.severity == 'critical' %}Kritisch
+                        {% elif defect.severity == 'major' %}Erheblich
+                        {% else %}Gering{% endif %}
+                    </span>
+                </div>
+                <p class="defect-description">{{ defect.description }}</p>
+                <div class="defect-meta">
+                    Kategorie: {{ defect.get_category_display }}
+                    {% if defect.requires_immediate_action %} | ⚡ Sofortige Maßnahme erforderlich{% endif %}
+                    {% if defect.affects_operational_readiness %} | 🚫 Beeinträchtigt Einsatzbereitschaft{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Fotos (nur Anzahl im PDF, Bilder können zu groß sein) -->
+    {% if photo_count > 0 %}
+    <div class="section">
+        <div class="section-title">Dokumentation</div>
+        <p>Es wurden <strong>{{ photo_count }} Fotos</strong> zur Dokumentation hochgeladen.</p>
+        <p style="font-size: 8pt; color: #666; margin-top: 5px;">
+            Fotos sind im digitalen System unter https://lager.resqware.de/vehicle_handover/handovers/{{ handover.pk }}/ einsehbar.
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Bestätigungen -->
+    <div class="section signatures">
+        <div class="section-title">Bestätigungen</div>
+
+        <div class="signature-box">
+            <div class="signature-label">Empfänger</div>
+            <div class="signature-name">{{ handover.handover_to }}</div>
+            {% if handover.confirmed_by_receiver %}
+            <div style="color: #059669; margin-top: 5px;">✓ Digital bestätigt am {{ handover.updated_at|date:"d.m.Y, H:i" }}</div>
+            {% else %}
+            <div style="color: #dc2626; margin-top: 5px;">⚠ Noch nicht bestätigt</div>
+            {% endif %}
+        </div>
+
+        {% if handover.handover_from %}
+        <div class="signature-box">
+            <div class="signature-label">Übergeber</div>
+            <div class="signature-name">{{ handover.handover_from }}</div>
+            {% if handover.confirmed_by_giver %}
+            <div style="color: #059669; margin-top: 5px;">✓ Digital bestätigt am {{ handover.updated_at|date:"d.m.Y, H:i" }}</div>
+            {% else %}
+            <div style="color: #dc2626; margin-top: 5px;">⚠ Noch nicht bestätigt</div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>
+            Erstellt am {{ handover.created_at|date:"d.m.Y, H:i" }} Uhr von {{ handover.created_by }}<br>
+            Feuerwehr Lagerverwaltungssystem (FLVS) | https://lager.resqware.de
+        </p>
+    </div>
+</body>
+</html>

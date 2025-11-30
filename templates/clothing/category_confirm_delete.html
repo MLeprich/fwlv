@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kategorie löschen - Kleiderkammer - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'clothing:dashboard' %}" class="text-gray-500 hover:text-gray-700">Kleiderkammer</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'clothing:category_list' %}" class="text-gray-500 hover:text-gray-700">Kategorien</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Löschen</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="mb-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="flex-shrink-0">
+                    <span class="text-4xl">⚠️</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Kategorie löschen</h1>
+                    <p class="mt-1 text-sm text-gray-500">Diese Aktion kann nicht rückgängig gemacht werden</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <span class="text-yellow-600">⚡</span>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">Achtung</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>Möchten Sie die Kategorie <strong>{{ object.name }}</strong> wirklich löschen?</p>
+                        <p class="mt-2">Die Kategorie wird deaktiviert und kann später reaktiviert werden.</p>
+                        {% if object.items.count > 0 %}
+                        <p class="mt-2 font-semibold">⚠️ Diese Kategorie enthält {{ object.items.count }} Artikel. Die Artikel bleiben erhalten, werden aber nicht mehr dieser Kategorie zugeordnet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <dl class="space-y-2">
+                    <div class="flex justify-between">
+                        <dt class="text-sm font-medium text-gray-500">Name:</dt>
+                        <dd class="text-sm text-gray-900">{{ object.name }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-sm font-medium text-gray-500">Code:</dt>
+                        <dd class="text-sm text-gray-900">{{ object.code }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-sm font-medium text-gray-500">Artikel:</dt>
+                        <dd class="text-sm text-gray-900">{{ object.items.count }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'clothing:category_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                    Ja, Kategorie löschen
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Prüfungsarten | FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'height_rescue:dashboard' %}" class="text-gray-500 hover:text-gray-700">Höhenrettung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'height_rescue:inspection_management' %}" class="text-gray-500 hover:text-gray-700">Verwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Prüfungsarten</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header mit Titel und Actions -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Prüfungsarten</h1>
+            <p class="mt-1 text-sm text-gray-600">
+                Verwalten Sie individuelle Prüfungsarten für Ihre Höhenrettung
+            </p>
+        </div>
+        <a href="{% url 'height_rescue:inspection_type_create' %}"
+           class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-150">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Neue Prüfungsart
+        </a>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <input type="text"
+                       name="search"
+                       value="{{ request.GET.search }}"
+                       placeholder="Suche nach Name, Norm..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <select name="requires_certification"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle Zertifizierungen</option>
+                    <option value="yes" {% if request.GET.requires_certification == 'yes' %}selected{% endif %}>Befähigung erforderlich</option>
+                    <option value="no" {% if request.GET.requires_certification == 'no' %}selected{% endif %}>Keine Befähigung</option>
+                </select>
+            </div>
+            <div>
+                <select name="requires_external"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle Prüfungen</option>
+                    <option value="yes" {% if request.GET.requires_external == 'yes' %}selected{% endif %}>Externe Prüfung</option>
+                    <option value="no" {% if request.GET.requires_external == 'no' %}selected{% endif %}>Interne Prüfung</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit"
+                        class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-150">
+                    Filtern
+                </button>
+                <a href="{% url 'height_rescue:inspection_type_list' %}"
+                   class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors duration-150">
+                    Zurücksetzen
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Prüfungsarten-Liste -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        {% if inspection_types %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfungsart</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfnorm</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Intervall</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Anforderungen</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfpunkte</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for inspection_type in inspection_types %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-gray-900">{{ inspection_type.name }}</div>
+                        {% if inspection_type.description %}
+                        <div class="text-sm text-gray-500">{{ inspection_type.description|truncatewords:10 }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if inspection_type.inspection_standard %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ inspection_type.inspection_standard }}
+                        </span>
+                        {% else %}
+                        <span class="text-sm text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if inspection_type.interval_months %}
+                            {% if inspection_type.interval_months|divisibleby:12 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    🕐 {{ inspection_type.interval_months|floatformat:0|add:"0"|divisibleby:12|yesno:"1,0" }}{% widthratio inspection_type.interval_months 12 1 %} Jahr{{ inspection_type.interval_months|add:"-12"|yesno:"e," }}
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                    🕐 {{ inspection_type.interval_months }} Monate
+                                </span>
+                            {% endif %}
+                        {% else %}
+                        <span class="text-sm text-gray-400">Kein Intervall</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col gap-1">
+                            {% if inspection_type.requires_certification %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                🎓 Befähigung erforderlich
+                            </span>
+                            {% endif %}
+                            {% if inspection_type.requires_external_service %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                🏢 Externe Prüfung
+                            </span>
+                            {% endif %}
+                            {% if not inspection_type.requires_certification and not inspection_type.requires_external_service %}
+                            <span class="text-sm text-gray-400">-</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if inspection_type.checklist %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            📋 {{ inspection_type.checklist|length }} Punkt{{ inspection_type.checklist|length|pluralize:"e" }}
+                        </span>
+                        {% else %}
+                        <span class="text-sm text-gray-400">Keine</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{% url 'height_rescue:inspection_type_edit' inspection_type.pk %}"
+                           class="text-blue-600 hover:text-blue-900 mr-3">
+                            Bearbeiten
+                        </a>
+                        <a href="{% url 'height_rescue:inspection_type_delete' inspection_type.pk %}"
+                           class="text-red-600 hover:text-red-900">
+                            Löschen
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div class="flex-1 flex justify-between sm:hidden">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Zurück</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Weiter</a>
+                {% endif %}
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Zeige <span class="font-medium">{{ page_obj.start_index }}</span> bis <span class="font-medium">{{ page_obj.end_index }}</span> von <span class="font-medium">{{ paginator.count }}</span> Prüfungsarten
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">Zurück</a>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">Weiter</a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Keine Prüfungsarten gefunden</h3>
+            <p class="mt-1 text-sm text-gray-500">Erstellen Sie die erste Prüfungsart für Ihre Höhenrettung.</p>
+            <div class="mt-6">
+                <a href="{% url 'height_rescue:inspection_type_create' %}"
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-150">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Prüfungsart erstellen
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,394 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Magazin - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">
+                    Dashboard
+                </a>
+            </li>
+            <li>
+                <span class="text-gray-400">/</span>
+            </li>
+            <li>
+                <span class="text-gray-900 font-medium">Magazin</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-green-600 to-green-800 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">📦</span>
+                    <h1 class="text-3xl font-bold">Magazin</h1>
+                </div>
+                <p class="text-green-100 text-lg">
+                    Verbrauchsmaterialien (Batterien, Waschmittel, Handschuhe, Schrauben, etc.)
+                </p>
+            </div>
+            <div class="hidden lg:block">
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20">
+                    <p class="text-green-100 text-sm mb-1">Gesamt-Artikel</p>
+                    <p class="text-4xl font-bold">{{ total_items }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Gesamt-Artikel -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Gesamt-Artikel</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_items }}</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <span class="text-3xl">📦</span>
+                </div>
+            </div>
+            <a href="{% url 'magazine:item_list' %}" class="text-gray-600 hover:text-gray-900 text-sm font-medium mt-4 inline-block">
+                Alle anzeigen →
+            </a>
+        </div>
+
+        <!-- Niedrige Bestände -->
+        <div class="bg-white rounded-lg shadow-sm border {% if low_stock_count > 0 %}border-orange-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Niedrige Bestände</p>
+                    <p class="text-3xl font-bold {% if low_stock_count > 0 %}text-orange-600{% else %}text-gray-900{% endif %} mt-2">
+                        {{ low_stock_count }}
+                    </p>
+                </div>
+                <div class="{% if low_stock_count > 0 %}bg-orange-50{% else %}bg-gray-50{% endif %} rounded-lg p-3">
+                    <span class="text-3xl">⚠️</span>
+                </div>
+            </div>
+            <a href="{% url 'magazine:low_stock' %}" class="{% if low_stock_count > 0 %}text-orange-600 hover:text-orange-700{% else %}text-gray-600 hover:text-gray-900{% endif %} text-sm font-medium mt-4 inline-block">
+                Details anzeigen →
+            </a>
+        </div>
+
+        <!-- Ablaufende Chargen -->
+        <div class="bg-white rounded-lg shadow-sm border {% if expiring_batches_count > 0 %}border-amber-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Läuft in 90 Tagen ab</p>
+                    <p class="text-3xl font-bold {% if expiring_batches_count > 0 %}text-amber-600{% else %}text-gray-900{% endif %} mt-2">
+                        {{ expiring_batches_count }}
+                    </p>
+                </div>
+                <div class="{% if expiring_batches_count > 0 %}bg-amber-50{% else %}bg-gray-50{% endif %} rounded-lg p-3">
+                    <span class="text-3xl">{% if expiring_batches_count > 0 %}📅{% else %}✅{% endif %}</span>
+                </div>
+            </div>
+            <a href="{% url 'magazine:expiring_batches' %}" class="{% if expiring_batches_count > 0 %}text-amber-600 hover:text-amber-700{% else %}text-gray-600 hover:text-gray-900{% endif %} text-sm font-medium mt-4 inline-block">
+                Details anzeigen →
+            </a>
+        </div>
+
+        <!-- Gefahrgut -->
+        <div class="bg-white rounded-lg shadow-sm border {% if hazardous_count > 0 %}border-purple-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Gefahrgut</p>
+                    <p class="text-3xl font-bold {% if hazardous_count > 0 %}text-purple-600{% else %}text-gray-900{% endif %} mt-2">
+                        {{ hazardous_count }}
+                    </p>
+                </div>
+                <div class="{% if hazardous_count > 0 %}bg-purple-50{% else %}bg-gray-50{% endif %} rounded-lg p-3">
+                    <span class="text-3xl">☢️</span>
+                </div>
+            </div>
+            <a href="{% url 'magazine:hazardous_items' %}" class="{% if hazardous_count > 0 %}text-purple-600 hover:text-purple-700{% else %}text-gray-600 hover:text-gray-900{% endif %} text-sm font-medium mt-4 inline-block">
+                Details anzeigen →
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Bereiche -->
+        <div class="lg:col-span-2">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">📂 Bereiche</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+
+                <!-- Stammdaten -->
+                <a href="{% url 'magazine:master_list' %}" class="bg-white rounded-lg shadow-sm border border-blue-200 hover:shadow-md hover:border-blue-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-blue-50 rounded-lg p-2">
+                            <span class="text-2xl">📚</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Stammdaten</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Produktkatalog verwalten
+                    </p>
+                    <p class="text-sm text-blue-600 font-medium">
+                        Stammdaten anzeigen →
+                    </p>
+                </a>
+
+                <!-- Alle Artikel -->
+                <a href="{% url 'magazine:item_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">📦</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Artikel</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Verbrauchsmaterialien verwalten
+                    </p>
+                    <div class="text-2xl font-bold text-gray-900">{{ total_items|default:0 }}</div>
+                    <p class="text-xs text-gray-500 mt-2">Alle Artikel anzeigen →</p>
+                </a>
+
+                <!-- Gefahrgut -->
+                <a href="{% url 'magazine:hazardous_items' %}" class="bg-white rounded-lg shadow-sm border border-purple-200 hover:shadow-md hover:border-purple-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-purple-50 rounded-lg p-2">
+                            <span class="text-2xl">☢️</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Gefahrgut</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Chemikalien & Sicherheitsdatenblätter
+                    </p>
+                    <div class="text-2xl font-bold text-purple-600">{{ hazardous_count|default:0 }}</div>
+                    <p class="text-xs text-gray-500 mt-2">Gefahrgut anzeigen →</p>
+                </a>
+
+                <!-- Chargen-Verwaltung -->
+                <a href="{% url 'magazine:batch_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">📋</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Chargen</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Batch-Tracking & FIFO-Prinzip
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Zur Übersicht →
+                    </p>
+                </a>
+
+                <!-- Niedrige Bestände -->
+                <a href="{% url 'magazine:low_stock' %}" class="bg-white rounded-lg shadow-sm border {% if low_stock_count > 0 %}border-orange-200 hover:border-orange-400{% else %}border-gray-200 hover:border-gray-400{% endif %} hover:shadow-md transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="{% if low_stock_count > 0 %}bg-orange-50{% else %}bg-gray-100{% endif %} rounded-lg p-2">
+                            <span class="text-2xl">⚠️</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Niedrig</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Artikel unter Mindestbestand
+                    </p>
+                    <div class="text-2xl font-bold {% if low_stock_count > 0 %}text-orange-600{% else %}text-gray-900{% endif %}">{{ low_stock_count }}</div>
+                </a>
+
+                <!-- Import/Export -->
+                <a href="{% url 'magazine:import_export' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">📤</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Import/Export</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Daten importieren & exportieren
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Zur Übersicht →
+                    </p>
+                </a>
+
+                <!-- Inventur -->
+                <a href="{% url 'magazine:inventory_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">📊</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Inventur</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Bestandsaufnahme & Prüfung
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Inventuren verwalten →
+                    </p>
+                </a>
+
+                <!-- Lagerbewegungen -->
+                <a href="{% url 'magazine:movement_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">🔄</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Bewegungen</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Ein- und Ausgänge
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Zur Übersicht →
+                    </p>
+                </a>
+
+                <!-- Personal-Verwaltung -->
+                <a href="{% url 'magazine:staff_management' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-gray-100 rounded-lg p-2">
+                            <span class="text-2xl">👥</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Personal</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Bearbeiter & Lesende verwalten
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Zur Verwaltung →
+                    </p>
+                </a>
+            </div>
+
+            <!-- Letzte Bewegungen -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <span>📋</span>
+                        <span>Letzte Bewegungen</span>
+                    </h3>
+                    <a href="{% url 'magazine:movement_list' %}" class="text-gray-600 hover:text-gray-900 text-sm font-medium">
+                        Alle anzeigen →
+                    </a>
+                </div>
+
+                {% if recent_movements %}
+                <div class="space-y-3">
+                    {% for movement in recent_movements %}
+                    <div class="border-l-2 border-gray-300 pl-4 py-2">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-medium">{{ movement.get_movement_type_display }}</span>
+                                    {% if movement.item.is_hazardous %}
+                                    <span class="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs rounded font-semibold border border-purple-200">☢️ Gefahrgut</span>
+                                    {% endif %}
+                                </div>
+                                <p class="font-medium text-gray-900">
+                                    {{ movement.item.name }}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {{ movement.quantity }} {{ movement.get_unit_display }}
+                                    {% if movement.created_by %} | {{ movement.created_by.get_full_name }}{% endif %}
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-500">{{ movement.movement_date|date:"d.m.Y" }}</p>
+                                <p class="text-xs text-gray-400">{{ movement.movement_date|time:"H:i" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <span class="text-4xl block mb-2">📋</span>
+                    <p>Noch keine Lagerbewegungen vorhanden</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column: Quick Actions -->
+        <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-4">⚡ Schnellaktionen</h2>
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-2">
+                <a href="{% url 'magazine:item_create' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    ➕ Neuer Artikel
+                </a>
+                <a href="{% url 'magazine:hazardous_items' %}" class="block w-full bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    ☢️ Gefahrgut
+                </a>
+                <a href="{% url 'magazine:batch_list' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    📋 Chargen verwalten
+                </a>
+                <a href="{% url 'magazine:movement_list' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    🔄 Lagerbewegungen
+                </a>
+                <a href="{% url 'magazine:import_export' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    📤 Import/Export
+                </a>
+                <a href="{% url 'magazine:inventory_list' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    📊 Inventur
+                </a>
+                <a href="{% url 'magazine:staff_management' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    👥 Personal verwalten
+                </a>
+            </div>
+
+            <!-- Niedrige Bestände -->
+            {% if low_stock_items %}
+            <div class="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-6">
+                <h3 class="font-bold text-orange-900 mb-4 flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Niedrige Bestände</span>
+                </h3>
+                <div class="space-y-2">
+                    {% for item in low_stock_items|slice:":5" %}
+                    <div class="bg-white rounded p-2 text-sm">
+                        <p class="font-medium text-gray-900">{{ item.name }}</p>
+                        <p class="text-xs text-orange-600 mt-1">{{ item.quantity }} {{ item.get_unit_display }} (Min: {{ item.min_quantity }})</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                <a href="{% url 'magazine:low_stock' %}" class="block mt-4 text-orange-600 hover:text-orange-700 text-sm font-medium">
+                    Alle ansehen →
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Ablaufende Chargen -->
+            {% if expiring_batches %}
+            <div class="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-6">
+                <h3 class="font-bold text-amber-900 mb-4 flex items-center gap-2">
+                    <span>📅</span>
+                    <span>Ablaufende Chargen</span>
+                </h3>
+                <div class="space-y-2">
+                    {% for batch in expiring_batches|slice:":5" %}
+                    <div class="bg-white rounded p-2 text-sm">
+                        <p class="font-medium text-gray-900">{{ batch.item.name }}</p>
+                        <p class="text-xs text-amber-600 mt-1">{{ batch.expiry_date|date:"d.m.Y" }} • Charge {{ batch.batch_number }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                <a href="{% url 'magazine:expiring_batches' %}" class="block mt-4 text-amber-600 hover:text-amber-700 text-sm font-medium">
+                    Alle ansehen →
+                </a>
+            </div>
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

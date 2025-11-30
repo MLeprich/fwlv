@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ object.title }} - 360° Editor{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:photo_360_list' %}" class="text-gray-500 hover:text-gray-700">360° Ansichten</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:photo_360_detail' object.pk %}" class="text-gray-500 hover:text-gray-700">{{ object.title|truncatewords:3 }}</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Editor</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.css"/>
+<style>
+    #editor-container {
+        width: 100%;
+        height: 80vh;
+        min-height: 600px;
+    }
+    .editing-mode {
+        cursor: crosshair !important;
+    }
+    .hotspot-panel {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    .custom-hotspot {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .custom-hotspot:hover {
+        transform: scale(1.2);
+    }
+    .hotspot-item {
+        transition: all 0.2s;
+    }
+    .hotspot-item:hover {
+        transform: translateX(5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="h-screen flex flex-col">
+    <!-- Top Bar -->
+    <div class="bg-gray-900 text-white px-6 py-4 flex justify-between items-center shadow-lg">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'vehicle_handover:photo_360_detail' object.pk %}"
+               class="text-gray-300 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-xl font-bold">{{ object.title }} - Editor</h1>
+                <p class="text-sm text-gray-400">{{ object.vehicle.name }} | {{ object.get_photo_type_display }}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="toggle-edit-mode"
+                    class="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2">
+                <span id="edit-mode-icon">✏️</span>
+                <span id="edit-mode-text">Bearbeitungsmodus aktivieren</span>
+            </button>
+            <a href="{% url 'vehicle_handover:photo_360_detail' object.pk %}"
+               class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-semibold transition-colors">
+                ✓ Fertig
+            </a>
+        </div>
+    </div>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Main Viewer -->
+        <div class="flex-1 bg-gray-900 relative">
+            <div id="editor-container"></div>
+
+            <!-- Help Overlay -->
+            <div id="help-overlay" class="absolute top-4 left-4 bg-black bg-opacity-75 text-white px-4 py-3 rounded-lg shadow-lg max-w-sm hidden">
+                <h3 class="font-bold mb-2">🎯 Bearbeitungsmodus</h3>
+                <ul class="text-sm space-y-1">
+                    <li>• Klicken Sie auf das Foto, um einen Hotspot zu platzieren</li>
+                    <li>• Geben Sie Titel und Details ein</li>
+                    <li>• Hotspots können später verschoben werden</li>
+                    <li>• Verwenden Sie das rechte Panel zur Verwaltung</li>
+                </ul>
+            </div>
+
+            <!-- Coordinate Display -->
+            <div id="coord-display" class="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-mono hidden">
+                Pitch: <span id="current-pitch">0°</span> | Yaw: <span id="current-yaw">0°</span>
+            </div>
+        </div>
+
+        <!-- Right Sidebar: Hotspot List -->
+        <div class="w-80 bg-gray-50 border-l border-gray-200 hotspot-panel p-4">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <span>🎯</span>
+                    <span>Hotspots (<span id="hotspot-count">{{ object.hotspots.count }}</span>)</span>
+                </h2>
+            </div>
+
+            <div id="hotspot-list" class="space-y-2">
+                {% for hotspot in object.hotspots.all %}
+                    <div class="hotspot-item bg-white border border-gray-200 rounded-lg p-3 shadow-sm" data-hotspot-id="{{ hotspot.id }}">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center gap-2 flex-1">
+                                <span class="text-2xl">
+                                    {% if hotspot.icon == 'drawer' %}📦
+                                    {% elif hotspot.icon == 'cabinet' %}🗄️
+                                    {% elif hotspot.icon == 'box' %}📋
+                                    {% elif hotspot.icon == 'tool' %}🔧
+                                    {% elif hotspot.icon == 'medical' %}⚕️
+                                    {% elif hotspot.icon == 'fire' %}🔥
+                                    {% elif hotspot.icon == 'radio' %}📻
+                                    {% elif hotspot.icon == 'equipment' %}⚙️
+                                    {% else %}📍
+                                    {% endif %}
+                                </span>
+                                <div class="flex-1">
+                                    <h3 class="font-semibold text-gray-900 text-sm">{{ hotspot.title }}</h3>
+                                    <p class="text-xs text-gray-500">Pitch: {{ hotspot.pitch|floatformat:1 }}° | Yaw: {{ hotspot.yaw|floatformat:1 }}°</p>
+                                </div>
+                            </div>
+                            {% if not hotspot.is_active %}
+                                <span class="bg-gray-400 text-white px-2 py-1 rounded text-xs">Inaktiv</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="flex gap-1 mt-2">
+                            <button onclick="focusHotspot('{{ hotspot.id }}')"
+                                    class="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded text-xs font-medium transition-colors">
+                                Anzeigen
+                            </button>
+                            <a href="{% url 'vehicle_handover:hotspot_update' hotspot.pk %}"
+                               class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-medium text-center transition-colors">
+                                Bearbeiten
+                            </a>
+                            <button onclick="deleteHotspot('{{ hotspot.id }}')"
+                                    class="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs font-medium transition-colors">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            {% if not object.hotspots.all %}
+                <div class="text-center py-8 text-gray-500">
+                    <span class="text-4xl inline-block mb-2">🎯</span>
+                    <p class="text-sm">Keine Hotspots vorhanden</p>
+                    <p class="text-xs mt-1">Aktivieren Sie den Bearbeitungsmodus</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create Hotspot -->
+<div id="create-hotspot-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" style="display: none;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onclick="event.stopPropagation()">
+        <div class="bg-purple-600 text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
+            <h3 class="text-lg font-bold">Neuer Hotspot</h3>
+            <button onclick="closeCreateModal()" class="text-white hover:text-gray-200">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <form id="create-hotspot-form" class="p-6">
+            {% csrf_token %}
+            <input type="hidden" id="hotspot-pitch" name="pitch">
+            <input type="hidden" id="hotspot-yaw" name="yaw">
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Titel *</label>
+                <input type="text" id="hotspot-title" name="title" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                       placeholder="z.B. Schublade links oben">
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                <textarea id="hotspot-description" name="description" rows="2"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          placeholder="Optionale Beschreibung"></textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Typ *</label>
+                <select id="hotspot-type" name="hotspot_type" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    <option value="info">ℹ️ Information</option>
+                    <option value="images">🖼️ Bildergalerie</option>
+                    <option value="checklist">✓ Checkliste</option>
+                    <option value="mixed">📋 Gemischt (Bilder + Checkliste)</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Icon</label>
+                    <select id="hotspot-icon" name="icon"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <option value="default">📍 Standard</option>
+                        <option value="drawer">📦 Schublade</option>
+                        <option value="cabinet">🗄️ Schrank</option>
+                        <option value="box">📋 Kiste</option>
+                        <option value="tool">🔧 Werkzeug</option>
+                        <option value="medical">⚕️ Medizin</option>
+                        <option value="fire">🔥 Brandschutz</option>
+                        <option value="radio">📻 Funk</option>
+                        <option value="equipment">⚙️ Ausrüstung</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Farbe</label>
+                    <select id="hotspot-color" name="color"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <option value="blue">🔵 Blau</option>
+                        <option value="red">🔴 Rot</option>
+                        <option value="green">🟢 Grün</option>
+                        <option value="yellow">🟡 Gelb</option>
+                        <option value="purple">🟣 Lila</option>
+                        <option value="orange">🟠 Orange</option>
+                        <option value="gray">⚫ Grau</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 px-4 py-3 rounded-lg mb-4">
+                <p class="text-sm text-gray-600">
+                    Position: <span class="font-mono font-semibold">Pitch: <span id="modal-pitch">0</span>° | Yaw: <span id="modal-yaw">0</span>°</span>
+                </p>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="submit"
+                        class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors">
+                    Hotspot erstellen
+                </button>
+                <button type="button" onclick="closeCreateModal()"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors">
+                    Abbrechen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/three/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.js"></script>
+
+<script>
+    // State
+    let editMode = false;
+    let pendingPosition = null;
+    const hotspots = {{ hotspots_json|safe }};
+
+    // Initialize Photo Sphere Viewer
+    const viewer = new PhotoSphereViewer.Viewer({
+        container: document.getElementById('editor-container'),
+        panorama: '{{ object.image.url }}',
+        size: {
+            width: '100%',
+            height: '80vh',
+        },
+        navbar: [
+            'zoom',
+            'move',
+            'fullscreen',
+        ],
+        defaultZoomLvl: 50,
+        fisheye: false,
+        mousewheel: true,
+        mousemove: true,
+        touchmove: true,
+        plugins: [
+            [PhotoSphereViewer.MarkersPlugin, {
+                markers: hotspots.map(h => ({
+                    id: h.id.toString(),
+                    position: {
+                        pitch: (h.pitch * Math.PI) / 180,
+                        yaw: (h.yaw * Math.PI) / 180
+                    },
+                    html: createHotspotHTML(h),
+                    tooltip: {
+                        content: h.title,
+                        position: 'top center',
+                    },
+                    data: h,
+                }))
+            }]
+        ]
+    });
+
+    const markersPlugin = viewer.getPlugin(PhotoSphereViewer.MarkersPlugin);
+
+    // Toggle edit mode
+    document.getElementById('toggle-edit-mode').addEventListener('click', () => {
+        editMode = !editMode;
+        const icon = document.getElementById('edit-mode-icon');
+        const text = document.getElementById('edit-mode-text');
+        const helpOverlay = document.getElementById('help-overlay');
+        const coordDisplay = document.getElementById('coord-display');
+
+        if (editMode) {
+            icon.textContent = '🎯';
+            text.textContent = 'Bearbeitungsmodus aktiv';
+            document.getElementById('editor-container').classList.add('editing-mode');
+            helpOverlay.classList.remove('hidden');
+            coordDisplay.classList.remove('hidden');
+        } else {
+            icon.textContent = '✏️';
+            text.textContent = 'Bearbeitungsmodus aktivieren';
+            document.getElementById('editor-container').classList.remove('editing-mode');
+            helpOverlay.classList.add('hidden');
+            coordDisplay.classList.add('hidden');
+        }
+    });
+
+    // Track mouse position for coordinate display
+    viewer.addEventListener('position-updated', ({ position }) => {
+        if (editMode) {
+            const pitchDeg = (position.pitch * 180) / Math.PI;
+            const yawDeg = (position.yaw * 180) / Math.PI;
+            document.getElementById('current-pitch').textContent = pitchDeg.toFixed(1) + '°';
+            document.getElementById('current-yaw').textContent = yawDeg.toFixed(1) + '°';
+        }
+    });
+
+    // Click to add hotspot
+    viewer.addEventListener('click', (e) => {
+        if (!editMode) return;
+
+        const position = viewer.getPosition();
+        const pitchDeg = (position.pitch * 180) / Math.PI;
+        const yawDeg = (position.yaw * 180) / Math.PI;
+
+        // Store position for modal
+        pendingPosition = { pitch: pitchDeg, yaw: yawDeg };
+
+        // Update modal
+        document.getElementById('hotspot-pitch').value = pitchDeg;
+        document.getElementById('hotspot-yaw').value = yawDeg;
+        document.getElementById('modal-pitch').textContent = pitchDeg.toFixed(1);
+        document.getElementById('modal-yaw').textContent = yawDeg.toFixed(1);
+
+        // Show modal
+        document.getElementById('create-hotspot-modal').style.display = 'flex';
+    });
+
+    // Create hotspot form submission
+    document.getElementById('create-hotspot-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<svg class="animate-spin h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Erstelle...';
+
+        try {
+            const response = await fetch('{% url "vehicle_handover:hotspot_create" object.pk %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData,
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Show success message
+                    submitBtn.innerHTML = '✓ Erfolgreich!';
+                    submitBtn.classList.add('bg-green-600');
+
+                    // Reload page after short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    alert('Fehler: ' + (data.errors || 'Unbekannter Fehler'));
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                alert('Fehler beim Erstellen des Hotspots: ' + (errorData.message || 'Server-Fehler'));
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Netzwerkfehler: Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+
+    // Close modal
+    function closeCreateModal() {
+        document.getElementById('create-hotspot-modal').style.display = 'none';
+        document.getElementById('create-hotspot-form').reset();
+        pendingPosition = null;
+    }
+
+    // Close modal on background click
+    document.getElementById('create-hotspot-modal').addEventListener('click', closeCreateModal);
+
+    // Focus on hotspot
+    function focusHotspot(hotspotId) {
+        const marker = markersPlugin.getMarker(hotspotId.toString());
+        if (marker) {
+            viewer.animate({
+                position: marker.state.position,
+                zoom: 80,
+                speed: '2rpm',
+            });
+        }
+    }
+
+    // Delete hotspot
+    async function deleteHotspot(hotspotId) {
+        if (!confirm('Möchten Sie diesen Hotspot wirklich löschen?')) return;
+
+        // Find the hotspot item element
+        const hotspotElement = document.querySelector(`[data-hotspot-id="${hotspotId}"]`);
+        if (hotspotElement) {
+            hotspotElement.style.opacity = '0.5';
+            hotspotElement.style.pointerEvents = 'none';
+        }
+
+        try {
+            const response = await fetch(`/vehicle_handover/hotspots/${hotspotId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            });
+
+            if (response.ok) {
+                // Remove from DOM with animation
+                if (hotspotElement) {
+                    hotspotElement.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        hotspotElement.remove();
+                        // Update count
+                        const count = document.querySelectorAll('.hotspot-item').length;
+                        document.getElementById('hotspot-count').textContent = count;
+                    }, 300);
+                }
+
+                // Remove marker from viewer
+                try {
+                    markersPlugin.removeMarker(hotspotId.toString());
+                } catch (e) {
+                    console.log('Marker already removed');
+                }
+            } else {
+                alert('Fehler beim Löschen');
+                if (hotspotElement) {
+                    hotspotElement.style.opacity = '1';
+                    hotspotElement.style.pointerEvents = 'auto';
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Netzwerkfehler: Bitte versuchen Sie es erneut.');
+            if (hotspotElement) {
+                hotspotElement.style.opacity = '1';
+                hotspotElement.style.pointerEvents = 'auto';
+            }
+        }
+    }
+
+    // Create HTML for hotspot marker
+    function createHotspotHTML(hotspot) {
+        const iconMap = {
+            'drawer': '📦',
+            'cabinet': '🗄️',
+            'box': '📋',
+            'tool': '🔧',
+            'medical': '⚕️',
+            'fire': '🔥',
+            'radio': '📻',
+            'equipment': '⚙️',
+            'default': '📍'
+        };
+
+        const colorMap = {
+            'red': '#EF4444',
+            'blue': '#3B82F6',
+            'green': '#10B981',
+            'yellow': '#F59E0B',
+            'purple': '#8B5CF6',
+            'orange': '#F97316',
+            'gray': '#6B7280'
+        };
+
+        const icon = iconMap[hotspot.icon] || iconMap['default'];
+        const bgColor = colorMap[hotspot.color] || colorMap['blue'];
+
+        return `
+            <div class="custom-hotspot" style="
+                background: ${bgColor};
+                color: white;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                border: 3px solid white;
+            ">
+                ${icon}
+            </div>
+        `;
+    }
+</script>
+{% endblock %}

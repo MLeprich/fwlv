@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Item bearbeiten{% else %}Neues Item{% endif %} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:template_list' %}" class="text-gray-500 hover:text-gray-700">Vorlagen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if object %}Item bearbeiten{% else %}Neues Item{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">
+            {% if object %}Item bearbeiten{% else %}Neues Item hinzufügen{% endif %}
+        </h1>
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reihenfolge</label>
+                    {{ form.order }}
+                    {% if form.order.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.order.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Erwartete Anzahl</label>
+                    {{ form.expected_quantity }}
+                    {% if form.expected_quantity.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.expected_quantity.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <label class="flex items-center cursor-pointer">
+                    {{ form.requires_serial }}
+                    <span class="ml-2 text-sm text-gray-700">{{ form.requires_serial.label }}</span>
+                </label>
+                {% if form.requires_serial.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.requires_serial.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">Bei Übergabe muss eine Seriennummer erfasst werden</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Beschreibung</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <a href="{% if object %}{% url 'vehicle_handover:template_detail' object.category.template.pk %}{% elif category %}{% url 'vehicle_handover:template_detail' category.template.pk %}{% else %}{% url 'vehicle_handover:template_list' %}{% endif %}"
+                   class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                    {% if object %}💾 Speichern{% else %}➕ Hinzufügen{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+<!-- Kilometerstand aktualisieren (HTMX Modal) -->
+<div id="modal-backdrop" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) closeModal()">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-auto">
+        <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-900">
+            📊 Kilometerstand aktualisieren
+        </h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+            <span class="text-2xl">×</span>
+        </button>
+    </div>
+
+    <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+        <p class="text-sm text-gray-700">
+            <span class="font-semibold">Fahrzeug:</span> {{ vehicle.call_sign }} - {{ vehicle.name }}
+        </p>
+        <p class="text-sm text-gray-700 mt-1">
+            <span class="font-semibold">Aktueller Stand:</span>
+            {% if vehicle.current_mileage %}
+                {{ vehicle.current_mileage|floatformat:0 }} km
+            {% else %}
+                <span class="text-gray-500">Noch nicht erfasst</span>
+            {% endif %}
+        </p>
+    </div>
+
+    <form hx-post="{% url 'vehicles:mileage_modal' vehicle.pk %}"
+          hx-target="#modal-content"
+          hx-swap="innerHTML"
+          class="space-y-4">
+        {% csrf_token %}
+
+        <div>
+            <label for="new_mileage" class="block text-sm font-medium text-gray-700 mb-1">
+                Neuer Kilometerstand *
+            </label>
+            <input type="number"
+                   id="new_mileage"
+                   name="mileage"
+                   step="0.1"
+                   min="{% if vehicle.current_mileage %}{{ vehicle.current_mileage }}{% else %}0{% endif %}"
+                   required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                   placeholder="z.B. 15234"
+                   autofocus />
+            <p class="mt-1 text-xs text-gray-500">
+                Der neue Stand muss höher als der aktuelle sein
+            </p>
+        </div>
+
+        <div>
+            <label for="mileage_date" class="block text-sm font-medium text-gray-700 mb-1">
+                Erfassungsdatum *
+            </label>
+            <input type="date"
+                   id="mileage_date"
+                   name="date"
+                   value="{{ today|date:'Y-m-d' }}"
+                   max="{{ today|date:'Y-m-d' }}"
+                   required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+            <label for="mileage_notes" class="block text-sm font-medium text-gray-700 mb-1">
+                Notizen (optional)
+            </label>
+            <textarea id="mileage_notes"
+                      name="notes"
+                      rows="3"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="z.B. Nach Einsatz, Routinecheck..."></textarea>
+        </div>
+
+        <div class="flex gap-3 pt-4">
+            <button type="submit"
+                    class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                💾 Speichern
+            </button>
+            <button type="button"
+                    onclick="closeModal()"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">
+                Abbrechen
+            </button>
+        </div>
+    </form>
+    </div><!-- End white background modal -->
+</div><!-- End modal-backdrop -->
+
+<script>
+function closeModal() {
+    document.getElementById('modal-backdrop').remove();
+}
+
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeModal();
+    }
+});
+</script>

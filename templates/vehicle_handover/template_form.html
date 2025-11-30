@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Fahrzeugübernahme - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:template_list' %}" class="text-gray-500 hover:text-gray-700">Vorlagen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ title }}</h1>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600">❌</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Grundinformationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Grundinformationen</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.name.label }} *
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. "LF 10/6 Standard" oder "HLF 20 Vollausstattung"</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zuordnung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Zuordnung</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.vehicle_types.label }}
+                        </label>
+                        {{ form.vehicle_types }}
+                        {% if form.vehicle_types.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.vehicle_types.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Wählen Sie die Fahrzeugtypen aus, für die diese Vorlage verwendet werden soll</p>
+                    </div>
+
+                    <div class="flex items-center gap-6">
+                        <label class="flex items-center cursor-pointer">
+                            {{ form.is_default }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.is_default.label }}</span>
+                        </label>
+                        {% if form.is_default.errors %}
+                        <p class="text-sm text-red-600">{{ form.is_default.errors.0 }}</p>
+                        {% endif %}
+
+                        <label class="flex items-center cursor-pointer">
+                            {{ form.is_active }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.is_active.label }}</span>
+                        </label>
+                        {% if form.is_active.errors %}
+                        <p class="text-sm text-red-600">{{ form.is_active.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Box -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex">
+                    <span class="text-blue-600 text-xl">💡</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-blue-800">Hinweis</h3>
+                        <p class="mt-1 text-sm text-blue-700">
+                            Nach dem Speichern können Sie Kategorien und Items zu dieser Vorlage hinzufügen.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% if object %}{% url 'vehicle_handover:template_detail' object.pk %}{% else %}{% url 'vehicle_handover:template_list' %}{% endif %}"
+                   class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                    {% if object %}
+                        💾 Änderungen speichern
+                    {% else %}
+                        ➕ Vorlage erstellen
+                    {% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

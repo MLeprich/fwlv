@@ -1,0 +1,194 @@
+<!-- Tab Content: Prüfungen (loaded via HTMX) -->
+{% load static %}
+
+<!-- Header with Add Button -->
+<div class="mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-900">Anstehende Prüfungen</h3>
+        <button
+            hx-get="{% url 'personnel:inspection_create' person.pk %}"
+            hx-target="body"
+            hx-swap="beforeend"
+            class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+        >
+            ➕ Prüfung hinzufügen
+        </button>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="text-2xl font-bold text-red-600">{{ inspection_stats.overdue|default:0 }}</div>
+            <div class="text-sm text-red-700">Überfällig</div>
+        </div>
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="text-2xl font-bold text-yellow-600">{{ inspection_stats.due_soon|default:0 }}</div>
+            <div class="text-sm text-yellow-700">Bald fällig</div>
+        </div>
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div class="text-2xl font-bold text-gray-600">{{ inspection_stats.pending|default:0 }}</div>
+            <div class="text-sm text-gray-700">Anstehend</div>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="text-2xl font-bold text-green-600">{{ inspection_stats.completed|default:0 }}</div>
+            <div class="text-sm text-green-700">Abgeschlossen</div>
+        </div>
+    </div>
+
+    <!-- Upcoming Inspections -->
+    {% if upcoming_inspections %}
+    <div class="space-y-4">
+        {% for inspection in upcoming_inspections %}
+        <div class="p-4 rounded-lg border-l-4
+            {% if inspection.status == 'overdue' %}bg-red-50 border-red-400
+            {% elif inspection.status == 'due_soon' %}bg-yellow-50 border-yellow-400
+            {% else %}bg-blue-50 border-blue-400{% endif %}">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        {% if inspection.status == 'overdue' %}
+                        <span class="text-2xl">🔴</span>
+                        {% elif inspection.status == 'due_soon' %}
+                        <span class="text-2xl">⚠️</span>
+                        {% else %}
+                        <span class="text-2xl">ℹ️</span>
+                        {% endif %}
+                        <h4 class="font-semibold text-gray-900">{{ inspection.title }}</h4>
+                        <span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">
+                            {{ inspection.get_inspection_type_display }}
+                        </span>
+                    </div>
+                    <div class="text-sm text-gray-700 space-y-1">
+                        <p><strong>Geplant:</strong> {{ inspection.scheduled_date|date:"d.m.Y" }}
+                            {% if inspection.status == 'overdue' %}
+                            <span class="text-red-600 font-semibold">(Überfällig)</span>
+                            {% elif inspection.status == 'due_soon' %}
+                            <span class="text-yellow-600 font-semibold">(Bald fällig)</span>
+                            {% endif %}
+                        </p>
+                        {% if inspection.interval_months %}
+                        <p><strong>Intervall:</strong> Alle {{ inspection.interval_months }} Monate</p>
+                        {% endif %}
+                        {% if inspection.examiner %}
+                        <p><strong>Prüfer:</strong> {{ inspection.examiner }}</p>
+                        {% endif %}
+                        {% if inspection.description %}
+                        <p class="text-gray-600">{{ inspection.description|truncatewords:20 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button
+                        hx-post="{% url 'personnel:inspection_complete' inspection.pk %}"
+                        hx-confirm="Prüfung '{{ inspection.title }}' als abgeschlossen markieren?"
+                        class="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+                    >
+                        ✓ Erledigt
+                    </button>
+                    <button
+                        hx-get="{% url 'personnel:inspection_update' inspection.pk %}"
+                        hx-target="body"
+                        hx-swap="beforeend"
+                        class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition-colors"
+                    >
+                        ✏️ Bearbeiten
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-8 bg-gray-50 rounded-lg">
+        <div class="text-4xl mb-2">✅</div>
+        <p class="text-gray-600">Keine anstehenden Prüfungen</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Completed Inspections (Timeline) -->
+<div>
+    <h3 class="font-semibold text-gray-900 mb-4">Abgeschlossene Prüfungen</h3>
+
+    {% if completed_inspections %}
+    <div class="relative">
+        <div class="absolute left-2 top-2 bottom-2 w-0.5 bg-gray-200"></div>
+        <div class="space-y-4">
+            {% for inspection in completed_inspections %}
+            <div class="relative pl-8">
+                <div class="absolute left-0 top-1 w-4 h-4 rounded-full border-2 border-white
+                    {% if inspection.passed %}bg-green-600
+                    {% elif inspection.passed == False %}bg-red-600
+                    {% else %}bg-gray-400{% endif %}">
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="font-medium text-gray-900">{{ inspection.title }}</p>
+                                <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                    {{ inspection.get_inspection_type_display }}
+                                </span>
+                                {% if inspection.passed %}
+                                <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                    ✓ Bestanden
+                                </span>
+                                {% elif inspection.passed == False %}
+                                <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                    ✗ Nicht bestanden
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                {% if inspection.examiner %}
+                                <p>Prüfer: {{ inspection.examiner }}</p>
+                                {% endif %}
+                                {% if inspection.result_notes %}
+                                <p class="mt-1 text-gray-500">{{ inspection.result_notes|truncatewords:15 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-gray-500 whitespace-nowrap">{{ inspection.completed_date|date:"d.m.Y" }}</span>
+                            {% if inspection.certificate_file %}
+                            <a href="{{ inspection.certificate_file.url }}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm">
+                                📄
+                            </a>
+                            {% endif %}
+                            <button
+                                hx-get="{% url 'personnel:inspection_update' inspection.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend"
+                                class="text-gray-600 hover:text-gray-800 text-sm"
+                            >
+                                ✏️
+                            </button>
+                        </div>
+                    </div>
+                    {% if inspection.next_inspection_date %}
+                    <div class="mt-2 pt-2 border-t border-gray-200">
+                        <p class="text-xs text-gray-500">
+                            <strong>Nächste Prüfung:</strong> {{ inspection.next_inspection_date|date:"d.m.Y" }}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-8 bg-gray-50 rounded-lg">
+        <div class="text-4xl mb-2">📋</div>
+        <p class="text-gray-600 mb-4">Noch keine Prüfungen abgeschlossen</p>
+        <button
+            hx-get="{% url 'personnel:inspection_create' person.pk %}"
+            hx-target="body"
+            hx-swap="beforeend"
+            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+        >
+            ➕ Erste Prüfung hinzufügen
+        </button>
+    </div>
+    {% endif %}
+</div>

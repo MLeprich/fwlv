@@ -1,0 +1,156 @@
+<!-- Qualifikations-Vorlage Modal (HTMX) -->
+<div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-40" x-data="{ show: true }" x-show="show" x-transition>
+    <div class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl"
+                 @click.away="document.getElementById('template-modal').innerHTML = ''"
+                 x-transition>
+
+                <!-- Modal Header -->
+                <div class="bg-gradient-to-r from-green-600 to-green-800 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-white">
+                            {% if is_edit %}
+                                Vorlage bearbeiten
+                            {% else %}
+                                Neue Vorlage erstellen
+                            {% endif %}
+                        </h3>
+                        <button
+                            type="button"
+                            onclick="document.getElementById('template-modal').innerHTML = ''"
+                            class="text-white hover:text-gray-200 transition-colors"
+                        >
+                            <span class="text-2xl">&times;</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Body -->
+                <form
+                    {% if is_edit %}
+                        hx-post="{% url 'personnel:template_edit' template.pk %}"
+                    {% else %}
+                        hx-post="{% url 'personnel:template_create' %}"
+                    {% endif %}
+                    hx-target="#template-modal"
+                    hx-swap="innerHTML"
+                    class="bg-white"
+                >
+                    {% csrf_token %}
+
+                    <div class="px-6 py-6 space-y-6">
+
+                        <!-- Name -->
+                        <div>
+                            <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                {{ form.name.label }} *
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                            {% endif %}
+                            {% if form.name.help_text %}
+                                <p class="mt-1 text-xs text-gray-500">{{ form.name.help_text }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Typ -->
+                        <div>
+                            <label for="{{ form.qualification_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                {{ form.qualification_type.label }} *
+                            </label>
+                            {{ form.qualification_type }}
+                            {% if form.qualification_type.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.qualification_type.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Beschreibung -->
+                        <div>
+                            <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                {{ form.description.label }}
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Standard-Gültigkeit -->
+                        <div>
+                            <label for="{{ form.default_validity_days.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                {{ form.default_validity_days.label }}
+                            </label>
+                            {{ form.default_validity_days }}
+                            {% if form.default_validity_days.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.default_validity_days.errors.0 }}</p>
+                            {% endif %}
+                            {% if form.default_validity_days.help_text %}
+                                <p class="mt-1 text-xs text-gray-500">{{ form.default_validity_days.help_text }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Ausstellende Stelle -->
+                        <div>
+                            <label for="{{ form.default_issuing_authority.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                {{ form.default_issuing_authority.label }}
+                            </label>
+                            {{ form.default_issuing_authority }}
+                            {% if form.default_issuing_authority.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.default_issuing_authority.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Aktiv -->
+                        <div class="flex items-center">
+                            {{ form.is_active }}
+                            <label for="{{ form.is_active.id_for_label }}" class="ml-2 text-sm font-medium text-gray-700">
+                                {{ form.is_active.label }}
+                            </label>
+                        </div>
+
+                        <!-- Notizen -->
+                        <div>
+                            <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                {{ form.notes.label }}
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        {% if form.non_field_errors %}
+                            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-200">
+                        <button
+                            type="button"
+                            onclick="document.getElementById('template-modal').innerHTML = ''"
+                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                        >
+                            Abbrechen
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                        >
+                            {% if is_edit %}
+                                Speichern
+                            {% else %}
+                                Erstellen
+                            {% endif %}
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>

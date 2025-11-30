@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Token Details | Info Monitors | FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'info_monitors:dashboard_list' %}" class="text-gray-500 hover:text-gray-700">Info-Monitore</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'info_monitors:access_token_list' %}" class="text-gray-500 hover:text-gray-700">Zugriffs-Tokens</a></li>
+            <li class="text-gray-400">/</li>
+            <li><span class="text-gray-900 font-semibold">{{ token.name }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                    {{ token.name }}
+                </h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Zugriffs-Token Details
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'info_monitors:access_token_list' %}"
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Zurück
+                </a>
+                <a href="{% url 'info_monitors:access_token_delete' token.pk %}"
+                   onclick="return confirm('Token wirklich löschen?')"
+                   class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Löschen
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Banner -->
+    {% if not is_valid %}
+        <div class="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        Token nicht mehr gültig
+                    </h3>
+                    <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                        <ul class="list-disc list-inside space-y-1">
+                            {% if not token.is_active %}
+                                <li>Token ist deaktiviert</li>
+                            {% endif %}
+                            {% if is_expired %}
+                                <li>Token ist abgelaufen</li>
+                            {% endif %}
+                            {% if is_max_uses_reached %}
+                                <li>Maximale Anzahl Verwendungen erreicht</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Token URL (mit Kopier-Funktion) -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+        <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            Zugriffs-URL
+        </h2>
+        <div class="space-y-4">
+            <!-- Token -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Token
+                </label>
+                <div class="flex gap-2">
+                    <input type="text"
+                           id="token-value"
+                           readonly
+                           value="{{ token.token }}"
+                           class="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-sm text-gray-900 dark:text-white">
+                    <button onclick="copyToClipboard('token-value', this)"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Kopieren
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vollständige URL -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Vollständige URL
+                </label>
+                <div class="flex gap-2">
+                    <input type="text"
+                           id="token-url"
+                           readonly
+                           value="{{ token_url }}"
+                           class="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-sm text-gray-900 dark:text-white">
+                    <button onclick="copyToClipboard('token-url', this)"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Kopieren
+                    </button>
+                </div>
+            </div>
+
+            <!-- Link zum Dashboard -->
+            <div>
+                <a href="{{ token_url }}" target="_blank"
+                   class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    Dashboard öffnen
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Token Details -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-6">
+        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-medium text-gray-900 dark:text-white">
+                Token-Informationen
+            </h2>
+        </div>
+        <div class="px-6 py-4">
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Name
+                    </dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ token.name }}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Dashboard
+                    </dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ token.dashboard.profile.name }} - {{ token.dashboard.name }}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Status
+                    </dt>
+                    <dd class="mt-1">
+                        {% if token.is_active %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                Aktiv
+                            </span>
+                        {% else %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                Inaktiv
+                            </span>
+                        {% endif %}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Erstellt von
+                    </dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ token.created_by.get_full_name|default:token.created_by.username }}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Erstellt am
+                    </dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ token.created_at|date:"d.m.Y H:i" }} Uhr
+                    </dd>
+                </div>
+
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Gültig bis
+                    </dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {% if token.expires_at %}
+                            {{ token.expires_at|date:"d.m.Y H:i" }} Uhr
+                            {% if is_expired %}
+                                <span class="ml-2 text-red-600 dark:text-red-400">(Abgelaufen)</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-gray-500 dark:text-gray-400">Unbegrenzt</span>
+                        {% endif %}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Verwendungen
+                    </dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {{ token.use_count }}
+                        {% if token.max_uses %}
+                            / {{ token.max_uses }}
+                            {% if is_max_uses_reached %}
+                                <span class="ml-2 text-orange-600 dark:text-orange-400">(Limit erreicht)</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-gray-500 dark:text-gray-400">(Unbegrenzt)</span>
+                        {% endif %}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Zuletzt verwendet
+                    </dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                        {% if token.last_used_at %}
+                            {{ token.last_used_at|date:"d.m.Y H:i" }} Uhr
+                        {% else %}
+                            <span class="text-gray-500 dark:text-gray-400">Noch nicht verwendet</span>
+                        {% endif %}
+                    </dd>
+                </div>
+
+                {% if token.last_used_ip %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Letzte IP-Adresse
+                        </dt>
+                        <dd class="mt-1 text-sm text-gray-900 dark:text-white font-mono">
+                            {{ token.last_used_ip }}
+                        </dd>
+                    </div>
+                {% endif %}
+
+                {% if token.ip_whitelist %}
+                    <div class="sm:col-span-2">
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            IP-Whitelist
+                        </dt>
+                        <dd class="mt-1 text-sm text-gray-900 dark:text-white font-mono">
+                            {{ token.ip_whitelist }}
+                        </dd>
+                    </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    <!-- QR-Code (optional für Zukunft) -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            QR-Code
+        </h2>
+        <div class="flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-900 rounded-lg">
+            <div id="qrcode" class="bg-white p-4 rounded"></div>
+        </div>
+        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400 text-center">
+            Scannen Sie diesen QR-Code mit einem Smartphone, um direkt zum Dashboard zu gelangen
+        </p>
+    </div>
+</div>
+
+<!-- JavaScript für Kopier-Funktion und QR-Code -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    // Kopier-Funktion
+    function copyToClipboard(elementId, button) {
+        const input = document.getElementById(elementId);
+        input.select();
+        input.setSelectionRange(0, 99999); // Für mobile Geräte
+
+        navigator.clipboard.writeText(input.value).then(() => {
+            // Feedback anzeigen
+            const originalText = button.innerHTML;
+            button.innerHTML = `
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Kopiert!
+            `;
+            button.classList.add('bg-green-50', 'text-green-700', 'border-green-300');
+
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('bg-green-50', 'text-green-700', 'border-green-300');
+            }, 2000);
+        }).catch(err => {
+            console.error('Fehler beim Kopieren:', err);
+            alert('Fehler beim Kopieren in die Zwischenablage');
+        });
+    }
+
+    // QR-Code generieren
+    document.addEventListener('DOMContentLoaded', function() {
+        new QRCode(document.getElementById("qrcode"), {
+            text: "{{ token_url }}",
+            width: 200,
+            height: 200,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    });
+</script>
+{% endblock %}

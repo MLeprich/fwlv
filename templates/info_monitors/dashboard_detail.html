@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ dashboard.name }} - Info-Monitore - FLVS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .widget-container {
+        transition: all 0.3s ease;
+    }
+
+    .widget-card {
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .widget-card:hover {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    {% if dashboard.theme == 'dark' %}
+    body {
+        background: #1a202c;
+        color: #e2e8f0;
+    }
+    .widget-card {
+        background: #2d3748;
+        color: #e2e8f0;
+    }
+    {% endif %}
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'info_monitors:dashboard_list' %}" class="text-gray-500 hover:text-gray-700">Info-Monitore</a></li>
+            <li class="text-gray-400">/</li>
+            <li><span class="text-gray-900 font-semibold">{{ dashboard.name }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="mb-6 flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">{{ dashboard.name }}</h1>
+            <p class="text-sm text-gray-600 mt-1">{{ dashboard.profile.name }}</p>
+            {% if dashboard.description %}
+            <p class="text-sm text-gray-600 mt-2">{{ dashboard.description }}</p>
+            {% endif %}
+        </div>
+        <div class="flex gap-3">
+            {% if perms.info_monitors.change_dashboard %}
+            <a href="{% url 'info_monitors:dashboard_editor' dashboard.pk %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Bearbeiten
+            </a>
+            {% endif %}
+            <button onclick="toggleFullscreen()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                </svg>
+                Vollbild
+            </button>
+        </div>
+    </div>
+
+    <!-- Dashboard Container -->
+    {% if dashboard.use_canvas_layout %}
+    <!-- Canvas Layout -->
+    <div id="dashboard-canvas" class="relative bg-white border border-gray-200 rounded-lg" style="width: {{ dashboard.canvas_width }}px; height: {{ dashboard.canvas_height }}px; max-width: 100%; overflow: auto;">
+        {% for widget in widgets %}
+        <div class="widget-container absolute" style="left: {{ widget.x_position }}px; top: {{ widget.y_position }}px; width: {{ widget.canvas_width }}px; height: {{ widget.height }}px;">
+            {% include 'info_monitors/widgets/widget_display.html' with widget=widget %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Grid Layout -->
+    <div class="grid grid-cols-12 gap-4">
+        {% for widget in widgets %}
+        <div class="col-span-{{ widget.width }} widget-container">
+            {% include 'info_monitors/widgets/widget_display.html' with widget=widget %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not widgets %}
+    <div class="text-center py-12 bg-white rounded-lg border border-gray-200">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1V5z"/>
+        </svg>
+        <p class="mt-2 text-sm text-gray-500">Noch keine Widgets vorhanden</p>
+        {% if perms.info_monitors.change_dashboard %}
+        <a href="{% url 'info_monitors:dashboard_editor' dashboard.pk %}" class="mt-4 inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+            Widgets hinzufügen
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Fullscreen Toggle
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+// Auto-Refresh
+{% if dashboard.auto_refresh %}
+setInterval(function() {
+    location.reload();
+}, {{ dashboard.refresh_interval }}000);
+{% endif %}
+</script>
+{% endblock %}

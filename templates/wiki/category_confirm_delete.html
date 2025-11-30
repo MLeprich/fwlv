@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Kategorie löschen - Wiki{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'wiki:dashboard' %}" class="text-gray-500 hover:text-gray-700">Wiki</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'wiki:category_list' %}" class="text-gray-500 hover:text-gray-700">Kategorieverwaltung</a></li>
+            <li class="text-gray-400">/</li>
+            <li><span class="text-gray-900 font-semibold">Löschen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-start mb-6">
+            <div class="flex-shrink-0">
+                <svg class="h-12 w-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">Kategorie wirklich löschen?</h1>
+                <p class="text-gray-600">
+                    Diese Aktion kann nicht rückgängig gemacht werden.
+                </p>
+            </div>
+        </div>
+
+        <!-- Kategorie-Info -->
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+            <div class="flex items-center mb-2">
+                <span class="text-3xl mr-3">{{ object.icon }}</span>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">{{ object.name }}</h3>
+                    {% if object.description %}
+                    <p class="text-sm text-gray-600">{{ object.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Warnung bei zugeordneten Seiten -->
+        {% if page_count > 0 %}
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg mb-6">
+            <div class="flex">
+                <span class="text-yellow-600">⚠️</span>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">Achtung!</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>Diese Kategorie enthält <strong>{{ page_count }} Seite{{ page_count|pluralize:"n" }}</strong>.</p>
+                        <p class="mt-1">Nach dem Löschen der Kategorie werden die Seiten keiner Kategorie mehr zugeordnet sein.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Unterkategorien Warnung -->
+        {% if object.subcategories.count > 0 %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg mb-6">
+            <div class="flex">
+                <span class="text-red-600">🚫</span>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Löschen nicht möglich!</h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <p>Diese Kategorie hat <strong>{{ object.subcategories.count }} Unterkategorie{{ object.subcategories.count|pluralize:"n" }}</strong>.</p>
+                        <p class="mt-1">Bitte löschen oder verschieben Sie zuerst alle Unterkategorien.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Formular -->
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'wiki:category_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                {% if object.subcategories.count == 0 %}
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                    🗑️ Unwiderruflich löschen
+                </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

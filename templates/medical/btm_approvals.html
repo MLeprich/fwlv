@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}BTM-Freigaben - Rettungsdienst - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'medical:btm_list' %}" class="text-gray-500 hover:text-gray-700">BTM</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Freigaben</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- BTM-Warning-Header -->
+<div class="bg-red-900 text-white px-6 py-4 border-b border-red-950">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <span class="text-3xl">☢️</span>
+            <div>
+                <h1 class="text-xl font-bold">BTM-Freigaben (Vier-Augen-Prinzip)</h1>
+                <p class="text-red-100 text-sm">Alle Aktionen werden protokolliert und erfordern eine Zweitfreigabe</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Info-Box -->
+    <div class="bg-red-50 border-l-4 border-red-400 p-6 rounded-r-lg mb-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">⚠️</span>
+            <div>
+                <h3 class="text-red-900 font-bold mb-2">Vier-Augen-Prinzip</h3>
+                <p class="text-red-800 text-sm mb-3">
+                    Jede BTM-Entnahme oder -Entsorgung muss von einer zweiten berechtigten Person freigegeben werden.
+                </p>
+                <ul class="text-red-700 text-sm space-y-1 list-disc list-inside">
+                    <li>Sie können keine eigenen BTM-Bewegungen freigeben</li>
+                    <li>Alle Freigaben werden mit digitaler Signatur und Zeitstempel protokolliert</li>
+                    <li>IP-Adresse und Geräte-Informationen werden gespeichert</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ausstehende Freigaben -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 bg-red-600 border-b border-red-700">
+            <h2 class="text-lg font-bold text-white">
+                Ausstehende Freigaben ({{ movements|length }})
+            </h2>
+        </div>
+
+        <div class="divide-y divide-gray-200">
+            {% for movement in movements %}
+            <div class="p-6 hover:bg-gray-50 transition-colors">
+                <div class="flex items-start justify-between gap-6">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-3">
+                            <span class="text-2xl">☢️</span>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">{{ movement.item.name }}</h3>
+                                <p class="text-sm text-gray-600">{{ movement.item.active_ingredient }}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Bewegungstyp</p>
+                                <p class="text-sm font-medium text-gray-900">{{ movement.get_movement_type_display }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Menge</p>
+                                <p class="text-sm font-medium text-gray-900">{{ movement.quantity }} {{ movement.unit }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Charge</p>
+                                <p class="text-sm font-medium text-gray-900">{{ movement.batch_number|default:"-" }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Angefordert von</p>
+                                <p class="text-sm font-medium text-gray-900">{{ movement.created_by.get_full_name }}</p>
+                            </div>
+                        </div>
+
+                        {% if movement.notes %}
+                        <div class="bg-gray-50 rounded p-3 mb-3">
+                            <p class="text-xs text-gray-500 mb-1">Grund / Notizen</p>
+                            <p class="text-sm text-gray-900">{{ movement.notes }}</p>
+                        </div>
+                        {% endif %}
+
+                        <div class="flex items-center gap-4 text-xs text-gray-500">
+                            <span>📅 {{ movement.created_at|date:"d.m.Y H:i" }}</span>
+                            {% if movement.patient_id %}
+                            <span>👤 Patient-ID: {{ movement.patient_id }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        {% if movement.created_by != request.user %}
+                        <form method="post" action="{% url 'medical:approve_btm_movement' movement.pk %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm whitespace-nowrap">
+                                ✅ Freigeben
+                            </button>
+                        </form>
+                        <button
+                            onclick="showRejectModal({{ movement.pk }})"
+                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm whitespace-nowrap"
+                        >
+                            ❌ Ablehnen
+                        </button>
+                        {% else %}
+                        <div class="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg text-sm font-medium text-center">
+                            ⚠️ Eigene Anfrage<br>
+                            <span class="text-xs">Keine Freigabe möglich</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="px-6 py-12 text-center text-gray-500">
+                <div class="text-4xl mb-4">✅</div>
+                <p class="text-lg font-medium text-gray-900 mb-2">Keine ausstehenden Freigaben</p>
+                <p class="text-sm">Alle BTM-Bewegungen wurden bereits bearbeitet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Ablehnen Modal (Hidden by default) -->
+<div id="rejectModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900">BTM-Bewegung ablehnen</h3>
+        </div>
+        <form id="rejectForm" method="post" class="p-6">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Ablehnungsgrund *</label>
+                <textarea
+                    name="reason"
+                    rows="4"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    placeholder="Bitte geben Sie einen Grund für die Ablehnung an..."
+                ></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button
+                    type="button"
+                    onclick="closeRejectModal()"
+                    class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                    Abbrechen
+                </button>
+                <button
+                    type="submit"
+                    class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                    Ablehnen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showRejectModal(movementId) {
+    const modal = document.getElementById('rejectModal');
+    const form = document.getElementById('rejectForm');
+    form.action = '/medical/btm/movement/' + movementId + '/reject/';
+    modal.classList.remove('hidden');
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

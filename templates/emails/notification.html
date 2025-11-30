@@ -1,0 +1,27 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}{{ notification.title }} - FLVS{% endblock %}
+
+{% block header_title %}{{ notification.title }}{% endblock %}
+
+{% block content %}
+<h2>{{ notification.title }}</h2>
+
+<div class="alert alert-{{ notification.notification_type }}">
+    {{ notification.message|linebreaks }}
+</div>
+
+{% if notification.action_url %}
+<p style="text-align: center;">
+    <a href="https://lager.resqware.de{{ notification.action_url }}" class="button">
+        Jetzt ansehen
+    </a>
+</p>
+{% endif %}
+
+<div class="meta">
+    <p><strong>Kategorie:</strong> {{ notification.get_category_display }}</p>
+    <p><strong>Typ:</strong> {{ notification.get_notification_type_display }}</p>
+    <p><strong>Zeitpunkt:</strong> {{ notification.created_at|date:"d.m.Y H:i" }} Uhr</p>
+</div>
+{% endblock %}

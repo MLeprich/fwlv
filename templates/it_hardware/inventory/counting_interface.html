@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inventur zählen - {{ check.check_number }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'it_hardware:dashboard' %}" class="text-gray-500 hover:text-gray-700">IT-Hardware</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'it_hardware:inventory_list' %}" class="text-gray-500 hover:text-gray-700">Inventuren</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'it_hardware:inventory_detail' check.pk %}" class="text-gray-500 hover:text-gray-700">{{ check.check_number }}</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Zählen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header with Progress -->
+    <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">📊</span>
+                    <div>
+                        <h1 class="text-3xl font-bold">{{ check.title }}</h1>
+                        <p class="text-red-100 text-lg mt-1">
+                            {{ check.check_number }} • Zählung läuft
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Progress -->
+            <div id="progress-display" class="text-center bg-white/10 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20">
+                <div class="text-sm text-white/80 mb-1">Fortschritt</div>
+                <div class="text-3xl font-bold">{{ check.get_progress_percentage }}%</div>
+                <div class="text-xs text-white/80 mt-1">{{ check.counted_items }} / {{ check.total_items }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <div class="flex items-center gap-3">
+            <span class="text-sm font-medium text-gray-700">Filter:</span>
+            <a href="?filter=all"
+               class="px-4 py-2 rounded-lg text-sm {% if current_filter == 'all' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                Alle ({{ check.total_items }})
+            </a>
+            <a href="?filter=uncounted"
+               class="px-4 py-2 rounded-lg text-sm {% if current_filter == 'uncounted' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                Ungezählt ({{ check.total_items|add:"-"|add:check.counted_items }})
+            </a>
+            <a href="?filter=discrepancies"
+               class="px-4 py-2 rounded-lg text-sm {% if current_filter == 'discrepancies' %}bg-red-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                Abweichungen ({{ check.items_with_discrepancies }})
+            </a>
+            {% if check.include_btm %}
+            <a href="?filter=btm"
+               class="px-4 py-2 rounded-lg text-sm {% if current_filter == 'btm' %}bg-purple-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                BTM
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Counting Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Artikel
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Lagerort
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Erwartet
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Gezählt
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Abweichung
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="counting-table-body" class="bg-white divide-y divide-gray-200">
+                {% for item in items %}
+                <tr id="item-row-{{ item.pk }}" class="hover:bg-gray-50 {% if item.has_discrepancy %}bg-red-50{% endif %}">
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-gray-900">{{ item.item_name }}</div>
+                        <div class="text-xs text-gray-500">{{ item.item_number }}</div>
+                        {% if item.batch_number %}
+                        <div class="text-xs text-gray-500">Charge: {{ item.batch_number }}</div>
+                        {% endif %}
+                        {% if item.expiry_date %}
+                        <div class="text-xs text-gray-500">MHD: {{ item.expiry_date|date:"d.m.Y" }}</div>
+                        {% endif %}
+                        {% if item.is_btm %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
+                            🔒 BTM
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ item.location.name }}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 font-medium">
+                        {{ item.expected_quantity }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value="{% if item.is_counted %}{{ item.counted_quantity }}{% endif %}"
+                            placeholder="0"
+                            class="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            hx-post="{% url 'it_hardware:inventory_item_update' item.pk %}"
+                            hx-trigger="change, blur"
+                            hx-target="#item-row-{{ item.pk }}"
+                            hx-swap="outerHTML"
+                            hx-include="[name='csrfmiddlewaretoken']"
+                            name="counted_quantity"
+                        >
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if item.is_counted %}
+                            {% with diff=item.get_discrepancy %}
+                            <span class="text-sm font-medium {% if diff > 0 %}text-green-600{% elif diff < 0 %}text-red-600{% else %}text-gray-500{% endif %}">
+                                {% if diff > 0 %}+{% endif %}{{ diff }}
+                            </span>
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-sm text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if item.is_counted %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                ✓ Gezählt
+                            </span>
+                        {% else %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                ⏳ Ausstehend
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center">
+                        <div class="text-gray-500">
+                            <div class="text-4xl mb-3">📋</div>
+                            <div class="text-lg font-medium">Keine Artikel gefunden</div>
+                            <div class="text-sm">Versuchen Sie einen anderen Filter</div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mt-6 flex items-center justify-between">
+        <a href="{% url 'it_hardware:inventory_detail' check.pk %}"
+           class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+            ← Zurück zur Übersicht
+        </a>
+
+        {% if check.counted_items == check.total_items %}
+        <form method="post" action="{% url 'it_hardware:inventory_complete' check.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                ✅ Inventur abschließen
+            </button>
+        </form>
+        {% else %}
+        <button disabled class="px-6 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium">
+            ✅ Inventur abschließen ({{ check.counted_items }}/{{ check.total_items }} gezählt)
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Help Text -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div>
+                <h3 class="font-bold text-blue-900 mb-2">Hinweise zur Zählung</h3>
+                <ul class="text-sm text-blue-800 space-y-1">
+                    <li>• Geben Sie die tatsächlich gezählte Menge ein</li>
+                    <li>• Die Eingabe wird automatisch gespeichert</li>
+                    <li>• Abweichungen werden rot/grün hervorgehoben</li>
+                    <li>• Bei BTM-Artikeln ist eine Verifizierung durch zweite Person erforderlich</li>
+                    <li>• Sie können die Zählung jederzeit unterbrechen und später fortsetzen</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- CSRF Token für HTMX Requests -->
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+<script>
+// HTMX Event Listener für Progress Updates
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    // Nach jedem Update: Lade Progress-Display neu
+    if (event.detail.target.id && event.detail.target.id.startsWith('item-row-')) {
+        htmx.ajax('GET', '{% url "it_hardware:inventory_progress" check.pk %}', {
+            target: '#progress-display',
+            swap: 'innerHTML'
+        });
+    }
+});
+
+// Auto-Focus auf erste ungezählte Zeile
+document.addEventListener('DOMContentLoaded', function() {
+    const firstUncountedInput = document.querySelector('tr:not(.bg-green-50) input[type="number"]');
+    if (firstUncountedInput) {
+        firstUncountedInput.focus();
+    }
+});
+
+// Keyboard Navigation (Enter = nächste Zeile)
+document.querySelectorAll('input[type="number"]').forEach((input, index, inputs) => {
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const nextIndex = index + 1;
+            if (nextIndex < inputs.length) {
+                inputs[nextIndex].focus();
+                inputs[nextIndex].select();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

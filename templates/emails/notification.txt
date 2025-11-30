@@ -1,0 +1,20 @@
+{{ notification.title }}
+================================================================================
+
+{{ notification.message }}
+
+{% if notification.action_url %}
+Jetzt ansehen: https://lager.resqware.de{{ notification.action_url }}
+{% endif %}
+
+--------------------------------------------------------------------------------
+Kategorie: {{ notification.get_category_display }}
+Typ: {{ notification.get_notification_type_display }}
+Zeitpunkt: {{ notification.created_at|date:"d.m.Y H:i" }} Uhr
+
+================================================================================
+Feuerwehr Lagerverwaltungssystem (FLVS)
+Diese E-Mail wurde automatisch generiert.
+
+Sie erhalten diese E-Mail, weil Sie Benachrichtigungen aktiviert haben.
+Einstellungen ändern: https://lager.resqware.de/settings/

@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ item.name }} | FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'it_hardware:dashboard' %}" class="text-gray-500 hover:text-gray-700">IT-Hardware</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'it_hardware:item_list' %}" class="text-gray-500 hover:text-gray-700">Hardware-Liste</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ item.name }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-7xl">
+    <!-- Header mit Actions -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">{{ item.name }}</h1>
+            <p class="mt-1 text-sm text-gray-600">{{ item.manufacturer }} {{ item.model }}</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'it_hardware:item_update' item.pk %}"
+               class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-150">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                Bearbeiten
+            </a>
+            <a href="{% url 'it_hardware:item_delete' item.pk %}"
+               class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors duration-150">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                Löschen
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Hauptbereich -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Basis-Informationen -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <span class="text-2xl mr-2">💻</span>
+                    Basis-Informationen
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Gerätetyp</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.get_hardware_type_display }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Asset-Tag</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.asset_tag|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Seriennummer</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.serial_number|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Hersteller</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.manufacturer|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Modell</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.model|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Status</p>
+                        <p class="mt-1">
+                            {% if item.it_status == 'in_use' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                ✓ In Betrieb
+                            </span>
+                            {% elif item.it_status == 'in_stock' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                📦 Auf Lager
+                            </span>
+                            {% elif item.it_status == 'defect' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                ⚡ Defekt
+                            </span>
+                            {% elif item.it_status == 'in_repair' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                🔧 In Reparatur
+                            </span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technische Spezifikationen -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <span class="text-2xl mr-2">⚙️</span>
+                    Technische Spezifikationen
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Betriebssystem</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.operating_system|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">OS-Version</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.os_version|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Letztes Update</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.last_os_update|date:"d.m.Y"|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Prozessor</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.cpu_model|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">RAM</p>
+                        <p class="mt-1 text-sm text-gray-900">{% if item.ram_gb %}{{ item.ram_gb }} GB{% else %}-{% endif %}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Speicher</p>
+                        <p class="mt-1 text-sm text-gray-900">{% if item.storage_gb %}{{ item.storage_gb }} GB{% else %}-{% endif %}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Netzwerk -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <span class="text-2xl mr-2">🌐</span>
+                    Netzwerk-Konfiguration
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">MAC-Adresse</p>
+                        <p class="mt-1 text-sm text-gray-900 font-mono">{{ item.mac_address|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">IP-Adresse</p>
+                        <p class="mt-1 text-sm text-gray-900 font-mono">{{ item.ip_address|default:"-" }}</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-sm font-medium text-gray-500">Hostname</p>
+                        <p class="mt-1 text-sm text-gray-900 font-mono">{{ item.hostname|default:"-" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bewegungshistorie -->
+            {% if movements %}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <span class="text-2xl mr-2">🔄</span>
+                    Bewegungshistorie
+                </h3>
+                <div class="flow-root">
+                    <ul class="-mb-8">
+                        {% for movement in movements %}
+                        <li>
+                            <div class="relative pb-8">
+                                {% if not forloop.last %}
+                                <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                                {% endif %}
+                                <div class="relative flex space-x-3">
+                                    <div>
+                                        <span class="h-8 w-8 rounded-full bg-cyan-500 flex items-center justify-center ring-8 ring-white">
+                                            <svg class="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </span>
+                                    </div>
+                                    <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                        <div>
+                                            <p class="text-sm text-gray-900">
+                                                {{ movement.get_movement_type_display }}
+                                                {% if movement.assigned_to %}
+                                                - an {{ movement.assigned_to.get_full_name }}
+                                                {% endif %}
+                                            </p>
+                                            {% if movement.notes %}
+                                            <p class="mt-1 text-sm text-gray-500">{{ movement.notes }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-right text-sm whitespace-nowrap text-gray-500">
+                                            {{ movement.created_at|date:"d.m.Y H:i" }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notizen -->
+            {% if item.notes %}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <span class="text-2xl mr-2">📝</span>
+                    Notizen
+                </h3>
+                <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ item.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div class="space-y-2">
+                    <a href="{% url 'it_hardware:movement_create' %}?item={{ item.pk }}"
+                       class="block w-full px-4 py-2 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-lg transition-colors duration-150 text-sm font-medium">
+                        🔄 Bewegung erfassen
+                    </a>
+                </div>
+            </div>
+
+            <!-- Zuweisung -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Zuweisung</h3>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Zugewiesen an</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.assigned_to.get_full_name|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Standort</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.location.name|default:"-" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Garantie & Support -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Garantie & Support</h3>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Kaufdatum</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.purchase_date|date:"d.m.Y"|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Kaufpreis</p>
+                        <p class="mt-1 text-sm text-gray-900">{% if item.purchase_price %}{{ item.purchase_price }} €{% else %}-{% endif %}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Garantie bis</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.warranty_end_date|date:"d.m.Y"|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Support-Vertrag bis</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.support_end_date|date:"d.m.Y"|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Lieferant</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.supplier|default:"-" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lizenz -->
+            {% if item.license_key or item.license_valid_until %}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Lizenz</h3>
+                <div class="space-y-3">
+                    {% if item.license_key %}
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Lizenzschlüssel</p>
+                        <p class="mt-1 text-sm text-gray-900 font-mono">{{ item.license_key }}</p>
+                    </div>
+                    {% endif %}
+                    {% if item.license_expiry_date %}
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Gültig bis</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ item.license_expiry_date|date:"d.m.Y" }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Desinfektion - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Desinfektion</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">🧼</span>
+                    <h1 class="text-3xl font-bold">Desinfektion</h1>
+                </div>
+                <p class="text-purple-100 text-lg">
+                    Verwaltung von Desinfektionsmitteln, Desinfektionsplänen und Protokollen
+                </p>
+            </div>
+            <div class="hidden lg:block">
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20">
+                    <p class="text-purple-100 text-sm mb-1">Aktive Pläne</p>
+                    <p class="text-4xl font-bold">{{ total_plans }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Alle Desinfektionsmittel -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Desinfektionsmittel</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_items }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <span class="text-3xl">🧴</span>
+                </div>
+            </div>
+            <a href="{% url 'disinfection:item_list' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium mt-4 inline-block">
+                Alle anzeigen →
+            </a>
+        </div>
+
+        <!-- Aktive Pläne -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Aktive Pläne</p>
+                    <p class="text-3xl font-bold text-green-600 mt-2">{{ total_plans }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <span class="text-3xl">📋</span>
+                </div>
+            </div>
+            <a href="{% url 'disinfection:plan_list' %}" class="text-green-600 hover:text-green-700 text-sm font-medium mt-4 inline-block">
+                Alle anzeigen →
+            </a>
+        </div>
+
+        <!-- Überfällige Desinfektionen -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 {% if overdue_count > 0 %}border-red-500{% else %}border-green-500{% endif %}">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Überfällig</p>
+                    <p class="text-3xl font-bold {% if overdue_count > 0 %}text-red-600{% else %}text-green-600{% endif %} mt-2">
+                        {{ overdue_count }}
+                    </p>
+                </div>
+                <div class="{% if overdue_count > 0 %}bg-red-100{% else %}bg-green-100{% endif %} rounded-full p-3">
+                    <span class="text-3xl">{% if overdue_count > 0 %}⚠️{% else %}✅{% endif %}</span>
+                </div>
+            </div>
+            <a href="{% url 'disinfection:plan_list' %}?status=overdue" class="{% if overdue_count > 0 %}text-red-600 hover:text-red-700{% else %}text-green-600 hover:text-green-700{% endif %} text-sm font-medium mt-4 inline-block">
+                Details anzeigen →
+            </a>
+        </div>
+
+        <!-- Bald fällig -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 {% if upcoming_count > 0 %}border-orange-500{% else %}border-green-500{% endif %}">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Nächste 7 Tage</p>
+                    <p class="text-3xl font-bold {% if upcoming_count > 0 %}text-orange-600{% else %}text-green-600{% endif %} mt-2">
+                        {{ upcoming_count }}
+                    </p>
+                </div>
+                <div class="{% if upcoming_count > 0 %}bg-orange-100{% else %}bg-green-100{% endif %} rounded-full p-3">
+                    <span class="text-3xl">{% if upcoming_count > 0 %}⏰{% else %}✅{% endif %}</span>
+                </div>
+            </div>
+            <a href="{% url 'disinfection:plan_list' %}?status=upcoming" class="{% if upcoming_count > 0 %}text-orange-600 hover:text-orange-700{% else %}text-green-600 hover:text-green-700{% endif %} text-sm font-medium mt-4 inline-block">
+                Details anzeigen →
+            </a>
+        </div>
+    </div>
+
+    <!-- Critical Alerts -->
+    {% if overdue_plans %}
+    <div class="bg-red-50 border-l-4 border-red-500 rounded-lg shadow p-6 mb-8">
+        <div class="flex items-start gap-3">
+            <span class="text-3xl">🚨</span>
+            <div class="flex-1">
+                <h3 class="text-lg font-bold text-red-900 mb-3">Überfällige Desinfektionen</h3>
+                <div class="mb-4">
+                    <h4 class="font-semibold text-red-800 mb-2">⚠️ Desinfektionen überfällig</h4>
+                    <div class="space-y-2">
+                        {% for plan in overdue_plans %}
+                        <div class="bg-white rounded p-3 flex items-center justify-between">
+                            <div>
+                                <a href="{% url 'disinfection:plan_list' %}" class="font-medium text-red-700 hover:text-red-800">
+                                    {{ plan.name }}
+                                </a>
+                                <p class="text-xs text-gray-600">
+                                    Fällig seit: {{ plan.next_due_date|date:"d.m.Y" }}
+                                    {% if plan.vehicle %} | {{ plan.vehicle.call_sign|default:plan.vehicle.name }}{% else %} | {{ plan.object_description }}{% endif %}
+                                </p>
+                            </div>
+                            <span class="text-red-600 font-bold text-sm">
+                                {{ plan.next_due_date|timesince }} überfällig
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Bereiche -->
+        <div class="lg:col-span-2">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">📂 Bereiche</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <!-- Desinfektionsmittel -->
+                <a href="{% url 'disinfection:item_list' %}" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 hover:border-blue-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">🧴</span>
+                        <h3 class="font-bold text-gray-900">Desinfektionsmittel</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Verwaltung aller Desinfektionsmittel
+                    </p>
+                    <div class="text-2xl font-bold text-blue-600">{{ total_items }}</div>
+                </a>
+
+                <!-- Desinfektionspläne -->
+                <a href="{% url 'disinfection:plan_list' %}" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 hover:border-green-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">📋</span>
+                        <h3 class="font-bold text-gray-900">Pläne</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Desinfektionspläne verwalten
+                    </p>
+                    <div class="text-2xl font-bold text-green-600">{{ total_plans }}</div>
+                </a>
+
+                <!-- Kalender -->
+                <a href="{% url 'disinfection:calendar' %}" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 hover:border-red-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">📅</span>
+                        <h3 class="font-bold text-gray-900">Kalender</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Termine und fällige Desinfektionen
+                    </p>
+                    <div class="text-2xl font-bold text-red-600">{{ overdue_count }}</div>
+                </a>
+
+                <!-- Protokolle -->
+                <a href="{% url 'disinfection:log_list' %}" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 hover:border-purple-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">📝</span>
+                        <h3 class="font-bold text-gray-900">Protokolle</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Durchgeführte Desinfektionen
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Übersicht →
+                    </p>
+                </a>
+
+                <!-- Kategorien -->
+                <a href="{% url 'disinfection:category_list' %}" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 hover:border-indigo-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">📂</span>
+                        <h3 class="font-bold text-gray-900">Kategorien</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Kategorien verwalten
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Verwalten →
+                    </p>
+                </a>
+
+                <!-- Niedrige Bestände -->
+                <a href="{% url 'disinfection:item_list' %}?status=low_stock" class="bg-gradient-to-br from-yellow-600 to-orange-700 rounded-lg shadow hover:shadow-lg transition-shadow p-6 text-white">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">📉</span>
+                        <h3 class="font-bold">Niedrige Bestände</h3>
+                    </div>
+                    <p class="text-yellow-100 text-sm mb-3">
+                        Nachbestellung erforderlich
+                    </p>
+                    <div class="text-2xl font-bold">{{ low_stock_count }}</div>
+                </a>
+            </div>
+
+            <!-- Letzte Desinfektionen -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <span>📝</span>
+                        <span>Letzte Desinfektionen</span>
+                    </h3>
+                    <a href="{% url 'disinfection:log_list' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        Alle anzeigen →
+                    </a>
+                </div>
+
+                {% if recent_logs %}
+                <div class="space-y-3">
+                    {% for log in recent_logs %}
+                    <div class="border-l-4 border-blue-500 pl-4 py-2">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold">{{ log.get_method_display }}</span>
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-800 text-xs rounded-full font-semibold">{{ log.object_type }}</span>
+                                </div>
+                                <p class="font-medium text-gray-900">
+                                    {{ log.object_description }}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {{ log.disinfection_date|date:"d.m.Y H:i" }}
+                                    {% if log.vehicle %} | {{ log.vehicle.call_sign|default:log.vehicle.name }}{% endif %}
+                                    | Durchgeführt von: {{ log.performed_by.get_full_name }}
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-green-600 text-2xl">✅</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <span class="text-4xl block mb-2">📝</span>
+                    <p>Noch keine Desinfektionen protokolliert</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column: Quick Actions -->
+        <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-4">⚡ Schnellaktionen</h2>
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-3">
+                <a href="{% url 'disinfection:item_list' %}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    🧴 Desinfektionsmittel
+                </a>
+                <a href="{% url 'disinfection:plan_list' %}" class="block w-full bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    📋 Desinfektionspläne
+                </a>
+                <a href="{% url 'disinfection:calendar' %}" class="block w-full bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    📅 Kalender
+                </a>
+                <a href="{% url 'disinfection:log_list' %}" class="block w-full bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    📝 Protokolle
+                </a>
+                <a href="{% url 'disinfection:plan_list' %}?status=overdue" class="block w-full bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    ⚠️ Überfällige Pläne
+                </a>
+                <hr class="border-gray-200">
+                <a href="{% url 'disinfection:category_list' %}" class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    📂 Kategorien verwalten
+                </a>
+                <a href="{% url 'disinfection:item_list' %}?status=low_stock" class="block w-full bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    📉 Niedrige Bestände
+                </a>
+            </div>
+
+            <!-- Help Box -->
+            <div class="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-6">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">💡</span>
+                    <div>
+                        <h3 class="font-bold text-purple-900 mb-2">Hinweise</h3>
+                        <ul class="text-sm text-purple-800 space-y-1">
+                            <li>• Desinfektionspläne regelmäßig überprüfen</li>
+                            <li>• Bestände vor Ablaufdatum kontrollieren</li>
+                            <li>• Gefahrstoffe sicher lagern</li>
+                            <li>• Sicherheitsdatenblätter bereithalten</li>
+                            <li>• VAH/DGHM/RKI-Zulassungen beachten</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

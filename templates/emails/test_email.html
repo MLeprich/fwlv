@@ -1,0 +1,32 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Test-Email - FLVS{% endblock %}
+
+{% block header_title %}Test-Email{% endblock %}
+
+{% block content %}
+<h2>Test-Email erfolgreich!</h2>
+
+<div class="alert alert-success">
+    <p><strong>Glückwunsch!</strong> Ihre E-Mail-Konfiguration funktioniert einwandfrei.</p>
+</div>
+
+<p>Diese Test-Email wurde von Ihrem FLVS-System gesendet, um die E-Mail-Konfiguration zu überprüfen.</p>
+
+<h3>Konfigurationsdetails:</h3>
+<ul>
+    <li><strong>Empfänger:</strong> {{ user.email }}</li>
+    <li><strong>Benutzer:</strong> {{ user.get_full_name }} ({{ user.username }})</li>
+    <li><strong>Zeitpunkt:</strong> {{ current_time|date:"d.m.Y H:i:s" }} Uhr</li>
+</ul>
+
+<div class="alert alert-info">
+    <p><strong>Hinweis:</strong> Sie können die Benachrichtigungseinstellungen jederzeit in Ihrem Benutzerprofil anpassen.</p>
+</div>
+
+<p style="text-align: center;">
+    <a href="https://lager.resqware.de/settings/" class="button">
+        Zu den Einstellungen
+    </a>
+</p>
+{% endblock %}

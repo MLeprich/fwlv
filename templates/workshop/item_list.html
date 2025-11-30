@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ersatzteilübersicht - KFZ-Werkstatt - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'workshop:dashboard' %}" class="text-gray-500 hover:text-gray-700">KFZ-Werkstatt</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Ersatzteilübersicht</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6">
+    <!-- Context Actions Bar (Sticky) -->
+    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'workshop:item_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Neues Ersatzteil
+                </a>
+                <a href="{% url 'workshop:movement_list' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                    📦 Lagerbewegungen
+                </a>
+                <a href="{% url 'workshop:service_list' %}" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                    🔧 Services
+                </a>
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                        📤 Export
+                    </button>
+                    <div x-show="open" @click.away="open = false" x-cloak class="absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            📊 Excel (.xlsx)
+                        </a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            📄 CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <form method="get" class="flex items-center gap-2">
+                    <select name="sort" onchange="this.form.submit()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                        <option value="">Sortierung ▾</option>
+                        <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Name A-Z</option>
+                        <option value="-name" {% if request.GET.sort == '-name' %}selected{% endif %}>Name Z-A</option>
+                        <option value="workshop_item_type" {% if request.GET.sort == 'workshop_item_type' %}selected{% endif %}>Typ</option>
+                        <option value="quantity" {% if request.GET.sort == 'quantity' %}selected{% endif %}>Bestand</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-6 mt-6">
+    <div class="flex gap-6">
+
+        <!-- Filter-Sidebar (20% / 250px) -->
+        <aside class="w-64 flex-shrink-0">
+            <div class="bg-white rounded-lg shadow p-6 sticky top-28">
+                <h3 class="text-sm font-bold text-gray-900 mb-4">Filter</h3>
+
+                <form method="get" class="space-y-6">
+                    <!-- Suche -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">🔍 Suche</label>
+                        <input
+                            type="text"
+                            name="search"
+                            value="{{ request.GET.search }}"
+                            placeholder="Name, Artikelnr., OEM..."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <!-- Artikeltyp -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Artikeltyp</label>
+                        <select name="type" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">Alle Typen</option>
+                            <optgroup label="Betriebsstoffe">
+                                <option value="engine_oil" {% if request.GET.type == 'engine_oil' %}selected{% endif %}>🛢️ Motoröl</option>
+                                <option value="transmission_oil" {% if request.GET.type == 'transmission_oil' %}selected{% endif %}>⚙️ Getriebeöl</option>
+                                <option value="brake_fluid" {% if request.GET.type == 'brake_fluid' %}selected{% endif %}>🔴 Bremsflüssigkeit</option>
+                                <option value="coolant" {% if request.GET.type == 'coolant' %}selected{% endif %}>❄️ Kühlflüssigkeit</option>
+                            </optgroup>
+                            <optgroup label="Verschleißteile">
+                                <option value="oil_filter" {% if request.GET.type == 'oil_filter' %}selected{% endif %}>🔧 Ölfilter</option>
+                                <option value="air_filter" {% if request.GET.type == 'air_filter' %}selected{% endif %}>💨 Luftfilter</option>
+                                <option value="brake_pads" {% if request.GET.type == 'brake_pads' %}selected{% endif %}>🔴 Bremsbeläge</option>
+                                <option value="wiper_blades" {% if request.GET.type == 'wiper_blades' %}selected{% endif %}>🌧️ Scheibenwischer</option>
+                            </optgroup>
+                            <optgroup label="Reifen">
+                                <option value="tire_summer" {% if request.GET.type == 'tire_summer' %}selected{% endif %}>☀️ Sommerreifen</option>
+                                <option value="tire_winter" {% if request.GET.type == 'tire_winter' %}selected{% endif %}>❄️ Winterreifen</option>
+                            </optgroup>
+                            <optgroup label="Elektrik">
+                                <option value="battery" {% if request.GET.type == 'battery' %}selected{% endif %}>🔋 Batterie</option>
+                                <option value="headlight_bulb" {% if request.GET.type == 'headlight_bulb' %}selected{% endif %}>💡 Leuchtmittel</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Status</label>
+                        <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">Alle Status</option>
+                            <option value="in_stock" {% if request.GET.status == 'in_stock' %}selected{% endif %}>✅ Auf Lager</option>
+                            <option value="low_stock" {% if request.GET.status == 'low_stock' %}selected{% endif %}>⚠️ Niedriger Bestand</option>
+                            <option value="out_of_stock" {% if request.GET.status == 'out_of_stock' %}selected{% endif %}>❌ Nicht vorrätig</option>
+                            <option value="on_order" {% if request.GET.status == 'on_order' %}selected{% endif %}>📦 Bestellt</option>
+                            <option value="expired" {% if request.GET.status == 'expired' %}selected{% endif %}>📅 Abgelaufen</option>
+                        </select>
+                    </div>
+
+                    <!-- Gefahrstoff -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Gefahrstoff</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="hazardous" value="yes" {% if request.GET.hazardous == 'yes' %}checked{% endif %} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-700">☢️ Nur Gefahrstoffe</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="pt-4 border-t border-gray-200 space-y-2">
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                            Filter anwenden
+                        </button>
+                        <a href="{% url 'workshop:item_list' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                            Zurücksetzen
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Content Area (80%) -->
+        <main class="flex-1 min-w-0">
+
+            <!-- Toolbar über Tabelle -->
+            <div class="bg-white rounded-t-lg border border-gray-200 px-6 py-3 flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    <span class="font-semibold text-gray-900">{{ page_obj.paginator.count|default:items.count }}</span> Ersatzteile gefunden
+                </div>
+                <div class="flex items-center gap-3">
+                    <select class="px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
+                        <option>50 pro Seite</option>
+                        <option>100 pro Seite</option>
+                        <option>200 pro Seite</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabelle -->
+            <div class="bg-white border-x border-b border-gray-200 rounded-b-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left">
+                                    <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Ersatzteil
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Typ
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Bestand
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Lagerort
+                                </th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Aktionen
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for item in items %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                </td>
+                                <td class="px-4 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex-1 min-w-0">
+                                            <a href="{% url 'workshop:item_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-blue-600">
+                                                {{ item.name }}
+                                            </a>
+                                            {% if item.is_hazardous %}
+                                            <span class="ml-2 px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                                ☢️ Gefahrstoff
+                                            </span>
+                                            {% endif %}
+                                            <p class="text-xs text-gray-500 mt-1">
+                                                {% if item.item_number %}{{ item.item_number }}{% endif %}
+                                                {% if item.manufacturer_part_number %} • HT: {{ item.manufacturer_part_number }}{% endif %}
+                                                {% if item.oem_number %} • OEM: {{ item.oem_number }}{% endif %}
+                                                {% if item.manufacturer %} • {{ item.manufacturer }}{% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-gray-900">{{ item.get_workshop_item_type_display }}</span>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    {% if item.workshop_status == 'in_stock' %}
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                        ✅ Auf Lager
+                                    </span>
+                                    {% elif item.workshop_status == 'low_stock' %}
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-semibold">
+                                        ⚠️ Niedriger Bestand
+                                    </span>
+                                    {% elif item.workshop_status == 'out_of_stock' %}
+                                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                        ❌ Nicht vorrätig
+                                    </span>
+                                    {% elif item.workshop_status == 'on_order' %}
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                                        📦 Bestellt
+                                    </span>
+                                    {% elif item.workshop_status == 'expired' %}
+                                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                        📅 Abgelaufen
+                                    </span>
+                                    {% else %}
+                                    <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">
+                                        {{ item.get_workshop_status_display }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap text-sm">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-900">{{ item.quantity }}</span>
+                                        <span class="text-gray-500">{{ item.get_unit_display }}</span>
+                                    </div>
+                                    {% if item.min_quantity and item.quantity <= item.min_quantity %}
+                                    <div class="text-xs text-yellow-600 mt-1">
+                                        ⚠️ Min: {{ item.min_quantity }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {% if item.location %}
+                                        {{ item.location.name }}
+                                    {% else %}
+                                        <span class="text-gray-400">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <a href="{% url 'workshop:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800" title="Details ansehen">
+                                            👁️
+                                        </a>
+                                        <a href="{% url 'workshop:item_update' item.pk %}" class="text-gray-600 hover:text-gray-800" title="Bearbeiten">
+                                            ✏️
+                                        </a>
+                                        <button class="text-gray-600 hover:text-gray-800" title="Mehr Aktionen">
+                                            ⋮
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="px-4 py-12 text-center text-gray-500">
+                                    <div class="text-4xl mb-4">🔧</div>
+                                    <p class="text-lg font-medium text-gray-900 mb-2">Keine Ersatzteile gefunden</p>
+                                    <p class="text-sm">Versuchen Sie, Ihre Filter anzupassen oder ein neues Ersatzteil anzulegen.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                    </div>
+                    <div class="flex gap-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            « Erste
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            ◀ Zurück
+                        </a>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if num == page_obj.number %}
+                            <span class="px-3 py-1 bg-blue-600 text-white border border-blue-600 rounded text-sm">
+                                {{ num }}
+                            </span>
+                            {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                            <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1 border border-gray-300 hover:bg-gray-100 rounded text-sm">
+                                {{ num }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            Weiter ▶
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">
+                            Letzte »
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}

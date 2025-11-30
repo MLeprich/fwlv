@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load diving_tags %}
+
+{% block title %}{{ title|default:"Wartung durchführen" }} - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:service_management' %}" class="text-gray-500 hover:text-gray-700">Wartungsverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title|default:"Wartung durchführen" }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+    <!-- Header mit Item/ServiceType Info -->
+    {% if assignment %}
+    <div class="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">🔧 {{ title }}</h1>
+                <p class="mt-1 text-cyan-100">Wartungsprotokoll erstellen</p>
+            </div>
+            <div class="text-right">
+                <p class="text-lg font-semibold">{{ device.inventory_number }}</p>
+                {% if device.serial_number %}
+                <p class="text-sm text-cyan-100">SN: {{ device.serial_number }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if service_type.description %}
+        <div class="mt-4 bg-white/10 rounded-lg p-4">
+            <p class="text-sm">{{ service_type.description }}</p>
+        </div>
+        {% endif %}
+
+        <div class="mt-4 flex flex-wrap gap-4 text-sm">
+            {% if service_type.interval_months %}
+            <div class="bg-white/20 rounded-lg px-3 py-1">
+                📅 Intervall: {{ service_type.interval_months }} Monate
+            </div>
+            {% endif %}
+            {% if service_type.requires_certification %}
+            <div class="bg-yellow-400/30 rounded-lg px-3 py-1">
+                🎓 Zertifizierung erforderlich
+            </div>
+            {% endif %}
+            {% if service_type.is_mandatory %}
+            <div class="bg-red-400/30 rounded-lg px-3 py-1">
+                ⚠️ Pflichtwartung
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Form -->
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Checkliste (wenn vorhanden) -->
+        {% if checklist_items %}
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="text-2xl mr-2">✅</span>
+                    Prüfungs-Checkliste
+                </h2>
+                <p class="mt-1 text-sm text-gray-600">
+                    Haken Sie alle durchgeführten Prüfpunkte ab.
+                    <span class="text-red-600 font-medium">* = Pflichtpunkt</span>
+                </p>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for item in checklist_items %}
+                    <div class="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+                        <div class="flex items-center h-6">
+                            {{ form|get_field:item.field_name }}
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <label for="id_{{ item.field_name }}" class="text-sm font-medium text-gray-700 cursor-pointer">
+                                {{ item.text }}
+                                {% if item.required %}
+                                <span class="text-red-500 ml-1">*</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Benutzerdefinierte Messfelder (wenn vorhanden) -->
+        {% if custom_fields %}
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="text-2xl mr-2">📏</span>
+                    Messwerte
+                </h2>
+                <p class="mt-1 text-sm text-gray-600">
+                    Erfassen Sie die gemessenen Werte.
+                </p>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for field in custom_fields %}
+                    <div>
+                        <label for="id_{{ field.field_name }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ field.name }}
+                            {% if field.unit %}
+                            <span class="text-gray-500">({{ field.unit }})</span>
+                            {% endif %}
+                            {% if field.required %}
+                            <span class="text-red-500">*</span>
+                            {% endif %}
+                        </label>
+                        {{ form|get_field:field.field_name }}
+                        {% if field.min is not None or field.max is not None %}
+                        <p class="mt-1 text-xs text-gray-500">
+                            {% if field.min is not None and field.max is not None %}
+                            Sollbereich: {{ field.min }} - {{ field.max }} {{ field.unit }}
+                            {% elif field.min is not None %}
+                            Min: {{ field.min }} {{ field.unit }}
+                            {% elif field.max is not None %}
+                            Max: {{ field.max }} {{ field.unit }}
+                            {% endif %}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Basis-Informationen -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="text-2xl mr-2">📋</span>
+                    Basis-Informationen
+                </h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.service_date.label }} *
+                        </label>
+                        {{ form.service_date }}
+                        {% if form.service_date.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.service_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.technician.label }} *
+                        </label>
+                        {{ form.technician }}
+                        {% if form.technician.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.technician.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.result.label }} *
+                        </label>
+                        {{ form.result }}
+                        {% if form.result.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.result.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.next_service_date.label }}
+                        </label>
+                        {{ form.next_service_date }}
+                        <p class="mt-1 text-xs text-gray-500">
+                            Automatisch berechnet basierend auf Intervall
+                        </p>
+                        {% if form.next_service_date.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.next_service_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arbeitsdetails -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="text-2xl mr-2">🔧</span>
+                    Arbeitsdetails
+                </h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.findings.label }}
+                    </label>
+                    {{ form.findings }}
+                    <p class="mt-1 text-xs text-gray-500">Festgestellte Mängel oder Auffälligkeiten</p>
+                    {% if form.findings.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.findings.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.work_performed.label }}
+                    </label>
+                    {{ form.work_performed }}
+                    <p class="mt-1 text-xs text-gray-500">Durchgeführte Arbeiten und Reparaturen</p>
+                    {% if form.work_performed.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.work_performed.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.parts_replaced.label }}
+                    </label>
+                    {{ form.parts_replaced }}
+                    <p class="mt-1 text-xs text-gray-500">Ausgetauschte Teile mit Teilenummern</p>
+                    {% if form.parts_replaced.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.parts_replaced.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Kosten -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="text-2xl mr-2">💰</span>
+                    Kosten
+                </h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.labor_hours.label }}
+                        </label>
+                        {{ form.labor_hours }}
+                        <p class="mt-1 text-xs text-gray-500">Arbeitsstunden</p>
+                        {% if form.labor_hours.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.labor_hours.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.parts_cost.label }}
+                        </label>
+                        {{ form.parts_cost }}
+                        <p class="mt-1 text-xs text-gray-500">Materialkosten in Euro</p>
+                        {% if form.parts_cost.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.parts_cost.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex items-center justify-end gap-3 pt-4">
+            <a href="{% url 'diving:service_management' %}" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+                Abbrechen
+            </a>
+            <button type="submit" class="px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-medium shadow-lg">
+                {{ submit_text|default:"Wartungsprotokoll speichern" }}
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Progress-Tracking für Checkliste
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="checklist_"]');
+
+    if (checkboxes.length > 0) {
+        // Progress bar erstellen
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'bg-gray-100 rounded-full h-2.5 mb-4';
+        progressContainer.innerHTML = '<div id="checklist-progress" class="bg-green-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>';
+
+        const checklistHeader = document.querySelector('.bg-gradient-to-r.from-green-50');
+        if (checklistHeader) {
+            const progressText = document.createElement('p');
+            progressText.id = 'progress-text';
+            progressText.className = 'text-sm text-gray-600 mt-2';
+            progressText.textContent = `0 von ${checkboxes.length} Punkten erledigt`;
+
+            checklistHeader.appendChild(progressText);
+            checklistHeader.appendChild(progressContainer);
+        }
+
+        function updateProgress() {
+            const checked = document.querySelectorAll('input[type="checkbox"][name^="checklist_"]:checked').length;
+            const total = checkboxes.length;
+            const percentage = Math.round((checked / total) * 100);
+
+            document.getElementById('checklist-progress').style.width = percentage + '%';
+            document.getElementById('progress-text').textContent = `${checked} von ${total} Punkten erledigt (${percentage}%)`;
+        }
+
+        checkboxes.forEach(cb => cb.addEventListener('change', updateProgress));
+        updateProgress();
+    }
+});
+</script>
+{% endblock %}

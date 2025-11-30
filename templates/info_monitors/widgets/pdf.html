@@ -1,0 +1,67 @@
+<!-- PDF Widget with Auto-Pagination -->
+<div class="h-full flex flex-col">
+    {% if widget.title %}
+    <div class="bg-gray-100 px-4 py-2 border-b border-gray-300">
+        <h3 class="text-lg font-bold text-gray-900">{{ widget.title }}</h3>
+    </div>
+    {% endif %}
+
+    <div class="flex-1 relative overflow-hidden">
+        {% if widget.pdf_file %}
+            <div class="w-full h-full relative" style="min-height: 400px;">
+                <!-- PDF Iframe - positioniert um die Toolbar zu verbergen -->
+                <iframe id="pdf-frame-{{ widget.id }}"
+                        src="{{ widget.pdf_file.url }}#view=FitH&page=1"
+                        class="border-0"
+                        style="position: absolute; top: -40px; left: 0; width: 100%; height: calc(100% + 40px);">
+                </iframe>
+
+                <!-- Overlay um die Toolbar-Region zu verdecken -->
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 1px; background: transparent; pointer-events: none; z-index: 10;"></div>
+            </div>
+
+            {% if widget.config.auto_rotate %}
+            <div class="absolute bottom-4 right-4 bg-black bg-opacity-70 text-white px-3 py-2 rounded-lg text-sm">
+                Seite <span id="pdf-current-page-{{ widget.id }}">1</span>
+            </div>
+            <script>
+            (function() {
+                let currentPage = 1;
+                const rotateInterval = {{ widget.config.rotate_interval|default:5 }}; // Sekunden
+
+                function nextPage() {
+                    currentPage++;
+                    const iframe = document.getElementById('pdf-frame-{{ widget.id }}');
+                    const currentSrc = iframe.src.split('#')[0];
+                    iframe.src = currentSrc + '#view=FitH&page=' + currentPage;
+                    document.getElementById('pdf-current-page-{{ widget.id }}').textContent = currentPage;
+                }
+
+                setInterval(nextPage, rotateInterval * 1000);
+            })();
+            </script>
+            {% endif %}
+
+        {% elif widget.config.pdf_url %}
+            <iframe src="{{ widget.config.pdf_url }}"
+                    class="w-full h-full border-0"
+                    style="min-height: 400px;">
+            </iframe>
+        {% elif widget.config.pdf_file %}
+            <iframe src="{{ widget.config.pdf_file }}"
+                    class="w-full h-full border-0"
+                    style="min-height: 400px;">
+            </iframe>
+        {% else %}
+            <div class="h-full flex items-center justify-center text-gray-500">
+                <div class="text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    <p class="mt-2 text-sm">Keine PDF-Datei konfiguriert</p>
+                    <p class="text-xs mt-1">Bitte eine PDF-Datei hochladen</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>

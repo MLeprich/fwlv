@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - IT-Hardware - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'it_hardware:dashboard' %}" class="text-gray-500 hover:text-gray-700">IT-Hardware</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'it_hardware:master_list' %}" class="text-gray-500 hover:text-gray-700">Hardware-Stammdaten</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{{ title }}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ title }}</h1>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <span class="text-red-600">❌</span>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Stammdatennummer</label>
+                        {{ form.master_number }}
+                        {% if form.master_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.master_number.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.master_number.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.master_number.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.hardware_type.label }}</label>
+                        {{ form.hardware_type }}
+                        {% if form.hardware_type.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.hardware_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hersteller-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Hersteller & Modell</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.manufacturer.label }}</label>
+                        {{ form.manufacturer }}
+                        {% if form.manufacturer.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.manufacturer.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.model.label }}</label>
+                        {{ form.model }}
+                        {% if form.model.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.model.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technische Spezifikationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Technische Spezifikationen (Standard)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.operating_system.label }}</label>
+                        {{ form.operating_system }}
+                        {% if form.operating_system.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.operating_system.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.cpu_model.label }}</label>
+                        {{ form.cpu_model }}
+                        {% if form.cpu_model.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.cpu_model.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.ram_gb.label }}</label>
+                        {{ form.ram_gb }}
+                        {% if form.ram_gb.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.ram_gb.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.storage_gb.label }}</label>
+                        {{ form.storage_gb }}
+                        {% if form.storage_gb.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.storage_gb.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.gpu_model.label }}</label>
+                        {{ form.gpu_model }}
+                        {% if form.gpu_model.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.gpu_model.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.screen_size_inch.label }}</label>
+                        {{ form.screen_size_inch }}
+                        {% if form.screen_size_inch.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.screen_size_inch.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lebenszyklus & Wartung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Lebenszyklus & Wartung</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.depreciation_years.label }}</label>
+                        {{ form.depreciation_years }}
+                        {% if form.depreciation_years.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.depreciation_years.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.maintenance_interval_months.label }}</label>
+                        {{ form.maintenance_interval_months }}
+                        {% if form.maintenance_interval_months.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.maintenance_interval_months.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wirtschaftliche Daten -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Wirtschaftliche Daten</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.purchase_price.label }}</label>
+                        {{ form.purchase_price }}
+                        {% if form.purchase_price.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.purchase_price.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dokument-Upload -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Dokumente & Bilder</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.manual_document.label }}
+                        </label>
+                        {{ form.manual_document }}
+                        {% if form.manual_document.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.manual_document.help_text }}</p>
+                        {% endif %}
+                        {% if form.manual_document.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.manual_document.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.instance.manual_document %}
+                        <div class="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <a href="{{ form.instance.manual_document.url }}" target="_blank" class="text-blue-600 hover:underline">
+                                Aktuelles Dokument anzeigen
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.image.label }}
+                        </label>
+                        {{ form.image }}
+                        {% if form.image.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.image.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.instance.image %}
+                        <div class="mt-2">
+                            <img src="{{ form.instance.image.url }}" alt="Produktbild" class="w-32 h-32 object-cover rounded">
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notizen -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'it_hardware:master_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    {{ submit_text }}
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

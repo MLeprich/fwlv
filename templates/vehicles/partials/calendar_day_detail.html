@@ -1,0 +1,111 @@
+{% load vehicle_filters %}
+
+<!-- Tagesdetails für ausgewählten Tag -->
+<div class="space-y-4">
+    <div class="flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900">
+            {{ selected_date|date:"l, d. F Y" }}
+        </h3>
+        <span class="text-sm text-gray-500">{{ selected_inspections|length }} Prüfung{% if selected_inspections|length != 1 %}en{% endif %}</span>
+    </div>
+
+    {% if selected_inspections %}
+        <div class="space-y-3">
+            {% for inspection in selected_inspections %}
+            <div class="border rounded-lg p-4 {% if inspection.is_overdue %}border-red-300 bg-red-50{% elif inspection.is_urgent %}border-orange-300 bg-orange-50{% else %}border-blue-300 bg-blue-50{% endif %}">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xl">🚒</span>
+                            <h4 class="font-semibold text-gray-900">
+                                {{ inspection.vehicle.call_sign|default:inspection.vehicle.name }}
+                            </h4>
+                        </div>
+                        <p class="text-sm text-gray-600">{{ inspection.vehicle.name }}</p>
+                        {% if inspection.vehicle.license_plate %}
+                        <p class="text-xs text-gray-500 mt-1">{{ inspection.vehicle.license_plate }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="flex flex-col items-end gap-1">
+                        {% if inspection.is_overdue %}
+                        <span class="px-2 py-1 text-xs font-medium text-red-800 bg-red-100 rounded-full">
+                            Überfällig
+                        </span>
+                        {% elif inspection.is_urgent %}
+                        <span class="px-2 py-1 text-xs font-medium text-orange-800 bg-orange-100 rounded-full">
+                            Fällig
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">
+                            Geplant
+                        </span>
+                        {% endif %}
+
+                        {% if inspection.type == 'HU/TÜV' %}
+                        <span class="px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">
+                            HU/TÜV
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
+                            UVV
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <span class="text-gray-500">Prüfungsdatum:</span>
+                        <span class="font-medium text-gray-900">{{ inspection.date|date:"d.m.Y" }}</span>
+                    </div>
+                    {% if inspection.vehicle.home_location %}
+                    <div>
+                        <span class="text-gray-500">Standort:</span>
+                        <span class="font-medium text-gray-900">{{ inspection.vehicle.home_location.name }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if inspection.vehicle.current_mileage %}
+                <div class="mt-2 text-sm">
+                    <span class="text-gray-500">Aktueller KM-Stand:</span>
+                    <span class="font-medium text-gray-900">{{ inspection.vehicle.current_mileage|floatformat:0 }} km</span>
+                </div>
+                {% endif %}
+
+                <div class="mt-3 flex gap-2">
+                    <a href="{% url 'vehicles:detail' inspection.vehicle.pk %}"
+                       class="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors text-center">
+                        📋 Details ansehen
+                    </a>
+                    <a href="{% url 'vehicles:detail' inspection.vehicle.pk %}#inspections"
+                       class="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                        ✓ Prüfung eintragen
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-12">
+            <div class="text-6xl mb-3">📅</div>
+            <p class="text-gray-500 font-medium">Keine Prüfungen geplant</p>
+            <p class="text-sm text-gray-400 mt-1">Für diesen Tag sind keine HU/TÜV oder UVV-Prüfungen vorgesehen.</p>
+        </div>
+    {% endif %}
+
+    <!-- Statistik -->
+    {% if selected_inspections %}
+    <div class="pt-4 border-t border-gray-200">
+        <div class="text-center p-3 bg-gray-50 rounded-lg">
+            <div class="text-sm text-gray-600 mb-1">Prüfungen an diesem Tag</div>
+            <div class="flex items-center justify-center gap-4">
+                <div>
+                    <span class="text-2xl font-bold text-gray-900">{{ selected_inspections|length }}</span>
+                    <span class="text-xs text-gray-500">gesamt</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>

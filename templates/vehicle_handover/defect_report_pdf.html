@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Mängelbericht - {{ handover.vehicle }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @bottom-right {
+                content: "Seite " counter(page) " von " counter(pages);
+                font-size: 9pt;
+                color: #666;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .header {
+            border-bottom: 3px solid #dc2626;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24pt;
+            color: #991b1b;
+            margin-bottom: 10px;
+        }
+
+        .header .meta {
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #991b1b;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        .info-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .info-row {
+            display: table-row;
+        }
+
+        .info-label {
+            display: table-cell;
+            width: 40%;
+            padding: 6px 10px 6px 0;
+            font-weight: bold;
+            color: #4b5563;
+        }
+
+        .info-value {
+            display: table-cell;
+            padding: 6px 0;
+            color: #111827;
+        }
+
+        .warning-box {
+            background-color: #fee2e2;
+            border-left: 4px solid #dc2626;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .warning-box strong {
+            color: #991b1b;
+            font-size: 12pt;
+        }
+
+        .defect-item {
+            border: 2px solid #e5e7eb;
+            padding: 15px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .defect-header {
+            margin-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 8px;
+        }
+
+        .defect-title {
+            font-weight: bold;
+            font-size: 12pt;
+            color: #111827;
+            margin-bottom: 5px;
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 8pt;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .severity-critical {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .severity-major {
+            background-color: #fed7aa;
+            color: #9a3412;
+        }
+
+        .severity-moderate {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .severity-minor {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .severity-info {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+
+        .defect-description {
+            color: #4b5563;
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .defect-meta {
+            margin: 10px 0;
+            padding: 8px;
+            background-color: #f9fafb;
+            border-left: 3px solid #9ca3af;
+            font-size: 9pt;
+        }
+
+        .defect-meta div {
+            margin: 3px 0;
+        }
+
+        .photo-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #d1d5db;
+        }
+
+        .photo-section-title {
+            font-weight: bold;
+            color: #374151;
+            margin-bottom: 10px;
+        }
+
+        .photo-grid {
+            display: table;
+            width: 100%;
+        }
+
+        .photo-row {
+            display: table-row;
+        }
+
+        .photo-cell {
+            display: table-cell;
+            width: 50%;
+            padding: 5px;
+            vertical-align: top;
+        }
+
+        .photo-cell img {
+            width: 100%;
+            max-width: 250px;
+            height: auto;
+            border: 1px solid #e5e7eb;
+        }
+
+        .photo-caption {
+            font-size: 8pt;
+            color: #666;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 8pt;
+            color: #666;
+            text-align: center;
+        }
+
+        .summary-box {
+            background-color: #fef3c7;
+            border: 2px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .summary-box h3 {
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>⚠️ Mängelbericht</h1>
+        <div class="meta">
+            <strong>{{ handover.vehicle }}</strong> |
+            {{ handover.handover_date|date:"d.m.Y, H:i" }} Uhr |
+            {{ handover.get_handover_type_display }}
+        </div>
+    </div>
+
+    <!-- Warnung -->
+    <div class="warning-box">
+        <strong>⚠ ACHTUNG:</strong> Bei diesem Fahrzeug wurden <strong>{{ handover.defects.count }}</strong> Mangel/Mängel festgestellt.
+    </div>
+
+    <!-- Fahrzeugdaten -->
+    <div class="section">
+        <div class="section-title">Fahrzeugdaten</div>
+        <div class="info-grid">
+            <div class="info-row">
+                <div class="info-label">Fahrzeug:</div>
+                <div class="info-value">{{ handover.vehicle }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">KM-Stand:</div>
+                <div class="info-value">{{ handover.odometer_reading }} km</div>
+            </div>
+            {% if handover.fuel_level %}
+            <div class="info-row">
+                <div class="info-label">Tankfüllung:</div>
+                <div class="info-value">{{ handover.fuel_level }}%</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Übergabe-Details -->
+    <div class="section">
+        <div class="section-title">Übergabe-Details</div>
+        <div class="info-grid">
+            <div class="info-row">
+                <div class="info-label">Übergeben von:</div>
+                <div class="info-value">{{ handover.handover_from|default:"Erstinbetriebnahme" }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Übergeben an:</div>
+                <div class="info-value">{{ handover.handover_to }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Datum & Uhrzeit:</div>
+                <div class="info-value">{{ handover.handover_date|date:"d.m.Y, H:i" }} Uhr</div>
+            </div>
+            {% if handover.location %}
+            <div class="info-row">
+                <div class="info-label">Standort:</div>
+                <div class="info-value">{{ handover.location }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Zusammenfassung -->
+    <div class="section">
+        <div class="section-title">Zusammenfassung der Mängel</div>
+        <div class="summary-box">
+            <h3>Statistik</h3>
+            <div style="margin-top: 10px;">
+                <strong>Gesamt:</strong> {{ defect_stats.total }} Mangel/Mängel<br>
+                <strong>Kritisch:</strong> {{ defect_stats.critical }}<br>
+                <strong>Erheblich:</strong> {{ defect_stats.major }}<br>
+                <strong>Mittel:</strong> {{ defect_stats.moderate }}<br>
+                <strong>Gering:</strong> {{ defect_stats.minor }}<br>
+                <strong>Sofortige Maßnahme erforderlich:</strong> {{ defect_stats.immediate_action }}<br>
+                <strong>Einsatzbereitschaft beeinträchtigt:</strong> {{ defect_stats.affects_readiness }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Detaillierte Mängel -->
+    <div class="section">
+        <div class="section-title">Detaillierte Mängelliste</div>
+
+        {% for item in defects_with_photos %}
+        <div class="defect-item">
+            <div class="defect-header">
+                <div class="defect-title">
+                    {{ forloop.counter }}. {{ item.defect.title }}
+                    <span class="severity-badge severity-{{ item.defect.severity }}">
+                        {% if item.defect.severity == 'critical' %}KRITISCH
+                        {% elif item.defect.severity == 'major' %}ERHEBLICH
+                        {% elif item.defect.severity == 'moderate' %}MITTEL
+                        {% elif item.defect.severity == 'minor' %}GERING
+                        {% else %}INFO{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <div class="defect-description">
+                {{ item.defect.description }}
+            </div>
+
+            <div class="defect-meta">
+                <div><strong>Kategorie:</strong> {{ item.defect.get_category_display }}</div>
+                <div><strong>Erfasst am:</strong> {{ item.defect.created_at|date:"d.m.Y, H:i" }} Uhr</div>
+                <div><strong>Erfasst von:</strong> {{ item.defect.created_by }}</div>
+                {% if item.defect.requires_immediate_action %}
+                <div style="color: #dc2626;">⚡ <strong>Sofortige Maßnahme erforderlich!</strong></div>
+                {% endif %}
+                {% if item.defect.affects_operational_readiness %}
+                <div style="color: #dc2626;">🚫 <strong>Beeinträchtigt Einsatzbereitschaft!</strong></div>
+                {% endif %}
+            </div>
+
+            {% if item.photos %}
+            <div class="photo-section">
+                <div class="photo-section-title">📷 Fotodokumentation ({{ item.photos|length }})</div>
+                <div class="photo-grid">
+                    {% for photo in item.photos %}
+                    {% if forloop.counter0|divisibleby:2 %}
+                    <div class="photo-row">
+                    {% endif %}
+                        <div class="photo-cell">
+                            <img src="data:image/jpeg;base64,{{ photo.data }}" alt="Mangelfoto">
+                            {% if photo.description %}
+                            <div class="photo-caption">{{ photo.description }}</div>
+                            {% endif %}
+                        </div>
+                    {% if forloop.counter|divisibleby:2 or forloop.last %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>
+            Mängelbericht erstellt am {{ handover.created_at|date:"d.m.Y, H:i" }} Uhr<br>
+            Feuerwehr Lagerverwaltungssystem (FLVS) | https://lager.resqware.de
+        </p>
+    </div>
+</body>
+</html>

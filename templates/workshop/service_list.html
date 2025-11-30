@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Fahrzeug-Services - KFZ-Werkstatt - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'workshop:dashboard' %}" class="text-gray-500 hover:text-gray-700">KFZ-Werkstatt</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Fahrzeug-Services</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-4xl">🔧</span>
+                    <h1 class="text-2xl font-bold">Fahrzeug-Services</h1>
+                </div>
+                <p class="text-purple-100">
+                    Wartungen, Reparaturen und Prüfungen
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'workshop:service_create' %}" class="bg-white text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                    <span>➕</span>
+                    <span>Neuer Service</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-gray-500">
+            <p class="text-gray-500 text-sm font-medium">Gesamt</p>
+            <p class="text-2xl font-bold text-gray-900">{{ total_count }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+            <p class="text-gray-500 text-sm font-medium">Geplant</p>
+            <p class="text-2xl font-bold text-blue-600">{{ scheduled_count }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+            <p class="text-gray-500 text-sm font-medium">In Bearbeitung</p>
+            <p class="text-2xl font-bold text-yellow-600">{{ in_progress_count }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+            <p class="text-gray-500 text-sm font-medium">Abgeschlossen</p>
+            <p class="text-2xl font-bold text-green-600">{{ completed_count }}</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Service-Typ</label>
+                <select name="type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="">Alle Typen</option>
+                    <option value="oil_change" {% if request.GET.type == 'oil_change' %}selected{% endif %}>Ölwechsel</option>
+                    <option value="inspection" {% if request.GET.type == 'inspection' %}selected{% endif %}>Inspektion</option>
+                    <option value="main_inspection" {% if request.GET.type == 'main_inspection' %}selected{% endif %}>Hauptuntersuchung (HU)</option>
+                    <option value="tire_change" {% if request.GET.type == 'tire_change' %}selected{% endif %}>Reifenwechsel</option>
+                    <option value="brake_service" {% if request.GET.type == 'brake_service' %}selected{% endif %}>Bremsenwartung</option>
+                    <option value="repair" {% if request.GET.type == 'repair' %}selected{% endif %}>Reparatur</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="">Alle Status</option>
+                    <option value="scheduled" {% if request.GET.status == 'scheduled' %}selected{% endif %}>Geplant</option>
+                    <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>In Bearbeitung</option>
+                    <option value="waiting_parts" {% if request.GET.status == 'waiting_parts' %}selected{% endif %}>Wartet auf Teile</option>
+                    <option value="waiting_approval" {% if request.GET.status == 'waiting_approval' %}selected{% endif %}>Wartet auf Freigabe</option>
+                    <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Abgeschlossen</option>
+                    <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Storniert</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    Filtern
+                </button>
+            </div>
+            <div class="flex items-end">
+                <a href="{% url 'workshop:service_list' %}" class="w-full text-center bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors">
+                    Zurücksetzen
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Services List -->
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        {% if services %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fahrzeug</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service-Typ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Geplant am</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Techniker</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kosten</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for service in services %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">{{ service.vehicle.call_sign }}</div>
+                                    <div class="text-xs text-gray-500">{{ service.vehicle.license_plate }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm text-gray-900">{{ service.get_service_type_display }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if service.service_status == 'scheduled' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {{ service.get_service_status_display }}
+                            </span>
+                            {% elif service.service_status == 'in_progress' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                {{ service.get_service_status_display }}
+                            </span>
+                            {% elif service.service_status == 'waiting_parts' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                {{ service.get_service_status_display }}
+                            </span>
+                            {% elif service.service_status == 'waiting_approval' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                {{ service.get_service_status_display }}
+                            </span>
+                            {% elif service.service_status == 'completed' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                {{ service.get_service_status_display }}
+                            </span>
+                            {% elif service.service_status == 'cancelled' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                {{ service.get_service_status_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ service.scheduled_date|date:"d.m.Y" }}</div>
+                            {% if service.is_overdue %}
+                            <div class="text-xs text-red-600 font-semibold">Überfällig!</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if service.technician %}
+                            <span class="text-sm text-gray-900">{{ service.technician.get_full_name }}</span>
+                            {% else %}
+                            <span class="text-sm text-gray-400">Nicht zugewiesen</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-medium text-gray-900">{{ service.total_cost|floatformat:2 }} €</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="{% url 'workshop:service_detail' service.pk %}" class="text-purple-600 hover:text-purple-900 mr-3">
+                                Ansehen
+                            </a>
+                            <a href="{% url 'workshop:service_update' service.pk %}" class="text-blue-600 hover:text-blue-900">
+                                Bearbeiten
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                </div>
+                <div class="flex gap-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                       class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-100">
+                        Erste
+                    </a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                       class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-100">
+                        Zurück
+                    </a>
+                    {% endif %}
+
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                       class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-100">
+                        Weiter
+                    </a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                       class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-100">
+                        Letzte
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-12">
+            <span class="text-6xl block mb-4">🔧</span>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Services gefunden</h3>
+            <p class="text-gray-500 mb-6">Es wurden noch keine Fahrzeug-Services erfasst.</p>
+            <a href="{% url 'workshop:service_create' %}" class="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                <span>➕</span>
+                <span>Ersten Service anlegen</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

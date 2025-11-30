@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}Einstellungen{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">
+                    Dashboard
+                </a>
+            </li>
+            <li>
+                <span class="text-gray-400">/</span>
+            </li>
+            <li>
+                <span class="text-gray-900 font-medium">Einstellungen</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6" x-data="{ activeSection: 'account' }">
+
+    <!-- 2-Spalten Layout: Sidebar + Content -->
+    <div class="settings-layout">
+
+        <!-- Sidebar Navigation -->
+        <div class="sidebar-nav">
+            <div class="bg-white rounded-lg shadow">
+                <nav class="p-4 space-y-1">
+                    <button
+                        @click="activeSection = 'account'"
+                        :class="activeSection === 'account' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left border-l-4"
+                    >
+                        <span class="text-xl">👤</span>
+                        <span class="font-medium text-sm">Account</span>
+                    </button>
+
+                    <button
+                        @click="activeSection = 'notifications'"
+                        :class="activeSection === 'notifications' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left border-l-4"
+                    >
+                        <span class="text-xl">🔔</span>
+                        <span class="font-medium text-sm">Benachrichtigungen</span>
+                    </button>
+
+                    <button
+                        @click="activeSection = 'appearance'"
+                        :class="activeSection === 'appearance' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left border-l-4"
+                    >
+                        <span class="text-xl">🎨</span>
+                        <span class="font-medium text-sm">Darstellung</span>
+                    </button>
+
+                    <button
+                        @click="activeSection = 'security'"
+                        :class="activeSection === 'security' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left border-l-4"
+                    >
+                        <span class="text-xl">🔒</span>
+                        <span class="font-medium text-sm">Sicherheit</span>
+                    </button>
+
+                    <button
+                        @click="activeSection = 'privacy'"
+                        :class="activeSection === 'privacy' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left border-l-4"
+                    >
+                        <span class="text-xl">🛡️</span>
+                        <span class="font-medium text-sm">Datenschutz</span>
+                    </button>
+
+                    <button
+                        @click="activeSection = 'api'"
+                        :class="activeSection === 'api' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left border-l-4"
+                    >
+                        <span class="text-xl">🔌</span>
+                        <span class="font-medium text-sm">API-Zugriff</span>
+                    </button>
+
+                    <div class="border-t border-gray-200 my-2"></div>
+
+                    {% if user.is_staff or user.is_superuser %}
+                    <button
+                        @click="activeSection = 'modules'"
+                        :class="activeSection === 'modules' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left border-l-4"
+                    >
+                        <span class="text-xl">🧩</span>
+                        <span class="font-medium text-sm">Module</span>
+                    </button>
+
+                    <button
+                        @click="activeSection = 'system'"
+                        :class="activeSection === 'system' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left border-l-4"
+                    >
+                        <span class="text-xl">⚙️</span>
+                        <span class="font-medium text-sm">System</span>
+                    </button>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="bg-white rounded-lg shadow">
+
+                <!-- Include Sub-Templates -->
+                {% include 'core/settings/account.html' %}
+                {% include 'core/settings/notifications.html' %}
+                {% include 'core/settings/appearance.html' %}
+                {% include 'core/settings/security.html' %}
+                {% include 'core/settings/privacy.html' %}
+                {% include 'core/settings/api.html' %}
+                {% if user.is_staff or user.is_superuser %}
+                {% include 'core/settings/modules.html' %}
+                {% include 'core/settings/system.html' %}
+                {% endif %}
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
+
+{% endblock %}

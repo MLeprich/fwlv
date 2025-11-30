@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Import/Export - Fahrzeugverwaltung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Import/Export</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">📤</span>
+                    <h1 class="text-3xl font-bold">Import/Export</h1>
+                </div>
+                <p class="text-blue-100 text-lg">
+                    Fahrzeugverwaltungs-Daten importieren und exportieren
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Fahrzeuge gesamt</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ vehicle_count }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <span class="text-3xl">🚒</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Modelle</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ model_count }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <span class="text-3xl">🚗</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Prüfungen (gesamt)</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ inspection_count }}</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <span class="text-3xl">🔍</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-6">
+        {% for message in messages %}
+        <div class="{% if message.tags == 'success' %}bg-green-50 border-green-400 text-green-700{% elif message.tags == 'error' %}bg-red-50 border-red-400 text-red-700{% else %}bg-blue-50 border-blue-400 text-blue-700{% endif %} border-l-4 p-4 rounded-r mb-4">
+            <p class="font-medium">{{ message }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Export Section -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📊</span>
+                <span>Export (Excel)</span>
+            </h2>
+            <p class="text-gray-600 text-sm mb-6">
+                Exportieren Sie Ihre Daten als Excel-Datei (.xlsx) mit professioneller Formatierung.
+            </p>
+
+            <div class="space-y-4">
+                <!-- Export Fahrzeuge -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="font-bold text-gray-900">Fahrzeuge</h3>
+                            <p class="text-xs text-gray-600">Alle Fahrzeuge mit Details</p>
+                        </div>
+                        <span class="text-2xl">🚒</span>
+                    </div>
+                    <a href="{% url 'vehicles:export_vehicles' %}" class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm">
+                        📥 Excel exportieren
+                    </a>
+                </div>
+
+                <!-- Export Modelle -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="font-bold text-gray-900">Modelle</h3>
+                            <p class="text-xs text-gray-600">Alle Fahrzeugmodelle</p>
+                        </div>
+                        <span class="text-2xl">🚗</span>
+                    </div>
+                    <a href="{% url 'vehicles:export_models' %}" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm">
+                        📥 Excel exportieren
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import Section -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📤</span>
+                <span>Import (Excel)</span>
+            </h2>
+            <p class="text-gray-600 text-sm mb-6">
+                Importieren Sie Daten aus Excel-Dateien. Laden Sie zuerst die Vorlage herunter!
+            </p>
+
+            <div class="space-y-4">
+                <!-- Import Fahrzeuge -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="font-bold text-gray-900">Fahrzeuge importieren</h3>
+                            <p class="text-xs text-gray-600">Excel-Datei mit Fahrzeugen</p>
+                        </div>
+                        <span class="text-2xl">🚒</span>
+                    </div>
+
+                    <!-- Template Download -->
+                    <a href="{% url 'vehicles:download_template' 'vehicles' %}" class="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg px-4 py-2 font-medium transition-colors text-sm mb-3">
+                        📋 Vorlage herunterladen
+                    </a>
+
+                    <!-- Upload Form -->
+                    <form method="post" action="{% url 'vehicles:import_vehicles' %}" enctype="multipart/form-data" class="space-y-3">
+                        {% csrf_token %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Excel-Datei auswählen:</label>
+                            <input type="file" name="excel_file" accept=".xlsx,.xls" required class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50">
+                        </div>
+                        <button type="submit" class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm">
+                            📤 Importieren
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Import Modelle -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="font-bold text-gray-900">Modelle importieren</h3>
+                            <p class="text-xs text-gray-600">Excel-Datei mit Modellen</p>
+                        </div>
+                        <span class="text-2xl">🚗</span>
+                    </div>
+
+                    <!-- Template Download -->
+                    <a href="{% url 'vehicles:download_template' 'models' %}" class="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg px-4 py-2 font-medium transition-colors text-sm mb-3">
+                        📋 Vorlage herunterladen
+                    </a>
+
+                    <!-- Upload Form -->
+                    <form method="post" action="{% url 'vehicles:import_models' %}" enctype="multipart/form-data" class="space-y-3">
+                        {% csrf_token %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Excel-Datei auswählen:</label>
+                            <input type="file" name="excel_file" accept=".xlsx,.xls" required class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50">
+                        </div>
+                        <button type="submit" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm">
+                            📤 Importieren
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div>
+                <h3 class="font-bold text-yellow-900 mb-2">Wichtige Hinweise</h3>
+                <ul class="text-sm text-yellow-800 space-y-1">
+                    <li>• <strong>Export:</strong> Daten werden als Excel-Datei (.xlsx) mit Formatierung exportiert</li>
+                    <li>• <strong>Import:</strong> Excel-Dateien (.xlsx, .xls) werden akzeptiert</li>
+                    <li>• Excel-Dateien sollten UTF-8 codiert sein</li>
+                    <li>• Laden Sie immer zuerst die Vorlage herunter, um das richtige Format zu sehen</li>
+                    <li>• Pflichtfelder sind mit * markiert</li>
+                    <li>• Duplikate werden automatisch erkannt und übersprungen</li>
+                    <li>• Nach dem Import erhalten Sie eine Zusammenfassung mit Erfolgen und Fehlern</li>
+                    <li>• Datum-Format: TT.MM.JJJJ (z.B. 31.12.2024)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Info -->
+    <div class="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-6">
+        <h3 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <span>⚙️</span>
+            <span>Technische Informationen</span>
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+                <p class="font-semibold text-gray-700 mb-1">Export-Format:</p>
+                <ul class="text-gray-600 space-y-1">
+                    <li>• Dateiformat: Excel (.xlsx)</li>
+                    <li>• Zeichenkodierung: UTF-8</li>
+                    <li>• Formatierung: Farbige Header, Spaltenbreiten</li>
+                    <li>• Datum-Format: TT.MM.JJJJ</li>
+                </ul>
+            </div>
+            <div>
+                <p class="font-semibold text-gray-700 mb-1">Import-Format:</p>
+                <ul class="text-gray-600 space-y-1">
+                    <li>• Dateiformat: Excel (.xlsx, .xls)</li>
+                    <li>• Zeichenkodierung: UTF-8</li>
+                    <li>• Header-Zeile muss vorhanden sein</li>
+                    <li>• Leere Zeilen werden ignoriert</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

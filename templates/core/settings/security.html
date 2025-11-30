@@ -1,0 +1,232 @@
+<!-- Sicherheit Section -->
+<div x-show="activeSection === 'security'" x-cloak class="p-6">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">Sicherheit</h2>
+
+    <!-- Passwort ändern -->
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+            Passwort ändern
+        </h3>
+        <div class="flex items-start gap-3 mb-4">
+            <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm text-gray-700">
+                    Letzter Passwort-Wechsel: <span class="font-medium">{{ user.last_password_change|default:"Unbekannt" }}</span>
+                </p>
+                <p class="text-sm text-gray-500 mt-1">
+                    Ändern Sie regelmäßig Ihr Passwort, um die Sicherheit Ihres Accounts zu gewährleisten.
+                </p>
+            </div>
+        </div>
+        <a
+            href="{% url 'core:password_change' %}"
+            class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+        >
+            🔒 Passwort ändern
+        </a>
+    </div>
+
+    <!-- Zwei-Faktor-Authentifizierung -->
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+            Zwei-Faktor-Authentifizierung (2FA)
+        </h3>
+
+        {% if requires_2fa %}
+        <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r mb-4">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-green-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <div class="ml-3">
+                    <p class="text-sm text-green-700 font-medium">
+                        2FA ist aktiviert
+                    </p>
+                    <p class="text-sm text-green-600 mt-1">
+                        Ihr Account ist durch Zwei-Faktor-Authentifizierung geschützt.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+                2FA verwalten
+            </button>
+            <button type="button" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+                Backup-Codes anzeigen
+            </button>
+        </div>
+        {% else %}
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r mb-4">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-yellow-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700 font-medium">
+                        2FA ist nicht aktiviert
+                    </p>
+                    <p class="text-sm text-yellow-600 mt-1">
+                        Schützen Sie Ihren Account mit Zwei-Faktor-Authentifizierung für zusätzliche Sicherheit.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+            2FA aktivieren
+        </button>
+        {% endif %}
+
+        <div class="mt-4 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700 font-medium">Was ist 2FA?</p>
+                    <p class="text-sm text-blue-600 mt-1">
+                        Die Zwei-Faktor-Authentifizierung fügt eine zusätzliche Sicherheitsebene hinzu. Neben Ihrem Passwort benötigen Sie einen zeitbasierten Code aus einer Authenticator-App (z.B. Google Authenticator, Authy).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aktive Sitzungen -->
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+            Aktive Sitzungen
+        </h3>
+        <p class="text-sm text-gray-500 mb-4">
+            Alle Geräte und Browser, auf denen Sie aktuell angemeldet sind.
+        </p>
+        <div class="space-y-3">
+            <!-- Current Session -->
+            <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">
+                                {{ request.META.HTTP_USER_AGENT|truncatewords:6|default:"Unbekannter Browser" }}
+                                <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                                    Aktuelle Sitzung
+                                </span>
+                            </div>
+                            <div class="text-sm text-gray-500 mt-1">
+                                IP: {{ request.META.REMOTE_ADDR|default:"127.0.0.1" }} • Angemeldet: {{ user.last_login|timesince }} her
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other Sessions Placeholder -->
+            <div class="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                <p class="text-sm text-gray-500">Keine weiteren aktiven Sitzungen</p>
+            </div>
+
+            <div class="pt-2">
+                <button type="button" class="text-sm text-red-600 hover:text-red-700 font-medium">
+                    Alle anderen Sitzungen beenden
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anmelde-Aktivitäten -->
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+            Letzte Anmelde-Aktivitäten
+        </h3>
+        <p class="text-sm text-gray-500 mb-4">
+            Überprüfen Sie verdächtige Anmeldeversuche oder unbekannte Zugriffe.
+        </p>
+
+        <div class="space-y-2">
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">Erfolgreiche Anmeldung</p>
+                        <p class="text-xs text-gray-500">{{ user.last_login|date:"d.m.Y H:i" }} Uhr • {{ request.META.REMOTE_ADDR }}</p>
+                    </div>
+                </div>
+                <span class="text-xs text-gray-400">Aktuell</span>
+            </div>
+
+            <!-- Placeholder für weitere Aktivitäten -->
+            <div class="text-center py-4">
+                <p class="text-sm text-gray-500">Keine weiteren Aktivitäten in den letzten 30 Tagen</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sicherheits-Empfehlungen -->
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+            Sicherheits-Empfehlungen
+        </h3>
+        <div class="space-y-3">
+            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                <div class="w-6 h-6 text-green-600 flex-shrink-0">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-900">Starkes Passwort</p>
+                    <p class="text-xs text-gray-500">Ihr Passwort erfüllt die Sicherheitsanforderungen</p>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                {% if requires_2fa %}
+                <div class="w-6 h-6 text-green-600 flex-shrink-0">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-900">2FA aktiviert</p>
+                    <p class="text-xs text-gray-500">Ihr Account ist durch 2FA geschützt</p>
+                </div>
+                {% else %}
+                <div class="w-6 h-6 text-yellow-600 flex-shrink-0">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-900">2FA nicht aktiviert</p>
+                    <p class="text-xs text-gray-500">Aktivieren Sie 2FA für zusätzliche Sicherheit</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                <div class="w-6 h-6 text-green-600 flex-shrink-0">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-900">E-Mail verifiziert</p>
+                    <p class="text-xs text-gray-500">{{ user.email }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

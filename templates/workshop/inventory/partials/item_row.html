@@ -1,0 +1,66 @@
+{% load static %}
+
+<tr id="item-row-{{ item.pk }}" class="hover:bg-gray-50 {% if item.has_discrepancy %}bg-red-50{% elif item.is_counted %}bg-green-50{% endif %}">
+    <td class="px-6 py-4">
+        <div class="text-sm font-medium text-gray-900">{{ item.item_name }}</div>
+        <div class="text-xs text-gray-500">{{ item.item_number }}</div>
+        {% if item.batch_number %}
+        <div class="text-xs text-gray-500">Charge: {{ item.batch_number }}</div>
+        {% endif %}
+        {% if item.expiry_date %}
+        <div class="text-xs text-gray-500">MHD: {{ item.expiry_date|date:"d.m.Y" }}</div>
+        {% endif %}
+        {% if item.is_btm %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
+            🔒 BTM
+        </span>
+        {% endif %}
+    </td>
+    <td class="px-6 py-4 text-sm text-gray-500">
+        {{ item.location.name }}
+    </td>
+    <td class="px-6 py-4 text-sm text-gray-900 font-medium">
+        {{ item.expected_quantity }}
+    </td>
+    <td class="px-6 py-4">
+        <input
+            type="number"
+            step="0.01"
+            min="0"
+            value="{% if item.is_counted %}{{ item.counted_quantity }}{% endif %}"
+            placeholder="0"
+            class="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 {% if error %}border-red-500{% endif %}"
+            hx-post="{% url 'workshop:inventory_item_update' item.pk %}"
+            hx-trigger="change, blur"
+            hx-target="#item-row-{{ item.pk }}"
+            hx-swap="outerHTML"
+            hx-include="[name='csrfmiddlewaretoken']"
+            name="counted_quantity"
+        >
+        {% if error %}
+        <div class="text-xs text-red-600 mt-1">{{ error }}</div>
+        {% endif %}
+    </td>
+    <td class="px-6 py-4">
+        {% if item.is_counted %}
+            {% with diff=item.get_discrepancy %}
+            <span class="text-sm font-medium {% if diff > 0 %}text-green-600{% elif diff < 0 %}text-red-600{% else %}text-gray-500{% endif %}">
+                {% if diff > 0 %}+{% endif %}{{ diff }}
+            </span>
+            {% endwith %}
+        {% else %}
+            <span class="text-sm text-gray-400">-</span>
+        {% endif %}
+    </td>
+    <td class="px-6 py-4">
+        {% if item.is_counted %}
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                ✓ Gezählt
+            </span>
+        {% else %}
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                ⏳ Ausstehend
+            </span>
+        {% endif %}
+    </td>
+</tr>

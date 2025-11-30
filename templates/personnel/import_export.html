@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Import / Export - Personal - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'personnel:dashboard' %}" class="text-gray-500 hover:text-gray-700">Personal</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Import / Export</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg shadow-lg p-8 mb-6 text-white">
+        <div class="flex items-start justify-between">
+            <div class="flex items-start gap-6">
+                <div class="flex-shrink-0">
+                    <div class="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <span class="text-5xl">📥</span>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h1 class="text-3xl font-bold mb-2">Import / Export</h1>
+                    <p class="text-gray-100 text-lg">
+                        Personal-Daten per Excel importieren oder exportieren
+                    </p>
+                </div>
+            </div>
+            <a href="{% url 'personnel:dashboard' %}" class="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-colors font-medium text-sm">
+                ← Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Export Section -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-bold text-gray-900">📤 Export</h2>
+        </div>
+        <div class="p-6">
+            <p class="text-gray-600 mb-4">
+                Exportieren Sie die aktuelle Personal-Liste als Excel-Datei für Archivierung oder externe Bearbeitung.
+            </p>
+            <div class="flex gap-3">
+                <a href="{% url 'personnel:export' %}?format=xlsx" class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    📊 Excel (.xlsx) exportieren
+                </a>
+                <a href="{% url 'personnel:export' %}?format=csv" class="inline-flex items-center px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                    📄 CSV exportieren
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Section -->
+    <div class="bg-white rounded-lg shadow" x-data="{ step: 1, file: null, validationResults: null }">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-bold text-gray-900">📥 Import</h2>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div :class="step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'" class="w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                        1
+                    </div>
+                    <span :class="step >= 1 ? 'text-gray-900 font-medium' : 'text-gray-500'">Datei hochladen</span>
+                </div>
+                <div class="flex-1 h-1 mx-4 bg-gray-200">
+                    <div :class="step >= 2 ? 'bg-blue-600' : 'bg-gray-200'" class="h-full transition-all duration-300" :style="'width: ' + (step >= 2 ? '100%' : '0%')"></div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div :class="step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'" class="w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                        2
+                    </div>
+                    <span :class="step >= 2 ? 'text-gray-900 font-medium' : 'text-gray-500'">Validierung</span>
+                </div>
+                <div class="flex-1 h-1 mx-4 bg-gray-200">
+                    <div :class="step >= 3 ? 'bg-blue-600' : 'bg-gray-200'" class="h-full transition-all duration-300" :style="'width: ' + (step >= 3 ? '100%' : '0%')"></div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div :class="step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'" class="w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                        3
+                    </div>
+                    <span :class="step >= 3 ? 'text-gray-900 font-medium' : 'text-gray-500'">Importieren</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Upload -->
+        <div x-show="step === 1" x-cloak class="p-6">
+            <div class="mb-6">
+                <h3 class="font-semibold text-gray-900 mb-3">Vorlage herunterladen</h3>
+                <p class="text-gray-600 mb-4">
+                    Laden Sie zuerst die Excel-Vorlage herunter, um sicherzustellen, dass Ihre Daten im richtigen Format vorliegen.
+                </p>
+                <a href="{% url 'personnel:import_template' %}" class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium text-sm">
+                    📥 Vorlage herunterladen (.xlsx)
+                </a>
+            </div>
+
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="font-semibold text-gray-900 mb-3">Datei hochladen</h3>
+                <p class="text-gray-600 mb-4">
+                    Laden Sie Ihre ausgefüllte Excel-Datei hoch. Unterstützte Formate: .xlsx, .xls, .csv
+                </p>
+
+                <form
+                    hx-post="{% url 'personnel:import_validate' %}"
+                    hx-encoding="multipart/form-data"
+                    hx-target="#validation-results"
+                    hx-swap="innerHTML"
+                    @htmx:after-request="if($event.detail.successful) { step = 2; }"
+                    class="space-y-4"
+                >
+                    {% csrf_token %}
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                        <input
+                            type="file"
+                            name="import_file"
+                            accept=".xlsx,.xls,.csv"
+                            required
+                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            @change="file = $event.target.files[0]"
+                        >
+                        <p class="mt-2 text-sm text-gray-500">
+                            oder Datei hier ablegen
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button
+                            type="submit"
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                        >
+                            Datei validieren →
+                        </button>
+                        <div class="htmx-indicator">
+                            <span class="text-gray-600">⏳ Validiere...</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Format Info -->
+            <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="font-semibold text-blue-900 mb-2">ℹ️ Erforderliche Spalten</h4>
+                <div class="grid grid-cols-2 gap-3 text-sm text-blue-800">
+                    <div>
+                        <strong>Pflichtfelder:</strong>
+                        <ul class="list-disc list-inside ml-2 mt-1">
+                            <li>Vorname</li>
+                            <li>Nachname</li>
+                            <li>Personalnummer</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong>Optionale Felder:</strong>
+                        <ul class="list-disc list-inside ml-2 mt-1">
+                            <li>E-Mail, Telefon, Mobil</li>
+                            <li>Straße, PLZ, Stadt</li>
+                            <li>Abteilung, Dienstgrad, Funktion</li>
+                            <li>Eintrittsdatum, Status</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Validation Results -->
+        <div x-show="step === 2" x-cloak class="p-6">
+            <div id="validation-results">
+                <!-- Results will be loaded here via HTMX -->
+            </div>
+        </div>
+
+        <!-- Step 3: Import Complete -->
+        <div x-show="step === 3" x-cloak class="p-6">
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">✅</div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Import erfolgreich!</h3>
+                <p class="text-gray-600 mb-6">Die Personal-Daten wurden erfolgreich importiert.</p>
+                <div class="flex items-center justify-center gap-3">
+                    <a href="{% url 'personnel:list' %}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        Zur Personal-Liste
+                    </a>
+                    <button @click="step = 1; validationResults = null" class="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+                        Neuer Import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import History -->
+    <div class="bg-white rounded-lg shadow mt-6">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-bold text-gray-900">📊 Import-Historie</h2>
+        </div>
+        <div class="divide-y divide-gray-100">
+            {% if import_history %}
+                {% for import_log in import_history %}
+                <div class="p-4 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-1">
+                                <span class="text-sm font-medium text-gray-900">{{ import_log.created_at|date:"d.m.Y H:i" }} Uhr</span>
+                                <span class="px-2 py-0.5 {% if import_log.status == 'success' %}bg-green-100 text-green-700{% elif import_log.status == 'error' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %} text-xs rounded-full font-semibold">
+                                    {{ import_log.get_status_display }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600">
+                                <strong>Datei:</strong> {{ import_log.filename }} |
+                                <strong>Benutzer:</strong> {{ import_log.created_by.get_full_name }} |
+                                <strong>Datensätze:</strong> {{ import_log.records_imported }} importiert, {{ import_log.records_failed }} fehlgeschlagen
+                            </p>
+                        </div>
+                        {% if import_log.error_log %}
+                        <button class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                            Fehler anzeigen
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="p-12 text-center">
+                <div class="text-4xl mb-4">📋</div>
+                <p class="text-gray-600">Noch keine Importe durchgeführt</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

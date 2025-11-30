@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Abteilung bearbeiten{% else %}Neue Abteilung{% endif %} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'organization:dashboard' %}" class="text-gray-500 hover:text-gray-700">Organisation</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'organization:department_list' %}" class="text-gray-500 hover:text-gray-700">Abteilungen</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{% if form.instance.pk %}Bearbeiten{% else %}Neu{% endif %}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="text-3xl">🏢</span>
+            <h1 class="text-2xl font-bold text-gray-900">
+                {% if form.instance.pk %}
+                Abteilung bearbeiten
+                {% else %}
+                Neue Abteilung anlegen
+                {% endif %}
+            </h1>
+        </div>
+        <p class="text-sm text-gray-500 ml-12">
+            {% if form.instance.pk %}
+            Bearbeiten Sie die Daten der Abteilung "{{ form.instance.name }}"
+            {% else %}
+            Legen Sie eine neue Abteilung an
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-lg shadow">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <!-- Error Messages -->
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600 text-xl mr-3">⚠️</span>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-medium text-red-900">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Name -->
+            <div>
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.name.label }} *
+                </label>
+                {{ form.name }}
+                {% if form.name.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.name.help_text }}</p>
+                {% endif %}
+                {% if form.name.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Abbreviation -->
+            <div>
+                <label for="{{ form.abbreviation.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.abbreviation.label }}
+                </label>
+                {{ form.abbreviation }}
+                {% if form.abbreviation.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.abbreviation.help_text }}</p>
+                {% endif %}
+                {% if form.abbreviation.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.abbreviation.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.description.label }}
+                </label>
+                {{ form.description }}
+                {% if form.description.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.description.help_text }}</p>
+                {% endif %}
+                {% if form.description.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Two Column Layout for Sort Order and Active Status -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Sort Order -->
+                <div>
+                    <label for="{{ form.sort_order.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                        {{ form.sort_order.label }}
+                    </label>
+                    {{ form.sort_order }}
+                    {% if form.sort_order.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.sort_order.help_text }}</p>
+                    {% endif %}
+                    {% if form.sort_order.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.sort_order.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Is Active -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-900 mb-2">
+                        {{ form.is_active.label }}
+                    </label>
+                    <div class="flex items-center mt-3">
+                        {{ form.is_active }}
+                        <label for="{{ form.is_active.id_for_label }}" class="ml-2 text-sm text-gray-700">
+                            Abteilung ist aktiv und kann ausgewählt werden
+                        </label>
+                    </div>
+                    {% if form.is_active.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Info Box -->
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-blue-600 text-xl mr-3">ℹ️</span>
+                    <div>
+                        <h3 class="text-sm font-medium text-blue-900">Hinweis</h3>
+                        <p class="mt-1 text-sm text-blue-700">
+                            Abteilungen werden in der Personalverwaltung für die organisatorische Zuordnung
+                            von Mitarbeitern verwendet (z.B. Einsatzabteilung, Technik, Verwaltung, Jugendfeuerwehr).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% url 'organization:department_list' %}" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    {% if form.instance.pk %}
+                    💾 Änderungen speichern
+                    {% else %}
+                    ➕ Abteilung anlegen
+                    {% endif %}
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Additional Info for Edit -->
+    {% if form.instance.pk %}
+    <div class="mt-6 bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">Zusätzliche Informationen</h3>
+        <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+                <dt class="font-medium text-gray-700">Erstellt am:</dt>
+                <dd class="text-gray-900">{{ form.instance.created_at|date:"d.m.Y H:i" }} Uhr</dd>
+            </div>
+            <div>
+                <dt class="font-medium text-gray-700">Zuletzt geändert:</dt>
+                <dd class="text-gray-900">{{ form.instance.updated_at|date:"d.m.Y H:i" }} Uhr</dd>
+            </div>
+        </dl>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

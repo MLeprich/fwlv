@@ -1,0 +1,175 @@
+<!-- Tab: Stammdaten -->
+<div x-show="activeTab === 'data'" x-cloak>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Persönliche Daten -->
+        <div class="space-y-4">
+            <h3 class="font-semibold text-gray-900 mb-3">Persönliche Daten</h3>
+
+            {% if person.date_of_birth %}
+            <div>
+                <p class="text-xs text-gray-500 mb-1">Geburtsdatum</p>
+                <p class="text-sm font-medium text-gray-900">{{ person.date_of_birth|date:"d.m.Y" }}</p>
+            </div>
+            {% endif %}
+
+            {% if person.email %}
+            <div>
+                <p class="text-xs text-gray-500 mb-1">E-Mail</p>
+                <p class="text-sm font-medium text-gray-900">
+                    <a href="mailto:{{ person.email }}" class="text-red-600 hover:text-red-700">{{ person.email }}</a>
+                </p>
+            </div>
+            {% endif %}
+
+            {% if person.phone %}
+            <div>
+                <p class="text-xs text-gray-500 mb-1">Telefon</p>
+                <p class="text-sm font-medium text-gray-900">{{ person.phone }}</p>
+            </div>
+            {% endif %}
+
+            {% if person.mobile %}
+            <div>
+                <p class="text-xs text-gray-500 mb-1">Mobil</p>
+                <p class="text-sm font-medium text-gray-900">{{ person.mobile }}</p>
+            </div>
+            {% endif %}
+
+            {% if person.get_address %}
+            <div>
+                <p class="text-xs text-gray-500 mb-1">Adresse</p>
+                <p class="text-sm font-medium text-gray-900">{{ person.get_address }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Organisatorische Daten -->
+        <div class="space-y-4">
+            <h3 class="font-semibold text-gray-900 mb-3">Organisatorische Daten</h3>
+
+            {% if person.entry_date %}
+            <div>
+                <p class="text-xs text-gray-500 mb-1">Eintrittsdatum</p>
+                <p class="text-sm font-medium text-gray-900">{{ person.entry_date|date:"d.m.Y" }}</p>
+            </div>
+            {% endif %}
+
+            {% if person.exit_date %}
+            <div>
+                <p class="text-xs text-gray-500 mb-1">Austrittsdatum</p>
+                <p class="text-sm font-medium text-gray-900">{{ person.exit_date|date:"d.m.Y" }}</p>
+            </div>
+            {% endif %}
+
+            {% if person.user %}
+            <div>
+                <p class="text-xs text-gray-500 mb-1">Benutzer-Account</p>
+                <p class="text-sm font-medium text-gray-900">
+                    <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                        🔗 {{ person.user.username }}
+                    </span>
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Organisationszugehörigkeit -->
+        <div class="md:col-span-2 mt-6">
+            <h3 class="font-semibold text-gray-900 mb-4">Feuerwehr-Organisationen</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Jugendfeuerwehr -->
+                {% if person.is_youth_fire_brigade %}
+                <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <div class="flex items-center mb-2">
+                        <span class="text-2xl mr-2">🧒</span>
+                        <h4 class="font-semibold text-gray-900">Jugendfeuerwehr</h4>
+                    </div>
+                    {% if person.youth_entry_date %}
+                    <p class="text-xs text-gray-600 mb-1">Eintritt: <span class="font-medium">{{ person.youth_entry_date|date:"d.m.Y" }}</span></p>
+                    {% endif %}
+                    {% if person.youth_exit_date %}
+                    <p class="text-xs text-gray-600">Austritt: <span class="font-medium">{{ person.youth_exit_date|date:"d.m.Y" }}</span></p>
+                    {% else %}
+                    <p class="text-xs text-green-600 font-semibold">✓ Aktuell aktiv</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Freiwillige Feuerwehr -->
+                {% if person.is_volunteer_fire_brigade %}
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-center mb-2">
+                        <span class="text-2xl mr-2">👨‍🚒</span>
+                        <h4 class="font-semibold text-gray-900">Freiwillige Feuerwehr</h4>
+                    </div>
+                    {% if person.volunteer_entry_date %}
+                    <p class="text-xs text-gray-600 mb-1">Eintritt: <span class="font-medium">{{ person.volunteer_entry_date|date:"d.m.Y" }}</span></p>
+                    {% endif %}
+                    {% if person.volunteer_unit %}
+                    <p class="text-xs text-gray-600 mb-1">Einheit: <span class="font-medium">{{ person.volunteer_unit }}</span></p>
+                    {% endif %}
+                    <p class="text-xs text-green-600 font-semibold">✓ Aktuell aktiv</p>
+                </div>
+                {% endif %}
+
+                <!-- Berufsfeuerwehr -->
+                {% if person.is_professional_fire_brigade %}
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="flex items-center mb-2">
+                        <span class="text-2xl mr-2">🚒</span>
+                        <h4 class="font-semibold text-gray-900">Berufsfeuerwehr</h4>
+                    </div>
+                    {% if person.professional_entry_date %}
+                    <p class="text-xs text-gray-600 mb-1">Eintritt: <span class="font-medium">{{ person.professional_entry_date|date:"d.m.Y" }}</span></p>
+                    {% endif %}
+                    {% if person.department %}
+                    <p class="text-xs text-gray-600 mb-1">Abteilung: <span class="font-medium">{{ person.department }}</span></p>
+                    {% endif %}
+                    <p class="text-xs text-green-600 font-semibold">✓ Aktuell aktiv</p>
+                </div>
+                {% endif %}
+
+                <!-- Vorherige Feuerwehr -->
+                {% if person.previous_fire_department %}
+                <div class="bg-gray-100 border border-gray-300 rounded-lg p-4">
+                    <div class="flex items-center mb-2">
+                        <span class="text-2xl mr-2">📋</span>
+                        <h4 class="font-semibold text-gray-900">Vorherige Feuerwehr</h4>
+                    </div>
+                    <p class="text-xs text-gray-600 mb-1">Feuerwehr: <span class="font-medium">{{ person.previous_fire_department }}</span></p>
+                    {% if person.previous_fire_department_entry_date %}
+                    <p class="text-xs text-gray-600 mb-1">Eintritt: <span class="font-medium">{{ person.previous_fire_department_entry_date|date:"d.m.Y" }}</span></p>
+                    {% endif %}
+                    {% if person.previous_fire_department_exit_date %}
+                    <p class="text-xs text-gray-600">Austritt: <span class="font-medium">{{ person.previous_fire_department_exit_date|date:"d.m.Y" }}</span></p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Dienstjahre -->
+            {% if person.get_service_start_date %}
+            <div class="mt-6 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="font-semibold text-gray-900 mb-1">⏱️ Gesamtdienstzeit</h4>
+                        <p class="text-xs text-gray-600">Seit {{ person.get_service_start_date|date:"d.m.Y" }}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-3xl font-bold text-red-600">{{ person.get_years_of_service }}</p>
+                        <p class="text-xs text-gray-600">Jahre</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if person.notes %}
+        <div class="md:col-span-2">
+            <p class="text-xs text-gray-500 mb-1">Notizen</p>
+            <div class="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg whitespace-pre-wrap">{{ person.notes }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>

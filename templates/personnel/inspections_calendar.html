@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Prüfungskalender - Personal - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'personnel:dashboard' %}" class="text-gray-500 hover:text-gray-700">Personal</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Prüfungskalender</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-orange-600 to-orange-800 rounded-lg shadow-lg p-8 mb-6 text-white">
+        <div class="flex items-start justify-between">
+            <div class="flex items-start gap-6">
+                <div class="flex-shrink-0">
+                    <div class="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <span class="text-5xl">📅</span>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h1 class="text-3xl font-bold mb-2">Prüfungskalender</h1>
+                    <p class="text-orange-100 text-lg">
+                        Fällige und anstehende Prüfungen, Qualifikations-Erneuerungen und Nachweise
+                    </p>
+                </div>
+            </div>
+            <a href="{% url 'personnel:dashboard' %}" class="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-colors font-medium text-sm">
+                ← Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Überfällig</p>
+            <p class="text-4xl font-bold text-gray-900">{{ stats.overdue }}</p>
+            <p class="text-sm text-red-600 mt-1">Sofortiger Handlungsbedarf</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Diese Woche</p>
+            <p class="text-4xl font-bold text-gray-900">{{ stats.this_week }}</p>
+            <p class="text-sm text-gray-600 mt-1">Nächste 7 Tage</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Diesen Monat</p>
+            <p class="text-4xl font-bold text-gray-900">{{ stats.this_month }}</p>
+            <p class="text-sm text-gray-600 mt-1">Nächste 30 Tage</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Dieses Quartal</p>
+            <p class="text-4xl font-bold text-gray-900">{{ stats.this_quarter }}</p>
+            <p class="text-sm text-gray-600 mt-1">Nächste 90 Tage</p>
+        </div>
+    </div>
+
+    <!-- Kalender-Navigation -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <button
+                        hx-get="?month={{ prev_month }}"
+                        hx-target="#calendar-content"
+                        class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                        ← Vorheriger Monat
+                    </button>
+                    <h2 class="text-2xl font-bold text-gray-900">{{ current_month_name }} {{ current_year }}</h2>
+                    <button
+                        hx-get="?month={{ next_month }}"
+                        hx-target="#calendar-content"
+                        class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                        Nächster Monat →
+                    </button>
+                </div>
+                <button class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-sm">
+                    Heute
+                </button>
+            </div>
+        </div>
+
+        <!-- Kalender (Monatsansicht) -->
+        <div id="calendar-content" class="p-6">
+            <div class="grid grid-cols-7 gap-2">
+                <!-- Wochentage Header -->
+                <div class="text-center font-semibold text-gray-700 py-2">Mo</div>
+                <div class="text-center font-semibold text-gray-700 py-2">Di</div>
+                <div class="text-center font-semibold text-gray-700 py-2">Mi</div>
+                <div class="text-center font-semibold text-gray-700 py-2">Do</div>
+                <div class="text-center font-semibold text-gray-700 py-2">Fr</div>
+                <div class="text-center font-semibold text-gray-700 py-2">Sa</div>
+                <div class="text-center font-semibold text-gray-700 py-2">So</div>
+
+                <!-- Kalender-Tage -->
+                {% for week in calendar_weeks %}
+                    {% for day in week %}
+                        <div class="min-h-[100px] border border-gray-200 rounded-lg p-2 {% if day.is_today %}bg-blue-50 border-blue-300{% elif not day.in_current_month %}bg-gray-50 text-gray-400{% else %}bg-white{% endif %}">
+                            <div class="text-sm font-semibold mb-1">{{ day.day }}</div>
+                            {% if day.inspections %}
+                                <div class="space-y-1">
+                                    {% for inspection in day.inspections %}
+                                        <div class="text-xs px-2 py-1 rounded {% if inspection.status == 'overdue' %}bg-red-100 text-red-700{% elif inspection.status == 'due_soon' %}bg-yellow-100 text-yellow-700{% else %}bg-green-100 text-green-700{% endif %} truncate" title="{{ inspection.person_name }} - {{ inspection.title }}">
+                                            {{ inspection.person_initials }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Anstehende Prüfungen (Liste) -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900">Anstehende Prüfungen ({{ upcoming_inspections|length }})</h3>
+        </div>
+        <div class="divide-y divide-gray-100">
+            {% for inspection in upcoming_inspections %}
+            <div class="p-4 hover:bg-gray-50 transition-colors">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="px-3 py-1 {% if inspection.status == 'overdue' %}bg-red-100 text-red-700{% elif inspection.status == 'due_soon' %}bg-yellow-100 text-yellow-700{% else %}bg-orange-100 text-orange-700{% endif %} text-xs font-semibold rounded-full">
+                                {% if inspection.status == 'overdue' %}🔴 Überfällig{% elif inspection.status == 'due_soon' %}🟡 Dringend{% else %}🟠 Anstehend{% endif %}
+                            </span>
+                            <span class="text-sm text-gray-500">{{ inspection.due_date|date:"d.m.Y" }} ({{ inspection.days_until }})</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-900 mb-1">{{ inspection.title }}</h4>
+                        <p class="text-sm text-gray-600">
+                            <strong>Person:</strong> <a href="{% url 'personnel:detail' inspection.person_id %}" class="text-orange-600 hover:text-orange-800">{{ inspection.person_name }}</a>
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            <strong>Letzte Prüfung:</strong> {{ inspection.last_date|date:"d.m.Y" }}
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors">
+                            ✓ Erledigt
+                        </button>
+                        <button class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition-colors">
+                            Verschieben
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-12 text-center">
+                <div class="text-6xl mb-4">✅</div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Alle Prüfungen aktuell</h3>
+                <p class="text-gray-600">Momentan stehen keine Prüfungen an.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

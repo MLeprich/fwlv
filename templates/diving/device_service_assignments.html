@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:inspection_due' %}" class="text-gray-500 hover:text-gray-700">Fällige Prüfungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+    <!-- Item Header -->
+    <div class="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">🔧 {{ title }}</h1>
+                <p class="mt-1 text-cyan-100">Wartungsarten und Prüfungsprotokolle</p>
+            </div>
+            <div class="text-right">
+                <p class="text-lg font-semibold">{{ item.name }}</p>
+                {% if item.serial_number %}
+                <p class="text-sm text-cyan-100">SN: {{ item.serial_number }}</p>
+                {% endif %}
+                <p class="text-xs text-cyan-100 mt-1">{{ item.get_item_type_display }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Service Type Button -->
+    {% if available_service_types %}
+    <div class="mb-6">
+        <a href="{% url 'diving:assign_service_type' item_pk=item.pk %}"
+           class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow">
+            ➕ Wartungsart hinzufügen
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Assigned Service Types -->
+    {% if assignments %}
+    <div class="space-y-6">
+        {% for assignment in assignments %}
+        <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+            <!-- Assignment Header -->
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            {{ assignment.service_type.name }}
+                        </h3>
+                        {% if assignment.service_type.description %}
+                        <p class="text-sm text-gray-600 mt-1">{{ assignment.service_type.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="text-right">
+                        {% if assignment.next_service_date %}
+                        <p class="text-sm text-gray-500">Nächste Wartung:</p>
+                        {% now "Y-m-d" as today %}
+                        {% if assignment.next_service_date|date:"Y-m-d" < today %}
+                        <p class="text-lg font-bold text-red-600">
+                            {{ assignment.next_service_date|date:"d.m.Y" }}
+                            <span class="text-xs">🚨 ÜBERFÄLLIG</span>
+                        </p>
+                        {% else %}
+                        <p class="text-lg font-bold text-gray-900">
+                            {{ assignment.next_service_date|date:"d.m.Y" }}
+                        </p>
+                        {% endif %}
+                        {% else %}
+                        <p class="text-sm text-gray-500">Noch nicht geplant</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Service Type Info -->
+                <div class="mt-4 flex flex-wrap gap-3 text-xs">
+                    {% if assignment.service_type.interval_months %}
+                    <div class="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                        📅 Intervall:
+                        {% if assignment.custom_interval_months %}
+                        {{ assignment.custom_interval_months }} Monate (angepasst)
+                        {% else %}
+                        {{ assignment.service_type.interval_months }} Monate
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% if assignment.service_type.requires_certification %}
+                    <div class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
+                        🎓 Zertifizierung erforderlich
+                    </div>
+                    {% endif %}
+                    {% if assignment.service_type.is_mandatory %}
+                    <div class="px-2 py-1 bg-red-100 text-red-700 rounded">
+                        ⚠️ Pflichtwartung
+                    </div>
+                    {% endif %}
+                    {% if assignment.last_service_date %}
+                    <div class="px-2 py-1 bg-green-100 text-green-700 rounded">
+                        ✅ Letzte: {{ assignment.last_service_date|date:"d.m.Y" }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <div class="p-6 bg-gradient-to-r from-green-50 to-emerald-50">
+                <a href="{% url 'diving:service_record_create' assignment_pk=assignment.pk %}"
+                   class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold shadow-lg">
+                    <span class="text-xl mr-2">✅</span>
+                    Wartung jetzt durchführen
+                </a>
+                <p class="mt-2 text-sm text-gray-600">
+                    Öffnet das Wartungsprotokoll mit der Checkliste aus der Wartungsart
+                </p>
+            </div>
+
+            <!-- Previous Records -->
+            {% if assignment.service_records.exists %}
+            <div class="p-6 border-t border-gray-200">
+                <h4 class="text-sm font-medium text-gray-700 mb-3">Bisherige Wartungsprotokolle:</h4>
+                <div class="space-y-2">
+                    {% for record in assignment.service_records.all|slice:":5" %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                            <span class="text-sm font-medium text-gray-900">
+                                {{ record.service_date|date:"d.m.Y" }}
+                            </span>
+                            <span class="ml-2 text-xs text-gray-500">
+                                von {{ record.technician.get_full_name }}
+                            </span>
+                        </div>
+                        <div>
+                            {% if record.result == 'completed' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                                ✅ Abgeschlossen
+                            </span>
+                            {% elif record.result == 'completed_with_remarks' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+                                ⚠️ Mit Anmerkungen
+                            </span>
+                            {% elif record.result == 'incomplete' %}
+                            <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                🔄 Unvollständig
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">
+                                ❌ Fehlgeschlagen
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- No Assignments -->
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-12 text-center">
+        <div class="text-6xl mb-4">📋</div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Wartungsarten zugewiesen</h3>
+        <p class="text-gray-600 mb-6">
+            Diesem Gerät sind noch keine Wartungsarten zugewiesen.
+            Weisen Sie zuerst eine Wartungsart zu, um Prüfungen mit Checklisten durchführen zu können.
+        </p>
+        {% if available_service_types %}
+        <a href="{% url 'diving:assign_service_type' item_pk=item.pk %}"
+           class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+            ➕ Erste Wartungsart hinzufügen
+        </a>
+        {% else %}
+        <p class="text-sm text-gray-500">
+            Erstellen Sie zuerst eine
+            <a href="{% url 'diving:service_type_create' %}" class="text-cyan-600 hover:text-cyan-700 font-medium">
+                Wartungsart
+            </a>
+        </p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Back Button -->
+    <div class="mt-6">
+        <a href="{% url 'diving:inspection_due' %}" class="text-gray-600 hover:text-gray-800 font-medium">
+            ← Zurück zu fälligen Prüfungen
+        </a>
+    </div>
+</div>
+{% endblock %}

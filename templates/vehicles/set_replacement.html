@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nachfolger festlegen - {{ object.call_sign }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:list' %}" class="text-gray-500 hover:text-gray-700">Fahrzeuge</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Nachfolger festlegen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-8">
+
+    <!-- Header mit Fahrzeug-Info -->
+    <div class="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg shadow-md p-6 mb-8 border-l-4 border-orange-500">
+        <div class="flex items-start gap-4">
+            <div class="text-5xl">⚠️</div>
+            <div class="flex-1">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">
+                    Nachfolger festlegen für Fahrzeug
+                </h1>
+                <div class="text-lg font-semibold text-orange-800 mb-2">
+                    {{ object.call_sign }}{% if object.name %} - {{ object.name }}{% endif %}
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-4 text-sm">
+                    {% if object.commissioning_date %}
+                    <div>
+                        <span class="text-gray-600">Indienststellung:</span>
+                        <span class="font-semibold text-gray-900">{{ object.commissioning_date|date:"d.m.Y" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if object.planned_retirement_date %}
+                    <div>
+                        <span class="text-gray-600">Geplante Außerdienststellung:</span>
+                        <span class="font-semibold text-orange-700">{{ object.planned_retirement_date|date:"d.m.Y" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if object.get_service_years %}
+                    <div>
+                        <span class="text-gray-600">Dienstjahre:</span>
+                        <span class="font-semibold text-gray-900">{{ object.get_service_years }} Jahre</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formular -->
+    <div class="bg-white rounded-lg shadow-md p-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-6">🔄 Nachfolgefahrzeug festlegen</h2>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600">❌</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Nachfolgefahrzeug -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    🚒 Nachfolgefahrzeug auswählen *
+                </label>
+                <select name="replacement_vehicle" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    <option value="">-- Nachfolgefahrzeug wählen --</option>
+                    {% for vehicle in available_vehicles %}
+                    <option value="{{ vehicle.pk }}" {% if form.replacement_vehicle.value == vehicle.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ vehicle.call_sign }}{% if vehicle.name %} - {{ vehicle.name }}{% endif %}
+                        {% if vehicle.manufacturer %} ({{ vehicle.manufacturer }}){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if form.replacement_vehicle.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.replacement_vehicle.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">
+                    Wählen Sie das Fahrzeug aus, das die Funktion übernimmt
+                </p>
+            </div>
+
+            <!-- Tatsächliche Außerdienststellung -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    📅 Tatsächliche Außerdienststellung
+                </label>
+                <input
+                    type="date"
+                    name="actual_retirement_date"
+                    value="{{ form.actual_retirement_date.value|default:'' }}"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                {% if form.actual_retirement_date.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.actual_retirement_date.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">
+                    Datum der tatsächlichen Außerdienststellung (optional - kann später gesetzt werden)
+                </p>
+            </div>
+
+            <!-- Grund der Außerdienststellung -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    📝 Grund der Außerdienststellung
+                </label>
+                <textarea
+                    name="retirement_reason"
+                    rows="4"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="z.B. Erreichen der maximalen Laufzeit, Wirtschaftlichkeit, technischer Zustand..."
+                >{{ form.retirement_reason.value|default:'' }}</textarea>
+                {% if form.retirement_reason.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.retirement_reason.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">
+                    Dokumentieren Sie den Grund für die Außerdienststellung
+                </p>
+            </div>
+
+            <!-- Info Box -->
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-blue-600">💡</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-blue-800">Hinweise</h3>
+                        <div class="mt-2 text-sm text-blue-700">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Das Nachfolgefahrzeug wird mit diesem Fahrzeug verknüpft</li>
+                                <li>Die Fahrzeughistorie bleibt erhalten und ist nachvollziehbar</li>
+                                <li>Das alte Fahrzeug kann später archiviert werden</li>
+                                <li>Sie können die Außerdienststellung auch zu einem späteren Zeitpunkt setzen</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% url 'vehicles:list' %}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium">
+                    🔄 Nachfolger festlegen
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Aktuelle Daten anzeigen wenn vorhanden -->
+    {% if object.replacement_vehicle %}
+    <div class="mt-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
+        <div class="flex">
+            <span class="text-green-600">✅</span>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-green-800">Nachfolger bereits festgelegt</h3>
+                <div class="mt-2 text-sm text-green-700">
+                    <p><strong>Nachfolgefahrzeug:</strong> {{ object.replacement_vehicle.call_sign }} - {{ object.replacement_vehicle.name }}</p>
+                    {% if object.actual_retirement_date %}
+                    <p class="mt-1"><strong>Außerdienststellung:</strong> {{ object.actual_retirement_date|date:"d.m.Y" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+    input[type="date"], select, textarea {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    input[type="date"]:focus, select:focus, textarea:focus {
+        outline: none;
+        ring: 2px;
+        ring-color: #F97316;
+        border-color: #F97316;
+    }
+
+    textarea {
+        min-height: 100px;
+        resize: vertical;
+        font-family: inherit;
+    }
+</style>
+{% endblock %}

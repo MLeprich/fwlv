@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Neue Lagerbewegung - Medical{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'medical:stock_movements' %}" class="text-gray-500 hover:text-gray-700">Lagerbewegungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Neue Bewegung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6" x-data="stockMovementForm()">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">📦 Neue Lagerbewegung erfassen</h1>
+
+        <form method="post" class="space-y-6" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600">❌</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Bewegungstyp -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Bewegungsart</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.movement_type.label }} *</label>
+                    <select
+                        name="{{ form.movement_type.name }}"
+                        id="{{ form.movement_type.id_for_label }}"
+                        @change="movementType = $event.target.value"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        required
+                    >
+                        <option value="">-- Bewegungsart auswählen --</option>
+                        {% for value, label in form.fields.movement_type.choices %}
+                        {% if value %}
+                        <option value="{{ value }}" {% if form.movement_type.value == value or request.GET.type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                    {% if form.movement_type.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.movement_type.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-sm text-gray-500">
+                        💡 <strong>Wareneingang:</strong> Neue Lieferung<br>
+                        💡 <strong>Warenausgang:</strong> Verbrauch/Entnahme<br>
+                        💡 <strong>Umlagerung:</strong> Zwischen Lagerorten<br>
+                        💡 <strong>Entsorgung:</strong> Verfallene/Beschädigte Artikel
+                    </p>
+                </div>
+            </div>
+
+            <!-- Artikel & Menge -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Artikel & Menge</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Artikel mit Suche -->
+                    <div class="md:col-span-2" x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                        items = Array.from(document.querySelectorAll('#{{ form.item.id_for_label }} option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(item => item.value);
+                        const currentValue = document.getElementById('{{ form.item.id_for_label }}').value;
+                        if (currentValue) {
+                            selected = items.find(item => item.value === currentValue);
+                        }
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.item.label }} *</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            <select
+                                name="{{ form.item.name }}"
+                                id="{{ form.item.id_for_label }}"
+                                @change="loadBatches($event.target.value)"
+                                required
+                            >
+                                <option value="">-- Artikel auswählen --</option>
+                                {% for item in form.fields.item.queryset %}
+                                <option value="{{ item.pk }}" {% if form.item.value == item.pk|stringformat:"s" %}selected{% endif %}>
+                                    {{ item.name }} {% if item.is_btm %}(BTM){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Artikel auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Artikel suchen (Name, PZN, Wirkstoff)..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="item in items.filter(i => i.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = item; document.getElementById('{{ form.item.id_for_label }}').value = item.value; document.getElementById('{{ form.item.id_for_label }}').dispatchEvent(new Event('change')); open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === item.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="item.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="mt-1 text-sm text-gray-500">💡 Tipp: Beginnen Sie mit der Eingabe, um nach Name, PZN oder Wirkstoff zu filtern</p>
+                        {% if form.item.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.item.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.quantity.label }} *</label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.quantity.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.unit.label }} *</label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.unit.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chargen-Information -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Chargen-Information</h2>
+
+                <!-- Charge auswählen (wenn Artikel ausgewählt) -->
+                <div class="mb-4" x-show="selectedItem && batches.length > 0">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Vorhandene Charge auswählen</label>
+                    <select
+                        @change="selectBatch($event.target.value)"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">-- Neue Charge oder wählen --</option>
+                        <template x-for="batch in batches" :key="batch.id">
+                            <option :value="batch.id" x-text="`${batch.batch_number} (${batch.location_name}) - Ablauf: ${batch.expiry_date} - Bestand: ${batch.quantity} ${batch.unit}`"></option>
+                        </template>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-500">💡 Wählen Sie eine vorhandene Charge oder geben Sie manuell eine neue ein</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.batch_number.label }}</label>
+                        {{ form.batch_number }}
+                        <p class="mt-1 text-sm text-gray-500">Chargen-/Batch-/Lot-Nummer</p>
+                        {% if form.batch_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.batch_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.expiry_date.label }}</label>
+                        {{ form.expiry_date }}
+                        <p class="mt-1 text-sm text-gray-500" x-show="selectedBatch">
+                            ✓ Automatisch von Charge übernommen
+                        </p>
+                        {% if form.expiry_date.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.expiry_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lagerorte -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Lagerorte</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Ziellagerort mit Suche -->
+                    <div x-data="{ open: false, search: '', selected: null, locations: [] }" x-init="
+                        locations = Array.from(document.querySelectorAll('#{{ form.to_location.id_for_label }} option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(loc => loc.value);
+                        const currentValue = document.getElementById('{{ form.to_location.id_for_label }}').value;
+                        if (currentValue) {
+                            selected = locations.find(loc => loc.value === currentValue);
+                        }
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.to_location.label }}</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.to_location }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Ziellagerort auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Lagerort suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="loc in locations.filter(l => l.text.toLowerCase().includes(search.toLowerCase()))" :key="loc.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = loc; document.getElementById('{{ form.to_location.id_for_label }}').value = loc.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === loc.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="loc.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="mt-1 text-sm text-gray-500">Erforderlich bei Wareneingang</p>
+                        {% if form.to_location.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.to_location.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Quelllagerort mit Suche -->
+                    <div x-data="{ open: false, search: '', selected: null, locations: [] }" x-init="
+                        locations = Array.from(document.querySelectorAll('#{{ form.from_location.id_for_label }} option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(loc => loc.value);
+                        const currentValue = document.getElementById('{{ form.from_location.id_for_label }}').value;
+                        if (currentValue) {
+                            selected = locations.find(loc => loc.value === currentValue);
+                        }
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.from_location.label }}</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.from_location }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Quelllagerort auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Lagerort suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="loc in locations.filter(l => l.text.toLowerCase().includes(search.toLowerCase()))" :key="loc.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = loc; document.getElementById('{{ form.from_location.id_for_label }}').value = loc.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === loc.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="loc.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="mt-1 text-sm text-gray-500">Erforderlich bei Warenausgang</p>
+                        {% if form.from_location.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.from_location.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referenz & Notizen -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Zusatzinformationen</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.reference_number.label }}</label>
+                        {{ form.reference_number }}
+                        {% if form.reference_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.reference_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'medical:stock_movements' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ✅ Lagerbewegung erfassen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function stockMovementForm() {
+    return {
+        movementType: '{{ request.GET.type|default:"" }}',
+        selectedItem: null,
+        selectedBatch: null,
+        batches: [],
+
+        async loadBatches(itemId) {
+            if (!itemId) {
+                this.batches = [];
+                this.selectedItem = null;
+                this.selectedBatch = null;
+                return;
+            }
+
+            this.selectedItem = itemId;
+
+            try {
+                const response = await fetch(`/medical/items/${itemId}/batches-json/`);
+                if (response.ok) {
+                    this.batches = await response.json();
+                } else {
+                    this.batches = [];
+                }
+            } catch (error) {
+                console.error('Error loading batches:', error);
+                this.batches = [];
+            }
+        },
+
+        selectBatch(batchId) {
+            if (!batchId) {
+                this.selectedBatch = null;
+                return;
+            }
+
+            const batch = this.batches.find(b => b.id == batchId);
+            if (batch) {
+                this.selectedBatch = batch;
+
+                // Setze Chargennummer
+                const batchNumberInput = document.getElementById('id_batch_number');
+                if (batchNumberInput) {
+                    batchNumberInput.value = batch.batch_number;
+                }
+
+                // Setze Verfallsdatum
+                const expiryDateInput = document.getElementById('id_expiry_date');
+                if (expiryDateInput) {
+                    expiryDateInput.value = batch.expiry_date;
+                }
+
+                // Setze from_location für Umlagerung/Ausgang
+                const fromLocationSelect = document.getElementById('id_from_location');
+                if (fromLocationSelect && batch.location_id) {
+                    fromLocationSelect.value = batch.location_id;
+                }
+            }
+        }
+    };
+}
+</script>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
+{% endblock %}

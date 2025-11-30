@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ item.name }} - Ausrüstung - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'core:dashboard' %}" class="text-gray-700 hover:text-primary-600">
+                    🏠 Dashboard
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <a href="{% url 'equipment:dashboard' %}" class="ml-1 text-gray-700 hover:text-primary-600">
+                        🛠️ Ausrüstung
+                    </a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <a href="{% url 'equipment:equipment_list' %}" class="ml-1 text-gray-700 hover:text-primary-600">
+                        Geräte
+                    </a>
+                </div>
+            </li>
+            <li aria-current="page">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="ml-1 text-gray-500 font-medium">{{ item.name }}</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Header with Actions -->
+    <div class="mb-8 flex items-start justify-between">
+        <div class="flex-1">
+            <div class="flex items-center gap-3 mb-3">
+                <h1 class="text-3xl font-bold text-gray-900">{{ item.name }}</h1>
+
+                <!-- Status Badge -->
+                {% if item.retired %}
+                    {% include 'includes/components/badge.html' with text="Ausgemustert" color="gray" %}
+                {% elif item.equipment_status == 'operational' %}
+                    {% include 'includes/components/badge.html' with text="Einsatzbereit" color="success" %}
+                {% elif item.equipment_status == 'maintenance' %}
+                    {% include 'includes/components/badge.html' with text="In Wartung" color="warning" %}
+                {% elif item.equipment_status == 'defective' %}
+                    {% include 'includes/components/badge.html' with text="Defekt" color="danger" %}
+                {% elif item.equipment_status == 'testing' %}
+                    {% include 'includes/components/badge.html' with text="In Prüfung" color="info" %}
+                {% elif item.equipment_status == 'decommissioned' %}
+                    {% include 'includes/components/badge.html' with text="Ausgemustert" color="gray" %}
+                {% endif %}
+
+                <!-- Maintenance/Inspection Warnings -->
+                {% if item.is_maintenance_due %}
+                    {% include 'includes/components/badge.html' with text="Wartung überfällig" color="danger" icon="⚠️" %}
+                {% endif %}
+                {% if item.is_inspection_due %}
+                    {% include 'includes/components/badge.html' with text="Prüfung überfällig" color="danger" icon="⚠️" %}
+                {% endif %}
+            </div>
+
+            <div class="flex items-center gap-6 text-sm text-gray-600">
+                <span>📦 {{ item.item_number }}</span>
+                {% if item.serial_number %}
+                <span>🔢 SN: {{ item.serial_number }}</span>
+                {% endif %}
+                {% if item.equipment_type %}
+                <span>🏷️ {{ item.get_equipment_type_display }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-3">
+            {% if item.requires_maintenance %}
+            <button
+                hx-get="{% url 'equipment:maintenance_modal' item.pk %}"
+                hx-target="#modal-container"
+                class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium">
+                🔧 Wartung eintragen
+            </button>
+            {% endif %}
+
+            {% if item.requires_inspection %}
+            <button
+                hx-get="{% url 'equipment:inspection_modal' item.pk %}"
+                hx-target="#modal-container"
+                class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium">
+                🔍 Prüfung eintragen
+            </button>
+            {% endif %}
+
+            <a href="{% url 'equipment:equipment_update' item.pk %}"
+               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                ✏️ Bearbeiten
+            </a>
+
+            <button
+                hx-delete="{% url 'equipment:equipment_delete' item.pk %}"
+                hx-confirm="Möchten Sie dieses Gerät wirklich löschen?"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                🗑️ Löschen
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left Column: Main Info -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Basic Information -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Grundinformationen</h2>
+                </div>
+                <div class="p-6">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Gerätetyp</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.get_equipment_type_display }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Kategorie</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.category.name|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Hersteller</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.manufacturer|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Modell</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.model|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Baujahr</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.model_year|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Seriennummer</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.serial_number|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Stromversorgung</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.get_power_source_display }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Gewicht</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.weight_kg|default:"-" }} kg</dd>
+                        </div>
+                        {% if item.dimensions %}
+                        <div class="md:col-span-2">
+                            <dt class="text-sm font-medium text-gray-500">Abmessungen</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.dimensions }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.description %}
+                        <div class="md:col-span-2">
+                            <dt class="text-sm font-medium text-gray-500">Beschreibung</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.description }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Location & Assignment -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Standort & Zuordnung</h2>
+                </div>
+                <div class="p-6">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% if item.assigned_vehicle %}
+                        <div class="md:col-span-2">
+                            <dt class="text-sm font-medium text-gray-500 mb-2">Zugeordnet zu Fahrzeug</dt>
+                            <dd class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                                <span class="text-2xl">🚒</span>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">{{ item.assigned_vehicle.name }}</div>
+                                    <div class="text-xs text-gray-600">{{ item.assigned_vehicle.license_plate }}</div>
+                                </div>
+                            </dd>
+                        </div>
+                        {% else %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Standort</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.location.name|default:"-" }}</dd>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Lagerplatz</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.storage_location|default:"-" }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Maintenance & Inspection -->
+            {% if item.requires_maintenance or item.requires_inspection %}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Wartung & Prüfung</h2>
+                </div>
+                <div class="p-6 space-y-6">
+                    {% if item.requires_maintenance %}
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">Wartung</h3>
+                        <dl class="grid grid-cols-2 gap-4">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Intervall</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ item.maintenance_interval_months|default:"-" }} Monate</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Letzte Wartung</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ item.last_maintenance_date|date:"d.m.Y"|default:"-" }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Nächste Wartung</dt>
+                                <dd class="mt-1 text-sm">
+                                    {% if item.next_maintenance_date %}
+                                        <span class="{% if item.is_maintenance_due %}text-red-600 font-medium{% else %}text-gray-900{% endif %}">
+                                            {{ item.next_maintenance_date|date:"d.m.Y" }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-gray-400">-</span>
+                                    {% endif %}
+                                </dd>
+                            </div>
+                        </dl>
+                        {% if item.maintenance_notes %}
+                        <div class="mt-4">
+                            <dt class="text-sm font-medium text-gray-500">Notizen</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.maintenance_notes }}</dd>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if item.requires_inspection %}
+                    <div class="pt-6 border-t border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">Prüfung (UVV/TÜV)</h3>
+                        <dl class="grid grid-cols-2 gap-4">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Intervall</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ item.inspection_interval_months|default:"-" }} Monate</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Letzte Prüfung</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ item.last_inspection_date|date:"d.m.Y"|default:"-" }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Nächste Prüfung</dt>
+                                <dd class="mt-1 text-sm">
+                                    {% if item.next_inspection_date %}
+                                        <span class="{% if item.is_inspection_due %}text-red-600 font-medium{% else %}text-gray-900{% endif %}">
+                                            {{ item.next_inspection_date|date:"d.m.Y" }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-gray-400">-</span>
+                                    {% endif %}
+                                </dd>
+                            </div>
+                        </dl>
+                        {% if item.inspection_notes %}
+                        <div class="mt-4">
+                            <dt class="text-sm font-medium text-gray-500">Notizen</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.inspection_notes }}</dd>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Operating Hours & Lifecycle -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Betriebsstunden & Lebensdauer</h2>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-4">
+                        {% if item.max_operating_hours %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500 mb-2">Betriebsstunden</dt>
+                            <dd>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm text-gray-900">{{ item.current_operating_hours }} / {{ item.max_operating_hours }} h</span>
+                                    <span class="text-sm text-gray-500">
+                                        {% widthratio item.current_operating_hours item.max_operating_hours 100 as progress %}
+                                        {{ progress }}%
+                                    </span>
+                                </div>
+                                <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="h-full
+                                        {% if progress >= 90 %}bg-red-500
+                                        {% elif progress >= 75 %}bg-yellow-500
+                                        {% else %}bg-green-500{% endif %}"
+                                        style="width: {{ progress }}%">
+                                    </div>
+                                </div>
+                            </dd>
+                        </div>
+                        {% endif %}
+
+                        {% if item.max_usage_years %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Max. Nutzungsdauer</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.max_usage_years }} Jahre</dd>
+                        </div>
+                        {% endif %}
+
+                        {% if item.replacement_due_date %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Austausch fällig</dt>
+                            <dd class="mt-1 text-sm">
+                                <span class="{% if item.is_replacement_due %}text-red-600 font-medium{% else %}text-gray-900{% endif %}">
+                                    {{ item.replacement_due_date|date:"d.m.Y" }}
+                                </span>
+                            </dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Stock Movements History -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">Lagerbewegungen</h2>
+                    <button
+                        hx-get="{% url 'equipment:stock_movement_modal' item.pk %}"
+                        hx-target="#modal-container"
+                        class="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                        + Bewegung erfassen
+                    </button>
+                </div>
+                <div class="divide-y divide-gray-200">
+                    {% for movement in item.stock_movements.all|slice:":5" %}
+                    <div class="px-6 py-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start gap-3">
+                                <div class="mt-1">
+                                    {% if movement.movement_type == 'incoming' %}
+                                        <span class="text-2xl">📥</span>
+                                    {% elif movement.movement_type == 'outgoing' %}
+                                        <span class="text-2xl">📤</span>
+                                    {% elif movement.movement_type == 'return' %}
+                                        <span class="text-2xl">↩️</span>
+                                    {% elif movement.movement_type == 'damage' %}
+                                        <span class="text-2xl">⚠️</span>
+                                    {% elif movement.movement_type == 'disposal' %}
+                                        <span class="text-2xl">🗑️</span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ movement.get_movement_type_display }}
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        {{ movement.movement_date|date:"d.m.Y H:i" }} Uhr
+                                    </div>
+                                    {% if movement.vehicle %}
+                                    <div class="text-sm text-gray-500 mt-1">
+                                        🚒 {{ movement.vehicle.name }}
+                                    </div>
+                                    {% endif %}
+                                    {% if movement.person %}
+                                    <div class="text-sm text-gray-500">
+                                        👤 {{ movement.person.get_full_name }}
+                                    </div>
+                                    {% endif %}
+                                    {% if movement.notes %}
+                                    <div class="text-sm text-gray-600 mt-1">
+                                        {{ movement.notes }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ movement.quantity }} {{ movement.unit }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="px-6 py-8 text-center text-sm text-gray-500">
+                        Noch keine Lagerbewegungen erfasst
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Sidebar -->
+        <div class="space-y-6">
+
+            <!-- Certification Info -->
+            {% if item.requires_certification %}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Zertifizierung</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Status</dt>
+                            <dd class="mt-1">
+                                {% if item.certification_status == 'valid' %}
+                                    {% include 'includes/components/badge.html' with text="Gültig" color="success" %}
+                                {% elif item.certification_status == 'expiring_soon' %}
+                                    {% include 'includes/components/badge.html' with text="Läuft bald ab" color="warning" %}
+                                {% elif item.certification_status == 'expired' %}
+                                    {% include 'includes/components/badge.html' with text="Abgelaufen" color="danger" %}
+                                {% else %}
+                                    {% include 'includes/components/badge.html' with text="Nicht erforderlich" color="gray" %}
+                                {% endif %}
+                            </dd>
+                        </div>
+                        {% if item.certification_number %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Zertifizierungsnummer</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.certification_number }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.certification_expires %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Gültig bis</dt>
+                            <dd class="mt-1 text-sm">
+                                <span class="{% if item.is_certification_expired %}text-red-600 font-medium{% else %}text-gray-900{% endif %}">
+                                    {{ item.certification_expires|date:"d.m.Y" }}
+                                </span>
+                            </dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- QR Code -->
+            {% if item.has_qr_code %}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">QR-Code</h3>
+                </div>
+                <div class="p-6 text-center">
+                    <div class="inline-block p-4 bg-white border-2 border-gray-200 rounded-lg">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ item.qr_code_data|urlencode }}"
+                             alt="QR Code"
+                             class="w-36 h-36">
+                    </div>
+                    <div class="mt-3 text-xs text-gray-500 font-mono">
+                        {{ item.qr_code_data }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Stock Info -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Bestand</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Aktueller Bestand</dt>
+                            <dd class="mt-1 text-2xl font-bold text-gray-900">
+                                {{ item.quantity }} {{ item.unit }}
+                            </dd>
+                        </div>
+                        {% if item.threshold_warning %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Warnschwelle</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.threshold_warning }} {{ item.unit }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.threshold_critical %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Kritische Schwelle</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.threshold_critical }} {{ item.unit }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Metadata -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Metadaten</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3 text-sm">
+                        <div>
+                            <dt class="font-medium text-gray-500">Erstellt am</dt>
+                            <dd class="mt-1 text-gray-900">{{ item.created_at|date:"d.m.Y H:i" }} Uhr</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-500">Erstellt von</dt>
+                            <dd class="mt-1 text-gray-900">{{ item.created_by.get_full_name }}</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-500">Zuletzt geändert</dt>
+                            <dd class="mt-1 text-gray-900">{{ item.updated_at|date:"d.m.Y H:i" }} Uhr</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-500">Geändert von</dt>
+                            <dd class="mt-1 text-gray-900">{{ item.updated_by.get_full_name }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal Container -->
+<div id="modal-container"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Keyboard Shortcut: E für Bearbeiten
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'e' && !e.ctrlKey && !e.metaKey) {
+            const activeElement = document.activeElement;
+            if (activeElement.tagName !== 'INPUT' && activeElement.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                window.location.href = '{% url "equipment:equipment_update" item.pk %}';
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Hersteller löschen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'vehicles:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugverwaltung</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'vehicles:manufacturer_list' %}" class="text-gray-500 hover:text-gray-700">Hersteller</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Löschen</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-8">
+
+    <div class="bg-white rounded-lg shadow-md p-8">
+        <div class="text-center mb-6">
+            <div class="text-5xl mb-4">⚠️</div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Hersteller löschen?</h1>
+            <p class="text-gray-600">
+                Möchten Sie den Hersteller "{{ object.name }}" wirklich löschen?
+            </p>
+        </div>
+
+        {% if object.vehicles.count > 0 %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p class="text-sm text-red-800">
+                <strong>Warnung:</strong> Diesem Hersteller sind {{ object.vehicles.count }} Fahrzeug(e) zugeordnet.
+                Diese Zuordnung wird beim Löschen entfernt.
+            </p>
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex items-center justify-center gap-4 mt-6">
+                <a href="{% url 'vehicles:manufacturer_list' %}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+                    🗑️ Endgültig löschen
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lagerbewegungen - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Lagerbewegungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">📦 Lagerbewegungen</h1>
+                    <p class="mt-1 text-sm text-gray-600">Alle Ein- und Ausgänge, Gasfüllungen, Tauchgänge und Wartungen</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'diving:item_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                        ← Zurück zur Ausrüstung
+                    </a>
+                    <a href="{% url 'diving:movement_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                        ➕ Neue Bewegung
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="p-6 border-b border-gray-200 bg-gray-50">
+            <form method="get" class="flex items-center gap-4 flex-wrap">
+                <div class="flex-1 min-w-[200px]">
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request.GET.search }}"
+                        placeholder="Suche nach Ausrüstung, Referenz..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                </div>
+                <select name="type" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle Bewegungsarten</option>
+                    <option value="incoming" {% if request.GET.type == 'incoming' %}selected{% endif %}>📥 Wareneingang</option>
+                    <option value="outgoing" {% if request.GET.type == 'outgoing' %}selected{% endif %}>📤 Warenausgang</option>
+                    <option value="transfer" {% if request.GET.type == 'transfer' %}selected{% endif %}>🔄 Umlagerung</option>
+                    <option value="disposal" {% if request.GET.type == 'disposal' %}selected{% endif %}>🗑️ Entsorgung</option>
+                    <option value="return" {% if request.GET.type == 'return' %}selected{% endif %}>↩️ Rückgabe</option>
+                </select>
+                <select name="gas_filled" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle (Gas gefüllt/leer)</option>
+                    <option value="yes" {% if request.GET.gas_filled == 'yes' %}selected{% endif %}>💨 Gas gefüllt</option>
+                    <option value="no" {% if request.GET.gas_filled == 'no' %}selected{% endif %}>⭕ Leer</option>
+                </select>
+                <select name="service" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle (mit/ohne Service)</option>
+                    <option value="yes" {% if request.GET.service == 'yes' %}selected{% endif %}>🔧 Mit Wartung</option>
+                </select>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    🔍 Filtern
+                </button>
+                {% if request.GET.search or request.GET.type or request.GET.gas_filled or request.GET.service %}
+                <a href="{% url 'diving:movement_list' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm">
+                    ✖ Zurücksetzen
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Movements List -->
+        <div class="overflow-x-auto">
+            {% if movements %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ausrüstung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Menge</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Von → Nach</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Eigenschaften</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Erstellt von</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for movement in movements %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ movement.movement_date|date:"d.m.Y" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if movement.movement_type == 'incoming' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">📥 Eingang</span>
+                            {% elif movement.movement_type == 'outgoing' %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">📤 Ausgang</span>
+                            {% elif movement.movement_type == 'transfer' %}
+                            <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-semibold">🔄 Umlagerung</span>
+                            {% elif movement.movement_type == 'disposal' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">🗑️ Entsorgung</span>
+                            {% elif movement.movement_type == 'return' %}
+                            <span class="px-2 py-1 bg-teal-100 text-teal-700 text-xs rounded-full font-semibold">↩️ Rückgabe</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">{{ movement.get_movement_type_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <a href="{% url 'diving:item_detail' movement.item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                {{ movement.item.name }}
+                            </a>
+                            <p class="text-xs text-gray-500">{{ movement.item.get_item_type_display }}</p>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ movement.quantity }} {{ movement.item.unit }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            {% if movement.from_location %}
+                            {{ movement.from_location.name }}
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                            <span class="text-gray-400 mx-1">→</span>
+                            {% if movement.to_location %}
+                            {{ movement.to_location.name }}
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <div class="flex items-center gap-1 flex-wrap">
+                                {% if movement.gas_filled %}
+                                <span class="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full font-semibold">
+                                    💨 {{ movement.get_gas_type_display }}
+                                </span>
+                                {% endif %}
+                                {% if movement.service_performed %}
+                                <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">🔧 Service</span>
+                                {% endif %}
+                                {% if movement.dive_date %}
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">🤿 Tauchgang</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ movement.created_by.get_full_name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="{% url 'diving:movement_detail' movement.pk %}" class="text-blue-600 hover:text-blue-900">
+                                Details →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Zeige
+                            <span class="font-medium">{{ page_obj.start_index }}</span>
+                            bis
+                            <span class="font-medium">{{ page_obj.end_index }}</span>
+                            von
+                            <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                            Bewegungen
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                            {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                ←
+                            </a>
+                            {% endif %}
+                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                                Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                            </span>
+                            {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                →
+                            </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">📦</div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Lagerbewegungen gefunden</h3>
+                <p class="text-gray-600 mb-6">Es sind noch keine Bewegungen erfasst oder Ihre Filter ergaben keine Treffer.</p>
+                <a href="{% url 'diving:movement_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Erste Bewegung erfassen
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

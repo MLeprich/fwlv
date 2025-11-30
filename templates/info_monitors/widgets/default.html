@@ -1,0 +1,29 @@
+<!-- Default Widget Template -->
+<div class="h-full flex flex-col items-center justify-center p-6 bg-gray-50">
+    <div class="text-center">
+        <div class="text-6xl mb-4">📦</div>
+
+        {% if widget.title %}
+        <h3 class="text-xl font-bold text-gray-900 mb-2">{{ widget.title }}</h3>
+        {% endif %}
+
+        <p class="text-sm text-gray-600 mb-4">{{ widget.get_widget_type_display }}</p>
+
+        {% if widget.description %}
+        <p class="text-sm text-gray-700 mb-4">{{ widget.description }}</p>
+        {% endif %}
+
+        <div class="mt-6 p-4 bg-white rounded-lg border border-gray-200 text-left max-w-md">
+            <h4 class="font-semibold text-sm text-gray-700 mb-2">Konfiguration:</h4>
+            {% if widget.config %}
+                <pre class="text-xs text-gray-600 overflow-auto">{{ widget.config|truncatechars:200 }}</pre>
+            {% else %}
+                <p class="text-xs text-gray-500 italic">Noch keine Konfiguration vorhanden</p>
+            {% endif %}
+        </div>
+
+        <p class="text-xs text-gray-400 mt-4">
+            Widget-ID: {{ widget.id }}
+        </p>
+    </div>
+</div>

@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lagerbewegung - Höhenrettung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'height_rescue:dashboard' %}" class="text-gray-500 hover:text-gray-700">Höhenrettung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'height_rescue:movement_list' %}" class="text-gray-500 hover:text-gray-700">Lagerbewegungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Details</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-6">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <span class="text-5xl">📦</span>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Lagerbewegung</h1>
+                    <p class="text-gray-600">{{ movement.movement_date|date:"d.m.Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'height_rescue:movement_list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors">
+                ← Zurück
+            </a>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    {% if movement.fall_arrested %}
+    <div class="bg-red-50 border-l-4 border-red-500 rounded-lg shadow p-6 mb-6">
+        <div class="flex items-start gap-3">
+            <span class="text-3xl">⚠️</span>
+            <div>
+                <h3 class="text-lg font-bold text-red-900 mb-2">STURZ AUFGEFANGEN!</h3>
+                <p class="text-red-800">Diese Ausrüstung hat einen Sturz aufgefangen und muss ausgemustert werden!</p>
+                {% if movement.fall_height_m %}
+                <p class="text-red-700 mt-1">Fallhöhe: {{ movement.fall_height_m }} m</p>
+                {% endif %}
+                {% if movement.fall_description %}
+                <p class="text-red-700 mt-2">{{ movement.fall_description }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Basis-Informationen -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">📋 Basis-Informationen</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500">Bewegungstyp</p>
+                        <p class="font-medium text-gray-900">
+                            {% if movement.movement_type == 'incoming' %}
+                            📥 Wareneingang
+                            {% elif movement.movement_type == 'outgoing' %}
+                            📤 Warenausgang
+                            {% elif movement.movement_type == 'transfer' %}
+                            🔄 Umlagerung
+                            {% elif movement.movement_type == 'disposal' %}
+                            🗑️ Entsorgung
+                            {% elif movement.movement_type == 'return' %}
+                            ↩️ Rückgabe
+                            {% else %}
+                            {{ movement.get_movement_type_display }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Datum</p>
+                        <p class="font-medium text-gray-900">{{ movement.movement_date|date:"d.m.Y H:i" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Ausrüstung</p>
+                        <p class="font-medium text-blue-600">
+                            <a href="{% url 'height_rescue:item_detail' movement.item.pk %}" class="hover:underline">
+                                {{ movement.item.name }}
+                            </a>
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Menge</p>
+                        <p class="font-medium text-gray-900">{{ movement.quantity }} {{ movement.item.unit }}</p>
+                    </div>
+                    {% if movement.reference_number %}
+                    <div class="col-span-2">
+                        <p class="text-sm text-gray-500">Referenznummer</p>
+                        <p class="font-medium text-gray-900">{{ movement.reference_number }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Lagerorte -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">📍 Lagerorte</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500">Von</p>
+                        <p class="font-medium text-gray-900">
+                            {% if movement.from_location %}
+                            {{ movement.from_location.name }}
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Nach</p>
+                        <p class="font-medium text-gray-900">
+                            {% if movement.to_location %}
+                            {{ movement.to_location.name }}
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Einsatz-Dokumentation -->
+            {% if movement.mission_date or movement.mission_type %}
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">🚒 Einsatz-Dokumentation</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    {% if movement.mission_date %}
+                    <div>
+                        <p class="text-sm text-gray-500">Einsatzdatum</p>
+                        <p class="font-medium text-gray-900">{{ movement.mission_date|date:"d.m.Y" }}</p>
+                    </div>
+                    {% endif %}
+                    {% if movement.mission_type %}
+                    <div>
+                        <p class="text-sm text-gray-500">Einsatzart</p>
+                        <p class="font-medium text-gray-900">{{ movement.mission_type }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Prüfung -->
+            {% if movement.inspection_performed %}
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">🔍 Prüfung</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500">Prüfung durchgeführt</p>
+                        <p class="font-medium {% if movement.inspection_passed %}text-green-600{% else %}text-red-600{% endif %}">
+                            {% if movement.inspection_passed %}✅ Bestanden{% else %}❌ Nicht bestanden{% endif %}
+                        </p>
+                    </div>
+                    {% if movement.inspector %}
+                    <div>
+                        <p class="text-sm text-gray-500">Prüfer</p>
+                        <p class="font-medium text-gray-900">{{ movement.inspector.get_full_name }}</p>
+                    </div>
+                    {% endif %}
+                    {% if movement.inspection_notes %}
+                    <div class="col-span-2">
+                        <p class="text-sm text-gray-500">Prüfnotizen</p>
+                        <p class="font-medium text-gray-900">{{ movement.inspection_notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Zustandsdokumentation -->
+            {% if movement.condition_before or movement.condition_after %}
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">📝 Zustandsdokumentation</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% if movement.condition_before %}
+                    <div>
+                        <p class="text-sm text-gray-500">Zustand vorher</p>
+                        <p class="font-medium text-gray-900">{{ movement.condition_before }}</p>
+                    </div>
+                    {% endif %}
+                    {% if movement.condition_after %}
+                    <div>
+                        <p class="text-sm text-gray-500">Zustand nachher</p>
+                        <p class="font-medium text-gray-900">{{ movement.condition_after }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notizen -->
+            {% if movement.notes %}
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">📝 Notizen</h2>
+                <p class="text-gray-900">{{ movement.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="space-y-6">
+            <!-- Meta-Informationen -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <h3 class="font-bold text-gray-900 mb-4">ℹ️ Meta-Informationen</h3>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm text-gray-500">Erstellt von</p>
+                        <p class="font-medium text-gray-900">{{ movement.created_by.get_full_name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Erstellt am</p>
+                        <p class="font-medium text-gray-900">{{ movement.created_at|date:"d.m.Y H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ausrüstung Info -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h3 class="font-bold text-blue-900 mb-3">🧗 Ausrüstung</h3>
+                <p class="text-sm text-blue-800 mb-2">{{ movement.item.name }}</p>
+                <p class="text-xs text-blue-700">{{ movement.item.get_item_type_display }}</p>
+                <a href="{% url 'height_rescue:item_detail' movement.item.pk %}" class="text-blue-600 hover:underline text-sm mt-2 inline-block">
+                    Details anzeigen →
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}BTM-Bereich - Rettungsdienst - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">BTM-Bereich</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- BTM-Warning-Header -->
+<div class="bg-red-900 text-white px-6 py-4 border-b border-red-950">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <span class="text-3xl">☢️</span>
+            <div>
+                <h1 class="text-xl font-bold">Betäubungsmittel-Bereich</h1>
+                <p class="text-red-100 text-sm">Alle Aktionen werden protokolliert • Vier-Augen-Prinzip aktiv</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right">
+                <p class="text-xs text-red-200">Session-Zeit verbleibend</p>
+                <p class="text-lg font-mono font-bold">14:58</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Context Actions Bar -->
+<div class="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'medical:btm_approvals' %}" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                ⏳ Ausstehende Freigaben
+                {% if pending_btm_approvals > 0 %}
+                <span class="ml-2 px-2 py-0.5 bg-white text-red-600 rounded-full text-xs font-bold">{{ pending_btm_approvals }}</span>
+                {% endif %}
+            </a>
+            <a href="#" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                📊 BTM-Buch
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-600">
+            <p class="text-gray-500 text-sm font-medium mb-1">BTM-Artikel</p>
+            <p class="text-3xl font-bold text-gray-900">{{ items|length }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Ausstehende Freigaben</p>
+            <p class="text-3xl font-bold text-gray-900">{{ pending_approvals_count|default:0 }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Bewegungen heute</p>
+            <p class="text-3xl font-bold text-gray-900">0</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Kontrollen fällig</p>
+            <p class="text-3xl font-bold text-gray-900">0</p>
+        </div>
+    </div>
+
+    <!-- BTM-Artikel Liste -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 bg-red-600 border-b border-red-700">
+            <h2 class="text-lg font-bold text-white">BTM-Artikel Übersicht</h2>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Name
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Wirkstoff
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Bestand
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Lagerort
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Letzte Entnahme
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Status
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Aktionen
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in items %}
+                    <tr class="hover:bg-red-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">☢️</span>
+                                <div>
+                                    <a href="{% url 'medical:item_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-red-600">
+                                        {{ item.name }}
+                                    </a>
+                                    <p class="text-xs text-gray-500">{{ item.item_number }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            {{ item.active_ingredient|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm">
+                                <span class="font-semibold text-gray-900">{{ item.quantity }}</span>
+                                <span class="text-gray-600">{{ item.unit }}</span>
+                            </div>
+                            {% if item.min_quantity %}
+                            <div class="text-xs text-gray-500">Min: {{ item.min_quantity }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            {{ item.location.name|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            -
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if item.is_out_of_stock %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                Leer
+                            </span>
+                            {% elif item.is_low_stock %}
+                            <span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-semibold">
+                                Niedrig
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                OK
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="{% url 'medical:item_detail' item.pk %}" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                Details →
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            <div class="text-4xl mb-4">☢️</div>
+                            <p class="text-lg font-medium text-gray-900 mb-2">Keine BTM-Artikel vorhanden</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

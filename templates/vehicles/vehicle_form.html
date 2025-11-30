@@ -1,0 +1,446 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Fahrzeug bearbeiten{% else %}Neues Fahrzeug{% endif %} - Fahrzeugverwaltung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:list' %}" class="text-gray-500 hover:text-gray-700">Fahrzeuge</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neues Fahrzeug{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">
+            {% if object %}
+                Fahrzeug bearbeiten: {{ object.call_sign }}
+            {% else %}
+                Neues Fahrzeug anlegen
+            {% endif %}
+        </h1>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600">❌</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🚒 Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.call_sign.label }}</label>
+                        {{ form.call_sign }}
+                        {% if form.call_sign.errors %}<p class="mt-1 text-sm text-red-600">{{ form.call_sign.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. Florian Musterstadt 1/44-1</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. Löschgruppenfahrzeug LF 20</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.vehicle_type.label }} *</label>
+                        {{ form.vehicle_type }}
+                        {% if form.vehicle_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.vehicle_type.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.license_plate.label }} *</label>
+                        {{ form.license_plate }}
+                        {% if form.license_plate.errors %}<p class="mt-1 text-sm text-red-600">{{ form.license_plate.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. FFW-MS 1234</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.status.label }} *</label>
+                        {{ form.status }}
+                        {% if form.status.errors %}<p class="mt-1 text-sm text-red-600">{{ form.status.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="flex items-center">
+                        <label class="flex items-center cursor-pointer">
+                            {{ form.is_active }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.is_active.label }}</span>
+                        </label>
+                        {% if form.is_active.errors %}<p class="mt-1 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}<p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fahrzeugdaten -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔧 Fahrzeugdaten</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.manufacturer.label }}</label>
+                        {{ form.manufacturer }}
+                        {% if form.manufacturer.errors %}<p class="mt-1 text-sm text-red-600">{{ form.manufacturer.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">
+                            Wählen Sie einen Hersteller aus der Liste. <a href="{% url 'organization:supplier_create' %}" target="_blank" class="text-blue-600 hover:text-blue-800 underline">Neuen Hersteller anlegen</a>
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.model.label }}</label>
+                        {{ form.model }}
+                        {% if form.model.errors %}<p class="mt-1 text-sm text-red-600">{{ form.model.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">
+                            Wählen Sie ein Modell aus der Liste. <a href="{% url 'vehicles:model_create' %}" target="_blank" class="text-blue-600 hover:text-blue-800 underline">Neues Modell anlegen</a>
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.year_of_manufacture.label }}</label>
+                        {{ form.year_of_manufacture }}
+                        {% if form.year_of_manufacture.errors %}<p class="mt-1 text-sm text-red-600">{{ form.year_of_manufacture.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.fuel_type.label }}</label>
+                        {{ form.fuel_type }}
+                        {% if form.fuel_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.fuel_type.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.vin.label }}</label>
+                        {{ form.vin }}
+                        {% if form.vin.errors %}<p class="mt-1 text-sm text-red-600">{{ form.vin.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Fahrzeug-Identifikationsnummer (FIN)</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.engine_number.label }}</label>
+                        {{ form.engine_number }}
+                        {% if form.engine_number.errors %}<p class="mt-1 text-sm text-red-600">{{ form.engine_number.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.current_mileage.label }}</label>
+                        {{ form.current_mileage }}
+                        {% if form.current_mileage.errors %}<p class="mt-1 text-sm text-red-600">{{ form.current_mileage.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Kilometerstand in km</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.engine_hours.label }}</label>
+                        {{ form.engine_hours }}
+                        {% if form.engine_hours.errors %}<p class="mt-1 text-sm text-red-600">{{ form.engine_hours.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Betriebsstunden</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Standort & Zuständigkeit -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📍 Standort & Zuständigkeit</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.home_location.label }}</label>
+                        {{ form.home_location }}
+                        {% if form.home_location.errors %}<p class="mt-1 text-sm text-red-600">{{ form.home_location.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Heimatstandort des Fahrzeugs</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.responsible_person.label }}</label>
+                        {{ form.responsible_person }}
+                        {% if form.responsible_person.errors %}<p class="mt-1 text-sm text-red-600">{{ form.responsible_person.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Fahrzeugwart/Verantwortlicher</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prüfungen & Versicherung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔍 Prüfungen & Versicherung</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.next_inspection_date.label }}</label>
+                        {{ form.next_inspection_date }}
+                        {% if form.next_inspection_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.next_inspection_date.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">HU/TÜV-Termin</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.next_safety_check_date.label }}</label>
+                        {{ form.next_safety_check_date }}
+                        {% if form.next_safety_check_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.next_safety_check_date.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">UVV-Prüfung</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.insurance_policy_number.label }}</label>
+                        {{ form.insurance_policy_number }}
+                        {% if form.insurance_policy_number.errors %}<p class="mt-1 text-sm text-red-600">{{ form.insurance_policy_number.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.insurance_expires.label }}</label>
+                        {{ form.insurance_expires }}
+                        {% if form.insurance_expires.errors %}<p class="mt-1 text-sm text-red-600">{{ form.insurance_expires.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-purple-50 border-l-4 border-purple-400 p-4 rounded-r-lg">
+                    <div class="flex">
+                        <span class="text-purple-600">💡</span>
+                        <div class="ml-3">
+                            <p class="text-sm text-purple-800">
+                                <strong>Hinweis:</strong> Detaillierte Prüfungen können nach Anlage des Fahrzeugs über die <a href="{% url 'vehicles:inspection_list' %}" class="underline font-semibold hover:text-purple-900">Prüfungsverwaltung</a> erfasst werden.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobiles Lager -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📦 Mobiles Lager</h2>
+                <div class="space-y-4">
+                    <div class="flex items-start">
+                        <label class="flex items-center cursor-pointer">
+                            {{ form.is_mobile_storage }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">{{ form.is_mobile_storage.label }}</span>
+                        </label>
+                        {% if form.is_mobile_storage.errors %}<p class="mt-1 text-sm text-red-600">{{ form.is_mobile_storage.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    {% if form.mobile_storage_location %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.mobile_storage_location.label }}</label>
+                        {{ form.mobile_storage_location }}
+                        {% if form.mobile_storage_location.errors %}<p class="mt-1 text-sm text-red-600">{{ form.mobile_storage_location.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Verknüpfung zum Lagerort-Eintrag</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                        <div class="flex">
+                            <span class="text-blue-600">💡</span>
+                            <div class="ml-3">
+                                <p class="text-sm text-blue-800">
+                                    <strong>Hinweis:</strong> Bei mobilen Lagern können Inventargegenstände direkt dem Fahrzeug zugeordnet werden. Dies ermöglicht eine vollständige Bestandsverwaltung inkl. Beladungsplänen.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Foto-Upload -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📸 Fahrzeugfoto</h2>
+                <div class="space-y-4">
+                    {% if object.photo %}
+                    <div class="mb-3">
+                        <p class="text-sm font-medium text-gray-700 mb-2">Aktuelles Foto:</p>
+                        <img src="{{ object.photo.url }}" alt="{{ object.name }}" class="w-64 h-64 object-cover rounded-lg border border-gray-200">
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.photo.label }}</label>
+                        {{ form.photo }}
+                        {% if form.photo.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.photo.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.photo.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.photo.help_text }}</p>
+                        {% endif %}
+
+                        <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-600">💡</span>
+                                <div class="text-xs text-blue-800">
+                                    <p class="font-semibold mb-1">Unterstützte Formate:</p>
+                                    <ul class="list-disc list-inside space-y-0.5">
+                                        <li>JPEG/JPG (.jpg, .jpeg)</li>
+                                        <li>PNG (.png)</li>
+                                        <li>Maximale Größe: 5 MB</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dokumente -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📄 Fahrzeugdokumente</h2>
+                <div class="space-y-4">
+                    {% if object.vehicle_documents %}
+                    <div class="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-600">📄</span>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-green-900">Aktuelles Dokument:</p>
+                                <a href="{{ object.vehicle_documents.url }}" target="_blank" class="text-sm text-green-700 hover:text-green-800 underline">
+                                    {{ object.vehicle_documents.name }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.vehicle_documents.label }}</label>
+                        {{ form.vehicle_documents }}
+                        {% if form.vehicle_documents.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.vehicle_documents.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.vehicle_documents.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.vehicle_documents.help_text }}</p>
+                        {% endif %}
+
+                        <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-600">💡</span>
+                                <div class="text-xs text-blue-800">
+                                    <p class="font-semibold mb-1">Dokumente können sein:</p>
+                                    <ul class="list-disc list-inside space-y-0.5">
+                                        <li>Fahrzeugschein / Zulassungsbescheinigung Teil I</li>
+                                        <li>Fahrzeugbrief / Zulassungsbescheinigung Teil II</li>
+                                        <li>Betriebsanleitung</li>
+                                        <li>Wartungs- und Prüfnachweise</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lifecycle Management -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔄 Lifecycle Management</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.commissioning_date.label }}</label>
+                        {{ form.commissioning_date }}
+                        {% if form.commissioning_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.commissioning_date.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Datum der Indienststellung</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.planned_retirement_date.label }}</label>
+                        {{ form.planned_retirement_date }}
+                        {% if form.planned_retirement_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.planned_retirement_date.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Geplante Außerdienststellung</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.actual_retirement_date.label }}</label>
+                        {{ form.actual_retirement_date }}
+                        {% if form.actual_retirement_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.actual_retirement_date.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Tatsächliche Außerdienststellung</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.replacement_vehicle.label }}</label>
+                        {{ form.replacement_vehicle }}
+                        {% if form.replacement_vehicle.errors %}<p class="mt-1 text-sm text-red-600">{{ form.replacement_vehicle.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Nachfolgefahrzeug</p>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.retirement_reason.label }}</label>
+                        {{ form.retirement_reason }}
+                        {% if form.retirement_reason.errors %}<p class="mt-1 text-sm text-red-600">{{ form.retirement_reason.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Grund der Außerdienststellung</p>
+                    </div>
+                </div>
+
+                {% if object and object.commissioning_date %}
+                <div class="mt-4 bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
+                    <div class="flex">
+                        <span class="text-green-600">📊</span>
+                        <div class="ml-3">
+                            <p class="text-sm text-green-800">
+                                <strong>Dienstjahre:</strong> {{ object.get_service_years }} Jahre
+                                {% if object.is_retired %}(Außer Dienst){% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Notizen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📝 Notizen</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>{% endif %}
+                    <p class="mt-1 text-xs text-gray-500">Zusätzliche Informationen zum Fahrzeug</p>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% if object %}{% url 'vehicles:detail' object.pk %}{% else %}{% url 'vehicles:list' %}{% endif %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    {% if object %}💾 Änderungen speichern{% else %}✅ Fahrzeug erstellen{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    input[type="text"], input[type="number"], input[type="date"], input[type="file"], select, textarea {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+    }
+    input[type="checkbox"] {
+        width: auto;
+        margin-right: 0.5rem;
+    }
+    input:focus, select:focus, textarea:focus {
+        outline: none;
+        ring: 2px;
+        ring-color: #3b82f6;
+    }
+    textarea {
+        min-height: 100px;
+        font-family: inherit;
+    }
+</style>
+{% endblock %}

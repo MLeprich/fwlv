@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Scan-Interface - {{ check.title }} - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="scanInterface()">
+
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ check.title }}</h1>
+                <p class="mt-1 text-sm text-gray-600">{{ check.check_number }}</p>
+            </div>
+
+            <!-- Progress Circle -->
+            <div class="text-center">
+                <div class="text-3xl font-bold text-primary-600">
+                    {% widthratio check.counted_items check.total_items 100 as progress %}
+                    {{ progress|default:0 }}%
+                </div>
+                <div class="text-xs text-gray-500">{{ check.counted_items }} / {{ check.total_items }}</div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+            {% widthratio check.counted_items check.total_items 100 as progress %}
+            <div class="h-full bg-primary-600 transition-all duration-300" style="width: {{ progress|default:0 }}%"></div>
+        </div>
+    </div>
+
+    <!-- Scanner Card -->
+    <div class="bg-white border-2 border-primary-500 rounded-lg shadow-lg overflow-hidden mb-6">
+        <div class="px-6 py-4 bg-primary-50 border-b border-primary-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Barcode/QR-Code Scanner</h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-600">Modus:</span>
+                    <select x-model="scanMode" class="text-sm border-gray-300 rounded">
+                        <option value="camera">📷 Kamera</option>
+                        <option value="manual">⌨️ Manuell</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <!-- Camera Scanner -->
+            <div x-show="scanMode === 'camera'" class="space-y-4">
+                <div class="relative">
+                    <video id="scanner-video" class="w-full rounded-lg bg-black" autoplay playsinline></video>
+                    <canvas id="scanner-canvas" class="hidden"></canvas>
+
+                    <!-- Scanner Overlay -->
+                    <div class="absolute inset-0 pointer-events-none">
+                        <div class="absolute inset-0 border-4 border-primary-500 rounded-lg"></div>
+                        <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-primary-500 animate-pulse"></div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button @click="startCamera()"
+                            class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                        📷 Kamera starten
+                    </button>
+                    <button @click="stopCamera()"
+                            class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                        ⏹️ Stoppen
+                    </button>
+                </div>
+            </div>
+
+            <!-- Manual Input -->
+            <div x-show="scanMode === 'manual'" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Code manuell eingeben oder scannen
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text"
+                               x-model="manualCode"
+                               @keyup.enter="processCode(manualCode)"
+                               placeholder="Artikelnummer, Barcode, QR-Code..."
+                               class="flex-1 px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                               autofocus>
+                        <button @click="processCode(manualCode)"
+                                class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+                            ✓
+                        </button>
+                    </div>
+                </div>
+
+                <div class="text-sm text-gray-500">
+                    💡 Tipp: Verwenden Sie einen Barcode-Scanner für schnellere Eingabe
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Last Scanned Item -->
+    <div x-show="lastScannedItem" class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Zuletzt gescannt</h3>
+        </div>
+        <div class="p-6">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h4 class="text-lg font-medium text-gray-900" x-text="lastScannedItem?.name"></h4>
+                    <p class="text-sm text-gray-600 mt-1" x-text="lastScannedItem?.item_number"></p>
+
+                    <div class="mt-4 grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Systembestand</label>
+                            <div class="text-2xl font-bold text-gray-900" x-text="lastScannedItem?.system_quantity"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gezählte Menge</label>
+                            <input type="number"
+                                   x-model="countedQuantity"
+                                   class="w-full px-3 py-2 text-xl font-bold border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                                   min="0">
+                        </div>
+                    </div>
+
+                    <!-- Discrepancy Warning -->
+                    <div x-show="hasDiscrepancy()" class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div class="flex items-start gap-2">
+                            <span class="text-yellow-600">⚠️</span>
+                            <div>
+                                <p class="text-sm font-medium text-yellow-800">Abweichung festgestellt</p>
+                                <p class="text-sm text-yellow-700 mt-1">
+                                    Differenz: <span x-text="getDiscrepancy()" class="font-bold"></span> Einheiten
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Grund für Abweichung</label>
+                            <select x-model="discrepancyReason" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                <option value="">Bitte wählen...</option>
+                                <option value="surplus">Überschuss</option>
+                                <option value="shortage">Fehlbestand</option>
+                                <option value="damaged">Beschädigt</option>
+                                <option value="expired">Abgelaufen</option>
+                                <option value="mislabeled">Falsch gekennzeichnet</option>
+                                <option value="mislocated">Falsch eingelagert</option>
+                            </select>
+                        </div>
+
+                        <div class="mt-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notizen</label>
+                            <textarea x-model="discrepancyNotes"
+                                      rows="2"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                      placeholder="Zusätzliche Informationen zur Abweichung..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item Photo -->
+                <div x-show="lastScannedItem?.photo" class="ml-4">
+                    <img :src="lastScannedItem?.photo"
+                         alt="Item photo"
+                         class="w-32 h-32 rounded-lg object-cover">
+                </div>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+                <button @click="saveCount()"
+                        class="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-lg">
+                    ✓ Zählung speichern
+                </button>
+                <button @click="skipItem()"
+                        class="px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-medium">
+                    ⏭️ Überspringen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Counts -->
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Letzte Zählungen</h3>
+        </div>
+        <div class="divide-y divide-gray-200">
+            <template x-for="(count, index) in recentCounts" :key="index">
+                <div class="px-6 py-3 flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-medium text-gray-900" x-text="count.name"></div>
+                        <div class="text-sm text-gray-500" x-text="count.item_number"></div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-medium text-gray-900">
+                            <span x-text="count.counted_quantity"></span> / <span x-text="count.system_quantity"></span>
+                        </div>
+                        <div x-show="count.has_discrepancy" class="text-xs text-red-600">
+                            Abweichung
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="recentCounts.length === 0">
+                <div class="px-6 py-8 text-center text-sm text-gray-500">
+                    Noch keine Zählungen erfasst
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <a href="{% url 'inventory_check:check_detail' check.pk %}"
+               class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
+                ← Zurück zur Inventur
+            </a>
+
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-gray-600">
+                    <span class="font-medium" x-text="recentCounts.length"></span> Artikel gezählt
+                </div>
+                <button @click="completeCheck()"
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                    ✓ Zählung abschließen
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function scanInterface() {
+    return {
+        scanMode: 'manual',
+        manualCode: '',
+        lastScannedItem: null,
+        countedQuantity: 0,
+        discrepancyReason: '',
+        discrepancyNotes: '',
+        recentCounts: [],
+        stream: null,
+        scannerActive: false,
+
+        async processCode(code) {
+            if (!code) return;
+
+            // Fetch item details from backend
+            try {
+                const response = await fetch(`/api/inventory-check/{{ check.pk }}/lookup/${code}/`);
+                const data = await response.json();
+
+                if (data.item) {
+                    this.lastScannedItem = data.item;
+                    this.countedQuantity = data.item.system_quantity;
+                    this.discrepancyReason = '';
+                    this.discrepancyNotes = '';
+
+                    // Play success sound
+                    this.playSound('success');
+
+                    // Focus on quantity input
+                    setTimeout(() => {
+                        document.querySelector('input[type="number"]')?.focus();
+                    }, 100);
+                } else {
+                    alert('Artikel nicht gefunden!');
+                    this.playSound('error');
+                }
+
+                this.manualCode = '';
+            } catch (error) {
+                console.error('Error fetching item:', error);
+                alert('Fehler beim Laden des Artikels');
+                this.playSound('error');
+            }
+        },
+
+        hasDiscrepancy() {
+            if (!this.lastScannedItem) return false;
+            return this.countedQuantity !== this.lastScannedItem.system_quantity;
+        },
+
+        getDiscrepancy() {
+            if (!this.lastScannedItem) return 0;
+            return this.countedQuantity - this.lastScannedItem.system_quantity;
+        },
+
+        async saveCount() {
+            if (!this.lastScannedItem) return;
+
+            const countData = {
+                item_id: this.lastScannedItem.id,
+                counted_quantity: this.countedQuantity,
+                system_quantity: this.lastScannedItem.system_quantity,
+                has_discrepancy: this.hasDiscrepancy(),
+                discrepancy_reason: this.discrepancyReason,
+                discrepancy_notes: this.discrepancyNotes
+            };
+
+            try {
+                const response = await fetch('/api/inventory-check/{{ check.pk }}/count/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(countData)
+                });
+
+                if (response.ok) {
+                    // Add to recent counts
+                    this.recentCounts.unshift({
+                        ...this.lastScannedItem,
+                        ...countData
+                    });
+
+                    // Keep only last 10
+                    if (this.recentCounts.length > 10) {
+                        this.recentCounts.pop();
+                    }
+
+                    this.playSound('success');
+                    this.lastScannedItem = null;
+                    this.manualCode = '';
+
+                    // Reload page to update progress
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    alert('Fehler beim Speichern der Zählung');
+                    this.playSound('error');
+                }
+            } catch (error) {
+                console.error('Error saving count:', error);
+                alert('Fehler beim Speichern');
+                this.playSound('error');
+            }
+        },
+
+        skipItem() {
+            this.lastScannedItem = null;
+            this.manualCode = '';
+        },
+
+        async startCamera() {
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                const video = document.getElementById('scanner-video');
+                video.srcObject = this.stream;
+                this.scannerActive = true;
+
+                // Start scanning loop
+                this.scanLoop();
+            } catch (error) {
+                alert('Kamera-Zugriff nicht möglich: ' + error.message);
+            }
+        },
+
+        stopCamera() {
+            if (this.stream) {
+                this.stream.getTracks().forEach(track => track.stop());
+                this.stream = null;
+                this.scannerActive = false;
+            }
+        },
+
+        scanLoop() {
+            if (!this.scannerActive) return;
+
+            // TODO: Implement actual barcode/QR scanning with library like QuaggaJS or ZXing
+            // For now, this is a placeholder
+
+            requestAnimationFrame(() => this.scanLoop());
+        },
+
+        completeCheck() {
+            if (confirm('Zählung wirklich abschließen? Sie können danach nicht mehr scannen.')) {
+                window.location.href = '/inventory-check/{{ check.pk }}/complete/';
+            }
+        },
+
+        playSound(type) {
+            // Play audio feedback
+            const audio = new Audio(type === 'success' ? '/static/sounds/beep.mp3' : '/static/sounds/error.mp3');
+            audio.play().catch(() => {}); // Ignore if sounds not available
+        }
+    }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // F2 to switch scan mode
+    if (e.key === 'F2') {
+        e.preventDefault();
+        const scanMode = document.querySelector('select[x-model="scanMode"]');
+        scanMode.value = scanMode.value === 'camera' ? 'manual' : 'camera';
+        scanMode.dispatchEvent(new Event('change'));
+    }
+
+    // ESC to skip item
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        document.querySelector('[\\@click="skipItem()"]')?.click();
+    }
+});
+</script>
+{% endblock %}

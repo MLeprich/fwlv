@@ -1,0 +1,570 @@
+{% extends 'base.html' %}
+{% load static math_filters %}
+
+{% block title %}{{ item.item_number }} - {{ item.name }} - Magazin - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'magazine:dashboard' %}" class="text-gray-500 hover:text-gray-700">Magazin</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'magazine:item_list' %}" class="text-gray-500 hover:text-gray-700">Artikel</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{{ item.item_number }}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-6">
+
+    <!-- Header with Actions -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                    <h1 class="text-2xl font-bold text-gray-900">{{ item.name }}</h1>
+                    {% if item.is_hazardous %}
+                    <span class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-semibold">
+                        ☢️ Gefahrgut
+                    </span>
+                    {% endif %}
+                    {% if item.quantity == 0 %}
+                    <span class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-semibold">
+                        ❌ Nicht verfügbar
+                    </span>
+                    {% elif item.is_reorder_needed %}
+                    <span class="px-3 py-1 bg-amber-100 text-amber-700 text-sm rounded-full font-semibold">
+                        ⚠️ Nachbestellung nötig
+                    </span>
+                    {% elif item.min_quantity and item.quantity < item.min_quantity %}
+                    <span class="px-3 py-1 bg-amber-100 text-amber-700 text-sm rounded-full font-semibold">
+                        ⚠️ Niedriger Bestand
+                    </span>
+                    {% else %}
+                    <span class="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-semibold">
+                        ✅ Verfügbar
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-sm text-gray-600">Artikel-Nr.: <span class="font-mono font-semibold">{{ item.item_number }}</span></p>
+                <p class="text-sm text-gray-600">Typ: <span class="font-semibold">{{ item.get_item_type_display }}</span></p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{% url 'magazine:movement_create' %}?item={{ item.pk }}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                    📦 Lagerbewegung
+                </a>
+                <a href="{% url 'magazine:item_update' item.pk %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ✏️ Bearbeiten
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warning Messages -->
+    {% if item.is_reorder_needed or item.quantity == 0 %}
+    <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <span class="text-red-600 text-xl">⚠️</span>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">Aktion erforderlich</h3>
+                <div class="mt-2 text-sm text-red-700">
+                    <ul class="list-disc list-inside space-y-1">
+                        {% if item.quantity == 0 %}
+                        <li>Artikel nicht mehr auf Lager</li>
+                        {% endif %}
+                        {% if item.is_reorder_needed %}
+                        <li>Bestellpunkt erreicht - Nachbestellung erforderlich (Aktuell: {{ item.quantity }} {{ item.unit }}, Bestellpunkt: {{ item.reorder_point }} {{ item.unit }})</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Content (2/3) -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Basis-Informationen -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">📋 Basis-Informationen</h2>
+                </div>
+                <div class="px-6 py-4">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Artikelnummer</dt>
+                            <dd class="mt-1 text-sm text-gray-900 font-mono font-semibold">{{ item.item_number }}</dd>
+                        </div>
+                        {% if item.barcode %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Barcode</dt>
+                            <dd class="mt-1 text-sm text-gray-900 font-mono">{{ item.barcode }}</dd>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Artikeltyp</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.get_item_type_display }}</dd>
+                        </div>
+                        {% if item.category %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Kategorie</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.category.name }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.manufacturer %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Hersteller</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.manufacturer }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.location %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Lagerort</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.location.name }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Bestand -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">📦 Bestand & Lagerung</h2>
+                </div>
+                <div class="px-6 py-4">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Aktueller Bestand</dt>
+                            <dd class="mt-1 text-2xl font-bold {% if item.quantity == 0 %}text-red-600{% elif item.min_quantity and item.quantity < item.min_quantity %}text-amber-600{% else %}text-green-600{% endif %}">
+                                {{ item.quantity }} {{ item.unit }}
+                            </dd>
+                        </div>
+                        {% if item.min_quantity %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Mindestbestand</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.min_quantity }} {{ item.unit }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.max_quantity %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Maximalbestand</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.max_quantity }} {{ item.unit }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.reorder_point %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Bestellpunkt</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.reorder_point }} {{ item.unit }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.standard_order_quantity %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Standard-Bestellmenge</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.standard_order_quantity }} {{ item.unit }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.last_ordered_date %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Zuletzt bestellt am</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.last_ordered_date|date:"d.m.Y" }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Eigenschaften -->
+            {% if item.size or item.material or item.color or item.weight_per_unit or item.volume_per_unit %}
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">📐 Eigenschaften</h2>
+                </div>
+                <div class="px-6 py-4">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% if item.size %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Größe/Maße</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.size }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.material %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Material</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.material }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.color %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Farbe</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.color }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.weight_per_unit %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Gewicht pro Einheit</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.weight_per_unit|floatformat:3 }} kg</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.volume_per_unit %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Volumen pro Einheit</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.volume_per_unit|floatformat:3 }} L</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.get_total_weight %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Gesamtgewicht Bestand</dt>
+                            <dd class="mt-1 text-sm text-gray-900 font-semibold">{{ item.get_total_weight|floatformat:2 }} kg</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.get_total_volume %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Gesamtvolumen Bestand</dt>
+                            <dd class="mt-1 text-sm text-gray-900 font-semibold">{{ item.get_total_volume|floatformat:2 }} L</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Gefahrgut-Informationen -->
+            {% if item.is_hazardous %}
+            <div class="bg-white rounded-lg shadow border-2 border-red-200">
+                <div class="px-6 py-4 border-b border-gray-200 bg-red-50">
+                    <h2 class="text-lg font-semibold text-gray-900">☢️ Gefahrgut-Informationen</h2>
+                </div>
+                <div class="px-6 py-4">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Gefahrenklasse</dt>
+                            <dd class="mt-1">
+                                <span class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-semibold">
+                                    {{ item.get_hazard_class_display }}
+                                </span>
+                            </dd>
+                        </div>
+                        {% if item.safety_data_sheet %}
+                        <div class="md:col-span-2">
+                            <dt class="text-sm font-medium text-gray-500 mb-2">Sicherheitsdatenblatt</dt>
+                            <dd>
+                                <a href="{{ item.safety_data_sheet.url }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
+                                    📄 Sicherheitsdatenblatt öffnen
+                                </a>
+                            </dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Lagerung -->
+            {% if item.storage_temperature_min or item.storage_temperature_max or item.storage_instructions %}
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">🌡️ Lagerhinweise</h2>
+                </div>
+                <div class="px-6 py-4">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% if item.storage_temperature_min %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Min. Lagertemperatur</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.storage_temperature_min }}°C</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.storage_temperature_max %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Max. Lagertemperatur</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.storage_temperature_max }}°C</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.storage_instructions %}
+                        <div class="md:col-span-2">
+                            <dt class="text-sm font-medium text-gray-500">Lageranweisungen</dt>
+                            <dd class="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{{ item.storage_instructions }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Lieferant & Kosten -->
+            {% if item.supplier or item.unit_price %}
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">💰 Lieferant & Kosten</h2>
+                </div>
+                <div class="px-6 py-4">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% if item.supplier %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Lieferant</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.supplier }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.unit_price %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Stückpreis</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ item.unit_price|floatformat:2 }} €</dd>
+                        </div>
+                        {% endif %}
+                        {% if item.unit_price and item.quantity %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Bestandswert</dt>
+                            <dd class="mt-1 text-lg text-gray-900 font-bold">{{ item.unit_price|multiply:item.quantity|floatformat:2 }} €</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Technische Spezifikationen -->
+            {% if item.technical_specifications %}
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">🔧 Technische Spezifikationen</h2>
+                </div>
+                <div class="px-6 py-4">
+                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ item.technical_specifications }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Verwendungshinweise -->
+            {% if item.usage_instructions %}
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">📝 Verwendungshinweise</h2>
+                </div>
+                <div class="px-6 py-4">
+                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ item.usage_instructions }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Beschreibung / Notizen -->
+            {% if item.description or item.notes %}
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">📄 Beschreibung & Notizen</h2>
+                </div>
+                <div class="px-6 py-4 space-y-4">
+                    {% if item.description %}
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2">Beschreibung</h3>
+                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ item.description }}</p>
+                    </div>
+                    {% endif %}
+                    {% if item.notes %}
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2">Notizen</h3>
+                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ item.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Lagerbewegungen -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">📦 Letzte Lagerbewegungen</h2>
+                    <a href="{% url 'magazine:movement_list' %}?item={{ item.pk }}" class="text-sm text-blue-600 hover:text-blue-800">
+                        Alle anzeigen →
+                    </a>
+                </div>
+                <div class="px-6 py-4">
+                    {% if recent_movements %}
+                    <div class="space-y-3">
+                        {% for movement in recent_movements|slice:":5" %}
+                        <div class="border border-gray-200 rounded-lg p-3">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-semibold text-gray-900 text-sm">{{ movement.get_movement_type_display }}</span>
+                                        {% if movement.person %}
+                                        <span class="text-sm text-gray-600">→ {{ movement.person.get_full_name }}</span>
+                                        {% elif movement.recipient_name %}
+                                        <span class="text-sm text-gray-600">→ {{ movement.recipient_name }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        <p>Menge: <span class="font-medium text-gray-900">{{ movement.quantity }} {{ movement.unit }}</span></p>
+                                        {% if movement.to_location %}
+                                        <p class="mt-1 text-xs">Nach: {{ movement.to_location.name }}</p>
+                                        {% endif %}
+                                        {% if movement.notes %}
+                                        <p class="mt-1 text-xs">{{ movement.notes|truncatewords:15 }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="text-right text-sm">
+                                    <p class="text-gray-600">{{ movement.movement_date|date:"d.m.Y" }}</p>
+                                    <p class="text-gray-500 text-xs mt-1">{{ movement.created_by.get_full_name }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8 text-gray-500">
+                        <p class="text-3xl mb-2">📦</p>
+                        <p class="text-sm">Noch keine Lagerbewegungen</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sidebar (1/3) -->
+        <div class="space-y-6">
+
+            <!-- Status -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">Status</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-600">Verfügbar</span>
+                        <span class="{% if item.quantity > 0 %}text-green-600 font-semibold{% else %}text-red-600 font-semibold{% endif %}">
+                            {% if item.quantity > 0 %}✅ Ja{% else %}❌ Nein{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-600">Bestand niedrig</span>
+                        <span class="{% if item.min_quantity and item.quantity < item.min_quantity %}text-red-600 font-semibold{% else %}text-green-600{% endif %}">
+                            {% if item.min_quantity and item.quantity < item.min_quantity %}⚠️ Ja{% else %}✅ Nein{% endif %}
+                        </span>
+                    </div>
+                    {% if item.reorder_point %}
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-600">Nachbestellung nötig</span>
+                        <span class="{% if item.is_reorder_needed %}text-red-600 font-semibold{% else %}text-green-600{% endif %}">
+                            {% if item.is_reorder_needed %}⚠️ Ja{% else %}✅ Nein{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if item.is_hazardous %}
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-600">Gefahrgut</span>
+                        <span class="text-red-600 font-semibold">☢️ Ja</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Barcode & QR-Code -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">Barcode & QR-Code</h3>
+
+                <!-- Barcode -->
+                <div class="mb-6">
+                    <p class="text-xs text-gray-500 mb-2">Barcode (Code128)</p>
+                    <div class="bg-white p-3 border border-gray-200 rounded-lg flex items-center justify-center">
+                        <img src="{% url 'magazine:item_barcode' item.pk %}"
+                             alt="Barcode für {{ item.item_number }}"
+                             class="max-w-full h-auto"
+                             style="max-height: 80px;">
+                    </div>
+                    <p class="text-xs text-center text-gray-600 mt-1 font-mono">{{ item.barcode|default:item.item_number }}</p>
+                </div>
+
+                <!-- QR-Code -->
+                <div>
+                    <p class="text-xs text-gray-500 mb-2">QR-Code (Details)</p>
+                    <div class="bg-white p-3 border border-gray-200 rounded-lg flex items-center justify-center">
+                        <img src="{% url 'magazine:item_qr_code' item.pk %}"
+                             alt="QR-Code für {{ item.item_number }}"
+                             class="max-w-full h-auto"
+                             style="max-height: 150px;">
+                    </div>
+                    <p class="text-xs text-center text-gray-500 mt-1">Enthält Artikeldetails</p>
+                </div>
+
+                <!-- Download-Links -->
+                <div class="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                    <a href="{% url 'magazine:item_barcode' item.pk %}"
+                       download="barcode_{{ item.item_number }}.svg"
+                       class="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium transition-colors">
+                        📥 Barcode herunterladen
+                    </a>
+                    <a href="{% url 'magazine:item_qr_code' item.pk %}"
+                       download="qrcode_{{ item.item_number }}.svg"
+                       class="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium transition-colors">
+                        📥 QR-Code herunterladen
+                    </a>
+                </div>
+            </div>
+
+            <!-- Dokumente -->
+            {% if item.manual_document or item.safety_data_sheet %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">📄 Dokumente</h3>
+                <div class="space-y-2">
+                    {% if item.manual_document %}
+                    <a href="{{ item.manual_document.url }}" target="_blank" class="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium transition-colors">
+                        📘 Handbuch/Produktinfo
+                    </a>
+                    {% endif %}
+                    {% if item.safety_data_sheet %}
+                    <a href="{{ item.safety_data_sheet.url }}" target="_blank" class="flex items-center gap-2 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded text-sm font-medium transition-colors">
+                        ☢️ Sicherheitsdatenblatt
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Metadaten -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">Metadaten</h3>
+                <dl class="space-y-3 text-sm">
+                    <div>
+                        <dt class="text-gray-500">Erstellt am</dt>
+                        <dd class="text-gray-900 font-medium">{{ item.created_at|date:"d.m.Y H:i" }}</dd>
+                    </div>
+                    {% if item.created_by %}
+                    <div>
+                        <dt class="text-gray-500">Erstellt von</dt>
+                        <dd class="text-gray-900 font-medium">{{ item.created_by.get_full_name }}</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt class="text-gray-500">Aktualisiert am</dt>
+                        <dd class="text-gray-900 font-medium">{{ item.updated_at|date:"d.m.Y H:i" }}</dd>
+                    </div>
+                    {% if item.updated_by %}
+                    <div>
+                        <dt class="text-gray-500">Aktualisiert von</dt>
+                        <dd class="text-gray-900 font-medium">{{ item.updated_by.get_full_name }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

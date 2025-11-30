@@ -1,0 +1,166 @@
+<!-- Tab: Übersicht -->
+<div x-show="activeTab === 'overview'" x-cloak>
+    <!-- Anstehende Aufgaben -->
+    {% if upcoming_tasks %}
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg p-6 mb-6">
+        <div class="flex items-start">
+            <span class="text-3xl mr-4">⚠️</span>
+            <div class="flex-1">
+                <h3 class="text-lg font-bold text-yellow-900 mb-3">Anstehende Aufgaben</h3>
+                <ul class="space-y-2">
+                    {% for task in upcoming_tasks %}
+                    <li class="flex items-start">
+                        <span class="text-yellow-600 mr-2">•</span>
+                        <span class="text-yellow-800">{{ task.description }} - {{ task.due_date|date:"d.m.Y" }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Anstehende Jubiläen -->
+    {% with anniversaries=person.get_upcoming_anniversaries %}
+    {% if anniversaries %}
+    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 rounded-r-lg p-6 mb-6">
+        <div class="flex items-start">
+            <span class="text-3xl mr-4">🎉</span>
+            <div class="flex-1">
+                <h3 class="text-lg font-bold text-gray-900 mb-3">Anstehende Dienstjubiläen</h3>
+                <div class="space-y-3">
+                    {% for anniversary in anniversaries %}
+                    <div class="flex items-center justify-between bg-white rounded-lg p-4 shadow-sm">
+                        <div class="flex items-center">
+                            <div class="text-center mr-4">
+                                <p class="text-3xl font-bold text-yellow-600">{{ anniversary.years }}</p>
+                                <p class="text-xs text-gray-600">Jahre</p>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-900">{{ anniversary.years }}-jähriges Dienstjubiläum</p>
+                                <p class="text-sm text-gray-600">am {{ anniversary.date|date:"d.m.Y" }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            {% if anniversary.is_upcoming %}
+                            <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+                                ⏰ In {{ anniversary.days_until }} Tagen
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                                In {{ anniversary.days_until }} Tagen
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Statistiken (3er Grid) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <!-- Qualifikationen -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-3xl">📜</span>
+                <span class="text-4xl font-bold text-gray-900">{{ active_qualifications.count }}</span>
+            </div>
+            <p class="text-sm text-gray-600">Aktive Qualifikationen</p>
+        </div>
+
+        <!-- Schichten (Placeholder) -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-3xl">📅</span>
+                <span class="text-4xl font-bold text-gray-900">-</span>
+            </div>
+            <p class="text-sm text-gray-600">Schichten 2024</p>
+        </div>
+
+        <!-- Schulungen (Placeholder) -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-3xl">🎓</span>
+                <span class="text-4xl font-bold text-gray-900">-</span>
+            </div>
+            <p class="text-sm text-gray-600">Schulungen 2024</p>
+        </div>
+    </div>
+
+    <!-- Letzte Aktivitäten (Timeline) -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 class="font-semibold text-gray-900 mb-4">Letzte Aktivitäten</h3>
+
+        {% if recent_activities %}
+        <div class="relative">
+            <!-- Timeline Line -->
+            <div class="absolute left-2 top-2 bottom-2 w-0.5 bg-gray-200"></div>
+
+            <!-- Timeline Items -->
+            <div class="space-y-4">
+                {% for activity in recent_activities %}
+                <div class="relative pl-8">
+                    <!-- Timeline Dot -->
+                    <div class="absolute left-0 top-1 w-4 h-4 bg-red-600 rounded-full border-2 border-white"></div>
+
+                    <!-- Activity Content -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">{{ activity.title }}</p>
+                                <p class="text-sm text-gray-600 mt-1">{{ activity.description }}</p>
+                            </div>
+                            <span class="text-xs text-gray-500 whitespace-nowrap ml-4">
+                                {{ activity.date|date:"d.m.Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <!-- Placeholder: Automatisch aus Audit-Log generieren -->
+        <div class="relative">
+            <div class="absolute left-2 top-2 bottom-2 w-0.5 bg-gray-200"></div>
+            <div class="space-y-4">
+                <div class="relative pl-8">
+                    <div class="absolute left-0 top-1 w-4 h-4 bg-blue-600 rounded-full border-2 border-white"></div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">Person erstellt</p>
+                                <p class="text-sm text-gray-600 mt-1">Eintrag in Personaldatenbank erstellt</p>
+                            </div>
+                            <span class="text-xs text-gray-500 whitespace-nowrap ml-4">
+                                {{ person.created_at|date:"d.m.Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {% for qual in active_qualifications|slice:":3" %}
+                <div class="relative pl-8">
+                    <div class="absolute left-0 top-1 w-4 h-4 bg-green-600 rounded-full border-2 border-white"></div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">Qualifikation erworben</p>
+                                <p class="text-sm text-gray-600 mt-1">{{ qual.name }}</p>
+                            </div>
+                            <span class="text-xs text-gray-500 whitespace-nowrap ml-4">
+                                {{ qual.issue_date|date:"d.m.Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>

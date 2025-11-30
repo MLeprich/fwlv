@@ -1,0 +1,133 @@
+{% comment %}
+Date Picker Component with Flatpickr
+
+Parameters:
+- name: Input name (required)
+- label: Field label (required)
+- value: Current value in ISO format (optional)
+- required: Boolean (optional)
+- mode: 'single', 'range', or 'multiple' (optional, default: single)
+- min_date: Minimum date (optional, e.g. "today" or "2024-01-01")
+- max_date: Maximum date (optional)
+- disable_dates: List of dates to disable (optional)
+- enable_time: Boolean to enable time selection (optional)
+- placeholder: Placeholder text (optional, default: "Datum auswählen...")
+- help_text: Help text below input (optional)
+{% endcomment %}
+
+<div class="space-y-1">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+
+    <div class="relative">
+        <input type="text"
+               name="{{ name }}"
+               id="{{ name }}"
+               value="{{ value|default:'' }}"
+               {% if required %}required{% endif %}
+               placeholder="{{ placeholder|default:'Datum auswählen...' }}"
+               class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
+               data-date-picker
+               data-mode="{{ mode|default:'single' }}"
+               {% if min_date %}data-min-date="{{ min_date }}"{% endif %}
+               {% if max_date %}data-max-date="{{ max_date }}"{% endif %}
+               {% if enable_time %}data-enable-time="true"{% endif %}
+               {% if disable_dates %}data-disable="{{ disable_dates|join:',' }}"{% endif %}>
+
+        <!-- Calendar Icon -->
+        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+        </div>
+    </div>
+
+    {% if help_text %}
+    <p class="text-xs text-gray-500">{{ help_text }}</p>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const picker = document.querySelector('#{{ name }}[data-date-picker]');
+    if (picker && typeof flatpickr !== 'undefined') {
+        const config = {
+            locale: 'de',
+            dateFormat: picker.dataset.enableTime ? 'd.m.Y H:i' : 'd.m.Y',
+            altInput: true,
+            altFormat: picker.dataset.enableTime ? 'd.m.Y H:i' : 'd.m.Y',
+            mode: picker.dataset.mode || 'single',
+            enableTime: picker.dataset.enableTime === 'true',
+            time_24hr: true,
+            allowInput: true,
+            clickOpens: true,
+            monthSelectorType: 'static',
+            onReady: function(selectedDates, dateStr, instance) {
+                // Add keyboard shortcut: T for Today
+                instance.calendarContainer.addEventListener('keydown', function(e) {
+                    if (e.key === 't' || e.key === 'T') {
+                        instance.setDate(new Date());
+                        instance.close();
+                    }
+                });
+            }
+        };
+
+        // Min/Max Date
+        if (picker.dataset.minDate) {
+            config.minDate = picker.dataset.minDate === 'today' ? new Date() : picker.dataset.minDate;
+        }
+        if (picker.dataset.maxDate) {
+            config.maxDate = picker.dataset.maxDate;
+        }
+
+        // Disable specific dates
+        if (picker.dataset.disable) {
+            config.disable = picker.dataset.disable.split(',').map(d => d.trim());
+        }
+
+        flatpickr(picker, config);
+    }
+});
+</script>
+
+<style>
+/* Flatpickr customization for Feuerwehr theme */
+.flatpickr-calendar {
+    @apply shadow-xl border border-gray-200 rounded-lg;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    @apply bg-primary-600 border-primary-600;
+}
+
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover {
+    @apply bg-primary-700 border-primary-700;
+}
+
+.flatpickr-day:hover {
+    @apply bg-gray-100;
+}
+
+.flatpickr-day.today {
+    @apply border-primary-600;
+}
+
+.flatpickr-months .flatpickr-month {
+    @apply bg-primary-600;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+    @apply bg-primary-600;
+}
+
+.flatpickr-weekday {
+    @apply text-gray-600 font-medium;
+}
+</style>

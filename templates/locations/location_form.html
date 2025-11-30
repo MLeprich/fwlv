@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if action == 'create' %}Neuer Lagerort{% else %}Lagerort bearbeiten{% endif %} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'locations:list' %}" class="text-gray-500 hover:text-gray-700">Lagerorte</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{% if action == 'create' %}Neuer Lagerort{% else %}Bearbeiten{% endif %}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">
+            {% if action == 'create' %}Neuer Lagerort{% else %}Lagerort bearbeiten{% endif %}
+        </h1>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <span class="text-red-600">❌</span>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Hierarchie -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Hierarchie</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.parent.label }}</label>
+                    {{ form.parent }}
+                    {% if form.parent.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.parent.help_text }}</p>
+                    {% endif %}
+                    {% if form.parent.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.parent.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.name.label }} *</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.code.label }} *</label>
+                        {{ form.code }}
+                        <p class="mt-1 text-sm text-gray-500">Eindeutiger Code, z.B. FW-GH-R1</p>
+                        {% if form.code.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.code.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.location_type.label }} *</label>
+                        {{ form.location_type }}
+                        {% if form.location_type.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.location_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Adresse -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Adresse (optional)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.street.label }}</label>
+                        {{ form.street }}
+                        {% if form.street.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.street.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.house_number.label }}</label>
+                        {{ form.house_number }}
+                        {% if form.house_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.house_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.postal_code.label }}</label>
+                        {{ form.postal_code }}
+                        {% if form.postal_code.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.postal_code.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.city.label }}</label>
+                        {{ form.city }}
+                        {% if form.city.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.city.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kapazität -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Kapazität</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.capacity.label }}</label>
+                        {{ form.capacity }}
+                        {% if form.capacity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.capacity.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.capacity_unit.label }}</label>
+                        {{ form.capacity_unit }}
+                        <p class="mt-1 text-sm text-gray-500">z.B. m³, kg, Stück</p>
+                        {% if form.capacity_unit.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.capacity_unit.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zugang -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Zugang</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.access_restricted }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.access_restricted.label }}</span>
+                        </label>
+                        {% if form.access_restricted.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.access_restricted.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.access_instructions.label }}</label>
+                        {{ form.access_instructions }}
+                        <p class="mt-1 text-sm text-gray-500">z.B. Schlüsselnummer, Türcode</p>
+                        {% if form.access_instructions.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.access_instructions.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Klimatisierung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Klimatisierung</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.climate_controlled }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.climate_controlled.label }}</span>
+                        </label>
+                        {% if form.climate_controlled.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.climate_controlled.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.temperature_min.label }}</label>
+                            {{ form.temperature_min }}
+                            {% if form.temperature_min.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.temperature_min.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.temperature_max.label }}</label>
+                            {{ form.temperature_max }}
+                            {% if form.temperature_max.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.temperature_max.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technische Ausstattung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Technische Ausstattung</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.technical_equipment.label }}</label>
+                    {{ form.technical_equipment }}
+                    <p class="mt-1 text-sm text-gray-500">z.B. Beamer, Prowise-Board, Soundsystem, WLAN - besonders relevant für Räume</p>
+                    {% if form.technical_equipment.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.technical_equipment.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Status & Notizen -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Status & Notizen</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.is_active }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.is_active.label }}</span>
+                        </label>
+                        {% if form.is_active.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'locations:list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    {% if action == 'create' %}Lagerort anlegen{% else %}Änderungen speichern{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dokumente | FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Dokumente</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">📄 Dokumente</h1>
+            <p class="mt-1 text-sm text-gray-600">
+                Alle Dokumente durchsuchen und verwalten
+            </p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'documents:category_management' %}"
+               class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-150">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                </svg>
+                Kategorien verwalten
+            </a>
+            <a href="{% url 'documents:document_create' %}"
+               class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-150">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Dokument hochladen
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiken -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500">
+            <div class="text-sm font-medium text-gray-600">Aktive Dokumente</div>
+            <div class="text-2xl font-bold text-gray-900">{{ total_documents }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-yellow-500">
+            <div class="text-sm font-medium text-gray-600">Prüfungen ausstehend</div>
+            <div class="text-2xl font-bold text-gray-900">{{ pending_reviews }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-red-500">
+            <div class="text-sm font-medium text-gray-600">Laufen bald ab</div>
+            <div class="text-2xl font-bold text-gray-900">{{ expiring_soon }}</div>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div class="md:col-span-2">
+                <input type="text"
+                       name="query"
+                       value="{{ request.GET.query }}"
+                       placeholder="Suche nach Titel, Nummer, Tags oder Inhalt..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <select name="category"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle Kategorien</option>
+                    {% for cat in search_form.fields.category.queryset %}
+                    <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <select name="status"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Alle Status</option>
+                    <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Entwurf</option>
+                    <option value="review" {% if request.GET.status == 'review' %}selected{% endif %}>In Prüfung</option>
+                    <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Freigegeben</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Aktiv</option>
+                    <option value="expired" {% if request.GET.status == 'expired' %}selected{% endif %}>Abgelaufen</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit"
+                        class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-150">
+                    Suchen
+                </button>
+                <a href="{% url 'documents:document_list' %}"
+                   class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors duration-150">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Dokumenten-Liste -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        {% if documents %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dokument</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategorie</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nummer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gültig bis</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hochgeladen</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for document in documents %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-blue-100 rounded-lg">
+                                📄
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">
+                                    <a href="{% url 'documents:document_detail' document.pk %}" class="hover:text-blue-600">
+                                        {{ document.title }}
+                                    </a>
+                                </div>
+                                {% if document.tags %}
+                                <div class="text-xs text-gray-500 mt-1">
+                                    Tags: {{ document.tags }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ document.category.name|default:"—" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ document.document_number|default:"—" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if document.valid_until %}
+                            {{ document.valid_until|date:"d.m.Y" }}
+                            {% if document.is_expired %}
+                                <span class="ml-1 text-red-600">⚠️</span>
+                            {% elif document.is_expiring_soon %}
+                                <span class="ml-1 text-yellow-600">⚠️</span>
+                            {% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if document.status == 'draft' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                            Entwurf
+                        </span>
+                        {% elif document.status == 'review' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            In Prüfung
+                        </span>
+                        {% elif document.status == 'approved' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            Freigegeben
+                        </span>
+                        {% elif document.status == 'active' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            Aktiv
+                        </span>
+                        {% elif document.status == 'expired' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            Abgelaufen
+                        </span>
+                        {% elif document.status == 'archived' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-200 text-gray-700">
+                            Archiviert
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ document.created_at|date:"d.m.Y" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{% url 'documents:document_detail' document.pk %}"
+                           class="text-blue-600 hover:text-blue-900 mr-3">
+                            Ansehen
+                        </a>
+                        <a href="{% url 'documents:document_download' document.pk %}"
+                           class="text-green-600 hover:text-green-900">
+                            Download
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div class="flex-1 flex justify-between sm:hidden">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Zurück
+                </a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Weiter
+                </a>
+                {% endif %}
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Seite <span class="font-medium">{{ page_obj.number }}</span> von <span class="font-medium">{{ page_obj.paginator.num_pages }}</span>
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            &larr;
+                        </a>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            &rarr;
+                        </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Keine Dokumente gefunden</h3>
+            <p class="mt-1 text-sm text-gray-500">
+                {% if request.GET.query %}
+                Keine Dokumente entsprechen Ihren Suchkriterien.
+                {% else %}
+                Laden Sie Ihr erstes Dokument hoch.
+                {% endif %}
+            </p>
+            <div class="mt-6">
+                <a href="{% url 'documents:document_create' %}"
+                   class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    Dokument hochladen
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Links -->
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href="{% url 'documents:pending_reviews' %}" class="block p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <h3 class="font-semibold text-gray-900">🔍 Prüfungen ausstehend</h3>
+            <p class="text-sm text-gray-600 mt-1">Dokumente die geprüft werden müssen</p>
+        </a>
+        <a href="{% url 'documents:expiring_documents' %}" class="block p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <h3 class="font-semibold text-gray-900">⏰ Ablaufende Dokumente</h3>
+            <p class="text-sm text-gray-600 mt-1">Dokumente mit nahendem Ablaufdatum</p>
+        </a>
+        <a href="{% url 'documents:category_list' %}" class="block p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <h3 class="font-semibold text-gray-900">📂 Kategorien</h3>
+            <p class="text-sm text-gray-600 mt-1">Dokumente nach Kategorie durchsuchen</p>
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,409 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Neue Lagerbewegung - Magazin - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:dashboard' %}" class="text-gray-500 hover:text-gray-700">Magazin</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:movement_list' %}" class="text-gray-500 hover:text-gray-700">Lagerbewegungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Neue Bewegung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6" x-data="movementForm()">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">📦 Neue Lagerbewegung erfassen</h1>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600">❌</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Bewegungstyp -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Bewegungsart</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.movement_type.label }} *</label>
+                    <select
+                        name="{{ form.movement_type.name }}"
+                        id="{{ form.movement_type.id_for_label }}"
+                        @change="movementType = $event.target.value"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        required
+                    >
+                        <option value="">-- Bewegungsart auswählen --</option>
+                        {% for value, label in form.fields.movement_type.choices %}
+                        {% if value %}
+                        <option value="{{ value }}" {% if form.movement_type.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                    {% if form.movement_type.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.movement_type.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-sm text-gray-500">
+                        💡 <strong>Wareneingang:</strong> Neue Lieferung<br>
+                        💡 <strong>Warenausgang:</strong> Entnahme/Verbrauch<br>
+                        💡 <strong>Rückgabe:</strong> Rückgabe ins Lager<br>
+                        💡 <strong>Umlagerung:</strong> Zwischen Lagerorten<br>
+                        💡 <strong>Entsorgung:</strong> MHD abgelaufen/Beschädigt<br>
+                        💡 <strong>Beschädigung/Schwund:</strong> Verlust oder Beschädigung melden
+                    </p>
+                </div>
+            </div>
+
+            <!-- Artikel & Menge -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Artikel & Menge</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.item.label }} *</label>
+                        {{ form.item }}
+                        {% if form.item.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.item.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.quantity.label }} *</label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.quantity.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.unit.label }} *</label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.unit.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empfängerzuordnung (nur bei Warenausgang/Rückgabe/Beschädigung) -->
+            <div class="border-b border-gray-200 pb-6" x-show="movementType === 'outgoing' || movementType === 'return' || movementType === 'damage'" x-cloak>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">👤 Empfängerzuordnung</h2>
+
+                <div class="space-y-4">
+                    <!-- Person Dropdown mit Suche -->
+                    <div x-data="{ open: false, search: '', selected: null, persons: [] }" x-init="
+                        persons = Array.from(document.querySelectorAll('#id_person option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(p => p.value);
+                        const currentValue = document.getElementById('id_person').value;
+                        if (currentValue) {
+                            selected = persons.find(p => p.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_person').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.person.label }}
+                            <span class="text-red-600" x-show="movementType === 'outgoing' || movementType === 'return' || movementType === 'damage'">*</span>
+                        </label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.person }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Person auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Person suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="person in persons.filter(p => p.text.toLowerCase().includes(search.toLowerCase()))" :key="person.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = person; document.getElementById('id_person').value = person.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === person.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="person.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.person.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.person.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">
+                            <span x-show="movementType === 'outgoing'">👤 Person, die den Artikel erhält</span>
+                            <span x-show="movementType === 'return'">↩️ Person, die den Artikel zurückgibt</span>
+                            <span x-show="movementType === 'damage'">⚠️ Person, die den Schwund/die Beschädigung meldet</span>
+                        </p>
+                    </div>
+
+                    <!-- Alternativ: Manueller Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.recipient_name.label }}</label>
+                        {{ form.recipient_name }}
+                        {% if form.recipient_name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.recipient_name.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">Nur ausfüllen, falls Person nicht in der Datenbank vorhanden ist</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.purpose.label }}</label>
+                        {{ form.purpose }}
+                        {% if form.purpose.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.purpose.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">z.B. Einsatz, Übung, Wartung</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lagerorte -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📍 Lagerorte</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Von Lagerort -->
+                    <div x-data="{ open: false, search: '', selected: null, locations: [] }" x-init="
+                        locations = Array.from(document.querySelectorAll('#id_from_location option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(loc => loc.value);
+                        const currentValue = document.getElementById('id_from_location').value;
+                        if (currentValue) {
+                            selected = locations.find(loc => loc.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_from_location').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.from_location.label }}</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.from_location }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Von Lagerort auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Lagerort suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="location in locations.filter(loc => loc.text.toLowerCase().includes(search.toLowerCase()))" :key="location.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = location; document.getElementById('id_from_location').value = location.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === location.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="location.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="mt-1 text-sm text-gray-500">Bei Warenausgang/Umlagerung</p>
+                        {% if form.from_location.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.from_location.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Nach Lagerort -->
+                    <div x-data="{ open: false, search: '', selected: null, locations: [] }" x-init="
+                        locations = Array.from(document.querySelectorAll('#id_to_location option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(loc => loc.value);
+                        const currentValue = document.getElementById('id_to_location').value;
+                        if (currentValue) {
+                            selected = locations.find(loc => loc.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_to_location').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.to_location.label }}</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.to_location }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Nach Lagerort auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Lagerort suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="location in locations.filter(loc => loc.text.toLowerCase().includes(search.toLowerCase()))" :key="location.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = location; document.getElementById('id_to_location').value = location.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === location.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="location.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="mt-1 text-sm text-gray-500">Bei Wareneingang/Umlagerung</p>
+                        {% if form.to_location.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.to_location.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referenz & Notizen -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Zusatzinformationen</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.reference_number.label }}</label>
+                        {{ form.reference_number }}
+                        <p class="mt-1 text-sm text-gray-500">z.B. Lieferschein-Nr., Bestellnummer</p>
+                        {% if form.reference_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.reference_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'magazine:movement_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ✅ Lagerbewegung erfassen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function movementForm() {
+    return {
+        movementType: ''
+    };
+}
+</script>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}

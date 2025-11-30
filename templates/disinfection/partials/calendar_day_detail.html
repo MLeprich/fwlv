@@ -1,0 +1,87 @@
+{% load custom_filters %}
+
+<!-- Tagesdetails für ausgewählten Tag -->
+<div class="space-y-4">
+    <div class="flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900">
+            {{ selected_date|date:"l, d. F Y" }}
+        </h3>
+        <span class="text-sm text-gray-500">{{ selected_plans|length }} Plan{% if selected_plans|length != 1 %}s{% endif %}</span>
+    </div>
+
+    {% if selected_plans %}
+        <div class="space-y-3">
+            {% for plan in selected_plans %}
+            <div class="border rounded-lg p-4 {% if plan.is_overdue %}border-red-300 bg-red-50{% else %}border-blue-300 bg-blue-50{% endif %}">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xl">🚗</span>
+                            <h4 class="font-semibold text-gray-900">
+                                {% if plan.vehicle %}
+                                    {{ plan.vehicle.call_sign|default:plan.vehicle.name }}
+                                {% else %}
+                                    {{ plan.object_description }}
+                                {% endif %}
+                            </h4>
+                        </div>
+                        {% if plan.vehicle %}
+                        <p class="text-sm text-gray-600">{{ plan.vehicle.name }}</p>
+                        {% endif %}
+                    </div>
+                    {% if plan.is_overdue %}
+                    <span class="px-2 py-1 text-xs font-medium text-red-800 bg-red-100 rounded-full">
+                        Überfällig
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
+                        Geplant
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <span class="text-gray-500">Intervall:</span>
+                        <span class="font-medium text-gray-900">{{ plan.get_frequency_display }}</span>
+                    </div>
+                    {% if plan.responsible_person %}
+                    <div>
+                        <span class="text-gray-500">Verantwortlich:</span>
+                        <span class="font-medium text-gray-900">{{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if plan.notes %}
+                <div class="mt-3 pt-3 border-t border-gray-200">
+                    <p class="text-sm text-gray-600">{{ plan.notes }}</p>
+                </div>
+                {% endif %}
+
+                <div class="mt-3 flex gap-2">
+                    <a href="#" class="flex-1 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors text-center">
+                        ✓ Durchführen
+                    </a>
+                    <a href="#" class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors">
+                        Details
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-12">
+            <div class="text-6xl mb-3">📅</div>
+            <p class="text-gray-500 font-medium">Keine Desinfektionen geplant</p>
+            <p class="text-sm text-gray-400 mt-1">Für diesen Tag sind keine Desinfektionen vorgesehen.</p>
+        </div>
+    {% endif %}
+
+    <!-- Schnellaktionen -->
+    <div class="pt-4 border-t border-gray-200">
+        <button class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors text-sm">
+            + Neue Desinfektion für diesen Tag
+        </button>
+    </div>
+</div>

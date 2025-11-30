@@ -1,0 +1,121 @@
+<!-- Tab: Qualifikationen -->
+<div x-show="activeTab === 'qualifications'" x-cloak>
+    <!-- Active Qualifications -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-gray-900">Aktive Qualifikationen</h3>
+            <button
+                hx-get="{% url 'personnel:qualification_create' person.pk %}"
+                hx-target="body"
+                hx-swap="beforeend"
+                class="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+            >
+                ➕ Qualifikation hinzufügen
+            </button>
+        </div>
+
+        {% if active_qualifications %}
+        <div class="space-y-3">
+            {% for qual in active_qualifications %}
+            <div class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border-l-4
+                {% if qual.is_expired %}border-red-400
+                {% elif qual.is_expiring_soon %}border-yellow-400
+                {% else %}border-green-400{% endif %}">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-semibold text-gray-900">{{ qual.name }}</h4>
+                            <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                                {{ qual.get_qualification_type_display }}
+                            </span>
+                            {% if qual.is_expired %}
+                            <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                🔴 Abgelaufen
+                            </span>
+                            {% elif qual.is_expiring_soon %}
+                            <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full font-semibold">
+                                🟡 Läuft bald ab
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                🟢 Gültig
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="text-sm text-gray-600 space-y-1">
+                            {% if qual.issuing_authority %}
+                            <p>🏛️ {{ qual.issuing_authority }}</p>
+                            {% endif %}
+                            <p>📅 Ausgestellt: {{ qual.issue_date|date:"d.m.Y" }}</p>
+                            {% if qual.expiry_date %}
+                            <p>⏰ Gültig bis: {{ qual.expiry_date|date:"d.m.Y" }}</p>
+                            {% else %}
+                            <p>⏰ Unbefristet gültig</p>
+                            {% endif %}
+                            {% if qual.certificate_number %}
+                            <p>🔢 Nr: {{ qual.certificate_number }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        {% if qual.certificate_file %}
+                        <a href="{{ qual.certificate_file.url }}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm">
+                            📄 Zertifikat
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'personnel:qualification_update' qual.pk %}" class="text-gray-600 hover:text-gray-800 text-sm">
+                            ✏️
+                        </a>
+                        <a href="{% url 'personnel:qualification_delete' qual.pk %}" class="text-red-600 hover:text-red-800 text-sm">
+                            🗑️
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12 bg-gray-50 rounded-lg">
+            <div class="text-4xl mb-4">📜</div>
+            <p class="text-gray-600 mb-4">Noch keine Qualifikationen vorhanden</p>
+            <a href="{% url 'personnel:qualification_create' person.pk %}" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                ➕ Erste Qualifikation hinzufügen
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Expired Qualifications -->
+    {% if expired_qualifications %}
+    <div>
+        <h3 class="font-semibold text-gray-900 mb-4">Abgelaufene Qualifikationen</h3>
+        <div class="space-y-3">
+            {% for qual in expired_qualifications %}
+            <div class="p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-semibold text-gray-900">{{ qual.name }}</h4>
+                            <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                ❌ Abgelaufen
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            <p>⏰ Abgelaufen am: {{ qual.expiry_date|date:"d.m.Y" }}</p>
+                        </div>
+                    </div>
+                    <button
+                        hx-get="{% url 'personnel:qualification_update' qual.pk %}"
+                        hx-target="body"
+                        hx-swap="beforeend"
+                        class="text-gray-600 hover:text-gray-800 text-sm"
+                    >
+                        🔄 Erneuern
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>

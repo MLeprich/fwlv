@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_edit %}Profil bearbeiten{% else %}Neues Profil erstellen{% endif %} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'info_monitors:dashboard_list' %}" class="text-gray-500 hover:text-gray-700">Info-Monitore</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'info_monitors:profile_list' %}" class="text-gray-500 hover:text-gray-700">Profile</a></li>
+            <li class="text-gray-400">/</li>
+            <li><span class="text-gray-900 font-semibold">{% if is_edit %}Bearbeiten{% else %}Neu{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-6" x-data="{
+    icon: '{{ form.instance.icon|default:'' }}',
+    color: '{{ form.instance.color|default:'#3B82F6' }}'
+}">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            {% if is_edit %}
+                ✏️ Profil bearbeiten
+            {% else %}
+                ➕ Neues Monitor-Profil erstellen
+            {% endif %}
+        </h1>
+        <p class="mt-2 text-gray-600">
+            Profile helfen Ihnen, Dashboards zu organisieren und zu gruppieren
+        </p>
+    </div>
+
+    <form method="post" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {% csrf_token %}
+
+        <!-- Linke Seite: Formular -->
+        <div class="space-y-6">
+            <!-- Basis-Informationen -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Basis-Informationen</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="id_name" class="block text-sm font-medium text-gray-700 mb-1">Profil-Name *</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="id_description" class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Design -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Design</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="id_icon" class="block text-sm font-medium text-gray-700 mb-1">Icon (Emoji)</label>
+                        <input type="text"
+                               name="icon"
+                               id="id_icon"
+                               x-model="icon"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="z.B. 📊, 🔧, 📦"
+                               value="{{ form.instance.icon }}">
+                        <div class="mt-2 flex gap-2 flex-wrap">
+                            <button type="button" @click="icon='📊'" class="px-3 py-1 text-2xl bg-gray-50 hover:bg-gray-100 rounded border border-gray-200">📊</button>
+                            <button type="button" @click="icon='🔧'" class="px-3 py-1 text-2xl bg-gray-50 hover:bg-gray-100 rounded border border-gray-200">🔧</button>
+                            <button type="button" @click="icon='📦'" class="px-3 py-1 text-2xl bg-gray-50 hover:bg-gray-100 rounded border border-gray-200">📦</button>
+                            <button type="button" @click="icon='🚒'" class="px-3 py-1 text-2xl bg-gray-50 hover:bg-gray-100 rounded border border-gray-200">🚒</button>
+                            <button type="button" @click="icon='🏥'" class="px-3 py-1 text-2xl bg-gray-50 hover:bg-gray-100 rounded border border-gray-200">🏥</button>
+                            <button type="button" @click="icon='📺'" class="px-3 py-1 text-2xl bg-gray-50 hover:bg-gray-100 rounded border border-gray-200">📺</button>
+                            <button type="button" @click="icon='💊'" class="px-3 py-1 text-2xl bg-gray-50 hover:bg-gray-100 rounded border border-gray-200">💊</button>
+                            <button type="button" @click="icon='🧰'" class="px-3 py-1 text-2xl bg-gray-50 hover:bg-gray-100 rounded border border-gray-200">🧰</button>
+                        </div>
+                        {% if form.icon.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.icon.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="id_color" class="block text-sm font-medium text-gray-700 mb-1">Farbe</label>
+                        <div class="flex gap-2">
+                            <input type="color"
+                                   x-model="color"
+                                   @input="document.getElementById('id_color').value = color"
+                                   class="h-10 w-20 border border-gray-300 rounded cursor-pointer">
+                            <input type="text"
+                                   name="color"
+                                   id="id_color"
+                                   x-model="color"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                   placeholder="#3B82F6"
+                                   value="{{ form.instance.color }}">
+                        </div>
+                        <div class="mt-2 flex gap-2 flex-wrap">
+                            <button type="button" @click="color='#3B82F6'" class="w-8 h-8 bg-blue-500 rounded border-2 border-gray-300 hover:border-gray-500"></button>
+                            <button type="button" @click="color='#10B981'" class="w-8 h-8 bg-green-500 rounded border-2 border-gray-300 hover:border-gray-500"></button>
+                            <button type="button" @click="color='#F59E0B'" class="w-8 h-8 bg-yellow-500 rounded border-2 border-gray-300 hover:border-gray-500"></button>
+                            <button type="button" @click="color='#EF4444'" class="w-8 h-8 bg-red-500 rounded border-2 border-gray-300 hover:border-gray-500"></button>
+                            <button type="button" @click="color='#8B5CF6'" class="w-8 h-8 bg-purple-500 rounded border-2 border-gray-300 hover:border-gray-500"></button>
+                            <button type="button" @click="color='#EC4899'" class="w-8 h-8 bg-pink-500 rounded border-2 border-gray-300 hover:border-gray-500"></button>
+                            <button type="button" @click="color='#6B7280'" class="w-8 h-8 bg-gray-500 rounded border-2 border-gray-300 hover:border-gray-500"></button>
+                        </div>
+                        {% if form.color.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.color.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Einstellungen -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Einstellungen</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="id_display_order" class="block text-sm font-medium text-gray-700 mb-1">Anzeigereihenfolge</label>
+                        {{ form.display_order }}
+                        <p class="mt-1 text-xs text-gray-500">Niedrigere Zahlen werden zuerst angezeigt</p>
+                        {% if form.display_order.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.display_order.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        {{ form.is_active }}
+                        <label for="id_is_active" class="text-sm text-gray-700">Profil aktiv</label>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        {{ form.is_default }}
+                        <label for="id_is_default" class="text-sm text-gray-700">Als Standard-Profil verwenden</label>
+                        <span class="ml-2 text-xs text-gray-500">(wird automatisch geladen)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex gap-3">
+                <button type="submit" class="flex-1 inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    {% if is_edit %}Änderungen speichern{% else %}Profil erstellen{% endif %}
+                </button>
+                <a href="{% url 'info_monitors:profile_list' %}" class="px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors">
+                    Abbrechen
+                </a>
+            </div>
+        </div>
+
+        <!-- Rechte Seite: Vorschau -->
+        <div class="lg:sticky lg:top-6 lg:self-start">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Vorschau</h2>
+
+                <!-- Profil-Card Vorschau -->
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                    <div class="flex items-center gap-4 p-4 rounded-lg transition-colors"
+                         :style="`background-color: ${color}20; border: 2px solid ${color};`">
+                        <div class="text-4xl" x-text="icon || '📁'"></div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-900" x-text="document.getElementById('id_name').value || 'Profil-Name'"></div>
+                            <div class="text-sm text-gray-600 mt-1" x-text="document.getElementById('id_description').value || 'Beschreibung des Profils'"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar-Preview -->
+                <div class="mt-6">
+                    <div class="text-sm font-medium text-gray-700 mb-3">In der Sidebar</div>
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-white border border-gray-200">
+                            <span class="text-xl" x-text="icon || '📁'"></span>
+                            <span class="text-sm" x-text="document.getElementById('id_name').value || 'Profil-Name'"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex gap-3">
+                            <div class="text-2xl">💡</div>
+                            <div class="flex-1 text-sm text-blue-900">
+                                <div class="font-medium mb-1">Tipp</div>
+                                <p class="text-blue-700">Profile helfen Ihnen, Dashboards nach Verwendungszweck zu organisieren (z.B. Leitstelle, Werkstatt, Lager).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

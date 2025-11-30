@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ausrüstungstypen - Höhenrettung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'height_rescue:dashboard' %}" class="text-gray-500 hover:text-gray-700">Höhenrettung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Ausrüstungstypen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Ausrüstungstypen</h1>
+        <div class="flex gap-3">
+            <a href="{% url 'height_rescue:master_list' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                ← Zurück zu Stammdaten
+            </a>
+            <a href="{% url 'height_rescue:equipment_type_create' %}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+                ➕ Neuer Typ
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beschreibung</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Verwendung</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for type in types %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{{ type.code }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ type.name }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">{{ type.description|truncatewords:10|default:"-" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if type.is_active %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Aktiv</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Inaktiv</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {{ type.master_items.count }} Stammdaten
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <a href="{% url 'height_rescue:equipment_type_edit' type.pk %}" class="text-orange-600 hover:text-orange-900">Bearbeiten</a>
+                        <a href="{% url 'height_rescue:equipment_type_delete' type.pk %}" class="text-red-600 hover:text-red-900">Löschen</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                        Keine Ausrüstungstypen vorhanden. <a href="{% url 'height_rescue:equipment_type_create' %}" class="text-orange-600 hover:text-orange-900">Jetzt erstellen</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

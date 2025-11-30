@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ master.name }} - Magazin-Stammdaten - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:dashboard' %}" class="text-gray-500 hover:text-gray-700">Magazin</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:master_list' %}" class="text-gray-500 hover:text-gray-700">Stammdaten</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ master.master_number }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-4xl">📦</span>
+                    <div>
+                        <p class="text-purple-200 text-sm font-mono">{{ master.master_number }}</p>
+                        <h1 class="text-2xl font-bold">{{ master.name }}</h1>
+                    </div>
+                </div>
+                <p class="text-purple-100">{{ master.get_item_type_display }}</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'magazine:master_barcode' master.pk %}" target="_blank" class="bg-purple-500 hover:bg-purple-400 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    Barcode
+                </a>
+                <a href="{% url 'magazine:master_qr_code' master.pk %}" target="_blank" class="bg-purple-500 hover:bg-purple-400 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    QR-Code
+                </a>
+                <a href="{% url 'magazine:master_update' master.pk %}" class="bg-white text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-lg font-medium transition-colors">
+                    Bearbeiten
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Details -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Basis-Informationen -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Basis-Informationen</h2>
+                <dl class="grid grid-cols-2 gap-4">
+                    <div>
+                        <dt class="text-sm text-gray-500">Hersteller</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ master.manufacturer|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Hersteller-Art.-Nr.</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ master.manufacturer_part_number|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Lieferant</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ master.supplier|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Lieferanten-Art.-Nr.</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ master.supplier_part_number|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Einheit</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ master.unit }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Stückpreis</dt>
+                        <dd class="text-sm font-medium text-gray-900">{% if master.unit_price %}{{ master.unit_price }} EUR{% else %}-{% endif %}</dd>
+                    </div>
+                </dl>
+                {% if master.description %}
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <dt class="text-sm text-gray-500 mb-1">Beschreibung</dt>
+                    <dd class="text-sm text-gray-900">{{ master.description }}</dd>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Physische Eigenschaften -->
+            {% if master.size or master.material or master.color or master.weight_per_unit or master.volume_per_unit %}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Physische Eigenschaften</h2>
+                <dl class="grid grid-cols-2 gap-4">
+                    {% if master.size %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Größe/Maße</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ master.size }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if master.material %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Material</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ master.material }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if master.color %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Farbe</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ master.color }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if master.weight_per_unit %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Gewicht/Einheit</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ master.weight_per_unit }} kg</dd>
+                    </div>
+                    {% endif %}
+                    {% if master.volume_per_unit %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Volumen/Einheit</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ master.volume_per_unit }} L</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+            {% endif %}
+
+            <!-- Gefahrgut -->
+            {% if master.is_hazardous %}
+            <div class="bg-red-50 rounded-lg shadow-sm border border-red-200 p-6">
+                <h2 class="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
+                    <span>⚠️</span> Gefahrgut
+                </h2>
+                <dl class="grid grid-cols-2 gap-4">
+                    <div>
+                        <dt class="text-sm text-red-600">Gefahrenklasse</dt>
+                        <dd class="text-sm font-medium text-red-900">{{ master.get_hazard_class_display }}</dd>
+                    </div>
+                    {% if master.safety_data_sheet %}
+                    <div>
+                        <dt class="text-sm text-red-600">Sicherheitsdatenblatt</dt>
+                        <dd><a href="{{ master.safety_data_sheet.url }}" target="_blank" class="text-sm text-red-700 hover:text-red-900 underline">PDF öffnen</a></dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+            {% endif %}
+
+            <!-- Lagerung & Haltbarkeit -->
+            {% if master.has_expiry_date or master.storage_temperature_min or master.storage_instructions %}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Lagerung & Haltbarkeit</h2>
+                <dl class="grid grid-cols-2 gap-4">
+                    {% if master.has_expiry_date %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Hat Verfallsdatum</dt>
+                        <dd class="text-sm font-medium text-gray-900">Ja{% if master.shelf_life_months %} ({{ master.shelf_life_months }} Monate){% endif %}</dd>
+                    </div>
+                    {% endif %}
+                    {% if master.storage_temperature_min or master.storage_temperature_max %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Lagertemperatur</dt>
+                        <dd class="text-sm font-medium text-gray-900">
+                            {% if master.storage_temperature_min %}{{ master.storage_temperature_min }}°C{% endif %}
+                            {% if master.storage_temperature_min and master.storage_temperature_max %} - {% endif %}
+                            {% if master.storage_temperature_max %}{{ master.storage_temperature_max }}°C{% endif %}
+                        </dd>
+                    </div>
+                    {% endif %}
+                </dl>
+                {% if master.storage_instructions %}
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <dt class="text-sm text-gray-500 mb-1">Lageranweisungen</dt>
+                    <dd class="text-sm text-gray-900">{{ master.storage_instructions }}</dd>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Right Column: Stock & Actions -->
+        <div class="space-y-6">
+
+            <!-- Bestand -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Bestand</h2>
+                <div class="text-center mb-4">
+                    <p class="text-4xl font-bold text-gray-900">{{ total_stock }}</p>
+                    <p class="text-sm text-gray-500">{{ master.unit }}</p>
+                </div>
+                {% if master.min_quantity %}
+                <div class="text-sm text-gray-600">
+                    Mindestbestand: {{ master.min_quantity }} {{ master.unit }}
+                </div>
+                {% endif %}
+                {% if master.reorder_point %}
+                <div class="text-sm text-gray-600">
+                    Bestellpunkt: {{ master.reorder_point }} {{ master.unit }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Chargen -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Chargen</h2>
+                {% if batches %}
+                <ul class="space-y-3">
+                    {% for batch in batches %}
+                    <li class="p-3 bg-gray-50 rounded-lg">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-medium text-gray-900">{{ batch.batch_number }}</p>
+                                <p class="text-xs text-gray-500">{{ batch.location.name }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-medium text-gray-900">{{ batch.quantity_remaining }}</p>
+                                {% if batch.expiry_date %}
+                                <p class="text-xs {% if batch.expiry_date < today %}text-red-600{% else %}text-gray-500{% endif %}">
+                                    {{ batch.expiry_date|date:"d.m.Y" }}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-sm text-gray-500 text-center py-4">Keine Chargen vorhanden</p>
+                {% endif %}
+            </div>
+
+            <!-- Metadata -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Metadaten</h2>
+                <dl class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="text-gray-500">Erstellt</dt>
+                        <dd class="text-gray-900">{{ master.created_at|date:"d.m.Y H:i" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-gray-500">Erstellt von</dt>
+                        <dd class="text-gray-900">{{ master.created_by.get_full_name|default:master.created_by.username }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-gray-500">Aktualisiert</dt>
+                        <dd class="text-gray-900">{{ master.updated_at|date:"d.m.Y H:i" }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

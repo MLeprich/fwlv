@@ -1,0 +1,53 @@
+<!-- Chart Widget -->
+<div class="h-full flex flex-col p-4">
+    {% if widget.title %}
+    <h3 class="text-lg font-bold text-gray-900 mb-4">{{ widget.title }}</h3>
+    {% endif %}
+
+    <div class="flex-1 relative">
+        <canvas id="chart-{{ widget.id }}"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const ctx = document.getElementById('chart-{{ widget.id }}').getContext('2d');
+
+    const config = {{ widget.config|safe|default:"{}" }};
+    const chartType = '{{ widget.chart_type|default:"line" }}';
+
+    const data = config.data || {
+        labels: ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun'],
+        datasets: [{
+            label: '{{ widget.title|default:"Daten" }}',
+            data: [12, 19, 3, 5, 2, 3],
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)'
+        }]
+    };
+
+    const options = config.options || {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
+            }
+        }
+    };
+
+    new Chart(ctx, {
+        type: chartType,
+        data: data,
+        options: options
+    });
+
+    {% if widget.auto_refresh %}
+    setInterval(function() {
+        location.reload();
+    }, {{ widget.refresh_interval }}000);
+    {% endif %}
+})();
+</script>

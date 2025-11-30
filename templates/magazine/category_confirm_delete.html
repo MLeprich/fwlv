@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kategorie löschen - Magazin - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:dashboard' %}" class="text-gray-500 hover:text-gray-700">Magazin</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:category_list' %}" class="text-gray-500 hover:text-gray-700">Kategorien</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Löschen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-start gap-4 mb-6">
+            <div class="flex-shrink-0">
+                <div class="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full">
+                    <span class="text-2xl">⚠️</span>
+                </div>
+            </div>
+            <div class="flex-1">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">Kategorie löschen?</h1>
+                <p class="text-gray-600">
+                    Möchten Sie die Kategorie <strong>"{{ object.name }}"</strong> wirklich löschen?
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg mb-6">
+            <div class="flex">
+                <span class="text-yellow-600">💡</span>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">Wichtiger Hinweis</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p><strong>Unterkategorien:</strong> Alle Unterkategorien dieser Kategorie werden ebenfalls gelöscht.</p>
+                        <p class="mt-1"><strong>Artikel:</strong> Artikel, die dieser Kategorie zugeordnet sind, werden keiner Kategorie zugeordnet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <dl class="space-y-2">
+                <div class="flex">
+                    <dt class="text-sm font-medium text-gray-600 w-32">Name:</dt>
+                    <dd class="text-sm text-gray-900">{{ object.name }}</dd>
+                </div>
+                <div class="flex">
+                    <dt class="text-sm font-medium text-gray-600 w-32">Code:</dt>
+                    <dd class="text-sm text-gray-900 font-mono">{{ object.code }}</dd>
+                </div>
+                {% if object.description %}
+                <div class="flex">
+                    <dt class="text-sm font-medium text-gray-600 w-32">Beschreibung:</dt>
+                    <dd class="text-sm text-gray-900">{{ object.description }}</dd>
+                </div>
+                {% endif %}
+                {% if object.parent %}
+                <div class="flex">
+                    <dt class="text-sm font-medium text-gray-600 w-32">Übergeordnet:</dt>
+                    <dd class="text-sm text-gray-900">{{ object.parent.name }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex items-center justify-end gap-3">
+                <a href="{% url 'magazine:category_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                    🗑️ Endgültig löschen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

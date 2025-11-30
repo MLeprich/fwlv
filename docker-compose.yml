@@ -1,0 +1,222 @@
+# =============================================================================
+# FLVS - Feuerwehr Lagerverwaltungssystem
+# Docker Compose Configuration
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: flvs-db
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/backup:/backup
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flvs}
+      POSTGRES_USER: ${POSTGRES_USER:-flvs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flvs} -d ${POSTGRES_DB:-flvs}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - flvs-network
+
+  # ---------------------------------------------------------------------------
+  # Redis (Cache & Celery Broker)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: flvs-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - flvs-network
+
+  # ---------------------------------------------------------------------------
+  # Django Web Application
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      target: production
+    container_name: flvs-web
+    restart: unless-stopped
+    volumes:
+      - static_files:/app/staticfiles
+      - media_files:/app/media
+      - log_files:/app/logs
+    environment:
+      - DJANGO_SETTINGS_MODULE=flvs_project.settings.production
+      - SECRET_KEY=${SECRET_KEY:?Secret key required}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-flvs}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-flvs}
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - EMAIL_HOST=${EMAIL_HOST:-}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS:-True}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-noreply@flvs.local}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - flvs-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.flvs.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.services.flvs.loadbalancer.server.port=8000"
+
+  # ---------------------------------------------------------------------------
+  # Celery Worker (Background Tasks)
+  # ---------------------------------------------------------------------------
+  celery-worker:
+    build:
+      context: .
+      target: celery-worker
+    container_name: flvs-celery-worker
+    restart: unless-stopped
+    volumes:
+      - media_files:/app/media
+      - log_files:/app/logs
+    environment:
+      - DJANGO_SETTINGS_MODULE=flvs_project.settings.production
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-flvs}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-flvs}
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - web
+      - redis
+      - db
+    networks:
+      - flvs-network
+
+  # ---------------------------------------------------------------------------
+  # Celery Beat (Scheduled Tasks)
+  # ---------------------------------------------------------------------------
+  celery-beat:
+    build:
+      context: .
+      target: celery-beat
+    container_name: flvs-celery-beat
+    restart: unless-stopped
+    volumes:
+      - log_files:/app/logs
+    environment:
+      - DJANGO_SETTINGS_MODULE=flvs_project.settings.production
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-flvs}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-flvs}
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - web
+      - redis
+      - db
+    networks:
+      - flvs-network
+
+  # ---------------------------------------------------------------------------
+  # Nginx Reverse Proxy
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: flvs-nginx
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - static_files:/var/www/static:ro
+      - media_files:/var/www/media:ro
+      - ./docker/certbot/conf:/etc/letsencrypt:ro
+      - ./docker/certbot/www:/var/www/certbot:ro
+    depends_on:
+      - web
+    networks:
+      - flvs-network
+
+  # ---------------------------------------------------------------------------
+  # Certbot (SSL Certificate Management) - Optional
+  # ---------------------------------------------------------------------------
+  certbot:
+    image: certbot/certbot
+    container_name: flvs-certbot
+    volumes:
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    profiles:
+      - ssl
+
+  # ---------------------------------------------------------------------------
+  # Database Backup (Optional)
+  # ---------------------------------------------------------------------------
+  backup:
+    image: postgres:16-alpine
+    container_name: flvs-backup
+    volumes:
+      - ./docker/backup:/backup
+      - ./docker/scripts/backup.sh:/backup.sh:ro
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-flvs}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-flvs}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    entrypoint: ["/bin/sh", "-c", "chmod +x /backup.sh && crond -f"]
+    depends_on:
+      - db
+    networks:
+      - flvs-network
+    profiles:
+      - backup
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  static_files:
+    driver: local
+  media_files:
+    driver: local
+  log_files:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  flvs-network:
+    driver: bridge

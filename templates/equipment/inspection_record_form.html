@@ -1,0 +1,414 @@
+{% extends 'base.html' %}
+
+{% block title %}Prüfung erfassen | FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'equipment:dashboard' %}" class="text-gray-500 hover:text-gray-700">Ausrüstung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'equipment:inspection_record_list' %}" class="text-gray-500 hover:text-gray-700">Prüfprotokolle</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Neue Prüfung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-4xl">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Prüfung erfassen</h1>
+        <p class="mt-1 text-sm text-gray-600">
+            Dokumentieren Sie die durchgeführte Prüfung
+        </p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <form method="post" enctype="multipart/form-data" id="inspection_form">
+            {% csrf_token %}
+
+            <div class="space-y-6">
+                <!-- Gerät auswählen (Searchable Dropdown) -->
+                <div class="p-4 bg-amber-50 border border-amber-200 rounded-lg"
+                     x-data="{
+                         open: false,
+                         search: '',
+                         selected: null,
+                         devices: [
+                             {% for device in devices %}
+                             { id: {{ device.id }}, text: '{{ device.inventory_number }} - {{ device.master.name }}', inv: '{{ device.inventory_number }}', name: '{{ device.master.name }}', serial: '{{ device.serial_number|default:"" }}' }{% if not forloop.last %},{% endif %}
+                             {% endfor %}
+                         ]
+                     }">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <span class="text-amber-700">🔧 Gerät auswählen</span> *
+                    </label>
+
+                    <!-- Custom Searchable Dropdown -->
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-left bg-white flex items-center justify-between"
+                        >
+                            <span x-text="selected ? selected.text : 'Gerät auswählen...'" class="truncate"></span>
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                        >
+                            <!-- Search Input -->
+                            <div class="p-2 border-b border-gray-200">
+                                <input
+                                    type="text"
+                                    x-model="search"
+                                    @click.stop
+                                    placeholder="Gerät suchen (Inventarnummer oder Name)..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm"
+                                >
+                            </div>
+
+                            <!-- Options List -->
+                            <div class="overflow-y-auto max-h-64">
+                                <template x-for="device in devices.filter(d => d.text.toLowerCase().includes(search.toLowerCase()) || d.serial.toLowerCase().includes(search.toLowerCase()))" :key="device.id">
+                                    <button
+                                        type="button"
+                                        @click="selected = device; selectDevice(device.id, device.text); open = false"
+                                        class="w-full text-left px-4 py-2 hover:bg-amber-50 text-sm border-b border-gray-100 last:border-0"
+                                        :class="selected && selected.id === device.id ? 'bg-amber-100 font-medium' : ''"
+                                    >
+                                        <div class="font-medium text-gray-900" x-text="device.inv"></div>
+                                        <div class="text-sm text-gray-600" x-text="device.name"></div>
+                                        <div x-show="device.serial" class="text-xs text-gray-500" x-text="'SN: ' + device.serial"></div>
+                                    </button>
+                                </template>
+                                <div x-show="devices.filter(d => d.text.toLowerCase().includes(search.toLowerCase()) || d.serial.toLowerCase().includes(search.toLowerCase())).length === 0" class="px-4 py-3 text-gray-500 text-sm">
+                                    Keine Geräte gefunden
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500">Wählen Sie das zu prüfende Gerät aus</p>
+                    <div id="device_feedback" class="mt-2 hidden"></div>
+                </div>
+
+                <!-- Form Fields -->
+                {% for field in form %}
+                <div {% if field.name == 'checklist_results_text' or field.name == 'device' %}style="display:none;"{% endif %}>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ field.label }}
+                        {% if field.field.required %}<span class="text-red-600">*</span>{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>
+                    {% endif %}
+                    {% if field.help_text and field.name != 'checklist_results_text' %}
+                    <p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <!-- Dynamische Checkliste (wird per JavaScript befüllt) -->
+                <div id="checklist_container" class="hidden">
+                    <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">✓ Prüfpunkte</h3>
+                        <div id="checklist_items" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Benutzerdefinierte Messfelder (wird per JavaScript befüllt) -->
+                <div id="custom_fields_container" class="hidden">
+                    <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">📏 Messwerte</h3>
+                        <div id="custom_fields_items" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
+                <a href="{% url 'equipment:inspection_record_list' %}"
+                   class="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors duration-150">
+                    Abbrechen
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-150">
+                    Prüfung erfassen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deviceSelect = document.getElementById('id_device');
+    const inspectionTypeSelect = document.getElementById('id_inspection_type');
+    const deviceFeedbackDiv = document.getElementById('device_feedback');
+    const checklistContainer = document.getElementById('checklist_container');
+    const checklistItems = document.getElementById('checklist_items');
+    const customFieldsContainer = document.getElementById('custom_fields_container');
+    const customFieldsItems = document.getElementById('custom_fields_items');
+    const checklistResultsText = document.getElementById('id_checklist_results_text');
+
+    // Globale Funktion zum Auswählen eines Geräts
+    window.selectDevice = async function(deviceId, deviceName) {
+        // Setze das versteckte device-Feld
+        deviceSelect.value = deviceId;
+
+        showDeviceFeedback('Lade verfügbare Prüfungen...', 'info');
+
+        try {
+            const response = await fetch(`{% url 'equipment:api_inspection_types_by_device' %}?device_id=${deviceId}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Fehler beim Laden der Daten');
+            }
+
+            if (data.inspection_types && data.inspection_types.length > 0) {
+                // Aktualisiere Inspection-Type-Dropdown mit den verfügbaren Prüfungen
+                inspectionTypeSelect.innerHTML = '<option value="">---------</option>';
+                data.inspection_types.forEach(it => {
+                    const option = document.createElement('option');
+                    option.value = it.id;
+                    option.textContent = it.name;
+                    inspectionTypeSelect.appendChild(option);
+                });
+
+                if (data.inspection_types.length === 1) {
+                    inspectionTypeSelect.value = data.inspection_types[0].id;
+                    showDeviceFeedback(`✓ Gerät ausgewählt<br>Prüfung: ${data.inspection_types[0].name}`, 'success');
+                    // Lade Checkliste
+                    loadChecklist(data.inspection_types[0].id);
+                } else {
+                    showDeviceFeedback(
+                        `✓ Gerät ausgewählt<br>` +
+                        `${data.inspection_types.length} Prüfungen verfügbar - bitte wählen Sie eine aus`,
+                        'success'
+                    );
+                    inspectionTypeSelect.focus();
+                }
+            } else {
+                inspectionTypeSelect.innerHTML = '<option value="">Keine Prüfungen verfügbar</option>';
+                showDeviceFeedback(`⚠ Für diesen Gerätetyp sind keine Prüfungsarten definiert`, 'warning');
+            }
+
+        } catch (error) {
+            showDeviceFeedback(`✗ ${error.message}`, 'error');
+        }
+    };
+
+    // Funktion zum Anzeigen von Device-Feedback
+    function showDeviceFeedback(message, type) {
+        deviceFeedbackDiv.classList.remove('hidden');
+        deviceFeedbackDiv.innerHTML = `
+            <div class="p-3 rounded-lg ${
+                type === 'success' ? 'bg-green-100 text-green-800' :
+                type === 'error' ? 'bg-red-100 text-red-800' :
+                type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-blue-100 text-blue-800'
+            }">
+                <p class="text-sm">${message}</p>
+            </div>
+        `;
+    }
+
+    // Funktion zum Laden der Checkliste
+    async function loadChecklist(inspectionTypeId) {
+        if (!inspectionTypeId) {
+            checklistContainer.classList.add('hidden');
+            customFieldsContainer.classList.add('hidden');
+            return;
+        }
+
+        try {
+            const response = await fetch(`{% url 'equipment:api_inspection_checklist' %}?inspection_type_id=${inspectionTypeId}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Fehler beim Laden der Checkliste');
+            }
+
+            // Zeige Checkliste
+            if (data.checklist && data.checklist.length > 0) {
+                renderChecklist(data.checklist);
+                checklistContainer.classList.remove('hidden');
+            } else {
+                checklistContainer.classList.add('hidden');
+            }
+
+            // Zeige Custom Fields
+            if (data.custom_fields && data.custom_fields.length > 0) {
+                renderCustomFields(data.custom_fields);
+                customFieldsContainer.classList.remove('hidden');
+            } else {
+                customFieldsContainer.classList.add('hidden');
+            }
+
+        } catch (error) {
+            console.error('Fehler beim Laden der Checkliste:', error);
+        }
+    }
+
+    // Funktion zum Rendern der Checkliste
+    function renderChecklist(checklist) {
+        checklistItems.innerHTML = '';
+
+        checklist.forEach((item, index) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200';
+            itemDiv.innerHTML = `
+                <div class="flex-1">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <span class="text-sm font-medium text-gray-900">${item}</span>
+                    </label>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button"
+                            class="checklist-btn px-3 py-1 text-xs font-semibold rounded-lg transition-colors"
+                            data-index="${index}"
+                            data-value="OK"
+                            onclick="setChecklistValue(${index}, 'OK', this)">
+                        OK
+                    </button>
+                    <button type="button"
+                            class="checklist-btn px-3 py-1 text-xs font-semibold rounded-lg transition-colors"
+                            data-index="${index}"
+                            data-value="Mangel"
+                            onclick="setChecklistValue(${index}, 'Mangel', this)">
+                        Mangel
+                    </button>
+                    <button type="button"
+                            class="checklist-btn px-3 py-1 text-xs font-semibold rounded-lg transition-colors"
+                            data-index="${index}"
+                            data-value="N/A"
+                            onclick="setChecklistValue(${index}, 'N/A', this)">
+                        N/A
+                    </button>
+                </div>
+            `;
+            checklistItems.appendChild(itemDiv);
+        });
+
+        // Style für Buttons
+        document.querySelectorAll('.checklist-btn').forEach(btn => {
+            btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+        });
+    }
+
+    // Funktion zum Rendern der Custom Fields
+    function renderCustomFields(customFields) {
+        customFieldsItems.innerHTML = '';
+
+        customFields.forEach((field, index) => {
+            const fieldDiv = document.createElement('div');
+            fieldDiv.className = 'space-y-1';
+
+            let inputHtml = '';
+            if (field.type === 'number') {
+                inputHtml = `
+                    <input type="number"
+                           class="custom-field w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                           data-field-name="${field.name}"
+                           placeholder="${field.unit || ''}"
+                           ${field.required ? 'required' : ''}
+                           ${field.min !== undefined ? `min="${field.min}"` : ''}
+                           ${field.max !== undefined ? `max="${field.max}"` : ''}
+                           onchange="updateCustomFields()">
+                `;
+            } else if (field.type === 'text') {
+                inputHtml = `
+                    <input type="text"
+                           class="custom-field w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                           data-field-name="${field.name}"
+                           ${field.required ? 'required' : ''}
+                           onchange="updateCustomFields()">
+                `;
+            }
+
+            fieldDiv.innerHTML = `
+                <label class="block text-sm font-medium text-gray-700">
+                    ${field.name}
+                    ${field.required ? '<span class="text-red-600">*</span>' : ''}
+                    ${field.unit ? `<span class="text-gray-500 text-xs">(${field.unit})</span>` : ''}
+                </label>
+                ${inputHtml}
+            `;
+            customFieldsItems.appendChild(fieldDiv);
+        });
+    }
+
+    // Globale Funktionen für Checklisten-Werte
+    window.checklistResults = {};
+    window.customFieldValues = {};
+
+    window.setChecklistValue = function(index, value, button) {
+        const checklistItemsArray = Array.from(checklistItems.children);
+        const itemText = checklistItemsArray[index].querySelector('span').textContent;
+
+        window.checklistResults[itemText] = value;
+
+        // Style-Update für alle Buttons in dieser Zeile
+        const row = button.closest('.flex.items-center');
+        row.querySelectorAll('.checklist-btn').forEach(btn => {
+            btn.classList.remove('bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800', 'bg-gray-400', 'text-gray-700');
+            btn.classList.add('bg-gray-200', 'text-gray-700');
+        });
+
+        // Markiere den ausgewählten Button
+        if (value === 'OK') {
+            button.classList.remove('bg-gray-200', 'text-gray-700');
+            button.classList.add('bg-green-100', 'text-green-800');
+        } else if (value === 'Mangel') {
+            button.classList.remove('bg-gray-200', 'text-gray-700');
+            button.classList.add('bg-red-100', 'text-red-800');
+        } else if (value === 'N/A') {
+            button.classList.remove('bg-gray-200', 'text-gray-700');
+            button.classList.add('bg-gray-400', 'text-gray-700');
+        }
+
+        updateChecklistJSON();
+    };
+
+    window.updateCustomFields = function() {
+        window.customFieldValues = {};
+        document.querySelectorAll('.custom-field').forEach(field => {
+            const name = field.dataset.fieldName;
+            const value = field.value;
+            if (value) {
+                window.customFieldValues[name] = value;
+            }
+        });
+    };
+
+    function updateChecklistJSON() {
+        checklistResultsText.value = JSON.stringify(window.checklistResults);
+    }
+
+    // Lade Checkliste bei Inspection-Type-Änderung
+    inspectionTypeSelect.addEventListener('change', function() {
+        loadChecklist(this.value);
+    });
+
+    // Form Submit - sammle Custom Fields
+    document.getElementById('inspection_form').addEventListener('submit', function(e) {
+        updateCustomFields();
+        // Custom Field Values in ein verstecktes Feld packen (wenn benötigt)
+        // Für jetzt gehen sie verloren, müssten separat gespeichert werden
+    });
+});
+</script>
+
+{% endblock %}

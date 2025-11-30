@@ -1,0 +1,246 @@
+{% comment %}
+HTMX-Partial: Vehicle Table
+Wird dynamisch bei Suche/Filter-Änderungen geladen
+{% endcomment %}
+
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fahrzeug
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Typ / Kennzeichen
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Standort
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    HU / UVV
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Aktionen
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for vehicle in vehicles %}
+            <tr class="hover:bg-gray-50 transition-colors">
+                <!-- Fahrzeug Info -->
+                <td class="px-6 py-4">
+                    <div class="flex items-start gap-3">
+                        {% if vehicle.photo %}
+                        <img src="{{ vehicle.photo.url }}" alt="{{ vehicle.name }}" class="w-16 h-16 rounded-lg object-cover">
+                        {% else %}
+                        <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <span class="text-3xl">🚒</span>
+                        </div>
+                        {% endif %}
+
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ vehicle.name }}
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                {{ vehicle.call_sign }}
+                            </div>
+                            {% if vehicle.manufacturer and vehicle.model %}
+                            <div class="text-xs text-gray-400 mt-0.5">
+                                {{ vehicle.manufacturer }} {{ vehicle.model }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+
+                <!-- Typ / Kennzeichen -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ vehicle.get_vehicle_type_display }}</div>
+                    <div class="text-sm font-medium text-gray-600 mt-1">
+                        {{ vehicle.license_plate }}
+                    </div>
+                    {% if vehicle.current_mileage %}
+                    <div class="text-xs text-gray-400 mt-0.5">
+                        {{ vehicle.current_mileage|stringformat:"d" }} km
+                    </div>
+                    {% endif %}
+                </td>
+
+                <!-- Standort -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if vehicle.home_location %}
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">📍</span>
+                        <div class="text-sm text-gray-900">
+                            {{ vehicle.home_location.name }}
+                        </div>
+                    </div>
+                    {% else %}
+                    <span class="text-sm text-gray-400">-</span>
+                    {% endif %}
+                </td>
+
+                <!-- HU / UVV -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="space-y-1">
+                        {% if vehicle.next_inspection_date %}
+                        <div class="text-sm">
+                            <span class="text-gray-500">HU:</span>
+                            <span class="{% if vehicle.is_inspection_due %}text-red-600 font-medium{% else %}text-gray-900{% endif %}">
+                                {{ vehicle.next_inspection_date|date:"d.m.Y" }}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        {% if vehicle.next_safety_check_date %}
+                        <div class="text-sm">
+                            <span class="text-gray-500">UVV:</span>
+                            <span class="{% if vehicle.is_safety_check_due %}text-red-600 font-medium{% else %}text-gray-900{% endif %}">
+                                {{ vehicle.next_safety_check_date|date:"d.m.Y" }}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        {% if not vehicle.next_inspection_date and not vehicle.next_safety_check_date %}
+                        <span class="text-sm text-gray-400">Nicht geplant</span>
+                        {% endif %}
+                    </div>
+                </td>
+
+                <!-- Status -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if vehicle.status == 'operational' %}
+                        {% include 'includes/components/badge.html' with text="Einsatzbereit" color="success" %}
+                    {% elif vehicle.status == 'in_use' %}
+                        {% include 'includes/components/badge.html' with text="Im Einsatz" color="info" %}
+                    {% elif vehicle.status == 'maintenance' %}
+                        {% include 'includes/components/badge.html' with text="In Wartung" color="warning" %}
+                    {% elif vehicle.status == 'repair' %}
+                        {% include 'includes/components/badge.html' with text="In Reparatur" color="danger" %}
+                    {% elif vehicle.status == 'out_of_service' %}
+                        {% include 'includes/components/badge.html' with text="Außer Dienst" color="gray" %}
+                    {% elif vehicle.status == 'reserved' %}
+                        {% include 'includes/components/badge.html' with text="Reserviert" color="primary" %}
+                    {% endif %}
+
+                    <!-- Warning Badges -->
+                    {% if vehicle.is_inspection_due %}
+                    <div class="mt-1">
+                        {% include 'includes/components/badge.html' with text="HU fällig" color="danger" size="sm" icon="⚠️" %}
+                    </div>
+                    {% endif %}
+                    {% if vehicle.is_safety_check_due %}
+                    <div class="mt-1">
+                        {% include 'includes/components/badge.html' with text="UVV fällig" color="danger" size="sm" icon="⚠️" %}
+                    </div>
+                    {% endif %}
+                </td>
+
+                <!-- Aktionen -->
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex items-center justify-end gap-2">
+                        <!-- Detail Button -->
+                        <a href="{% url 'vehicles:detail' vehicle.pk %}"
+                           class="text-primary-600 hover:text-primary-900"
+                           title="Details anzeigen">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </a>
+
+                        <!-- Edit Button -->
+                        <a href="{% url 'vehicles:update' vehicle.pk %}"
+                           class="text-blue-600 hover:text-blue-900"
+                           title="Bearbeiten">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </a>
+
+                        <!-- Handover Button -->
+                        <a href="{% url 'vehicle_handover:handover_create' %}"
+                           class="text-green-600 hover:text-green-900"
+                           title="Fahrzeugübernahme">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                            </svg>
+                        </a>
+
+                        <!-- Inspection Button -->
+                        <button
+                            hx-get="{% url 'vehicles:inspection_modal' vehicle.pk %}"
+                            hx-target="#modal-container"
+                            class="text-orange-600 hover:text-orange-900"
+                            title="Prüfung eintragen">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                        <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Keine Fahrzeuge gefunden</p>
+                            <p class="text-sm text-gray-500 mt-1">Passen Sie Ihre Suchkriterien an oder fügen Sie ein neues Fahrzeug hinzu.</p>
+                        </div>
+                        <a href="{% url 'vehicles:create' %}"
+                           class="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+                            + Neues Fahrzeug
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if vehicles.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-700">
+            Zeige {{ vehicles.start_index }} bis {{ vehicles.end_index }} von {{ vehicles.paginator.count }} Einträgen
+        </div>
+
+        <nav class="flex gap-2">
+            {% if vehicles.has_previous %}
+            <button
+                hx-get="{% url 'vehicles:list' %}?page={{ vehicles.previous_page_number }}"
+                hx-target="#vehicle-list"
+                hx-include="[name='search'], [name='vehicle_type'], [name='status'], [name='location']"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Zurück
+            </button>
+            {% endif %}
+
+            <span class="px-3 py-1 bg-primary-600 text-white rounded-lg">
+                {{ vehicles.number }}
+            </span>
+
+            {% if vehicles.has_next %}
+            <button
+                hx-get="{% url 'vehicles:list' %}?page={{ vehicles.next_page_number }}"
+                hx-target="#vehicle-list"
+                hx-include="[name='search'], [name='vehicle_type'], [name='status'], [name='location']"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Weiter
+            </button>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Container -->
+<div id="modal-container"></div>

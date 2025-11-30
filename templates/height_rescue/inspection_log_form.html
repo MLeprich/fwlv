@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title|default:"Prüfung dokumentieren" }} - Höhenrettung{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center space-x-2 text-sm mb-6">
+        <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        <span class="text-gray-400">/</span>
+        <a href="{% url 'height_rescue:dashboard' %}" class="text-gray-500 hover:text-gray-700">Höhenrettung</a>
+        <span class="text-gray-400">/</span>
+        <a href="{% url 'height_rescue:inspection_list' %}" class="text-gray-500 hover:text-gray-700">Prüfprotokolle</a>
+        <span class="text-gray-400">/</span>
+        <span class="text-gray-900 font-medium">{{ title|default:"Prüfung dokumentieren" }}</span>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">🔍 {{ title|default:"Prüfung dokumentieren" }}</h1>
+        <p class="mt-1 text-sm text-gray-600">Prüfprotokoll für Höhenrettungsausrüstung erstellen</p>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white shadow-sm rounded-lg border border-gray-200">
+        <form method="post" enctype="multipart/form-data" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📋 Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Ausrüstung -->
+                    <div x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                        items = Array.from(document.querySelectorAll('#id_item option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(item => item.value);
+                        const currentValue = document.getElementById('id_item').value;
+                        if (currentValue) {
+                            selected = items.find(item => item.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_item').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.item.label }} *</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.item }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Ausrüstung auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Ausrüstung suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="item in items.filter(i => i.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = item; document.getElementById('id_item').value = item.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-purple-50 text-sm"
+                                            :class="selected && selected.value === item.value ? 'bg-purple-100 font-medium' : ''"
+                                            x-text="item.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.item.errors %}<p class="mt-1 text-sm text-red-600">{{ form.item.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- Prüfdatum -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.inspection_date.label }} *</label>
+                        {{ form.inspection_date }}
+                        {% if form.inspection_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.inspection_date.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- Prüfart -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.inspection_type.label }} *</label>
+                        {{ form.inspection_type }}
+                        {% if form.inspection_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.inspection_type.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- Prüfer -->
+                    <div x-data="{ open: false, search: '', selected: null, inspectors: [] }" x-init="
+                        inspectors = Array.from(document.querySelectorAll('#id_inspector option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(insp => insp.value);
+                        const currentValue = document.getElementById('id_inspector').value;
+                        if (currentValue) {
+                            selected = inspectors.find(insp => insp.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_inspector').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.inspector.label }} *</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.inspector }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Prüfer auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Prüfer suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="inspector in inspectors.filter(insp => insp.text.toLowerCase().includes(search.toLowerCase()))" :key="inspector.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = inspector; document.getElementById('id_inspector').value = inspector.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-purple-50 text-sm"
+                                            :class="selected && selected.value === inspector.value ? 'bg-purple-100 font-medium' : ''"
+                                            x-text="inspector.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.inspector.errors %}<p class="mt-1 text-sm text-red-600">{{ form.inspector.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prüfergebnis -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">✅ Prüfergebnis</h2>
+                <div>
+                    <label class="flex items-center">
+                        {{ form.passed }}
+                        <span class="ml-2 text-sm font-medium text-gray-700">Prüfung bestanden</span>
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500">Aktivieren, wenn die Ausrüstung alle Prüfpunkte bestanden hat und einsatzbereit ist</p>
+                    {% if form.passed.errors %}<p class="mt-1 text-sm text-red-600">{{ form.passed.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Prüfpunkte -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔬 Prüfpunkte</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.visual_check }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Sichtprüfung OK</span>
+                        </label>
+                        {% if form.visual_check.errors %}<p class="mt-1 text-sm text-red-600">{{ form.visual_check.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.functionality_check }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Funktionsprüfung OK</span>
+                        </label>
+                        {% if form.functionality_check.errors %}<p class="mt-1 text-sm text-red-600">{{ form.functionality_check.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.marking_legible }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Kennzeichnung lesbar</span>
+                        </label>
+                        {% if form.marking_legible.errors %}<p class="mt-1 text-sm text-red-600">{{ form.marking_legible.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.no_damage }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Keine Beschädigungen</span>
+                        </label>
+                        {% if form.no_damage.errors %}<p class="mt-1 text-sm text-red-600">{{ form.no_damage.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.no_wear }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Keine übermäßige Abnutzung</span>
+                        </label>
+                        {% if form.no_wear.errors %}<p class="mt-1 text-sm text-red-600">{{ form.no_wear.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.no_corrosion }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Keine Korrosion</span>
+                        </label>
+                        {% if form.no_corrosion.errors %}<p class="mt-1 text-sm text-red-600">{{ form.no_corrosion.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feststellungen & Maßnahmen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📝 Feststellungen & Maßnahmen</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.findings.label }}</label>
+                        {{ form.findings }}
+                        <p class="mt-1 text-xs text-gray-500">Mängel, Beschädigungen, Abnutzungserscheinungen</p>
+                        {% if form.findings.errors %}<p class="mt-1 text-sm text-red-600">{{ form.findings.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.actions_taken.label }}</label>
+                        {{ form.actions_taken }}
+                        <p class="mt-1 text-xs text-gray-500">Reparatur, Austausch, Aussonderung, etc.</p>
+                        {% if form.actions_taken.errors %}<p class="mt-1 text-sm text-red-600">{{ form.actions_taken.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nächste Prüfung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📅 Nächste Prüfung</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.next_inspection_due.label }}</label>
+                    {{ form.next_inspection_due }}
+                    <p class="mt-1 text-xs text-gray-500">Datum für die nächste Prüfung</p>
+                    {% if form.next_inspection_due.errors %}<p class="mt-1 text-sm text-red-600">{{ form.next_inspection_due.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Dokumentation -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📎 Dokumentation</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.protocol_file.label }}</label>
+                    {{ form.protocol_file }}
+                    <p class="mt-1 text-xs text-gray-500">Prüfprotokoll als PDF hochladen (optional)</p>
+                    {% if form.protocol_file.errors %}<p class="mt-1 text-sm text-red-600">{{ form.protocol_file.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'height_rescue:inspection_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                    {{ submit_text|default:"Protokoll speichern" }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

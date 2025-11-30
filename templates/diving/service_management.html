@@ -1,0 +1,344 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Wartungsverwaltung - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Wartungsverwaltung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-cyan-600 to-blue-700 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">🔧</span>
+                    <h1 class="text-3xl font-bold">Wartungsverwaltung</h1>
+                </div>
+                <p class="text-cyan-100 text-lg">
+                    Zentrale Verwaltung für TÜV-Prüfungen und Service-Intervalle
+                </p>
+            </div>
+            <div class="hidden lg:block">
+                <a href="{% url 'diving:dashboard' %}" class="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-3 border border-white/20 hover:bg-white/20 transition-colors">
+                    <span class="text-white font-medium">← Zurück zum Dashboard</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-cyan-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Wartungstypen</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_types }}</p>
+                </div>
+                <div class="bg-cyan-100 rounded-full p-3">
+                    <span class="text-3xl">📋</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Aktive Zuweisungen</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_assignments }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <span class="text-3xl">🔗</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Durchgeführte Wartungen</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_records }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <span class="text-3xl">✅</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wartungsarten Management -->
+    <div class="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border-2 border-cyan-200 p-6 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-cyan-600 rounded-full flex items-center justify-center">
+                    <span class="text-2xl">🔧</span>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Wartungsarten verwalten</h2>
+                    <p class="text-sm text-gray-600">Individuelle Wartungen erstellen und Ausrüstung zuweisen</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Wartungstypen Liste -->
+            <a href="{% url 'diving:service_type_list' %}" class="bg-white rounded-lg p-4 border-2 border-cyan-200 hover:border-cyan-400 transition-all group">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-2xl">📋</span>
+                    <h3 class="font-bold text-gray-900 group-hover:text-cyan-600 transition-colors">Wartungstypen</h3>
+                </div>
+                <p class="text-sm text-gray-600 mb-2">Jahresservice, TÜV-Prüfung, Dichtungswechsel, Funktionsprüfung</p>
+                <div class="flex items-center justify-between mt-3">
+                    <span class="text-sm font-medium text-cyan-600 group-hover:underline">Verwalten →</span>
+                    <span class="text-lg font-bold text-cyan-600">{{ total_types }}</span>
+                </div>
+            </a>
+
+            <!-- Neuen Wartungstyp erstellen -->
+            <a href="{% url 'diving:service_type_create' %}" class="bg-gradient-to-br from-cyan-600 to-blue-700 text-white rounded-lg p-4 border-2 border-cyan-600 hover:from-cyan-700 hover:to-blue-800 transition-all group">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-2xl">➕</span>
+                    <h3 class="font-bold">Neuen Wartungstyp erstellen</h3>
+                </div>
+                <p class="text-sm text-cyan-100 mb-2">Eigene Wartungsart mit individuellen Prüfpunkten anlegen</p>
+                <span class="text-sm font-medium group-hover:underline">Jetzt erstellen →</span>
+            </a>
+        </div>
+
+        <!-- Wartungstypen Übersicht -->
+        {% if service_types %}
+        <div class="mt-6">
+            <h3 class="font-bold text-gray-900 mb-3">📊 Vorhandene Wartungstypen</h3>
+            <div class="bg-white rounded-lg border border-cyan-200 overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Standard</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Intervall</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zuweisungen</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for type in service_types %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="font-medium text-gray-900">{{ type.name }}</div>
+                                {% if type.is_mandatory %}
+                                <span class="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">Pflicht</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ type.service_standard|default:"-" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ type.interval_months|default:"-" }} Monate
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-cyan-600">
+                                {{ type.assignment_count }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <a href="{% url 'diving:service_type_edit' type.pk %}" class="text-cyan-600 hover:text-cyan-900 mr-3">Bearbeiten</a>
+                                <a href="{% url 'diving:service_type_delete' type.pk %}" class="text-red-600 hover:text-red-900">Löschen</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="mt-6 bg-white rounded-lg p-8 text-center border-2 border-dashed border-cyan-300">
+            <span class="text-5xl block mb-3">📋</span>
+            <p class="text-gray-600 font-medium mb-2">Noch keine Wartungstypen angelegt</p>
+            <p class="text-sm text-gray-500 mb-4">Erstellen Sie Ihren ersten Wartungstyp, um loszulegen</p>
+            <a href="{% url 'diving:service_type_create' %}" class="inline-block bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                ➕ Ersten Wartungstyp erstellen
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <a href="{% url 'diving:service_list' %}" class="bg-white rounded-lg p-6 border-2 border-cyan-200 hover:border-cyan-400 transition-all group">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="text-3xl">📋</span>
+                <h3 class="font-bold text-gray-900 group-hover:text-cyan-600 transition-colors">Service-Protokolle</h3>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">Alle durchgeführten TÜV-Prüfungen und Wartungen ansehen</p>
+            <span class="text-sm font-medium text-cyan-600 group-hover:underline">Zur Liste →</span>
+        </a>
+
+        <a href="{% url 'diving:movement_create' %}" class="bg-gradient-to-br from-green-600 to-teal-700 text-white rounded-lg p-6 border-2 border-green-600 hover:from-green-700 hover:to-teal-800 transition-all group">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="text-3xl">➕</span>
+                <h3 class="font-bold">Wartung dokumentieren</h3>
+            </div>
+            <p class="text-sm text-green-100 mb-2">Neue Wartung oder TÜV-Prüfung als Lagerbewegung erfassen</p>
+            <span class="text-sm font-medium group-hover:underline">Jetzt erfassen →</span>
+        </a>
+    </div>
+
+    <!-- Überfällige Wartungen -->
+    {% if items_overdue %}
+    <div class="bg-red-50 rounded-lg border-2 border-red-200 p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <span class="text-2xl">⚠️</span>
+            Überfällige Wartungen ({{ items_overdue|length }})
+        </h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ausrüstung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fällig seit</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Letzte Wartung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aktion</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in items_overdue %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{% url 'diving:device_detail' item.pk %}" class="font-medium text-gray-900 hover:text-blue-600">
+                                {{ item.inventory_number }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ item.master.name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
+                            {{ item.next_service_date|date:"d.m.Y" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if item.last_service_date %}{{ item.last_service_date|date:"d.m.Y" }}{% else %}-{% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <a href="{% url 'diving:device_detail' item.pk %}" class="text-blue-600 hover:text-blue-800">Details →</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Demnächst fällige Wartungen -->
+    {% if items_upcoming %}
+    <div class="bg-yellow-50 rounded-lg border-2 border-yellow-200 p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <span class="text-2xl">⏳</span>
+            Demnächst fällige Wartungen (nächste 30 Tage)
+        </h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ausrüstung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fällig am</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tage verbleibend</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aktion</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in items_upcoming %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{% url 'diving:device_detail' item.pk %}" class="font-medium text-gray-900 hover:text-blue-600">
+                                {{ item.inventory_number }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ item.master.name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-yellow-600">
+                            {{ item.next_service_date|date:"d.m.Y" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% now "Y-m-d" as today %}
+                            {{ item.next_service_date|timeuntil }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <a href="{% url 'diving:device_detail' item.pk %}" class="text-blue-600 hover:text-blue-800">Details →</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Letzte Service-Logs -->
+    {% if recent_services %}
+    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <span class="text-2xl">📝</span>
+            Letzte Service-Protokolle
+        </h2>
+        <div class="space-y-3">
+            {% for service in recent_services %}
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-cyan-600 rounded-full flex items-center justify-center text-white font-bold">
+                        {% if service.passed %}✓{% else %}✗{% endif %}
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">{{ service.device.inventory_number }}</p>
+                        <p class="text-sm text-gray-500">{{ service.get_service_type_display }} • {{ service.service_date|date:"d.m.Y" }}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-medium text-gray-900">{{ service.technician.get_full_name|default:service.technician }}</p>
+                    <span class="text-xs px-2 py-1 rounded-full {% if service.passed %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                        {% if service.passed %}Bestanden{% else %}Nicht bestanden{% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4 text-center">
+            <a href="{% url 'diving:service_list' %}" class="text-cyan-600 hover:text-cyan-800 font-medium">
+                Alle Service-Protokolle ansehen →
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Hilfe-Box -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-3xl">💡</span>
+            <div>
+                <h3 class="font-bold text-yellow-900 mb-2">Wie funktioniert die Wartungsverwaltung?</h3>
+                <ul class="text-sm text-yellow-800 space-y-1">
+                    <li><strong>1. Wartungstyp erstellen:</strong> Definieren Sie, welche Wartung durchgeführt werden soll (z.B. "Jahresservice Atemregler")</li>
+                    <li><strong>2. Wartungspunkte festlegen:</strong> Legen Sie eine Checkliste an (z.B. "Atemregler auf Beschädigungen prüfen", "Ansprechdruck messen")</li>
+                    <li><strong>3. Ausrüstung zuweisen:</strong> Weisen Sie den Wartungstyp der jeweiligen Ausrüstung zu</li>
+                    <li><strong>4. Wartungen durchführen:</strong> Dokumentieren Sie durchgeführte Wartungen mit Protokoll</li>
+                    <li>• Intervalle werden automatisch berechnet (z.B. Atemregler jährlich, TÜV-Flaschen alle 2.5 Jahre)</li>
+                    <li>• Individuelle Messfelder können pro Wartungstyp definiert werden (Ansprechdruck, Durchflussrate, etc.)</li>
+                    <li>• Kosten für Arbeitsstunden und Material werden erfasst</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

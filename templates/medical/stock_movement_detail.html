@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lagerbewegung #{{ movement.id }} - Medical{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'medical:stock_movements' %}" class="text-gray-500 hover:text-gray-700">Lagerbewegungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">#{{ movement.id }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-6">
+    <div class="space-y-6">
+
+        <!-- Header Card -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">
+                        {% if movement.movement_type == 'incoming' %}📥 Wareneingang
+                        {% elif movement.movement_type == 'outgoing' %}📤 Warenausgang
+                        {% elif movement.movement_type == 'transfer' %}🔄 Umlagerung
+                        {% elif movement.movement_type == 'disposal' %}🗑️ Entsorgung
+                        {% else %}📦 Lagerbewegung
+                        {% endif %}
+                        #{{ movement.id }}
+                    </h1>
+                    <p class="text-sm text-gray-600">
+                        {{ movement.movement_date|date:"d.m.Y H:i" }} Uhr •
+                        {{ movement.created_by.get_full_name|default:movement.created_by.username }}
+                    </p>
+                </div>
+                <div>
+                    {% if movement.movement_type == 'incoming' %}
+                    <span class="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-semibold">Eingang</span>
+                    {% elif movement.movement_type == 'outgoing' %}
+                    <span class="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full font-semibold">Ausgang</span>
+                    {% elif movement.movement_type == 'transfer' %}
+                    <span class="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full font-semibold">Umlagerung</span>
+                    {% elif movement.movement_type == 'disposal' %}
+                    <span class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-semibold">Entsorgung</span>
+                    {% endif %}
+                    {% if movement.item.is_btm %}
+                    <span class="ml-2 px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-semibold">☢️ BTM</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Artikel & Menge -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Artikel & Menge</h2>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Artikel</label>
+                    <a href="{% url 'medical:item_detail' movement.item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                        {{ movement.item.name }}
+                    </a>
+                    {% if movement.item.pzn %}
+                    <p class="text-sm text-gray-500 mt-1">PZN: {{ movement.item.pzn }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Menge</label>
+                    <p class="text-lg font-bold {% if movement.movement_type == 'outgoing' or movement.movement_type == 'disposal' %}text-red-600{% else %}text-green-600{% endif %}">
+                        {% if movement.movement_type == 'outgoing' or movement.movement_type == 'disposal' %}-{% else %}+{% endif %}{{ movement.quantity }} {{ movement.unit }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chargen-Info -->
+        {% if movement.batch_number or movement.expiry_date %}
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Chargen-Information</h2>
+            <div class="grid grid-cols-2 gap-6">
+                {% if movement.batch_number %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Chargennummer</label>
+                    <p class="text-sm font-mono">{{ movement.batch_number }}</p>
+                </div>
+                {% endif %}
+                {% if movement.expiry_date %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Verfallsdatum</label>
+                    <p class="text-sm">{{ movement.expiry_date|date:"d.m.Y" }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Lagerorte -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Lagerorte</h2>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Von</label>
+                    <p class="text-sm">{{ movement.from_location.name|default:"-" }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nach</label>
+                    <p class="text-sm">{{ movement.to_location.name|default:"-" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lieferscheine & Dokumente -->
+        {% if documents %}
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">📎 Dokumente ({{ documents.count }})</h2>
+            <div class="space-y-3">
+                {% for doc in documents %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <span class="text-2xl">
+                                {% if doc.get_file_extension == '.pdf' %}📕
+                                {% elif doc.get_file_extension in '.jpg,.jpeg,.png' %}🖼️
+                                {% elif doc.get_file_extension in '.doc,.docx' %}📘
+                                {% else %}📄
+                                {% endif %}
+                            </span>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900">{{ doc.title }}</h3>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {{ doc.document_number }} • {{ doc.get_document_type_display }}
+                                </p>
+                                <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                    <span>📦 {{ doc.get_file_size_display }}</span>
+                                    <span>📅 {{ doc.created_at|date:"d.m.Y H:i" }}</span>
+                                    <span>👤 {{ doc.created_by.get_full_name }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="{% url 'medical:document_download' movement.item.pk doc.pk %}"
+                           class="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium whitespace-nowrap">
+                            📥 Download
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Referenz & Notizen -->
+        {% if movement.reference_number or movement.notes %}
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Zusätzliche Informationen</h2>
+            <div class="space-y-4">
+                {% if movement.reference_number %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Referenznummer</label>
+                    <p class="text-sm font-mono">{{ movement.reference_number }}</p>
+                </div>
+                {% endif %}
+                {% if movement.notes %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notizen</label>
+                    <p class="text-sm text-gray-900 whitespace-pre-wrap">{{ movement.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- BTM Approval (falls relevant) -->
+        {% if movement.requires_approval %}
+        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+            <div class="flex">
+                <span class="text-amber-600">⚠️</span>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-amber-800">BTM-Freigabe erforderlich</h3>
+                    <div class="mt-2 text-sm text-amber-700">
+                        <p>Status:
+                            {% if movement.approval_status == 'pending' %}
+                            <span class="font-semibold">Ausstehend</span>
+                            {% elif movement.approval_status == 'approved' %}
+                            <span class="font-semibold text-green-700">✅ Freigegeben</span>
+                            von {{ movement.approved_by.get_full_name }} am {{ movement.approval_date|date:"d.m.Y H:i" }}
+                            {% elif movement.approval_status == 'rejected' %}
+                            <span class="font-semibold text-red-700">❌ Abgelehnt</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Zurück-Button -->
+        <div class="flex justify-end">
+            <a href="{% url 'medical:stock_movements' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                ← Zurück zur Übersicht
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

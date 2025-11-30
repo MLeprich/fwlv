@@ -1,0 +1,50 @@
+<!-- KPI Widget -->
+<div class="h-full flex flex-col items-center justify-center p-6">
+    <div class="text-center w-full">
+        {% if widget.title %}
+        <h3 class="text-lg font-semibold text-gray-600 mb-4">{{ widget.title }}</h3>
+        {% endif %}
+
+        {% if widget.kpi %}
+            <!-- Actual KPI Value -->
+            <div class="text-6xl font-bold text-blue-600 mb-2">
+                {{ widget.cached_data.value|default:"--" }}
+            </div>
+            {% if widget.kpi.unit %}
+            <div class="text-xl text-gray-500">{{ widget.kpi.unit }}</div>
+            {% endif %}
+            {% if widget.cached_data.trend %}
+            <div class="mt-4 text-sm">
+                {% if widget.cached_data.trend == 'up' %}
+                <span class="text-green-600">↑ {{ widget.cached_data.trend_value|default:"" }}</span>
+                {% elif widget.cached_data.trend == 'down' %}
+                <span class="text-red-600">↓ {{ widget.cached_data.trend_value|default:"" }}</span>
+                {% else %}
+                <span class="text-gray-600">→ Stabil</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% elif widget.config.value %}
+            <!-- Manual Value -->
+            <div class="text-6xl font-bold text-blue-600 mb-2">
+                {{ widget.config.value }}
+            </div>
+            {% if widget.config.unit %}
+            <div class="text-xl text-gray-500">{{ widget.config.unit }}</div>
+            {% endif %}
+        {% else %}
+            <div class="text-gray-500">
+                <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                <p class="mt-2 text-sm">Keine KPI konfiguriert</p>
+            </div>
+        {% endif %}
+
+        {% if widget.last_updated_at %}
+        <div class="mt-6 text-xs text-gray-400">
+            Aktualisiert: {{ widget.last_updated_at|date:"H:i" }} Uhr
+        </div>
+        {% endif %}
+    </div>
+</div>

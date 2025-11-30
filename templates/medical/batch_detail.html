@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Charge {{ batch.batch_number }} - Details{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'medical:batch_list' %}" class="text-gray-500 hover:text-gray-700">Chargen</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{{ batch.batch_number }}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+{% with article=batch.master|default:batch.item %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="px-6 py-5 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                        <span>📦 Charge {{ batch.batch_number }}</span>
+                        {% if article.is_btm %}
+                        <span class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-semibold">
+                            ☢️ BTM
+                        </span>
+                        {% endif %}
+                        {% if batch.is_recalled %}
+                        <span class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-semibold">
+                            🚨 Rückruf
+                        </span>
+                        {% endif %}
+                    </h1>
+                    <p class="text-gray-600 mt-1">{{ article.name }}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    {% if batch.master %}
+                    <a href="{% url 'medical:master_detail' batch.master.pk %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                        Zum Artikel →
+                    </a>
+                    {% elif batch.item %}
+                    <a href="{% url 'medical:item_detail' batch.item.pk %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                        Zum Artikel →
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Banner -->
+        {% if batch.is_expired %}
+        <div class="px-6 py-4 bg-red-50 border-l-4 border-red-600">
+            <p class="text-red-800 font-medium">❌ Diese Charge ist abgelaufen ({{ batch.expiry_date|date:"d.m.Y" }})</p>
+        </div>
+        {% elif batch.cold_chain_break %}
+        <div class="px-6 py-4 bg-purple-50 border-l-4 border-purple-600">
+            <p class="text-purple-800 font-medium">❄️ Kühlkette wurde unterbrochen - Charge nicht verwenden!</p>
+        </div>
+        {% elif batch.quantity_remaining == 0 %}
+        <div class="px-6 py-4 bg-gray-50 border-l-4 border-gray-600">
+            <p class="text-gray-800 font-medium">✓ Diese Charge ist vollständig aufgebraucht</p>
+        </div>
+        {% elif batch.days_until_expiry <= 30 %}
+        <div class="px-6 py-4 bg-amber-50 border-l-4 border-amber-600">
+            <p class="text-amber-800 font-medium">⚠️ Charge läuft in {{ batch.days_until_expiry }} Tagen ab</p>
+        </div>
+        {% endif %}
+
+        <!-- Info Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Chargen-Nr.</p>
+                <p class="text-lg font-semibold text-gray-900">{{ batch.batch_number }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Lieferanten-Charge</p>
+                <p class="text-lg font-semibold text-gray-900">{{ batch.supplier_batch_number|default:"-" }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Eingangsdatum</p>
+                <p class="text-lg font-semibold text-gray-900">{{ batch.received_date|date:"d.m.Y" }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Ablaufdatum</p>
+                <p class="text-lg font-semibold {% if batch.is_expired %}text-red-600{% elif batch.days_until_expiry <= 30 %}text-amber-600{% else %}text-gray-900{% endif %}">
+                    {{ batch.expiry_date|date:"d.m.Y" }}
+                </p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Menge empfangen</p>
+                <p class="text-lg font-semibold text-gray-900">{{ batch.quantity_received }} {{ article.unit }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Restbestand</p>
+                <p class="text-lg font-semibold text-gray-900">{{ batch.quantity_remaining }} {{ article.unit }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Lagerort</p>
+                <p class="text-lg font-semibold text-gray-900">{{ batch.location.name|default:"-" }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Verfügbarkeit</p>
+                <p class="text-lg font-semibold text-gray-900">
+                    {{ batch.get_percentage_remaining|floatformat:0 }}%
+                </p>
+            </div>
+        </div>
+
+        {% if batch.notes %}
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <p class="text-sm text-gray-500 mb-1">Notizen</p>
+            <p class="text-gray-900">{{ batch.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="mb-6" x-data="{ activeTab: 'movements' }">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button
+                    @click="activeTab = 'movements'"
+                    :class="activeTab === 'movements' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                >
+                    📦 Lagerbewegungen ({{ total_movements }})
+                </button>
+                {% if article.requires_cold_chain %}
+                <button
+                    @click="activeTab = 'temperature'"
+                    :class="activeTab === 'temperature' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                >
+                    ❄️ Temperatur-Log ({{ temp_logs.count }})
+                </button>
+                {% endif %}
+                <button
+                    @click="activeTab = 'stats'"
+                    :class="activeTab === 'stats' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                >
+                    📊 Statistiken
+                </button>
+                <button
+                    @click="activeTab = 'codes'"
+                    :class="activeTab === 'codes' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                >
+                    📱 QR-Code & Barcode
+                </button>
+            </nav>
+        </div>
+
+        <!-- Tab: Lagerbewegungen -->
+        <div x-show="activeTab === 'movements'" class="mt-6">
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Datum</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Typ</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Menge</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Von/Nach</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Benutzer</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Grund</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for movement in movements %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ movement.movement_date|date:"d.m.Y H:i" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if movement.movement_type == 'incoming' %}
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                        ↓ Eingang
+                                    </span>
+                                    {% elif movement.movement_type == 'outgoing' %}
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                                        ↑ Ausgang
+                                    </span>
+                                    {% elif movement.movement_type == 'disposal' %}
+                                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                        🗑️ Entsorgung
+                                    </span>
+                                    {% elif movement.movement_type == 'transfer' %}
+                                    <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-semibold">
+                                        ↔️ Umlagerung
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                    {{ movement.quantity }} {{ article.unit }}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">
+                                    {% if movement.from_location %}{{ movement.from_location.name }}{% else %}-{% endif %}
+                                    →
+                                    {% if movement.to_location %}{{ movement.to_location.name }}{% else %}-{% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ movement.created_by.get_full_name }}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600">
+                                    {{ movement.reason|default:"-" }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                    Keine Lagerbewegungen für diese Charge gefunden
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Temperatur-Log -->
+        {% if article.requires_cold_chain %}
+        <div x-show="activeTab === 'temperature'" class="mt-6" x-cloak>
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Zeitstempel</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Temperatur</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Sollbereich</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Gerät</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for log in temp_logs %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ log.measured_at|date:"d.m.Y H:i:s" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold {% if log.is_within_range %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {{ log.temperature }}°C
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                    {{ article.min_temperature }}°C - {{ article.max_temperature }}°C
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if log.is_within_range %}
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                        ✅ OK
+                                    </span>
+                                    {% else %}
+                                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                        ❌ Abweichung
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                    {{ log.device_id|default:"-" }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                                    Keine Temperaturmessungen für diese Charge gefunden
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tab: Statistiken -->
+        <div x-show="activeTab === 'stats'" class="mt-6" x-cloak>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-600">
+                    <p class="text-gray-500 text-sm font-medium mb-2">Eingänge gesamt</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ incoming_quantity }} {{ article.unit }}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-600">
+                    <p class="text-gray-500 text-sm font-medium mb-2">Ausgänge gesamt</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ outgoing_quantity }} {{ article.unit }}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-600">
+                    <p class="text-gray-500 text-sm font-medium mb-2">Lagerbewegungen</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ total_movements }}</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6 mt-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Chargen-Details</h3>
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Artikel-Kategorie</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ article.category.name|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Wirkstoff</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ article.active_ingredient|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Hersteller</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ article.manufacturer|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Lagertage</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ batch.days_in_stock }} Tage</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Verbrauchsrate</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% widthratio batch.quantity_received batch.quantity_remaining 1 %}% verbraucht
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Kühlkette</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% if article.requires_cold_chain %}
+                                ❄️ Kühlpflichtig ({{ article.min_temperature }}°C - {{ article.max_temperature }}°C)
+                            {% else %}
+                                Raumtemperatur
+                            {% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Tab: QR-Code & Barcode -->
+        <div x-show="activeTab === 'codes'" class="mt-6" x-cloak>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- QR-Code -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">📱 QR-Code</h3>
+                    <div class="bg-gray-50 p-6 rounded-lg flex items-center justify-center mb-4">
+                        {{ batch.generate_qr_code|safe }}
+                    </div>
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg mb-4">
+                        <p class="text-sm text-blue-800 mb-2"><strong>Enthält folgende Daten:</strong></p>
+                        <ul class="text-sm text-blue-700 space-y-1">
+                            <li>• Artikel: {{ article.name }}</li>
+                            <li>• Chargennummer: {{ batch.batch_number }}</li>
+                            <li>• Verfallsdatum: {{ batch.expiry_date|date:"d.m.Y" }}</li>
+                            <li>• Lagerort: {{ batch.location.name|default:"-" }}</li>
+                        </ul>
+                    </div>
+                    <a href="data:image/svg+xml;base64,{{ batch.generate_qr_code|safe|urlencode }}"
+                       download="qr_batch_{{ batch.batch_number }}.svg"
+                       class="block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                        📥 QR-Code herunterladen (SVG)
+                    </a>
+                </div>
+
+                <!-- Barcode -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">📊 Barcode</h3>
+                    <div class="bg-gray-50 p-6 rounded-lg flex items-center justify-center mb-4">
+                        {{ batch.generate_barcode|safe }}
+                    </div>
+                    <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg mb-4">
+                        <p class="text-sm text-green-800 mb-2"><strong>Chargennummer:</strong></p>
+                        <p class="text-lg font-mono font-bold text-green-900">{{ batch.batch_number }}</p>
+                    </div>
+                    <a href="data:image/svg+xml;base64,{{ batch.generate_barcode|safe|urlencode }}"
+                       download="barcode_{{ batch.batch_number }}.svg"
+                       class="block text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                        📥 Barcode herunterladen (SVG)
+                    </a>
+                </div>
+            </div>
+
+            <!-- Verwendungszweck -->
+            <div class="bg-white rounded-lg shadow p-6 mt-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">💡 Verwendungszweck</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <p class="font-semibold text-purple-900 mb-2">📱 QR-Code</p>
+                        <p class="text-sm text-purple-700">Für Smartphone-Scanner zur schnellen Identifikation und Verlinkung zur Chargen-Detailseite</p>
+                    </div>
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                        <p class="font-semibold text-orange-900 mb-2">📊 Barcode</p>
+                        <p class="text-sm text-orange-700">Für Barcode-Scanner zur eindeutigen Identifikation der Chargennummer</p>
+                    </div>
+                    <div class="bg-teal-50 border border-teal-200 rounded-lg p-4">
+                        <p class="font-semibold text-teal-900 mb-2">🖨️ Druck</p>
+                        <p class="text-sm text-teal-700">Codes können auf Etiketten gedruckt und an Lagerboxen befestigt werden</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endwith %}
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
+{% endblock %}

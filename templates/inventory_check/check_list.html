@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Inventuren - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'core:dashboard' %}" class="text-gray-700 hover:text-primary-600">
+                    🏠 Dashboard
+                </a>
+            </li>
+            <li aria-current="page">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="ml-1 text-gray-500 font-medium">📋 Inventuren</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Inventurverwaltung</h1>
+                <p class="mt-2 text-sm text-gray-600">
+                    {{ checks.paginator.count }} Inventuren |
+                    {{ in_progress_count }} laufend |
+                    {{ planned_count }} geplant
+                </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Quick Stats -->
+                <div class="hidden lg:flex items-center gap-4 mr-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600">{{ in_progress_count }}</div>
+                        <div class="text-xs text-gray-500">Laufend</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-yellow-600">{{ planned_count }}</div>
+                        <div class="text-xs text-gray-500">Geplant</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600">{{ completed_count }}</div>
+                        <div class="text-xs text-gray-500">Abgeschlossen</div>
+                    </div>
+                </div>
+
+                <!-- Export Button -->
+                {% include 'includes/components/button.html' with text="Exportieren" type="secondary" icon="📤" size="md" %}
+
+                <!-- Add Button -->
+                {% include 'includes/components/button.html' with text="Neue Inventur" type="primary" icon="➕" size="md" href="/inventory-check/create/" %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Search -->
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Suche</label>
+                <input
+                    type="search"
+                    placeholder="Titel, Inventur-Nummer..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    hx-get="{% url 'inventory_check:check_list' %}"
+                    hx-trigger="keyup changed delay:300ms"
+                    hx-target="#check-list"
+                    hx-include="[name='type'], [name='status'], [name='location']"
+                    name="search"
+                />
+            </div>
+
+            <!-- Type Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Inventurart</label>
+                <select
+                    name="type"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    hx-get="{% url 'inventory_check:check_list' %}"
+                    hx-trigger="change"
+                    hx-target="#check-list"
+                    hx-include="[name='search'], [name='status'], [name='location']"
+                >
+                    <option value="">Alle Arten</option>
+                    <option value="full">Vollinventur</option>
+                    <option value="partial">Teilinventur</option>
+                    <option value="spot_check">Stichprobe</option>
+                    <option value="cycle_count">Zykluszählung</option>
+                    <option value="annual">Jahresinventur</option>
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                    name="status"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    hx-get="{% url 'inventory_check:check_list' %}"
+                    hx-trigger="change"
+                    hx-target="#check-list"
+                    hx-include="[name='search'], [name='type'], [name='location']"
+                >
+                    <option value="">Alle Status</option>
+                    <option value="planned">Geplant</option>
+                    <option value="in_progress">In Bearbeitung</option>
+                    <option value="counting_complete">Zählung abgeschlossen</option>
+                    <option value="review">In Prüfung</option>
+                    <option value="adjustments_pending">Korrekturen ausstehend</option>
+                    <option value="completed">Abgeschlossen</option>
+                    <option value="cancelled">Abgebrochen</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Quick Filters -->
+        <div class="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+            <span class="text-sm text-gray-600 mr-2">Schnellfilter:</span>
+            <button
+                hx-get="{% url 'inventory_check:check_list' %}?status=in_progress"
+                hx-target="#check-list"
+                class="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200">
+                🔄 Laufend
+            </button>
+            <button
+                hx-get="{% url 'inventory_check:check_list' %}?status=planned"
+                hx-target="#check-list"
+                class="px-3 py-1 text-sm bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200">
+                📅 Geplant
+            </button>
+            <button
+                hx-get="{% url 'inventory_check:check_list' %}?status=adjustments_pending"
+                hx-target="#check-list"
+                class="px-3 py-1 text-sm bg-red-100 text-red-800 rounded-full hover:bg-red-200">
+                ⚠️ Korrekturen ausstehend
+            </button>
+            <button
+                hx-get="{% url 'inventory_check:check_list' %}?type=annual"
+                hx-target="#check-list"
+                class="px-3 py-1 text-sm bg-purple-100 text-purple-800 rounded-full hover:bg-purple-200">
+                📆 Jahresinventuren
+            </button>
+        </div>
+    </div>
+
+    <!-- Check List -->
+    <div id="check-list">
+        {% include 'inventory_check/partials/check_table.html' %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Keyboard Shortcut: Ctrl+N für neue Inventur
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            window.location.href = '{% url "inventory_check:check_create" %}';
+        }
+    });
+
+    // Keyboard Shortcut: Ctrl+F für Search-Focus
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            document.querySelector('input[name="search"]').focus();
+        }
+    });
+</script>
+{% endblock %}

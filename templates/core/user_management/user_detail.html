@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% load permission_tags %}
+
+{% block title %}{{ user_obj.get_full_name }} - Benutzerverwaltung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li>
+                <a href="{% url 'core:user_list' %}" class="text-gray-500 hover:text-gray-700">Benutzerverwaltung</a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li>
+                <span class="text-gray-900 font-semibold">{{ user_obj.get_full_name }}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <a href="{% url 'core:user_list' %}" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Zurück zur Benutzerliste
+        </a>
+
+        <div class="flex justify-between items-start">
+            <div class="flex items-center gap-4">
+                <div class="h-16 w-16 rounded-full bg-red-600 text-white flex items-center justify-center font-bold text-2xl">
+                    {% if user_obj.first_name %}{{ user_obj.first_name|first }}{% else %}{{ user_obj.username|first }}{% endif %}{% if user_obj.last_name %}{{ user_obj.last_name|first }}{% endif %}
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">{{ user_obj.get_full_name }}</h1>
+                    <p class="text-gray-600">@{{ user_obj.username }}</p>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <a href="{% url 'core:user_set_password' user_obj.pk %}"
+                   class="inline-flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                    </svg>
+                    Passwort
+                </a>
+                <a href="{% url 'core:user_edit' user_obj.pk %}"
+                   class="inline-flex items-center px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Bearbeiten
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: User Info -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Basic Info Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Benutzerinformationen</h2>
+
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Email</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user_obj.email|default:"—" }}</dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Personalnummer</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user_obj.personnel_number|default:"—" }}</dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Position</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user_obj.position|default:"—" }}</dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Abteilung</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user_obj.department|default:"—" }}</dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Telefon</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user_obj.phone|default:"—" }}</dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Status</dt>
+                        <dd class="mt-1">
+                            {% if user_obj.is_active %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Aktiv
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    Inaktiv
+                                </span>
+                            {% endif %}
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Registriert seit</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user_obj.date_joined|date:"d.m.Y" }}</dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Letzter Login</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% if user_obj.last_login %}
+                                {{ user_obj.last_login|date:"d.m.Y H:i" }}
+                            {% else %}
+                                Noch nie
+                            {% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Right Column: Roles & Permissions -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Rollen Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Rollen</h2>
+
+                <!-- Aktuelle Rollen -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Zugewiesene Rollen</h3>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        {% for group in user_obj.groups.all %}
+                            <div class="inline-flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                                <span class="text-sm font-medium text-red-800">{{ group.name }}</span>
+                                <form method="post" action="{% url 'core:assign_roles' user_obj.pk %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="remove">
+                                    <input type="hidden" name="role" value="{{ group.name }}">
+                                    <button type="submit"
+                                            class="text-red-600 hover:text-red-800 transition-colors"
+                                            title="Rolle entfernen">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </form>
+                            </div>
+                        {% empty %}
+                            <p class="text-sm text-gray-500">Keine Rollen zugewiesen</p>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Rolle hinzufügen -->
+                    <form method="post" action="{% url 'core:assign_roles' user_obj.pk %}" class="flex gap-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add">
+                        <div class="flex-1">
+                            <select name="role"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                <option disabled selected>Rolle auswählen...</option>
+                                {% for role in available_roles %}
+                                    {% if role not in user_obj.groups.all %}
+                                        <option value="{{ role.name }}">{{ role.name }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit"
+                                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                            </svg>
+                            Hinzufügen
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Berechtigungen Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Berechtigungen</h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 mb-2">Superuser</dt>
+                        <dd>
+                            {% if permission_summary.is_superuser %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    Ja
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    Nein
+                                </span>
+                            {% endif %}
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 mb-2">Freigabelimit</dt>
+                        <dd class="text-sm font-mono text-gray-900">
+                            {% if permission_summary.approval_limit > 999999999 %}
+                                ∞ (unbegrenzt)
+                            {% else %}
+                                {{ permission_summary.approval_limit|floatformat:0 }} €
+                            {% endif %}
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 mb-2">BTM-Berechtigung</dt>
+                        <dd>
+                            {% if permission_summary.btm_clearance %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Ja
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    Nein
+                                </span>
+                            {% endif %}
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 mb-2">Zeitbasierter Zugriff</dt>
+                        <dd>
+                            {% if permission_summary.has_time_access %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Aktiv
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    Gesperrt
+                                </span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                </div>
+
+                {% if permission_summary.modules %}
+                <div class="mt-6">
+                    <dt class="text-sm font-medium text-gray-500 mb-3">Verantwortliche Module</dt>
+                    <div class="flex flex-wrap gap-2">
+                        {% for module in permission_summary.modules %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ module }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if permission_summary.roles %}
+                <div class="mt-6">
+                    <dt class="text-sm font-medium text-gray-500 mb-3">Alle Rollen</dt>
+                    <div class="flex flex-wrap gap-2">
+                        {% for role in permission_summary.roles %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                {{ role }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Ticket-Berechtigungen Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Ticket-Berechtigungen</h2>
+                <form method="post" action="{% url 'core:user_ticket_permissions' user_obj.pk %}">
+                    {% csrf_token %}
+                    <div class="space-y-4">
+                        <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" name="create_ticket" value="1"
+                                   {% if has_create_ticket %}checked{% endif %}
+                                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">Ticketersteller</span>
+                                <p class="text-xs text-gray-500">Kann Tickets erstellen und eigene Tickets einsehen</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" name="process_ticket" value="1"
+                                   {% if has_process_ticket %}checked{% endif %}
+                                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">Ticketbearbeiter</span>
+                                <p class="text-xs text-gray-500">Kann alle Tickets sehen, zuweisen und bearbeiten</p>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+                            Berechtigungen speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Delegationen Card -->
+            {% if active_delegations or delegations_as_delegate %}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Vertretungen</h2>
+
+                {% if active_delegations %}
+                <div class="mb-6">
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Als Vertretung für</h3>
+                    <div class="space-y-2">
+                        {% for delegation in active_delegations %}
+                            <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="text-sm font-medium text-blue-900">
+                                            {{ delegation.delegator.get_full_name }}
+                                        </p>
+                                        <p class="text-xs text-blue-700 mt-1">
+                                            {{ delegation.valid_from|date:"d.m.Y" }} - {{ delegation.valid_to|date:"d.m.Y" }}
+                                        </p>
+                                    </div>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                        Aktiv
+                                    </span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if delegations_as_delegate %}
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Wird vertreten durch</h3>
+                    <div class="space-y-2">
+                        {% for delegation in delegations_as_delegate %}
+                            <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">
+                                            {{ delegation.delegate.get_full_name }}
+                                        </p>
+                                        <p class="text-xs text-gray-600 mt-1">
+                                            {{ delegation.valid_from|date:"d.m.Y" }} - {{ delegation.valid_to|date:"d.m.Y" }}
+                                        </p>
+                                    </div>
+                                    {% if delegation.approved_at %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                            Genehmigt
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            Ausstehend
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

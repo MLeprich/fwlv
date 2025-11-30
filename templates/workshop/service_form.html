@@ -1,0 +1,445 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Service bearbeiten{% else %}Neuer Service{% endif %} - KFZ-Werkstatt - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'workshop:dashboard' %}" class="text-gray-500 hover:text-gray-700">KFZ-Werkstatt</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'workshop:service_list' %}" class="text-gray-500 hover:text-gray-700">Services</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if form.instance.pk %}Bearbeiten{% else %}Neu{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center gap-3">
+            <span class="text-4xl">🔧</span>
+            <div>
+                <h1 class="text-2xl font-bold">
+                    {% if form.instance.pk %}
+                    Service bearbeiten
+                    {% else %}
+                    Neuen Service anlegen
+                    {% endif %}
+                </h1>
+                <p class="text-purple-100">
+                    {% if form.instance.pk %}
+                    Service-Eintrag für {{ form.instance.vehicle.call_sign }} aktualisieren
+                    {% else %}
+                    Wartung, Reparatur oder Prüfung erfassen
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="post" enctype="multipart/form-data" class="bg-white rounded-lg shadow border border-gray-200 p-6">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-6">
+            <div class="flex items-start gap-3">
+                <span class="text-2xl">⚠️</span>
+                <div>
+                    <h3 class="font-bold text-red-900 mb-2">Fehler beim Speichern</h3>
+                    <div class="text-sm text-red-800">
+                        {{ form.non_field_errors }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Fahrzeug & Service-Art -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Fahrzeug & Service-Art</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div x-data="{ open: false, search: '', selected: null, vehicles: [] }" x-init="
+                    vehicles = Array.from(document.querySelectorAll('#id_vehicle option')).map(opt => ({
+                        value: opt.value,
+                        text: opt.text
+                    })).filter(veh => veh.value);
+                    const currentValue = document.getElementById('id_vehicle').value;
+                    if (currentValue) {
+                        selected = vehicles.find(veh => veh.value === currentValue);
+                    }
+                
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_vehicle').removeAttribute('required');
+                    ">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Fahrzeug <span class="text-red-600">*</span>
+                    </label>
+
+                    <!-- Hidden Original Select -->
+                    <div class="hidden">
+                        {{ form.vehicle }}
+                    </div>
+
+                    <!-- Custom Searchable Dropdown -->
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-left bg-white flex items-center justify-between"
+                        >
+                            <span x-text="selected ? selected.text : 'Fahrzeug auswählen...'" class="truncate"></span>
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                        >
+                            <!-- Search Input -->
+                            <div class="p-2 border-b border-gray-200">
+                                <input
+                                    type="text"
+                                    x-model="search"
+                                    @click.stop
+                                    placeholder="Fahrzeug suchen..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                                >
+                            </div>
+
+                            <!-- Options List -->
+                            <div class="overflow-y-auto max-h-64">
+                                <template x-for="vehicle in vehicles.filter(veh => veh.text.toLowerCase().includes(search.toLowerCase()))" :key="vehicle.value">
+                                    <button
+                                        type="button"
+                                        @click="selected = vehicle; document.getElementById('id_vehicle').value = vehicle.value; open = false"
+                                        class="w-full text-left px-4 py-2 hover:bg-purple-50 text-sm"
+                                        :class="selected && selected.value === vehicle.value ? 'bg-purple-100 font-medium' : ''"
+                                        x-text="vehicle.text"
+                                    ></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if form.vehicle.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.vehicle.errors.0 }}</p>
+                    {% endif %}
+                    {% if form.vehicle.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.vehicle.help_text }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Service-Typ <span class="text-red-600">*</span>
+                    </label>
+                    {{ form.service_type }}
+                    {% if form.service_type.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.service_type.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Status <span class="text-red-600">*</span>
+                    </label>
+                    {{ form.service_status }}
+                    {% if form.service_status.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.service_status.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Zeitplanung -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Zeitplanung</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Geplantes Datum <span class="text-red-600">*</span>
+                    </label>
+                    {{ form.scheduled_date }}
+                    {% if form.scheduled_date.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.scheduled_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Beginn
+                    </label>
+                    {{ form.started_date }}
+                    {% if form.started_date.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.started_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Abschluss
+                    </label>
+                    {{ form.completed_date }}
+                    {% if form.completed_date.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.completed_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Fahrzeugdaten -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Fahrzeugdaten</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Kilometerstand bei Service <span class="text-red-600">*</span>
+                    </label>
+                    {{ form.mileage_at_service }}
+                    {% if form.mileage_at_service.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.mileage_at_service.errors.0 }}</p>
+                    {% endif %}
+                    {% if form.mileage_at_service.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.mileage_at_service.help_text }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Betriebsstunden bei Service
+                    </label>
+                    {{ form.operating_hours_at_service }}
+                    {% if form.operating_hours_at_service.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.operating_hours_at_service.errors.0 }}</p>
+                    {% endif %}
+                    {% if form.operating_hours_at_service.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.operating_hours_at_service.help_text }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Durchführung -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Durchführung</h2>
+            <div class="grid grid-cols-1 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Beschreibung der Arbeiten <span class="text-red-600">*</span>
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                    {% endif %}
+                    {% if form.description.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.description.help_text }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div x-data="{ open: false, search: '', selected: null, persons: [] }" x-init="
+                        persons = Array.from(document.querySelectorAll('#id_technician option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(per => per.value);
+                        const currentValue = document.getElementById('id_technician').value;
+                        if (currentValue) {
+                            selected = persons.find(per => per.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_technician').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Mechaniker/Techniker
+                        </label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.technician }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Techniker auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Techniker suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <button
+                                        type="button"
+                                        @click="selected = null; document.getElementById('id_technician').value = ''; open = false"
+                                        class="w-full text-left px-4 py-2 hover:bg-purple-50 text-sm text-gray-500 italic"
+                                    >
+                                        - Nicht zugewiesen -
+                                    </button>
+                                    <template x-for="person in persons.filter(per => per.text.toLowerCase().includes(search.toLowerCase()))" :key="person.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = person; document.getElementById('id_technician').value = person.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-purple-50 text-sm"
+                                            :class="selected && selected.value === person.value ? 'bg-purple-100 font-medium' : ''"
+                                            x-text="person.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.technician.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.technician.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Arbeitsstunden
+                        </label>
+                        {{ form.labor_hours }}
+                        {% if form.labor_hours.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.labor_hours.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kosten -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Kosten</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Arbeitskosten (€)
+                    </label>
+                    {{ form.labor_cost }}
+                    {% if form.labor_cost.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.labor_cost.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Externe Kosten (€)
+                    </label>
+                    {{ form.external_cost }}
+                    {% if form.external_cost.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.external_cost.errors.0 }}</p>
+                    {% endif %}
+                    {% if form.external_cost.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.external_cost.help_text }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p class="text-sm text-blue-800">
+                    <strong>💡 Hinweis:</strong> Teilekosten werden automatisch aus den verwendeten Artikeln berechnet.
+                </p>
+            </div>
+        </div>
+
+        <!-- Dokumentation -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Dokumentation</h2>
+            <div class="grid grid-cols-1 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Rechnungsnummer
+                    </label>
+                    {{ form.invoice_number }}
+                    {% if form.invoice_number.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.invoice_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Notizen
+                    </label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Aktionen -->
+        <div class="flex items-center justify-between pt-4">
+            <a href="{% if form.instance.pk %}{% url 'workshop:service_detail' form.instance.pk %}{% else %}{% url 'workshop:service_list' %}{% endif %}"
+               class="text-gray-600 hover:text-gray-800 font-medium">
+                Abbrechen
+            </a>
+            <div class="flex gap-3">
+                {% if form.instance.pk %}
+                <button type="submit" name="action" value="save"
+                        class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                    Änderungen speichern
+                </button>
+                {% else %}
+                <button type="submit" name="action" value="save"
+                        class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                    Service anlegen
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    <!-- Hilfe-Box -->
+    <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div>
+                <h3 class="font-bold text-yellow-900 mb-2">Wichtige Hinweise</h3>
+                <ul class="text-sm text-yellow-800 space-y-1">
+                    <li>• Pflichtfelder sind mit einem <span class="text-red-600">*</span> gekennzeichnet</li>
+                    <li>• Kilometerstand bei Service-Beginn erforderlich</li>
+                    <li>• Detaillierte Beschreibung der Arbeiten erfassen</li>
+                    <li>• Teilekosten werden automatisch berechnet</li>
+                    <li>• Rechnungsnummer für externe Dienstleister angeben</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

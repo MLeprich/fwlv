@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex items-center justify-between" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li class="text-gray-900 font-semibold">Dashboard</li>
+        </ol>
+        <div class="text-sm text-gray-500">
+            <span>{{ request.user.get_full_name }}</span>
+            <span class="mx-2">•</span>
+            <span>{{ today|date:"d.m.Y" }}</span>
+        </div>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Welcome Banner -->
+<div class="bg-gradient-to-r from-red-600 to-red-700 rounded-lg p-6 text-white mb-6 shadow-lg">
+    <h1 class="text-2xl font-bold mb-2">
+        Willkommen, {{ request.user.first_name|default:request.user.username }}! 👋
+    </h1>
+    <p class="text-red-100">
+        Hier ist deine Übersicht für heute
+    </p>
+</div>
+
+<!-- Critical Alerts Section -->
+{% if critical_alerts %}
+<div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg">
+    <div class="flex items-start">
+        <span class="text-2xl mr-3">⚠️</span>
+        <div class="flex-1">
+            <h3 class="text-red-800 font-semibold mb-2">Kritische Hinweise ({{ critical_alerts|length }})</h3>
+            <ul class="space-y-1 text-sm text-red-700">
+                {% for alert in critical_alerts|slice:":3" %}
+                <li>
+                    <a href="{{ alert.url }}" class="hover:underline">
+                        {{ alert.message }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% if critical_alerts|length > 3 %}
+            <a href="{% url 'core:alerts' %}" class="text-sm text-red-800 hover:underline font-semibold mt-2 inline-block">
+                + {{ critical_alerts|length|add:"-3" }} weitere ansehen
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- KPI Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {% url 'core:inventory_critical' as inventory_url %}
+    {% include 'includes/components/kpi_card.html' with title="Kritische Bestände" value=critical_stock_count icon="📉" color="red" trend_value=stock_trend trend_direction=stock_trend_direction url=inventory_url link_text="Details ansehen" %}
+
+    {% url 'core:inspections_upcoming' as inspections_url %}
+    {% include 'includes/components/kpi_card.html' with title="Prüfungen (30 Tage)" value=upcoming_inspections icon="📋" color="yellow" subtitle="HU/UVV fällig" url=inspections_url link_text="Kalender öffnen" %}
+
+    {% url 'procurement:order_list' as orders_url %}
+    {% include 'includes/components/kpi_card.html' with title="Offene Bestellungen" value=pending_orders icon="📦" color="blue" subtitle="In Bearbeitung" url=orders_url link_text="Übersicht" %}
+
+    {% url 'vehicles:list' as vehicles_url %}
+    {% include 'includes/components/kpi_card.html' with title="Fahrzeuge" value=operational_vehicles icon="🚒" color="green" subtitle="Einsatzbereit" progress_current=operational_vehicles progress_total=total_vehicles url=vehicles_url link_text="Alle Fahrzeuge" %}
+</div>
+
+<!-- Additional KPIs Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    {% url 'medical:expiring_batches' as medical_url %}
+    {% include 'includes/components/kpi_card.html' with title="Ablaufende Medikamente" value=expiring_medications icon="💊" color="orange" subtitle="Nächste 90 Tage" url=medical_url link_text="Liste anzeigen" %}
+
+    {% url 'personnel:list' as personnel_url %}
+    {% include 'includes/components/kpi_card.html' with title="Abgelaufene Qualifikationen" value=expired_qualifications icon="📜" color="red" subtitle="Personen betroffen" url=personnel_url link_text="Personal anzeigen" %}
+
+    {% include 'includes/components/kpi_card.html' with title="Laufende Inventuren" value=active_inventory_checks icon="📋" color="blue" progress_current=inventory_progress progress_total=100 url="#" link_text="Inventuren" %}
+</div>
+
+<!-- Heute Wichtig Section -->
+<div class="mb-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">📌 Heute wichtig</h2>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Meine Aufgaben -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="font-semibold text-gray-900">Meine Aufgaben</h3>
+                <span class="bg-primary-100 text-primary-700 text-xs px-2 py-1 rounded-full font-semibold">
+                    {{ my_tasks|length }}
+                </span>
+            </div>
+            <div class="p-5">
+                {% if my_tasks %}
+                <ul class="space-y-3">
+                    {% for task in my_tasks|slice:":5" %}
+                    <li class="flex items-start gap-3">
+                        <input type="checkbox" class="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500" hx-post="{% url 'core:tasks_toggle' task.id %}" hx-swap="outerHTML" />
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-900">{{ task.title }}</p>
+                            <p class="text-xs text-gray-500">{{ task.module }} • Fällig: {{ task.due_date|date:"d.m.Y" }}</p>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <span class="text-4xl mb-2 block">✅</span>
+                    <p class="text-sm">Keine offenen Aufgaben</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Benachrichtigungen -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="font-semibold text-gray-900">Neueste Benachrichtigungen</h3>
+                <a href="{% url 'notifications:list' %}" class="text-sm text-primary-600 hover:text-primary-700">
+                    Alle ansehen
+                </a>
+            </div>
+            <div class="p-5">
+                {% if recent_notifications %}
+                <ul class="space-y-3">
+                    {% for notif in recent_notifications|slice:":5" %}
+                    <li class="flex gap-3 {% if not notif.is_read %}bg-blue-50 -mx-2 px-2 py-2 rounded{% endif %}">
+                        <span class="text-xl flex-shrink-0">
+                            {% if notif.priority == 'critical' %}🔴
+                            {% elif notif.priority == 'high' %}🟠
+                            {% else %}🔵{% endif %}
+                        </span>
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-900">{{ notif.title }}</p>
+                            <p class="text-xs text-gray-500">{{ notif.created_at|timesince }} ago</p>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <span class="text-4xl mb-2 block">🔔</span>
+                    <p class="text-sm">Keine neuen Benachrichtigungen</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Module Kacheln -->
+<div class="mb-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">🚀 Quick Access</h2>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {% if perms.medical.view_medication %}
+        <a href="{% url 'medical:dashboard' %}" class="group bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 border-2 border-transparent hover:border-primary-200">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-4xl">💊</span>
+                {% if critical_medications_count > 0 %}
+                <span class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-semibold">{{ critical_medications_count }}</span>
+                {% endif %}
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600">Rettungsdienst</h3>
+            <p class="text-sm text-gray-500">Medikamente & Medizintechnik</p>
+        </a>
+        {% endif %}
+
+        {% if perms.clothing.view_clothingitem %}
+        <a href="{% url 'clothing:item_list' %}" class="group bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 border-2 border-transparent hover:border-primary-200">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-4xl">👕</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600">Kleiderkammer</h3>
+            <p class="text-sm text-gray-500">Schutz- & Dienstkleidung</p>
+        </a>
+        {% endif %}
+
+        {% if perms.magazine.view_magazineitem %}
+        <a href="{% url 'magazine:item_list' %}" class="group bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 border-2 border-transparent hover:border-primary-200">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-4xl">📦</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600">Magazin</h3>
+            <p class="text-sm text-gray-500">Verbrauchsmaterial</p>
+        </a>
+        {% endif %}
+
+        {% if perms.vehicles.view_vehicle %}
+        <a href="{% url 'vehicles:list' %}" class="group bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 border-2 border-transparent hover:border-primary-200">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-4xl">🚙</span>
+                {% if vehicles_in_maintenance > 0 %}
+                <span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full font-semibold">{{ vehicles_in_maintenance }}</span>
+                {% endif %}
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600">Fahrzeuge</h3>
+            <p class="text-sm text-gray-500">Verwaltung & Wartung</p>
+        </a>
+        {% endif %}
+
+        {% if perms.workshop.view_workshopitem %}
+        <a href="{% url 'workshop:item_list' %}" class="group bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 border-2 border-transparent hover:border-primary-200">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-4xl">🔧</span>
+                {% if pending_inspections > 0 %}
+                <span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full font-semibold">{{ pending_inspections }}</span>
+                {% endif %}
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600">KFZ-Werkstatt</h3>
+            <p class="text-sm text-gray-500">Werkstatt & Prüfungen</p>
+        </a>
+        {% endif %}
+
+        {% if perms.equipment.view_equipment %}
+        <a href="{% url 'equipment:item_list' %}" class="group bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 border-2 border-transparent hover:border-primary-200">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-4xl">🧰</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600">Ausrüstung</h3>
+            <p class="text-sm text-gray-500">Geräte & Prüfungen</p>
+        </a>
+        {% endif %}
+
+        {% if perms.personnel.view_person %}
+        <a href="{% url 'personnel:list' %}" class="group bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 border-2 border-transparent hover:border-primary-200">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-4xl">👤</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600">Personal</h3>
+            <p class="text-sm text-gray-500">Stammdaten & Qualifikationen</p>
+        </a>
+        {% endif %}
+
+        {% if perms.procurement.view_order %}
+        <a href="{% url 'procurement:order_list' %}" class="group bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 border-2 border-transparent hover:border-primary-200">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-4xl">📋</span>
+                {% if pending_approvals > 0 %}
+                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">{{ pending_approvals }}</span>
+                {% endif %}
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600">Bestellungen</h3>
+            <p class="text-sm text-gray-500">Beschaffung & Freigaben</p>
+        </a>
+        {% endif %}
+
+        {% if perms.vehicle_handover.add_vehiclehandover %}
+        <a href="{% url 'vehicle_handover:handover_list' %}" class="group bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 border-2 border-transparent hover:border-primary-200">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-4xl">✅</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600">Fahrzeugübernahme</h3>
+            <p class="text-sm text-gray-500">Neue Übernahme starten</p>
+        </a>
+        {% endif %}
+
+        {% if perms.reporting.view_reports %}
+        <a href="#" class="group bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 border-2 border-transparent hover:border-primary-200">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-4xl">📊</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600">Reports & KPIs</h3>
+            <p class="text-sm text-gray-500">Auswertungen & Statistiken</p>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Letzte Aktivitäten -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="font-semibold text-gray-900">🕐 Letzte Aktivitäten</h2>
+        <a href="{% url 'core:activity_log' %}" class="text-sm text-primary-600 hover:text-primary-700">
+            Alle ansehen
+        </a>
+    </div>
+    <div class="divide-y divide-gray-200">
+        {% for activity in recent_activities|slice:":8" %}
+        <div class="px-5 py-3 hover:bg-gray-50 transition-colors">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
+                    {{ activity.user.first_name.0|default:activity.user.username.0 }}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-gray-900">
+                        <span class="font-medium">{{ activity.user.get_full_name }}</span>
+                        {{ activity.action_text }}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ activity.module }} • {{ activity.created_at|timesince }} ago
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="px-5 py-8 text-center text-gray-500">
+            <p class="text-sm">Keine Aktivitäten</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}360° Ansichten - Fahrzeugübernahme{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">360° Ansichten</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">360° Fahrzeuginnenraum</h1>
+            <p class="text-gray-600 mt-1">Sphärische Fotos mit interaktiven Hotspots</p>
+        </div>
+        <a href="{% url 'vehicle_handover:photo_360_create' %}"
+           class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Neues 360° Foto
+        </a>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fahrzeug</label>
+                <select name="vehicle" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">Alle Fahrzeuge</option>
+                    {% for vehicle in vehicles %}
+                        <option value="{{ vehicle.id }}" {% if request.GET.vehicle == vehicle.id|stringformat:"s" %}selected{% endif %}>
+                            {{ vehicle.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Bereich</label>
+                <select name="photo_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">Alle Bereiche</option>
+                    <option value="front" {% if request.GET.photo_type == "front" %}selected{% endif %}>Vorne (Fahrerkabine)</option>
+                    <option value="rear" {% if request.GET.photo_type == "rear" %}selected{% endif %}>Hinten (Laderaum)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select name="is_active" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">Alle</option>
+                    <option value="1" {% if request.GET.is_active == "1" %}selected{% endif %}>Aktiv</option>
+                    <option value="0" {% if request.GET.is_active == "0" %}selected{% endif %}>Inaktiv</option>
+                </select>
+            </div>
+            <div class="flex items-end gap-2">
+                <button type="submit" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors">
+                    Filtern
+                </button>
+                <a href="{% url 'vehicle_handover:photo_360_list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-5 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm">Gesamt</p>
+                    <p class="text-3xl font-bold">{{ total_count }}</p>
+                </div>
+                <span class="text-5xl opacity-50">📸</span>
+            </div>
+        </div>
+        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-5 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm">Vorne</p>
+                    <p class="text-3xl font-bold">{{ front_count }}</p>
+                </div>
+                <span class="text-5xl opacity-50">🚗</span>
+            </div>
+        </div>
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg p-5 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-orange-100 text-sm">Hinten</p>
+                    <p class="text-3xl font-bold">{{ rear_count }}</p>
+                </div>
+                <span class="text-5xl opacity-50">🚐</span>
+            </div>
+        </div>
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-5 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-purple-100 text-sm">Hotspots</p>
+                    <p class="text-3xl font-bold">{{ total_hotspots }}</p>
+                </div>
+                <span class="text-5xl opacity-50">🎯</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Grid -->
+    {% if object_list %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for photo in object_list %}
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                    <!-- Thumbnail -->
+                    <div class="relative h-48 bg-gray-900">
+                        {% if photo.image %}
+                            <img src="{{ photo.image.url }}" alt="{{ photo.title }}"
+                                 class="w-full h-full object-cover opacity-75">
+                        {% else %}
+                            <div class="flex items-center justify-center h-full">
+                                <span class="text-6xl opacity-30">🎯</span>
+                            </div>
+                        {% endif %}
+
+                        <!-- Status Badge -->
+                        <div class="absolute top-3 right-3">
+                            {% if photo.is_active %}
+                                <span class="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                    ✓ Aktiv
+                                </span>
+                            {% else %}
+                                <span class="bg-gray-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                    Inaktiv
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Photo Type Badge -->
+                        <div class="absolute top-3 left-3">
+                            {% if photo.photo_type == 'front' %}
+                                <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                    🚗 Vorne
+                                </span>
+                            {% else %}
+                                <span class="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                    🚐 Hinten
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="p-5">
+                        <h3 class="font-bold text-lg text-gray-900 mb-2 truncate">{{ photo.title }}</h3>
+
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">🚒</span>
+                            <span class="text-gray-700 font-medium">{{ photo.vehicle.name }}</span>
+                        </div>
+
+                        {% if photo.description %}
+                            <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ photo.description }}</p>
+                        {% endif %}
+
+                        <!-- Stats -->
+                        <div class="flex items-center gap-4 mb-4 text-sm text-gray-600">
+                            <div class="flex items-center gap-1">
+                                <span>🎯</span>
+                                <span class="font-semibold">{{ photo.hotspots.count }}</span>
+                                <span>Hotspot{{ photo.hotspots.count|pluralize:"s" }}</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span>📅</span>
+                                <span>{{ photo.captured_date|date:"d.m.Y" }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex gap-2">
+                            <a href="{% url 'vehicle_handover:photo_360_detail' photo.pk %}"
+                               class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-center font-semibold text-sm transition-colors">
+                                Ansehen
+                            </a>
+                            <a href="{% url 'vehicle_handover:photo_360_editor' photo.pk %}"
+                               class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-center font-semibold text-sm transition-colors">
+                                Bearbeiten
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+            <div class="flex justify-center items-center gap-2 mt-8">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Erste</a>
+                    <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Zurück</a>
+                {% endif %}
+
+                <span class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold">
+                    Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                </span>
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Weiter</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Letzte</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% else %}
+        <!-- Empty State -->
+        <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+            <span class="text-8xl inline-block mb-4">🎯</span>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Keine 360° Fotos vorhanden</h3>
+            <p class="text-gray-600 mb-6">Laden Sie Ihr erstes sphärisches Fahrzeugfoto hoch und fügen Sie Hotspots hinzu.</p>
+            <a href="{% url 'vehicle_handover:photo_360_create' %}"
+               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Erstes 360° Foto erstellen
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

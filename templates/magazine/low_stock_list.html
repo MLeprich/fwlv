@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Niedriger Bestand - Magazin - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:dashboard' %}" class="text-gray-500 hover:text-gray-700">Magazin</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Niedriger Bestand</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">⚠️ Niedriger Bestand</h1>
+                    <p class="mt-1 text-sm text-gray-600">Artikel, die den Mindestbestand unterschritten haben</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'magazine:item_list' %}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                        ← Zurück zur Übersicht
+                    </a>
+                    <a href="{% url 'magazine:movement_create' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                        📥 Wareneingang
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Box -->
+        {% if items %}
+        <div class="p-6 bg-amber-50 border-b border-amber-100">
+            <div class="flex items-start gap-3">
+                <span class="text-2xl">⚠️</span>
+                <div>
+                    <h3 class="text-sm font-semibold text-amber-900">Achtung: Mindestbestand unterschritten</h3>
+                    <p class="mt-1 text-sm text-amber-800">
+                        <strong>{{ items|length }}</strong> Artikel haben den Mindestbestand unterschritten und sollten nachbestellt werden.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Filters -->
+        <div class="p-6 border-b border-gray-200 bg-gray-50">
+            <form method="get" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Suche -->
+                    <div class="md:col-span-2">
+                        <input
+                            type="text"
+                            name="search"
+                            value="{{ request.GET.search }}"
+                            placeholder="Suche nach Artikel, Artikelnummer..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                        >
+                    </div>
+
+                    <!-- Kategorie -->
+                    <div>
+                        <select name="category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                            <option value="">Alle Kategorien</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <!-- Sortierung -->
+                    <select name="sort" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                        <option value="-quantity" {% if request.GET.sort == '-quantity' or not request.GET.sort %}selected{% endif %}>Bestand aufsteigend</option>
+                        <option value="quantity" {% if request.GET.sort == 'quantity' %}selected{% endif %}>Bestand absteigend</option>
+                        <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Name A-Z</option>
+                        <option value="-name" {% if request.GET.sort == '-name' %}selected{% endif %}>Name Z-A</option>
+                    </select>
+
+                    <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm">
+                        🔍 Filtern
+                    </button>
+
+                    {% if request.GET.search or request.GET.category or request.GET.sort %}
+                    <a href="{% url 'magazine:low_stock' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm">
+                        ✖ Zurücksetzen
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <!-- Items List -->
+        <div class="overflow-x-auto">
+            {% if items %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artikel</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategorie</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bestand</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mindestbestand</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Differenz</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lagerort</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in items %}
+                    <tr class="hover:bg-amber-50">
+                        <td class="px-6 py-4">
+                            <div class="flex items-start gap-2">
+                                <span class="text-xl">⚠️</span>
+                                <div>
+                                    <a href="{% url 'magazine:item_detail' item.pk %}" class="text-sm font-medium text-amber-600 hover:text-amber-800">
+                                        {{ item.name }}
+                                    </a>
+                                    <p class="text-xs text-gray-500">{{ item.item_number }}</p>
+                                    {% if item.is_hazardous %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 mt-1">
+                                        ☢️ Gefahrgut
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {% if item.category %}
+                            {{ item.category.name }}
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm">
+                                <span class="font-bold text-red-600">{{ item.quantity }}</span>
+                                <span class="text-gray-600 ml-1">{{ item.get_unit_display }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {{ item.min_quantity }} {{ item.get_unit_display }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% widthratio item.min_quantity 1 1 as min_qty %}
+                            {% widthratio item.quantity 1 1 as curr_qty %}
+                            {% widthratio min_qty 1 1 as min_int %}
+                            {% widthratio curr_qty 1 1 as curr_int %}
+                            {% with diff=min_int|add:"-"|add:curr_int %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                                -{{ item.min_quantity|floatformat:0|add:"-"|add:item.quantity|floatformat:0 }} {{ item.get_unit_display }}
+                            </span>
+                            {% endwith %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {% if item.location %}
+                            <div class="flex items-center gap-1">
+                                <span>📍</span>
+                                <span>{{ item.location.name }}</span>
+                            </div>
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="{% url 'magazine:movement_create' %}" class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium">
+                                    📥 Auffüllen
+                                </a>
+                                <a href="{% url 'magazine:item_detail' item.pk %}" class="text-amber-600 hover:text-amber-800 font-medium">
+                                    Details →
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} Artikel)
+                    </div>
+                    <div class="flex gap-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            « Erste
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            ‹ Zurück
+                        </a>
+                        {% endif %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            Weiter ›
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                            Letzte »
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">✅</div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Artikel mit niedrigem Bestand</h3>
+                <p class="text-gray-600 mb-6">
+                    {% if request.GET.search or request.GET.category %}
+                    Keine Artikel gefunden, die Ihren Suchkriterien entsprechen.
+                    {% else %}
+                    Alle Artikel haben ausreichend Bestand. Gut gemacht! 🎉
+                    {% endif %}
+                </p>
+                {% if request.GET.search or request.GET.category %}
+                <a href="{% url 'magazine:low_stock' %}" class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                    ✖ Filter zurücksetzen
+                </a>
+                {% else %}
+                <a href="{% url 'magazine:item_list' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Zur Artikelübersicht →
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

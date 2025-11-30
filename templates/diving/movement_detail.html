@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lagerbewegung Details - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:movement_list' %}" class="text-gray-500 hover:text-gray-700">Lagerbewegungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Details</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <!-- Header -->
+        <div class="flex justify-between items-start mb-6 pb-6 border-b border-gray-200">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Lagerbewegung #{{ movement.id }}</h1>
+                <p class="mt-1 text-sm text-gray-600">{{ movement.movement_date|date:"d.m.Y H:i" }} Uhr</p>
+            </div>
+            <div>
+                {% if movement.movement_type == 'incoming' %}
+                <span class="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-semibold">📥 Wareneingang</span>
+                {% elif movement.movement_type == 'outgoing' %}
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full font-semibold">📤 Warenausgang</span>
+                {% elif movement.movement_type == 'transfer' %}
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full font-semibold">🔄 Umlagerung</span>
+                {% elif movement.movement_type == 'disposal' %}
+                <span class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-semibold">🗑️ Entsorgung</span>
+                {% elif movement.movement_type == 'return' %}
+                <span class="px-3 py-1 bg-teal-100 text-teal-700 text-sm rounded-full font-semibold">↩️ Rückgabe</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Basis-Informationen -->
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">📦 Basis-Informationen</h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Ausrüstung</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        <a href="{% url 'diving:item_detail' movement.item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                            {{ movement.item.name }}
+                        </a>
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Menge</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.quantity }} {{ movement.item.unit }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Von Lagerort</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.from_location.name|default:"-" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Nach Lagerort</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.to_location.name|default:"-" }}</dd>
+                </div>
+                {% if movement.reference_number %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Referenznummer</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.reference_number }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <!-- Gasfüllung -->
+        {% if movement.gas_filled %}
+        <div class="mb-6 p-4 bg-cyan-50 rounded-lg border border-cyan-200">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>💨</span> Gasfüllung
+            </h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Gastyp</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.get_gas_type_display }}</dd>
+                </div>
+                {% if movement.fill_pressure_bar %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Fülldruck</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.fill_pressure_bar }} bar</dd>
+                </div>
+                {% endif %}
+                {% if movement.oxygen_percentage %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Sauerstoffanteil</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.oxygen_percentage }}%</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+        {% endif %}
+
+        <!-- Tauchgang -->
+        {% if movement.dive_date %}
+        <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>🤿</span> Tauchgang
+            </h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Datum</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.dive_date|date:"d.m.Y" }}</dd>
+                </div>
+                {% if movement.dive_location %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Tauchort</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.dive_location }}</dd>
+                </div>
+                {% endif %}
+                {% if movement.max_depth_m %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Max. Tiefe</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.max_depth_m }} m</dd>
+                </div>
+                {% endif %}
+                {% if movement.dive_duration_minutes %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Tauchzeit</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.dive_duration_minutes }} min</dd>
+                </div>
+                {% endif %}
+                {% if movement.dive_purpose %}
+                <div class="md:col-span-2">
+                    <dt class="text-sm font-medium text-gray-500">Zweck</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.dive_purpose }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+        {% endif %}
+
+        <!-- Service/Wartung -->
+        {% if movement.service_performed %}
+        <div class="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>🔧</span> Service/Wartung
+            </h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% if movement.service_type %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Serviceart</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.service_type }}</dd>
+                </div>
+                {% endif %}
+                {% if movement.service_technician %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Techniker</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.service_technician.get_full_name }}</dd>
+                </div>
+                {% endif %}
+                {% if movement.service_notes %}
+                <div class="md:col-span-2">
+                    <dt class="text-sm font-medium text-gray-500">Notizen</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.service_notes }}</dd>
+                </div>
+                {% endif %}
+                {% if movement.parts_replaced %}
+                <div class="md:col-span-2">
+                    <dt class="text-sm font-medium text-gray-500">Ersetzte Teile</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.parts_replaced }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+        {% endif %}
+
+        <!-- Zustand -->
+        {% if movement.condition_before or movement.condition_after %}
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">📋 Zustandsdokumentation</h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% if movement.condition_before %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Zustand vorher</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.condition_before }}</dd>
+                </div>
+                {% endif %}
+                {% if movement.condition_after %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Zustand nachher</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ movement.condition_after }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+        {% endif %}
+
+        <!-- Notizen -->
+        {% if movement.notes %}
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">📝 Notizen</h2>
+            <p class="text-sm text-gray-900">{{ movement.notes }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Metadaten -->
+        <div class="pt-6 border-t border-gray-200">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500">
+                <div>
+                    <dt class="font-medium">Erstellt von</dt>
+                    <dd class="mt-1">{{ movement.created_by.get_full_name }} am {{ movement.created_at|date:"d.m.Y H:i" }} Uhr</dd>
+                </div>
+                {% if movement.updated_at != movement.created_at %}
+                <div>
+                    <dt class="font-medium">Zuletzt geändert</dt>
+                    <dd class="mt-1">{{ movement.updated_at|date:"d.m.Y H:i" }} Uhr</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-6 flex gap-3">
+            <a href="{% url 'diving:movement_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                ← Zurück zur Liste
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

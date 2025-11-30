@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Typenverwaltung - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Typenverwaltung</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Typenverwaltung</h1>
+        <p class="text-gray-600">Verwalten Sie Ausrüstungstypen und Flaschentypen für die Tauchausrüstung</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Ausrüstungstypen -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900">Ausrüstungstypen</h2>
+                    <p class="text-sm text-gray-600 mt-1">{{ equipment_types_count }} Typen</p>
+                </div>
+                <a href="{% url 'diving:equipment_type_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Neu
+                </a>
+            </div>
+
+            <div class="p-6">
+                {% if equipment_types %}
+                <div class="space-y-3">
+                    {% for equipment_type in equipment_types %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div class="flex items-center gap-3 flex-1">
+                            {% if equipment_type.icon %}
+                            <span class="text-2xl">{{ equipment_type.icon }}</span>
+                            {% else %}
+                            <span class="text-2xl">🤿</span>
+                            {% endif %}
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-gray-900">{{ equipment_type.name }}</div>
+                                {% if equipment_type.category %}
+                                <div class="text-xs text-gray-500">{{ equipment_type.category }}</div>
+                                {% endif %}
+                                {% if equipment_type.code %}
+                                <div class="text-xs text-gray-400 font-mono">{{ equipment_type.code }}</div>
+                                {% endif %}
+                            </div>
+                            {% if not equipment_type.is_active %}
+                            <span class="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-full">Inaktiv</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="{% url 'diving:equipment_type_edit' equipment_type.pk %}" class="text-blue-600 hover:text-blue-800 text-sm" title="Bearbeiten">
+                                ✏️
+                            </a>
+                            <a href="{% url 'diving:equipment_type_delete' equipment_type.pk %}" class="text-red-600 hover:text-red-800 text-sm" title="Löschen">
+                                🗑️
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-3">🤿</div>
+                    <p class="font-medium">Keine Ausrüstungstypen vorhanden</p>
+                    <p class="text-sm mt-1">Erstellen Sie Ihren ersten Ausrüstungstyp.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Flaschentypen -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900">Flaschentypen</h2>
+                    <p class="text-sm text-gray-600 mt-1">{{ bottle_types_count }} Typen</p>
+                </div>
+                <a href="{% url 'diving:bottle_type_create' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                    ➕ Neu
+                </a>
+            </div>
+
+            <div class="p-6">
+                {% if bottle_types %}
+                <div class="space-y-3">
+                    {% for bottle_type in bottle_types %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="text-2xl">🧊</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-gray-900">{{ bottle_type.name }}</div>
+                                {% if bottle_type.material %}
+                                <div class="text-xs text-gray-500">Material: {{ bottle_type.material }}</div>
+                                {% endif %}
+                                {% if bottle_type.code %}
+                                <div class="text-xs text-gray-400 font-mono">{{ bottle_type.code }}</div>
+                                {% endif %}
+                            </div>
+                            {% if not bottle_type.is_active %}
+                            <span class="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-full">Inaktiv</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="{% url 'diving:bottle_type_edit' bottle_type.pk %}" class="text-blue-600 hover:text-blue-800 text-sm" title="Bearbeiten">
+                                ✏️
+                            </a>
+                            <a href="{% url 'diving:bottle_type_delete' bottle_type.pk %}" class="text-red-600 hover:text-red-800 text-sm" title="Löschen">
+                                🗑️
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-3">🧊</div>
+                    <p class="font-medium">Keine Flaschentypen vorhanden</p>
+                    <p class="text-sm mt-1">Erstellen Sie Ihren ersten Flaschentyp.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Zurück-Button -->
+    <div class="mt-6">
+        <a href="{% url 'diving:master_list' %}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+            ← Zurück zur Stammdaten-Liste
+        </a>
+    </div>
+
+</div>
+{% endblock %}

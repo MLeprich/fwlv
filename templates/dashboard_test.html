@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}TEST Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">TEST DASHBOARD</h1>
+
+<div class="grid grid-cols-4 gap-4">
+    {% include 'includes/components/kpi_card.html' with title="Test 1" value=10 icon="📊" color="blue" url="#" %}
+    {% include 'includes/components/kpi_card.html' with title="Test 2" value=20 icon="📈" color="green" url="#" %}
+    {% include 'includes/components/kpi_card.html' with title="Test 3" value=30 icon="📉" color="red" url="#" %}
+    {% include 'includes/components/kpi_card.html' with title="Test 4" value=40 icon="💊" color="orange" url="#" %}
+</div>
+{% endblock %}

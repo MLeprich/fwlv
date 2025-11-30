@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ausrüstung & Geräte - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'core:dashboard' %}" class="text-gray-700 hover:text-primary-600">
+                    🏠 Dashboard
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <a href="{% url 'equipment:dashboard' %}" class="ml-1 text-gray-700 hover:text-primary-600">
+                        🛠️ Ausrüstung
+                    </a>
+                </div>
+            </li>
+            <li aria-current="page">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="ml-1 text-gray-500 font-medium">Geräte</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Ausrüstung & Geräte</h1>
+                <p class="mt-2 text-sm text-gray-600">
+                    {{ equipment_items.count }} Geräte |
+                    {{ maintenance_due_count }} Wartungen fällig |
+                    {{ inspection_due_count }} Prüfungen fällig
+                </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Quick Stats -->
+                <div class="hidden lg:flex items-center gap-4 mr-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600">{{ in_service_count }}</div>
+                        <div class="text-xs text-gray-500">Im Einsatz</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-yellow-600">{{ maintenance_due_count }}</div>
+                        <div class="text-xs text-gray-500">Wartung</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-red-600">{{ retired_count }}</div>
+                        <div class="text-xs text-gray-500">Ausgemustert</div>
+                    </div>
+                </div>
+
+                <!-- Export Button -->
+                {% include 'includes/components/button.html' with text="Exportieren" type="secondary" icon="📤" size="md" %}
+
+                <!-- Add Button -->
+                {% include 'includes/components/button.html' with text="Neues Gerät" type="primary" icon="➕" size="md" href="/equipment/items/create/" %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Search -->
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Suche</label>
+                <input
+                    type="search"
+                    placeholder="Name, Seriennummer, Hersteller..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    hx-get="{% url 'equipment:equipment_list' %}"
+                    hx-trigger="keyup changed delay:300ms"
+                    hx-target="#equipment-list"
+                    hx-include="[name='category'], [name='location'], [name='vehicle'], [name='status']"
+                    name="search"
+                />
+            </div>
+
+            <!-- Category Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie</label>
+                <select
+                    name="category"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    hx-get="{% url 'equipment:equipment_list' %}"
+                    hx-trigger="change"
+                    hx-target="#equipment-list"
+                    hx-include="[name='search'], [name='location'], [name='vehicle'], [name='status']"
+                >
+                    <option value="">Alle Kategorien</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Location Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Standort</label>
+                <select
+                    name="location"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    hx-get="{% url 'equipment:equipment_list' %}"
+                    hx-trigger="change"
+                    hx-target="#equipment-list"
+                    hx-include="[name='search'], [name='category'], [name='vehicle'], [name='status']"
+                >
+                    <option value="">Alle Standorte</option>
+                    {% for location in locations %}
+                    <option value="{{ location.id }}">{{ location.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                    name="status"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    hx-get="{% url 'equipment:equipment_list' %}"
+                    hx-trigger="change"
+                    hx-target="#equipment-list"
+                    hx-include="[name='search'], [name='category'], [name='location'], [name='vehicle']"
+                >
+                    <option value="">Alle Status</option>
+                    <option value="in_service">Im Einsatz</option>
+                    <option value="maintenance_due">Wartung fällig</option>
+                    <option value="inspection_due">Prüfung fällig</option>
+                    <option value="retired">Ausgemustert</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Quick Filters -->
+        <div class="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+            <span class="text-sm text-gray-600 mr-2">Schnellfilter:</span>
+            <button
+                hx-get="{% url 'equipment:equipment_list' %}?status=maintenance_due"
+                hx-target="#equipment-list"
+                class="px-3 py-1 text-sm bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200">
+                ⚠️ Wartung fällig
+            </button>
+            <button
+                hx-get="{% url 'equipment:equipment_list' %}?status=inspection_due"
+                hx-target="#equipment-list"
+                class="px-3 py-1 text-sm bg-orange-100 text-orange-800 rounded-full hover:bg-orange-200">
+                🔍 Prüfung fällig
+            </button>
+            <button
+                hx-get="{% url 'equipment:equipment_list' %}?vehicle=assigned"
+                hx-target="#equipment-list"
+                class="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200">
+                🚒 Auf Fahrzeugen
+            </button>
+        </div>
+    </div>
+
+    <!-- Equipment List -->
+    <div id="equipment-list">
+        {% include 'equipment/partials/equipment_table.html' %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Keyboard Shortcut: Ctrl+N für neues Gerät
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            window.location.href = '{% url "equipment:equipment_create" %}';
+        }
+    });
+
+    // Keyboard Shortcut: Ctrl+F für Search-Focus
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            document.querySelector('input[name="search"]').focus();
+        }
+    });
+</script>
+{% endblock %}

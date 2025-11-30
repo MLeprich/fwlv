@@ -1,0 +1,484 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'disinfection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Desinfektion</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'disinfection:log_list' %}" class="text-gray-500 hover:text-gray-700">Protokolle</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">📝</span>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+                <p class="text-sm text-gray-600">Dokumentieren Sie durchgeführte Desinfektionen</p>
+            </div>
+        </div>
+        <a href="{% url 'disinfection:log_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm">
+            ← Zurück zur Liste
+        </a>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <!-- Was wurde desinfiziert? -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Was wurde desinfiziert?</h2>
+
+                <div class="space-y-4">
+                    <!-- Objekt-Typ -->
+                    <div>
+                        <label for="{{ form.object_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Objekt-Typ <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.object_type }}
+                        {% if form.object_type.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.object_type.help_text }}</p>
+                        {% endif %}
+                        {% if form.object_type.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.object_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Fahrzeug mit Suche -->
+                    <div x-data="{ open: false, search: '', selected: null, vehicles: [] }" x-init="
+                        vehicles = Array.from(document.querySelectorAll('#{{ form.vehicle.id_for_label }} option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(v => v.value);
+                        const currentValue = document.getElementById('{{ form.vehicle.id_for_label }}').value;
+                        if (currentValue) {
+                            selected = vehicles.find(v => v.value === currentValue);
+                        }
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Fahrzeug
+                        </label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.vehicle }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Fahrzeug auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Fahrzeug suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="vehicle in vehicles.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="vehicle.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = vehicle; document.getElementById('{{ form.vehicle.id_for_label }}').value = vehicle.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === vehicle.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="vehicle.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.vehicle.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.vehicle.help_text }}</p>
+                        {% endif %}
+                        {% if form.vehicle.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.vehicle.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Objekt-Beschreibung -->
+                    <div>
+                        <label for="{{ form.object_description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Objekt-Beschreibung <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.object_description }}
+                        {% if form.object_description.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.object_description.help_text }}</p>
+                        {% endif %}
+                        {% if form.object_description.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.object_description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wann und Wer? -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Wann und Wer?</h2>
+
+                <div class="space-y-4">
+                    <!-- Desinfektionsdatum -->
+                    <div>
+                        <label for="{{ form.disinfection_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Desinfektionsdatum <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.disinfection_date }}
+                        {% if form.disinfection_date.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.disinfection_date.help_text }}</p>
+                        {% endif %}
+                        {% if form.disinfection_date.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.disinfection_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Durchgeführt von mit Suche -->
+                    <div x-data="{ open: false, search: '', selected: null, users: [] }" x-init="
+                        users = Array.from(document.querySelectorAll('#{{ form.performed_by.id_for_label }} option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(u => u.value);
+                        const currentValue = document.getElementById('{{ form.performed_by.id_for_label }}').value;
+                        if (currentValue) {
+                            selected = users.find(u => u.value === currentValue);
+                        }
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Durchgeführt von <span class="text-red-600">*</span>
+                        </label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.performed_by }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Person auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Person suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="user in users.filter(u => u.text.toLowerCase().includes(search.toLowerCase()))" :key="user.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = user; document.getElementById('{{ form.performed_by.id_for_label }}').value = user.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === user.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="user.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.performed_by.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.performed_by.help_text }}</p>
+                        {% endif %}
+                        {% if form.performed_by.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.performed_by.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Kontrolliert von mit Suche -->
+                    <div x-data="{ open: false, search: '', selected: null, users: [] }" x-init="
+                        users = Array.from(document.querySelectorAll('#{{ form.verified_by.id_for_label }} option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(u => u.value);
+                        const currentValue = document.getElementById('{{ form.verified_by.id_for_label }}').value;
+                        if (currentValue) {
+                            selected = users.find(u => u.value === currentValue);
+                        }
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Kontrolliert von
+                        </label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.verified_by }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Person auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Person suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="user in users.filter(u => u.text.toLowerCase().includes(search.toLowerCase()))" :key="user.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = user; document.getElementById('{{ form.verified_by.id_for_label }}').value = user.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === user.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="user.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.verified_by.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.verified_by.help_text }}</p>
+                        {% endif %}
+                        {% if form.verified_by.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.verified_by.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verwendete Mittel & Methode -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Verwendete Mittel & Methode</h2>
+
+                <div class="space-y-4">
+                    <!-- Desinfektionsmittel -->
+                    <div>
+                        <label for="{{ form.disinfection_item.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Desinfektionsmittel <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.disinfection_item }}
+                        {% if form.disinfection_item.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.disinfection_item.help_text }}</p>
+                        {% endif %}
+                        {% if form.disinfection_item.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.disinfection_item.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Desinfektionsplan -->
+                    <div>
+                        <label for="{{ form.disinfection_plan.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Desinfektionsplan
+                        </label>
+                        {{ form.disinfection_plan }}
+                        {% if form.disinfection_plan.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.disinfection_plan.help_text }}</p>
+                        {% endif %}
+                        {% if form.disinfection_plan.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.disinfection_plan.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Verdünnung -->
+                        <div>
+                            <label for="{{ form.dilution_used.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                Verwendete Verdünnung
+                            </label>
+                            {{ form.dilution_used }}
+                            {% if form.dilution_used.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ form.dilution_used.help_text }}</p>
+                            {% endif %}
+                            {% if form.dilution_used.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.dilution_used.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Einwirkzeit -->
+                        <div>
+                            <label for="{{ form.contact_time_minutes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                Einwirkzeit (Minuten)
+                            </label>
+                            {{ form.contact_time_minutes }}
+                            {% if form.contact_time_minutes.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ form.contact_time_minutes.help_text }}</p>
+                            {% endif %}
+                            {% if form.contact_time_minutes.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.contact_time_minutes.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Methode -->
+                    <div>
+                        <label for="{{ form.method.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Methode <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.method }}
+                        {% if form.method.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.method.help_text }}</p>
+                        {% endif %}
+                        {% if form.method.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.method.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dokumentation -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Dokumentation</h2>
+
+                <div class="space-y-4">
+                    <!-- Grund/Anlass -->
+                    <div>
+                        <label for="{{ form.reason.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Grund/Anlass
+                        </label>
+                        {{ form.reason }}
+                        {% if form.reason.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.reason.help_text }}</p>
+                        {% endif %}
+                        {% if form.reason.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.reason.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Protokoll -->
+                    <div>
+                        <label for="{{ form.protocol.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Protokoll <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.protocol }}
+                        {% if form.protocol.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.protocol.help_text }}</p>
+                        {% endif %}
+                        {% if form.protocol.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.protocol.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Notizen -->
+                    <div>
+                        <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Zusätzliche Notizen
+                        </label>
+                        {{ form.notes }}
+                        {% if form.notes.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.notes.help_text }}</p>
+                        {% endif %}
+                        {% if form.notes.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-4">
+                <a href="{% url 'disinfection:log_list' %}" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+                    Protokoll speichern
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Hilfetext -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div>
+                <h3 class="font-semibold text-blue-900 mb-1">Hinweise zur Protokollierung</h3>
+                <ul class="text-sm text-blue-800 space-y-1">
+                    <li>• Dokumentieren Sie alle durchgeführten Desinfektionen vollständig</li>
+                    <li>• Geben Sie die verwendete Verdünnung und Einwirkzeit genau an</li>
+                    <li>• Bei Fahrzeugen: Notieren Sie ggf. auch den Einsatzanlass</li>
+                    <li>• Eine zweite Person sollte die Durchführung kontrollieren (Vier-Augen-Prinzip)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}

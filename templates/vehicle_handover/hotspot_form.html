@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if object %}Hotspot bearbeiten{% else %}Neuer Hotspot{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:photo_360_list' %}" class="text-gray-500 hover:text-gray-700">360° Ansichten</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            {% if object %}
+            <li><a href="{% url 'vehicle_handover:photo_360_detail' object.photo_360.pk %}" class="text-gray-500 hover:text-gray-700">{{ object.photo_360.title|truncatewords:3 }}</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Hotspot bearbeiten</span></li>
+            {% else %}
+            <li><span class="text-gray-900 font-medium">Neuer Hotspot</span></li>
+            {% endif %}
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-4xl">
+    <!-- Header -->
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{% if object %}{% url 'vehicle_handover:photo_360_editor' object.photo_360.pk %}{% else %}{% url 'vehicle_handover:photo_360_list' %}{% endif %}"
+           class="text-gray-600 hover:text-gray-900">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+        </a>
+        <h1 class="text-3xl font-bold text-gray-900">
+            {% if object %}
+                Hotspot bearbeiten
+            {% else %}
+                Neuen Hotspot erstellen
+            {% endif %}
+        </h1>
+    </div>
+
+    {% if object %}
+        <!-- 360° Photo Info -->
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-5 text-white mb-6">
+            <div class="flex items-center gap-3">
+                <span class="text-4xl">📸</span>
+                <div>
+                    <h3 class="font-bold text-lg">{{ object.photo_360.title }}</h3>
+                    <p class="text-blue-100 text-sm">
+                        {{ object.photo_360.vehicle.name }} | {{ object.photo_360.get_photo_type_display }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Form Column -->
+        <div class="lg:col-span-2">
+            <form method="post" enctype="multipart/form-data" class="bg-white rounded-lg shadow-lg p-6">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                        <div class="flex items-start gap-2">
+                            <span class="text-red-500 text-xl">⚠️</span>
+                            <div class="flex-1">
+                                {% for error in form.non_field_errors %}
+                                    <p class="text-red-800 text-sm">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Grundinformationen</h2>
+
+                <!-- Title -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Titel *
+                        {% if form.title.errors %}
+                            <span class="text-red-600 text-xs">{{ form.title.errors.0 }}</span>
+                        {% endif %}
+                    </label>
+                    {{ form.title }}
+                    <p class="text-sm text-gray-600 mt-1">Aussagekräftiger Name für den Hotspot (z.B. "Schublade links oben").</p>
+                </div>
+
+                <!-- Description -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Beschreibung
+                        {% if form.description.errors %}
+                            <span class="text-red-600 text-xs">{{ form.description.errors.0 }}</span>
+                        {% endif %}
+                    </label>
+                    {{ form.description }}
+                    <p class="text-sm text-gray-600 mt-1">Detaillierte Beschreibung des Hotspots.</p>
+                </div>
+
+                <h2 class="text-xl font-bold text-gray-900 mb-4 mt-8">Hotspot-Typ & Verknüpfung</h2>
+
+                <!-- Hotspot Type -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Typ *
+                        {% if form.hotspot_type.errors %}
+                            <span class="text-red-600 text-xs">{{ form.hotspot_type.errors.0 }}</span>
+                        {% endif %}
+                    </label>
+                    {{ form.hotspot_type }}
+                    <p class="text-sm text-gray-600 mt-1">Welche Art von Inhalt soll der Hotspot haben?</p>
+                </div>
+
+                <!-- Checklist Template -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Checkliste
+                        {% if form.checklist_template.errors %}
+                            <span class="text-red-600 text-xs">{{ form.checklist_template.errors.0 }}</span>
+                        {% endif %}
+                    </label>
+                    {{ form.checklist_template }}
+                    <p class="text-sm text-gray-600 mt-1">Optional: Verknüpfen Sie eine Checkliste mit diesem Hotspot.</p>
+                </div>
+
+                <h2 class="text-xl font-bold text-gray-900 mb-4 mt-8">Position & Darstellung</h2>
+
+                <!-- Position -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Pitch (Vertikal) *
+                            {% if form.pitch.errors %}
+                                <span class="text-red-600 text-xs">{{ form.pitch.errors.0 }}</span>
+                            {% endif %}
+                        </label>
+                        {{ form.pitch }}
+                        <p class="text-sm text-gray-600 mt-1">-90° bis +90° (vertikal)</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Yaw (Horizontal) *
+                            {% if form.yaw.errors %}
+                                <span class="text-red-600 text-xs">{{ form.yaw.errors.0 }}</span>
+                            {% endif %}
+                        </label>
+                        {{ form.yaw }}
+                        <p class="text-sm text-gray-600 mt-1">-180° bis +180° (horizontal)</p>
+                    </div>
+                </div>
+
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
+                    <div class="flex items-start gap-2">
+                        <span class="text-yellow-600 text-xl">ℹ️</span>
+                        <p class="text-yellow-800 text-sm">
+                            <strong>Tipp:</strong> Verwenden Sie den 360° Editor, um Hotspots durch Klicken im Foto zu positionieren.
+                            Die Koordinaten werden automatisch gesetzt.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Icon & Color -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Icon
+                            {% if form.icon.errors %}
+                                <span class="text-red-600 text-xs">{{ form.icon.errors.0 }}</span>
+                            {% endif %}
+                        </label>
+                        {{ form.icon }}
+                        <p class="text-sm text-gray-600 mt-1">Symbol für den Hotspot</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Farbe
+                            {% if form.color.errors %}
+                                <span class="text-red-600 text-xs">{{ form.color.errors.0 }}</span>
+                            {% endif %}
+                        </label>
+                        {{ form.color }}
+                        <p class="text-sm text-gray-600 mt-1">Hintergrundfarbe</p>
+                    </div>
+                </div>
+
+                <!-- Order -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Reihenfolge
+                        {% if form.order.errors %}
+                            <span class="text-red-600 text-xs">{{ form.order.errors.0 }}</span>
+                        {% endif %}
+                    </label>
+                    {{ form.order }}
+                    <p class="text-sm text-gray-600 mt-1">Sortierreihenfolge (kleinere Zahlen erscheinen zuerst).</p>
+                </div>
+
+                <!-- Is Active -->
+                <div class="mb-6">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        {{ form.is_active }}
+                        <span class="text-sm font-medium text-gray-700">Hotspot ist aktiv</span>
+                    </label>
+                    <p class="text-sm text-gray-600 mt-1 ml-6">Inaktive Hotspots werden ausgeblendet.</p>
+                </div>
+
+                {% if object %}
+                    <h2 class="text-xl font-bold text-gray-900 mb-4 mt-8">Detailbilder</h2>
+
+                    {{ formset.management_form }}
+
+                    <div class="space-y-4 mb-6">
+                        {% for form_item in formset %}
+                            <div class="border border-gray-200 rounded-lg p-4 {% if form_item.instance.pk %}bg-gray-50{% else %}bg-blue-50{% endif %}">
+                                <div class="flex items-start gap-4">
+                                    {% if form_item.instance.image %}
+                                        <img src="{{ form_item.instance.image.url }}" alt="" class="w-24 h-24 object-cover rounded">
+                                    {% endif %}
+                                    <div class="flex-1 space-y-3">
+                                        {{ form_item.id }}
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Bild</label>
+                                            {{ form_item.image }}
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Bildunterschrift</label>
+                                            {{ form_item.caption }}
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Reihenfolge</label>
+                                                {{ form_item.order }}
+                                            </div>
+                                            <div class="flex items-end">
+                                                <label class="flex items-center gap-2">
+                                                    {{ form_item.DELETE }}
+                                                    <span class="text-sm text-red-600">Bild löschen</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <p class="text-sm text-gray-600 mb-6">
+                        Fügen Sie Detailbilder hinzu, die zeigen, was sich in diesem Bereich befindet.
+                    </p>
+                {% endif %}
+
+                <!-- Buttons -->
+                <div class="flex gap-3 pt-6 border-t border-gray-200">
+                    <button type="submit"
+                            class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        {% if object %}Änderungen speichern{% else %}Hotspot erstellen{% endif %}
+                    </button>
+                    <a href="{% if object %}{% url 'vehicle_handover:photo_360_editor' object.photo_360.pk %}{% else %}{% url 'vehicle_handover:photo_360_list' %}{% endif %}"
+                       class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors">
+                        Abbrechen
+                    </a>
+                </div>
+
+                {% if object %}
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <a href="{% url 'vehicle_handover:hotspot_delete' object.pk %}"
+                           class="text-red-600 hover:text-red-800 text-sm font-medium">
+                            🗑️ Hotspot löschen
+                        </a>
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Info Sidebar -->
+        <div class="space-y-4">
+            <!-- Icon Reference -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <h3 class="font-bold text-gray-900 mb-3 text-sm">Icon-Übersicht</h3>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex items-center gap-1">
+                        <span>📍</span>
+                        <span class="text-gray-600">Standard</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span>📦</span>
+                        <span class="text-gray-600">Schublade</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span>🗄️</span>
+                        <span class="text-gray-600">Schrank</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span>📋</span>
+                        <span class="text-gray-600">Kiste</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span>🔧</span>
+                        <span class="text-gray-600">Werkzeug</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span>⚕️</span>
+                        <span class="text-gray-600">Medizin</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span>🔥</span>
+                        <span class="text-gray-600">Brandschutz</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span>📻</span>
+                        <span class="text-gray-600">Funk</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span>⚙️</span>
+                        <span class="text-gray-600">Ausrüstung</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Color Reference -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <h3 class="font-bold text-gray-900 mb-3 text-sm">Farb-Übersicht</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-blue-500 rounded-full"></div>
+                        <span class="text-xs text-gray-600">Blau (Standard)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-red-500 rounded-full"></div>
+                        <span class="text-xs text-gray-600">Rot (Wichtig)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                        <span class="text-xs text-gray-600">Grün (OK)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-yellow-500 rounded-full"></div>
+                        <span class="text-xs text-gray-600">Gelb (Warnung)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-purple-500 rounded-full"></div>
+                        <span class="text-xs text-gray-600">Lila</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-orange-500 rounded-full"></div>
+                        <span class="text-xs text-gray-600">Orange</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-gray-500 rounded-full"></div>
+                        <span class="text-xs text-gray-600">Grau (Neutral)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-sm p-4">
+                <h3 class="font-bold text-gray-900 mb-2 text-sm flex items-center gap-1">
+                    <span>💡</span>
+                    <span>Tipps</span>
+                </h3>
+                <ul class="text-xs text-gray-700 space-y-1">
+                    <li>• Verwenden Sie aussagekräftige Titel</li>
+                    <li>• Fügen Sie Detailbilder für bessere Übersicht hinzu</li>
+                    <li>• Verknüpfen Sie Checklisten für Inventurprüfungen</li>
+                    <li>• Nutzen Sie Farben zur Kategorisierung</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

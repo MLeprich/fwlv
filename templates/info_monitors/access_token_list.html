@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Zugriffs-Tokens | Info Monitors | FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'info_monitors:dashboard_list' %}" class="text-gray-500 hover:text-gray-700">Info-Monitore</a></li>
+            <li class="text-gray-400">/</li>
+            <li><span class="text-gray-900 font-semibold">Zugriffs-Tokens</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                    Zugriffs-Tokens
+                </h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Verwalte Zugriffs-Tokens für öffentliche Monitor-Anzeige
+                </p>
+            </div>
+            <a href="{% url 'info_monitors:access_token_create' %}"
+               class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Neuen Token erstellen
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiken -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+                    <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                    </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                        Gesamt Tokens
+                    </dt>
+                    <dd class="text-2xl font-semibold text-gray-900 dark:text-white">
+                        {{ total_tokens }}
+                    </dd>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+                    <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                        Aktive Tokens
+                    </dt>
+                    <dd class="text-2xl font-semibold text-gray-900 dark:text-white">
+                        {{ active_tokens }}
+                    </dd>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-yellow-500 rounded-md p-3">
+                    <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                        Abgelaufene Tokens
+                    </dt>
+                    <dd class="text-2xl font-semibold text-gray-900 dark:text-white">
+                        {{ expired_tokens }}
+                    </dd>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+        <form method="get" class="flex flex-wrap gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <label for="dashboard" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Dashboard
+                </label>
+                <select name="dashboard" id="dashboard"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Alle Dashboards</option>
+                    {% for dashboard in dashboards %}
+                        <option value="{{ dashboard.id }}" {% if request.GET.dashboard == dashboard.id|stringformat:"s" %}selected{% endif %}>
+                            {{ dashboard.profile.name }} - {{ dashboard.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex-1 min-w-[200px]">
+                <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Status
+                </label>
+                <select name="status" id="status"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Alle Status</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Aktiv</option>
+                    <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inaktiv</option>
+                    <option value="expired" {% if request.GET.status == 'expired' %}selected{% endif %}>Abgelaufen</option>
+                </select>
+            </div>
+
+            <div class="flex items-end">
+                <button type="submit"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                    Filtern
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Token Liste -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        {% if tokens %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Name
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Dashboard
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Status
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Verwendungen
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Gültig bis
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Erstellt
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Aktionen
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for token in tokens %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ token.name }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                                        {{ token.token|truncatechars:20 }}...
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900 dark:text-white">
+                                        {{ token.dashboard.name }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ token.dashboard.profile.name }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if token.is_active %}
+                                        {% if token.expires_at and token.expires_at < now %}
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                                Abgelaufen
+                                            </span>
+                                        {% elif token.max_uses and token.use_count >= token.max_uses %}
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                                                Max. erreicht
+                                            </span>
+                                        {% else %}
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                Aktiv
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                            Inaktiv
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                    {{ token.use_count }}
+                                    {% if token.max_uses %}
+                                        / {{ token.max_uses }}
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                    {% if token.expires_at %}
+                                        {{ token.expires_at|date:"d.m.Y H:i" }}
+                                    {% else %}
+                                        <span class="text-gray-400">Unbegrenzt</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                    {{ token.created_at|date:"d.m.Y" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <a href="{% url 'info_monitors:access_token_detail' token.pk %}"
+                                       class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">
+                                        Details
+                                    </a>
+                                    <a href="{% url 'info_monitors:access_token_delete' token.pk %}"
+                                       onclick="return confirm('Token wirklich löschen?')"
+                                       class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                                        Löschen
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <div class="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
+                    <div class="flex-1 flex justify-between sm:hidden">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Zurück
+                            </a>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Weiter
+                            </a>
+                        {% endif %}
+                    </div>
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700 dark:text-gray-300">
+                                Zeige
+                                <span class="font-medium">{{ page_obj.start_index }}</span>
+                                bis
+                                <span class="font-medium">{{ page_obj.end_index }}</span>
+                                von
+                                <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                                Tokens
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">Keine Tokens gefunden</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Erstellen Sie Ihren ersten Zugriffs-Token für öffentliche Monitor-Anzeige.
+                </p>
+                <div class="mt-6">
+                    <a href="{% url 'info_monitors:access_token_create' %}"
+                       class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Neuen Token erstellen
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

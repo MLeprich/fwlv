@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Charge löschen - Tauchen{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Breadcrumb -->
+    <nav class="flex mb-8" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'diving:dashboard' %}" class="text-gray-700 hover:text-cyan-600">
+                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                    </svg>
+                    Dashboard
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    <a href="{% url 'diving:master_list' %}" class="ml-1 text-gray-700 hover:text-cyan-600">Stammdaten</a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    <a href="{% url 'diving:master_detail' master.pk %}" class="ml-1 text-gray-700 hover:text-cyan-600">{{ master.name }}</a>
+                </div>
+            </li>
+            <li aria-current="page">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="ml-1 text-gray-500">Charge löschen</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Delete Confirmation -->
+    <div class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
+        <div class="flex items-center mb-6">
+            <div class="flex-shrink-0 bg-red-100 rounded-full p-3">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div class="ml-4">
+                <h1 class="text-2xl font-bold text-gray-900">Charge löschen</h1>
+                <p class="mt-1 text-sm text-gray-500">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <h2 class="text-sm font-semibold text-gray-700 mb-3">Zu löschende Charge:</h2>
+            <dl class="space-y-2">
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-600">Chargennummer:</dt>
+                    <dd class="text-sm font-medium text-gray-900">{{ object.batch_number }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-600">Stammdaten:</dt>
+                    <dd class="text-sm font-medium text-gray-900">{{ object.master.name }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-600">Eingangsdatum:</dt>
+                    <dd class="text-sm font-medium text-gray-900">{{ object.received_date|date:"d.m.Y" }}</dd>
+                </div>
+                {% if object.expiry_date %}
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-600">Ablaufdatum:</dt>
+                    <dd class="text-sm font-medium text-gray-900">{{ object.expiry_date|date:"d.m.Y" }}</dd>
+                </div>
+                {% endif %}
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-600">Restmenge:</dt>
+                    <dd class="text-sm font-medium text-gray-900">{{ object.quantity_remaining }} / {{ object.quantity_received }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Achtung</h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <p>Durch das Löschen dieser Charge werden alle zugehörigen Daten unwiderruflich entfernt.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex items-center justify-end space-x-4">
+                <a href="{% url 'diving:master_detail' master.pk %}"
+                   class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Abbrechen
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium">
+                    Charge löschen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

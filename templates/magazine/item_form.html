@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Artikel bearbeiten{% else %}Neuer Artikel{% endif %} - Magazin - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'magazine:dashboard' %}" class="text-gray-500 hover:text-gray-700">Magazin</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'magazine:item_list' %}" class="text-gray-500 hover:text-gray-700">Artikel</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neu{% endif %}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">
+            {% if object %}Artikel bearbeiten{% else %}Neuen Artikel anlegen{% endif %}
+        </h1>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <span class="text-red-600">❌</span>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📋 Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.name.label }} *</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.item_type.label }}</label>
+                        {{ form.item_type }}
+                        {% if form.item_type.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.item_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.item_number.label }}</label>
+                        {{ form.item_number }}
+                        {% if form.item_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.item_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.barcode.label }}</label>
+                        {{ form.barcode }}
+                        {% if form.barcode.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.barcode.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.manufacturer.label }}</label>
+                        {{ form.manufacturer }}
+                        {% if form.manufacturer.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.manufacturer.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Eigenschaften (Größe, Material, Farbe, Gewicht, Volumen) -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📦 Eigenschaften</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.size.label }}</label>
+                        {{ form.size }}
+                        {% if form.size.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.size.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. "AAA", "1 Liter", "M8x20"</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.material.label }}</label>
+                        {{ form.material }}
+                        {% if form.material.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.material.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. "Edelstahl", "Latex", "Kunststoff"</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.color.label }}</label>
+                        {{ form.color }}
+                        {% if form.color.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.color.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.weight_per_unit.label }}</label>
+                        {{ form.weight_per_unit }}
+                        {% if form.weight_per_unit.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.weight_per_unit.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Gewicht in kg pro Einheit</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.volume_per_unit.label }}</label>
+                        {{ form.volume_per_unit }}
+                        {% if form.volume_per_unit.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.volume_per_unit.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Volumen in Litern pro Einheit</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gefahrgut -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">☢️ Gefahrgut-Informationen</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        {{ form.is_hazardous }}
+                        <label class="ml-2 text-sm font-medium text-gray-700">{{ form.is_hazardous.label }}</label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.hazard_class.label }}</label>
+                            {{ form.hazard_class }}
+                            {% if form.hazard_class.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.hazard_class.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.un_number.label }}</label>
+                            {{ form.un_number }}
+                            {% if form.un_number.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.un_number.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.safety_data_sheet.label }}</label>
+                            {{ form.safety_data_sheet }}
+                            {% if form.safety_data_sheet.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.safety_data_sheet.errors.0 }}</p>
+                            {% endif %}
+                            <p class="mt-1 text-xs text-gray-500">Sicherheitsdatenblatt (PDF)</p>
+                        </div>
+
+                        <!-- Trennlinie -->
+                        <div class="md:col-span-2 border-t border-gray-200 pt-4"></div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.manual_document.label }}</label>
+                            {{ form.manual_document }}
+                            {% if form.manual_document.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ form.manual_document.help_text }}</p>
+                            {% endif %}
+                            {% if form.manual_document.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.manual_document.errors.0 }}</p>
+                            {% endif %}
+                            {% if form.instance.manual_document %}
+                            <div class="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <a href="{{ form.instance.manual_document.url }}" target="_blank" class="text-blue-600 hover:underline">
+                                    Aktuelles Dokument anzeigen
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lagerung & Bestand -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🏢 Lagerung & Bestand</h2>
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <span class="text-blue-600">ℹ️</span>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-700">
+                                Der Lagerort wird beim ersten Wareneingang automatisch gesetzt.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.category.label }}</label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.unit.label }}</label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.unit.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.min_quantity.label }}</label>
+                        {{ form.min_quantity }}
+                        {% if form.min_quantity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.min_quantity.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.max_quantity.label }}</label>
+                        {{ form.max_quantity }}
+                        {% if form.max_quantity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.max_quantity.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lieferanten & Kosten -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">💰 Lieferanten & Kosten</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.supplier.label }}</label>
+                        {{ form.supplier }}
+                        {% if form.supplier.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.supplier.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.unit_price.label }}</label>
+                        {{ form.unit_price }}
+                        {% if form.unit_price.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.unit_price.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Preis pro Einheit in €</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notizen -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📝 Notizen</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'magazine:item_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    {% if object %}Aktualisieren{% else %}Erstellen{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

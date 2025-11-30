@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etiketten Druck - FLVS</title>
+    <style>
+        @media print {
+            @page {
+                size: 62mm 29mm;
+                margin: 0;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .label {
+                page-break-after: always;
+            }
+            .label:last-child {
+                page-break-after: auto;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #111827;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .print-button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .print-button:hover {
+            background: #1d4ed8;
+        }
+
+        .labels-preview {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .labels-preview {
+                gap: 0;
+            }
+        }
+
+        /* Brother DK-11209 compatible: 62mm x 29mm */
+        .label {
+            width: 62mm;
+            height: 29mm;
+            background: white;
+            border: 1px solid #d1d5db;
+            padding: 2mm;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 2mm;
+            align-items: center;
+        }
+
+        @media print {
+            .label {
+                border: none;
+            }
+        }
+
+        .label-left {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .label-name {
+            font-size: 8pt;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 1mm;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .label-number {
+            font-size: 7pt;
+            font-family: 'Courier New', monospace;
+            color: #374151;
+            white-space: nowrap;
+        }
+
+        .label-right {
+            display: flex;
+            flex-direction: column;
+            gap: 1mm;
+            align-items: flex-end;
+        }
+
+        .label-qr {
+            width: 18mm;
+            height: 18mm;
+        }
+
+        .label-qr img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .label-barcode {
+            width: 18mm;
+            height: 6mm;
+        }
+
+        .label-barcode img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header no-print">
+            <h1>Etiketten Druck (62x29mm)</h1>
+            <p>{{ devices|length }} Etikett{{ devices|length|pluralize:"en" }} | Format: Brother DK-11209 kompatibel</p>
+            <button class="print-button" onclick="window.print()">🖨️ Drucken</button>
+        </div>
+
+        <div class="labels-preview">
+            {% for device in devices %}
+            <div class="label">
+                <div class="label-left">
+                    <div class="label-name">{{ device.master.name|truncatechars:25 }}</div>
+                    <div class="label-number">{{ device.inventory_number }}</div>
+                    {% if device.serial_number %}
+                    <div class="label-number" style="font-size: 6pt; color: #6b7280;">SN: {{ device.serial_number|truncatechars:15 }}</div>
+                    {% endif %}
+                </div>
+                <div class="label-right">
+                    <div class="label-qr">
+                        <img src="data:image/svg+xml;base64,{{ device.qr_code_base64 }}" alt="QR">
+                    </div>
+                    <div class="label-barcode">
+                        <img src="data:image/svg+xml;base64,{{ device.barcode_base64 }}" alt="Barcode">
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align: center; padding: 40px; color: #6b7280;">
+                <p>Keine Geräte ausgewählt</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,293 @@
+{% comment %}
+HTMX-Partial: Equipment Table
+Wird dynamisch bei Suche/Filter-Änderungen geladen
+{% endcomment %}
+
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Gerät
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Standort / Fahrzeug
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Wartung
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Prüfung
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Betriebsstunden
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Aktionen
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for item in equipment_items %}
+            <tr class="hover:bg-gray-50 transition-colors">
+                <!-- Gerät Name + Badges -->
+                <td class="px-6 py-4">
+                    <div class="flex items-start gap-2">
+                        <div class="flex-1">
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ item.name }}
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                {{ item.item_number }}
+                            </div>
+                            {% if item.serial_number %}
+                            <div class="text-xs text-gray-400 mt-0.5">
+                                SN: {{ item.serial_number }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Badges -->
+                        <div class="flex flex-col gap-1">
+                            {% if item.requires_maintenance %}
+                            {% include 'includes/components/badge.html' with text="Wartungspflichtig" color="info" size="sm" %}
+                            {% endif %}
+
+                            {% if item.requires_inspection %}
+                            {% include 'includes/components/badge.html' with text="Prüfpflichtig" color="warning" size="sm" %}
+                            {% endif %}
+
+                            {% if item.retired %}
+                            {% include 'includes/components/badge.html' with text="Ausgemustert" color="gray" size="sm" %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+
+                <!-- Standort / Fahrzeug -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if item.assigned_vehicle %}
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">🚒</span>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ item.assigned_vehicle.name }}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                {{ item.assigned_vehicle.license_plate }}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">📍</span>
+                        <div class="text-sm text-gray-900">
+                            {{ item.location.name|default:"-" }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </td>
+
+                <!-- Wartung -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if item.requires_maintenance %}
+                        {% if item.next_maintenance_due %}
+                        <div class="text-sm text-gray-900">
+                            {{ item.next_maintenance_due|date:"d.m.Y" }}
+                        </div>
+                        {% if item.days_until_maintenance_due <= 7 %}
+                        <div class="text-xs text-red-600 font-medium mt-0.5">
+                            ⚠️ Überfällig!
+                        </div>
+                        {% elif item.days_until_maintenance_due <= 30 %}
+                        <div class="text-xs text-yellow-600 font-medium mt-0.5">
+                            In {{ item.days_until_maintenance_due }} Tagen
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <span class="text-sm text-gray-400">Nicht geplant</span>
+                        {% endif %}
+                    {% else %}
+                    <span class="text-sm text-gray-400">-</span>
+                    {% endif %}
+                </td>
+
+                <!-- Prüfung -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if item.requires_inspection %}
+                        {% if item.next_inspection_due %}
+                        <div class="text-sm text-gray-900">
+                            {{ item.next_inspection_due|date:"d.m.Y" }}
+                        </div>
+                        {% if item.days_until_inspection_due <= 7 %}
+                        <div class="text-xs text-red-600 font-medium mt-0.5">
+                            ⚠️ Überfällig!
+                        </div>
+                        {% elif item.days_until_inspection_due <= 30 %}
+                        <div class="text-xs text-yellow-600 font-medium mt-0.5">
+                            In {{ item.days_until_inspection_due }} Tagen
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <span class="text-sm text-gray-400">Nicht geplant</span>
+                        {% endif %}
+                    {% else %}
+                    <span class="text-sm text-gray-400">-</span>
+                    {% endif %}
+                </td>
+
+                <!-- Betriebsstunden -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if item.operating_hours %}
+                    <div class="text-sm font-medium text-gray-900">
+                        {{ item.operating_hours }} h
+                    </div>
+                    {% if item.max_operating_hours %}
+                    <div class="text-xs text-gray-500">
+                        Max: {{ item.max_operating_hours }} h
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="mt-1 w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        {% widthratio item.operating_hours item.max_operating_hours 100 as progress %}
+                        <div class="h-full
+                            {% if progress >= 90 %}bg-red-500
+                            {% elif progress >= 75 %}bg-yellow-500
+                            {% else %}bg-green-500{% endif %}"
+                            style="width: {{ progress }}%">
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <span class="text-sm text-gray-400">-</span>
+                    {% endif %}
+                </td>
+
+                <!-- Status -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if item.retired %}
+                        {% include 'includes/components/badge.html' with text="Ausgemustert" color="gray" %}
+                    {% elif item.days_until_maintenance_due <= 0 or item.days_until_inspection_due <= 0 %}
+                        {% include 'includes/components/badge.html' with text="Überfällig" color="danger" icon="⚠️" %}
+                    {% elif item.days_until_maintenance_due <= 7 or item.days_until_inspection_due <= 7 %}
+                        {% include 'includes/components/badge.html' with text="Dringend" color="warning" %}
+                    {% elif item.assigned_vehicle %}
+                        {% include 'includes/components/badge.html' with text="Im Einsatz" color="success" %}
+                    {% else %}
+                        {% include 'includes/components/badge.html' with text="Verfügbar" color="info" %}
+                    {% endif %}
+                </td>
+
+                <!-- Aktionen -->
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex items-center justify-end gap-2">
+                        <!-- Detail Button -->
+                        <a href="{% url 'equipment:equipment_detail' item.pk %}"
+                           class="text-primary-600 hover:text-primary-900"
+                           title="Details anzeigen">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </a>
+
+                        <!-- Edit Button -->
+                        <a href="{% url 'equipment:equipment_update' item.pk %}"
+                           class="text-blue-600 hover:text-blue-900"
+                           title="Bearbeiten">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </a>
+
+                        <!-- Maintenance Button -->
+                        {% if item.requires_maintenance %}
+                        <button
+                            hx-get="{% url 'equipment:maintenance_modal' item.pk %}"
+                            hx-target="#modal-container"
+                            class="text-yellow-600 hover:text-yellow-900"
+                            title="Wartung eintragen">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </button>
+                        {% endif %}
+
+                        <!-- Inspection Button -->
+                        {% if item.requires_inspection %}
+                        <button
+                            hx-get="{% url 'equipment:inspection_modal' item.pk %}"
+                            hx-target="#modal-container"
+                            class="text-orange-600 hover:text-orange-900"
+                            title="Prüfung eintragen">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                        <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Keine Geräte gefunden</p>
+                            <p class="text-sm text-gray-500 mt-1">Passen Sie Ihre Suchkriterien an oder fügen Sie ein neues Gerät hinzu.</p>
+                        </div>
+                        <a href="{% url 'equipment:equipment_create' %}"
+                           class="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+                            + Neues Gerät
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if equipment_items.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-700">
+            Zeige {{ equipment_items.start_index }} bis {{ equipment_items.end_index }} von {{ equipment_items.paginator.count }} Einträgen
+        </div>
+
+        <nav class="flex gap-2">
+            {% if equipment_items.has_previous %}
+            <button
+                hx-get="{% url 'equipment:equipment_list' %}?page={{ equipment_items.previous_page_number }}"
+                hx-target="#equipment-list"
+                hx-include="[name='search'], [name='category'], [name='location'], [name='vehicle'], [name='status']"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Zurück
+            </button>
+            {% endif %}
+
+            <span class="px-3 py-1 bg-primary-600 text-white rounded-lg">
+                {{ equipment_items.number }}
+            </span>
+
+            {% if equipment_items.has_next %}
+            <button
+                hx-get="{% url 'equipment:equipment_list' %}?page={{ equipment_items.next_page_number }}"
+                hx-target="#equipment-list"
+                hx-include="[name='search'], [name='category'], [name='location'], [name='vehicle'], [name='status']"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Weiter
+            </button>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Container -->
+<div id="modal-container"></div>

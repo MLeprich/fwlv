@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load mptt_tags %}
+
+{% block title %}Standorte & Lagerorte - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Standorte & Lagerorte</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6">
+    <!-- Context Actions Bar -->
+    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'locations:create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Neuer Standort/Lagerort
+                </a>
+                <a href="{% url 'locations:import_export' %}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">
+                    📤 Import/Export
+                </a>
+            </div>
+            <div class="flex items-center gap-3">
+                <form method="get" class="flex items-center gap-2">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ request.GET.q }}"
+                        placeholder="Suche..."
+                        class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                    <select name="type" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                        <option value="">Alle Typen</option>
+                        <optgroup label="Standorte & Gebäude">
+                            <option value="site" {% if request.GET.type == 'site' %}selected{% endif %}>🏛️ Standort/Wache</option>
+                            <option value="building" {% if request.GET.type == 'building' %}selected{% endif %}>🏢 Gebäude</option>
+                            <option value="area" {% if request.GET.type == 'area' %}selected{% endif %}>🌳 Stellfläche/Außenbereich</option>
+                        </optgroup>
+                        <optgroup label="Räume & Stellplätze">
+                            <option value="room" {% if request.GET.type == 'room' %}selected{% endif %}>🚪 Raum</option>
+                            <option value="parking_spot" {% if request.GET.type == 'parking_spot' %}selected{% endif %}>🅿️ Stellplatz</option>
+                        </optgroup>
+                        <optgroup label="Lagerstrukturen">
+                            <option value="rack" {% if request.GET.type == 'rack' %}selected{% endif %}>📚 Regal</option>
+                            <option value="cabinet" {% if request.GET.type == 'cabinet' %}selected{% endif %}>🗄️ Schrank</option>
+                            <option value="shelf" {% if request.GET.type == 'shelf' %}selected{% endif %}>📋 Regalboden/Fach</option>
+                            <option value="drawer" {% if request.GET.type == 'drawer' %}selected{% endif %}>📥 Schublade</option>
+                            <option value="box" {% if request.GET.type == 'box' %}selected{% endif %}>📦 Kiste/Box</option>
+                        </optgroup>
+                        <optgroup label="Mobile & Container">
+                            <option value="vehicle" {% if request.GET.type == 'vehicle' %}selected{% endif %}>🚗 Fahrzeug</option>
+                            <option value="container" {% if request.GET.type == 'container' %}selected{% endif %}>📦 Container</option>
+                        </optgroup>
+                        <option value="other" {% if request.GET.type == 'other' %}selected{% endif %}>📍 Sonstiges</option>
+                    </select>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                        Suchen
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-6 mt-6">
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+                <p class="text-gray-500 text-sm font-medium mb-1">Standorte/Wachen</p>
+                <p class="text-3xl font-bold text-gray-900">{{ root_locations.count }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+                <p class="text-gray-500 text-sm font-medium mb-1">Gebäude & Bereiche</p>
+                <p class="text-3xl font-bold text-gray-900">{{ locations|length }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+                <p class="text-gray-500 text-sm font-medium mb-1">Räume & Stellplätze</p>
+                <p class="text-3xl font-bold text-gray-900">{{ locations|length }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
+                <p class="text-gray-500 text-sm font-medium mb-1">Lagerstrukturen</p>
+                <p class="text-3xl font-bold text-gray-900">0</p>
+            </div>
+        </div>
+
+        <!-- Hierarchical Tree View -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                <h2 class="text-lg font-bold text-gray-900">Standorte & Lagerorte (Hierarchische Ansicht)</h2>
+            </div>
+
+            <div class="p-6">
+                {% if root_locations %}
+                    {% recursetree root_locations %}
+                    <div class="{% if not node.is_root_node %}ml-8{% endif %} mb-2">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                            <div class="flex items-center gap-3 flex-1">
+                                <!-- Icon based on type -->
+                                <span class="text-xl">
+                                    {% if node.location_type == 'site' %}🏛️
+                                    {% elif node.location_type == 'building' %}🏢
+                                    {% elif node.location_type == 'area' %}🌳
+                                    {% elif node.location_type == 'room' %}🚪
+                                    {% elif node.location_type == 'parking_spot' %}🅿️
+                                    {% elif node.location_type == 'rack' %}📚
+                                    {% elif node.location_type == 'cabinet' %}🗄️
+                                    {% elif node.location_type == 'shelf' %}📋
+                                    {% elif node.location_type == 'drawer' %}📥
+                                    {% elif node.location_type == 'box' %}📦
+                                    {% elif node.location_type == 'vehicle' %}🚗
+                                    {% elif node.location_type == 'container' %}📦
+                                    {% else %}📍
+                                    {% endif %}
+                                </span>
+
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <a href="{% url 'locations:detail' node.pk %}" class="font-medium text-gray-900 hover:text-blue-600">
+                                            {{ node.name }}
+                                        </a>
+                                        <span class="text-xs text-gray-500 font-mono bg-gray-200 px-2 py-0.5 rounded">
+                                            {{ node.code }}
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">{{ node.get_location_type_display }}</p>
+                                </div>
+
+                                <!-- Children count -->
+                                {% if node.get_children.count > 0 %}
+                                <span class="text-xs text-gray-500">
+                                    {{ node.get_children.count }} Unter-Lagerorte
+                                </span>
+                                {% endif %}
+
+                                <!-- Climate controlled badge -->
+                                {% if node.climate_controlled %}
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                                    ❄️ Klimatisiert
+                                </span>
+                                {% endif %}
+
+                                <!-- Access restricted badge -->
+                                {% if node.access_restricted %}
+                                <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                    🔒 Zugriff beschränkt
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="{% url 'locations:detail' node.pk %}" class="text-blue-600 hover:text-blue-800 text-sm">
+                                    👁️
+                                </a>
+                                <a href="{% url 'locations:edit' node.pk %}" class="text-gray-600 hover:text-gray-800 text-sm">
+                                    ✏️
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Children -->
+                        {% if not node.is_leaf_node %}
+                        <div class="children">
+                            {{ children }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endrecursetree %}
+                {% else %}
+                <div class="text-center py-12">
+                    <div class="text-4xl mb-4">🏢</div>
+                    <p class="text-lg font-medium text-gray-900 mb-2">Keine Standorte vorhanden</p>
+                    <p class="text-sm text-gray-600 mb-4">Legen Sie Ihren ersten Standort, Gebäude oder Lagerort an.</p>
+                    <a href="{% url 'locations:create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                        ➕ Standort/Lagerort anlegen
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

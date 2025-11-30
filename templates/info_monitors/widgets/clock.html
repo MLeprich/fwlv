@@ -1,0 +1,54 @@
+<!-- Clock Widget -->
+<div class="h-full flex flex-col items-center justify-center p-4">
+    <div class="text-center">
+        <div id="clock-time-{{ widget.id }}" class="text-6xl font-bold mb-2" style="font-family: 'Courier New', monospace;">
+            --:--{% if widget.config.show_seconds %}:--{% endif %}
+        </div>
+        {% if widget.config.show_date %}
+        <div id="clock-date-{{ widget.id }}" class="text-2xl text-gray-600">
+            --.--.----
+        </div>
+        {% endif %}
+        {% if widget.title %}
+        <div class="mt-4 text-lg font-semibold text-gray-700">
+            {{ widget.title }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function() {
+    const showSeconds = {{ widget.config.show_seconds|yesno:"true,false" }};
+    const showDate = {{ widget.config.show_date|yesno:"true,false" }};
+
+    function updateClock() {
+        const now = new Date();
+
+        // Time
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+
+        let timeStr = `${hours}:${minutes}`;
+        if (showSeconds) {
+            timeStr += `:${seconds}`;
+        }
+        document.getElementById('clock-time-{{ widget.id }}').textContent = timeStr;
+
+        // Date
+        if (showDate) {
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const dateElement = document.getElementById('clock-date-{{ widget.id }}');
+            if (dateElement) {
+                dateElement.textContent = `${day}.${month}.${year}`;
+            }
+        }
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+})();
+</script>

@@ -1,0 +1,202 @@
+<!-- Tab Content: Pflichtstunden (loaded via HTMX) -->
+{% load static %}
+
+<!-- Header with Add Button -->
+<div class="mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-900">Pflichtstunden {{ dutyhours_year }}</h3>
+        <div class="flex items-center gap-3">
+            <!-- Jahr-Filter -->
+            <select
+                id="dutyhours-year-filter"
+                class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                onchange="window.location.href='{% url 'personnel:detail' person.pk %}?tab=dutyhours&year=' + this.value"
+            >
+                {% for year in dutyhours_available_years %}
+                <option value="{{ year }}" {% if year == dutyhours_year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+
+            <button
+                hx-get="{% url 'personnel:dutyhours_create' person.pk %}"
+                hx-target="body"
+                hx-swap="beforeend"
+                class="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+            >
+                ➕ Stunden hinzufügen
+            </button>
+        </div>
+    </div>
+
+    <!-- Overall Progress Bar -->
+    <div class="mb-6 bg-white border border-gray-200 rounded-lg p-4">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-700">Gesamtfortschritt</span>
+            <span class="text-sm font-semibold text-gray-900">
+                {{ dutyhours_total_completed|floatformat:1 }} / {{ dutyhours_total_required|floatformat:1 }} Stunden
+                ({{ dutyhours_total_percentage|floatformat:0 }}%)
+            </span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3">
+            <div class="h-3 rounded-full transition-all duration-500
+                {% if dutyhours_total_percentage >= 100 %}bg-green-600
+                {% elif dutyhours_total_percentage >= 75 %}bg-blue-600
+                {% elif dutyhours_total_percentage >= 50 %}bg-yellow-500
+                {% else %}bg-red-500{% endif %}"
+                style="width: {{ dutyhours_total_percentage|floatformat:0 }}%">
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Progress Cards -->
+    {% if dutyhours_category_stats %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {% for stat in dutyhours_category_stats %}
+        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+                <h4 class="font-medium text-gray-900">{{ stat.category_display }}</h4>
+                <span class="px-2 py-1 rounded-full text-xs font-semibold
+                    {% if stat.status == 'completed' %}bg-green-100 text-green-700
+                    {% elif stat.status == 'on_track' %}bg-blue-100 text-blue-700
+                    {% elif stat.status == 'warning' %}bg-yellow-100 text-yellow-700
+                    {% else %}bg-red-100 text-red-700{% endif %}">
+                    {{ stat.percentage|floatformat:0 }}%
+                </span>
+            </div>
+
+            <div class="mb-2">
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="h-2 rounded-full transition-all
+                        {% if stat.status == 'completed' %}bg-green-600
+                        {% elif stat.status == 'on_track' %}bg-blue-600
+                        {% elif stat.status == 'warning' %}bg-yellow-500
+                        {% else %}bg-red-500{% endif %}"
+                        style="width: {% if stat.percentage > 100 %}100{% else %}{{ stat.percentage|floatformat:0 }}{% endif %}%">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-gray-600">
+                <span>{{ stat.completed_hours|floatformat:1 }} / {{ stat.required_hours|floatformat:1 }} h</span>
+                {% if stat.remaining_hours > 0 %}
+                <span class="text-red-600 font-medium">Noch {{ stat.remaining_hours|floatformat:1 }} h</span>
+                {% else %}
+                <span class="text-green-600 font-medium">✓ Erfüllt</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+        <p class="text-sm text-yellow-800">
+            <strong>Hinweis:</strong> Für das Jahr {{ dutyhours_year }} wurden noch keine Pflichtstunden-Anforderungen definiert.
+            Bitte kontaktieren Sie einen Administrator.
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Recent Entries -->
+    <h3 class="font-semibold text-gray-900 mb-4">Eingetragene Stunden ({{ dutyhours_year }})</h3>
+
+    {% if dutyhours_entries %}
+    <div class="space-y-3">
+        {% for entry in dutyhours_entries %}
+        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        <h4 class="font-medium text-gray-900">{{ entry.title }}</h4>
+                        <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-semibold">
+                            {{ entry.category.name }}
+                        </span>
+                        {% if entry.confirmed %}
+                        <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                            ✓ Bestätigt
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                            Unbestätigt
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-sm text-gray-600 space-y-1">
+                        <div class="flex items-center gap-4">
+                            <span>📅 {{ entry.date|date:"d.m.Y" }}</span>
+                            <span class="font-semibold text-purple-600">⏱️ {{ entry.hours|floatformat:1 }} Stunden</span>
+                        </div>
+                        {% if entry.supervisor %}
+                        <p>👤 Trainer: {{ entry.supervisor }}</p>
+                        {% endif %}
+                        {% if entry.description %}
+                        <p class="text-gray-500">{{ entry.description|truncatewords:20 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    {% if entry.certificate_file %}
+                    <a href="{{ entry.certificate_file.url }}" target="_blank" class="text-purple-600 hover:text-purple-800 text-sm">
+                        📄
+                    </a>
+                    {% endif %}
+                    <button
+                        hx-get="{% url 'personnel:dutyhours_update' entry.pk %}"
+                        hx-target="body"
+                        hx-swap="beforeend"
+                        class="text-gray-600 hover:text-gray-800 text-sm"
+                    >
+                        ✏️
+                    </button>
+                </div>
+            </div>
+
+            {% if entry.confirmed and entry.confirmed_date %}
+            <div class="mt-2 pt-2 border-t border-gray-200">
+                <p class="text-xs text-gray-500">Bestätigt am {{ entry.confirmed_date|date:"d.m.Y" }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12 bg-gray-50 rounded-lg">
+        <div class="text-4xl mb-4">⏱️</div>
+        <p class="text-gray-600 mb-4">Noch keine Stunden für {{ dutyhours_year }} eingetragen</p>
+        <button
+            hx-get="{% url 'personnel:dutyhours_create' person.pk %}"
+            hx-target="body"
+            hx-swap="beforeend"
+            class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+        >
+            ➕ Erste Stunden eintragen
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Summary Statistics -->
+{% if dutyhours_entries %}
+<div class="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
+    <h4 class="font-semibold text-purple-900 mb-3">Statistik für {{ dutyhours_year }}</h4>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div>
+            <div class="text-2xl font-bold text-purple-600">{{ dutyhours_confirmed_count }}</div>
+            <div class="text-xs text-purple-700">Bestätigt</div>
+        </div>
+        <div>
+            <div class="text-2xl font-bold text-gray-600">{{ dutyhours_unconfirmed_count }}</div>
+            <div class="text-xs text-gray-700">Unbestätigt</div>
+        </div>
+        <div>
+            <div class="text-2xl font-bold text-purple-600">{{ dutyhours_total_hours|floatformat:1 }}</div>
+            <div class="text-xs text-purple-700">Gesamt Stunden</div>
+        </div>
+        <div>
+            <div class="text-2xl font-bold text-green-600">{{ dutyhours_categories_fulfilled }}</div>
+            <div class="text-xs text-green-700">Erfüllte Kategorien</div>
+        </div>
+    </div>
+</div>
+{% endif %}

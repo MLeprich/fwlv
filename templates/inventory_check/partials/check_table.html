@@ -1,0 +1,234 @@
+{% comment %}
+HTMX-Partial: Inventory Check Table
+Wird dynamisch bei Suche/Filter-Änderungen geladen
+{% endcomment %}
+
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Inventur
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Art / Umfang
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Zeitraum
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fortschritt
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Aktionen
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for check in checks %}
+            <tr class="hover:bg-gray-50 transition-colors">
+                <!-- Inventur Info -->
+                <td class="px-6 py-4">
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">
+                            {{ check.title }}
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            {{ check.check_number }}
+                        </div>
+                        {% if check.location %}
+                        <div class="text-xs text-gray-400 mt-1">
+                            📍 {{ check.location.name }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </td>
+
+                <!-- Art / Umfang -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ check.get_check_type_display }}</div>
+                    <div class="text-sm text-gray-500 mt-1">
+                        {{ check.total_items }} Artikel
+                    </div>
+                    {% if check.module_filter %}
+                    <div class="text-xs text-gray-400 mt-0.5">
+                        Modul: {{ check.module_filter }}
+                    </div>
+                    {% endif %}
+                </td>
+
+                <!-- Zeitraum -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">
+                        {{ check.scheduled_start_date|date:"d.m.Y" }}
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        bis {{ check.scheduled_end_date|date:"d.m.Y" }}
+                    </div>
+                    {% if check.actual_start_date %}
+                    <div class="text-xs text-gray-400 mt-1">
+                        Gestartet: {{ check.actual_start_date|date:"d.m.Y H:i" }}
+                    </div>
+                    {% endif %}
+                </td>
+
+                <!-- Fortschritt -->
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-2 mb-1">
+                        <div class="text-sm font-medium text-gray-900">
+                            {{ check.counted_items }} / {{ check.total_items }}
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            {% widthratio check.counted_items check.total_items 100 as progress %}
+                            ({{ progress|default:0 }}%)
+                        </div>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        {% widthratio check.counted_items check.total_items 100 as progress %}
+                        <div class="h-full bg-primary-600" style="width: {{ progress|default:0 }}%"></div>
+                    </div>
+                    {% if check.items_with_discrepancies > 0 %}
+                    <div class="text-xs text-red-600 mt-1">
+                        ⚠️ {{ check.items_with_discrepancies }} Abweichungen
+                    </div>
+                    {% endif %}
+                </td>
+
+                <!-- Status -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if check.status == 'planned' %}
+                        {% include 'includes/components/badge.html' with text="Geplant" color="gray" %}
+                    {% elif check.status == 'in_progress' %}
+                        {% include 'includes/components/badge.html' with text="In Bearbeitung" color="info" %}
+                    {% elif check.status == 'counting_complete' %}
+                        {% include 'includes/components/badge.html' with text="Zählung abgeschlossen" color="success" %}
+                    {% elif check.status == 'review' %}
+                        {% include 'includes/components/badge.html' with text="In Prüfung" color="warning" %}
+                    {% elif check.status == 'adjustments_pending' %}
+                        {% include 'includes/components/badge.html' with text="Korrekturen ausstehend" color="danger" %}
+                    {% elif check.status == 'completed' %}
+                        {% include 'includes/components/badge.html' with text="Abgeschlossen" color="success" %}
+                    {% elif check.status == 'cancelled' %}
+                        {% include 'includes/components/badge.html' with text="Abgebrochen" color="gray" %}
+                    {% endif %}
+
+                    <div class="text-xs text-gray-500 mt-1">
+                        {{ check.responsible_person.get_full_name }}
+                    </div>
+                </td>
+
+                <!-- Aktionen -->
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex items-center justify-end gap-2">
+                        <!-- Detail Button -->
+                        <a href="{% url 'inventory_check:check_detail' check.pk %}"
+                           class="text-primary-600 hover:text-primary-900"
+                           title="Details anzeigen">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </a>
+
+                        <!-- Scan Button (if in progress) -->
+                        {% if check.status == 'in_progress' %}
+                        <a href="{% url 'inventory_check:scan_interface' check.pk %}"
+                           class="text-green-600 hover:text-green-900"
+                           title="Scannen">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                            </svg>
+                        </a>
+                        {% endif %}
+
+                        <!-- Edit Button (if not completed) -->
+                        {% if check.status != 'completed' and check.status != 'cancelled' %}
+                        <a href="{% url 'inventory_check:check_update' check.pk %}"
+                           class="text-blue-600 hover:text-blue-900"
+                           title="Bearbeiten">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </a>
+                        {% endif %}
+
+                        <!-- Start Button (if planned) -->
+                        {% if check.status == 'planned' %}
+                        <button
+                            hx-post="{% url 'inventory_check:check_start' check.pk %}"
+                            hx-confirm="Inventur jetzt starten?"
+                            class="text-green-600 hover:text-green-900"
+                            title="Starten">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                        <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Keine Inventuren gefunden</p>
+                            <p class="text-sm text-gray-500 mt-1">Passen Sie Ihre Suchkriterien an oder legen Sie eine neue Inventur an.</p>
+                        </div>
+                        <a href="{% url 'inventory_check:check_create' %}"
+                           class="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+                            + Neue Inventur
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if checks.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-700">
+            Zeige {{ checks.start_index }} bis {{ checks.end_index }} von {{ checks.paginator.count }} Einträgen
+        </div>
+
+        <nav class="flex gap-2">
+            {% if checks.has_previous %}
+            <button
+                hx-get="{% url 'inventory_check:check_list' %}?page={{ checks.previous_page_number }}"
+                hx-target="#check-list"
+                hx-include="[name='search'], [name='type'], [name='status'], [name='location']"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Zurück
+            </button>
+            {% endif %}
+
+            <span class="px-3 py-1 bg-primary-600 text-white rounded-lg">
+                {{ checks.number }}
+            </span>
+
+            {% if checks.has_next %}
+            <button
+                hx-get="{% url 'inventory_check:check_list' %}?page={{ checks.next_page_number }}"
+                hx-target="#check-list"
+                hx-include="[name='search'], [name='type'], [name='status'], [name='location']"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Weiter
+            </button>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Container -->
+<div id="modal-container"></div>

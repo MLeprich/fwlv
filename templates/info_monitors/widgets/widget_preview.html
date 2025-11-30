@@ -1,0 +1,19 @@
+<!-- Widget Preview (for editor) -->
+<div class="text-center text-gray-500">
+    <div class="text-4xl mb-2">
+        {% if widget.widget_type == 'clock' %}🕐
+        {% elif widget.widget_type == 'text' %}📝
+        {% elif widget.widget_type == 'pdf' %}📄
+        {% elif widget.widget_type == 'announcements' %}📢
+        {% elif widget.widget_type == 'events' %}📅
+        {% elif widget.widget_type == 'kpi' %}📊
+        {% elif widget.widget_type == 'chart' %}📈
+        {% elif widget.widget_type == 'weather' %}🌤️
+        {% else %}📦
+        {% endif %}
+    </div>
+    <p class="text-sm font-medium">{{ widget.get_widget_type_display }}</p>
+    {% if widget.config %}
+    <p class="text-xs mt-1">Konfiguriert</p>
+    {% endif %}
+</div>

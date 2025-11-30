@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kühlketten-Überwachung - Rettungsdienst - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Kühlketten-Überwachung</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Context Actions Bar -->
+<div class="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'medical:cold_chain_api_docs' %}" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                📡 IoT API Dokumentation
+            </a>
+            <a href="#" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                📊 Temperatur protokollieren
+            </a>
+            <a href="#" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                📤 Export
+            </a>
+            <a href="#" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                📧 Alarm-Report
+            </a>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="text-sm text-gray-600">
+                Letzte Aktualisierung: <span class="font-medium text-gray-900">{{ last_update|date:"d.m.Y H:i" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Alert Box -->
+    {% if critical_alerts > 0 %}
+    <div class="bg-red-50 border-l-4 border-red-400 p-6 rounded-r-lg mb-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">❄️</span>
+            <div>
+                <h3 class="text-red-900 font-bold mb-2">Kritische Temperatur-Anomalien erkannt</h3>
+                <p class="text-red-800 text-sm mb-3">
+                    {{ critical_alerts }} kühlpflichtige Chargen haben Temperaturabweichungen in den letzten 24 Stunden.
+                </p>
+                <ul class="text-red-700 text-sm space-y-1 list-disc list-inside">
+                    <li>Sofortige Überprüfung der Kühlgeräte erforderlich</li>
+                    <li>Betroffene Chargen müssen auf Verwendbarkeit geprüft werden</li>
+                    <li>Dokumentation für Qualitätssicherung erforderlich</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-600">
+            <p class="text-gray-500 text-sm font-medium mb-1">Überwachte Artikel</p>
+            <p class="text-3xl font-bold text-gray-900">{{ monitored_items|default:0 }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Kühlkette OK</p>
+            <p class="text-3xl font-bold text-gray-900">{{ ok_count|default:0 }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Warnungen (24h)</p>
+            <p class="text-3xl font-bold text-gray-900">{{ warnings_24h|default:0 }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Kritische Abweichungen</p>
+            <p class="text-3xl font-bold text-gray-900">{{ critical_alerts|default:0 }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+            <p class="text-gray-500 text-sm font-medium mb-1">Kühlkette unterbrochen</p>
+            <p class="text-3xl font-bold text-gray-900">{{ broken_chains|default:0 }}</p>
+        </div>
+    </div>
+
+    <!-- Temperature Monitoring Cards -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+        <!-- Refrigerator 1 -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">❄️</span>
+                    <div>
+                        <h3 class="font-bold text-blue-900">Kühlschrank Rettungswache 1</h3>
+                        <p class="text-sm text-blue-700">Lagerort: RTW-Stellplatz A</p>
+                    </div>
+                </div>
+                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                    ✅ OK
+                </span>
+            </div>
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Aktuelle Temperatur</p>
+                        <p class="text-4xl font-bold text-blue-600">5.2°C</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500 mb-1">Sollbereich</p>
+                        <p class="text-lg font-medium text-gray-900">2-8°C</p>
+                    </div>
+                </div>
+
+                <!-- Mini Temperature Graph (Placeholder) -->
+                <div class="bg-gray-50 rounded p-4 mb-4">
+                    <div class="flex items-end justify-between h-24 gap-1">
+                        <div class="bg-blue-400 rounded-t" style="height: 60%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 55%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 65%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 50%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 60%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 58%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 62%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 55%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 60%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 63%; width: 8%;"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 mt-2">
+                        <span>24h</span>
+                        <span>Jetzt</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 text-center text-sm">
+                    <div>
+                        <p class="text-gray-500 mb-1">Min (24h)</p>
+                        <p class="font-semibold text-gray-900">4.8°C</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 mb-1">Max (24h)</p>
+                        <p class="font-semibold text-gray-900">5.9°C</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 mb-1">Ø (24h)</p>
+                        <p class="font-semibold text-gray-900">5.3°C</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Refrigerator 2 (with warning) -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">❄️</span>
+                    <div>
+                        <h3 class="font-bold text-amber-900">Kühlschrank Rettungswache 2</h3>
+                        <p class="text-sm text-amber-700">Lagerort: Medikamentenlager</p>
+                    </div>
+                </div>
+                <span class="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-semibold">
+                    ⚠️ Warnung
+                </span>
+            </div>
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Aktuelle Temperatur</p>
+                        <p class="text-4xl font-bold text-amber-600">8.5°C</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500 mb-1">Sollbereich</p>
+                        <p class="text-lg font-medium text-gray-900">2-8°C</p>
+                    </div>
+                </div>
+
+                <!-- Mini Temperature Graph with spike -->
+                <div class="bg-gray-50 rounded p-4 mb-4">
+                    <div class="flex items-end justify-between h-24 gap-1">
+                        <div class="bg-blue-400 rounded-t" style="height: 60%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 55%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 65%; width: 8%;"></div>
+                        <div class="bg-blue-400 rounded-t" style="height: 58%; width: 8%;"></div>
+                        <div class="bg-amber-400 rounded-t" style="height: 75%; width: 8%;"></div>
+                        <div class="bg-amber-400 rounded-t" style="height: 82%; width: 8%;"></div>
+                        <div class="bg-amber-400 rounded-t" style="height: 88%; width: 8%;"></div>
+                        <div class="bg-amber-400 rounded-t" style="height: 90%; width: 8%;"></div>
+                        <div class="bg-amber-400 rounded-t" style="height: 85%; width: 8%;"></div>
+                        <div class="bg-amber-400 rounded-t" style="height: 78%; width: 8%;"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 mt-2">
+                        <span>24h</span>
+                        <span>Jetzt</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 text-center text-sm mb-4">
+                    <div>
+                        <p class="text-gray-500 mb-1">Min (24h)</p>
+                        <p class="font-semibold text-gray-900">5.2°C</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 mb-1">Max (24h)</p>
+                        <p class="font-semibold text-amber-600">9.1°C</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 mb-1">Ø (24h)</p>
+                        <p class="font-semibold text-gray-900">7.8°C</p>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 rounded p-3 border border-amber-200">
+                    <p class="text-xs font-medium text-amber-800">
+                        ⚠️ Temperatur seit 3:42h über Sollbereich. Bitte Gerät prüfen.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Recent Temperature Logs -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-bold text-gray-900">Kühlpflichtige Chargen</h2>
+                <div class="flex items-center gap-3">
+                    <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                        <option>Alle Standorte</option>
+                        <option>RTW-Stellplatz A</option>
+                        <option>Medikamentenlager</option>
+                        <option>Notaufnahme</option>
+                    </select>
+                    <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                        <option>Alle Status</option>
+                        <option>OK</option>
+                        <option>Warnung</option>
+                        <option>Kritisch</option>
+                        <option>Kühlkette unterbrochen</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Artikel
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Charge
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Lagerort
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Sollbereich
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Aktuelle Temp.
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Letzte Messung
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Status
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Aktionen
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for log in temperature_logs %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">{{ log.batch.item.name }}</div>
+                                <div class="text-xs text-gray-500">{{ log.batch.item.active_ingredient|default:"-" }}</div>
+                                {% if log.batch.item.is_btm %}
+                                <span class="mt-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                    ☢️ BTM
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {{ log.batch.batch_number }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ log.location.name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {% if log.batch.item.storage_condition == 'refrigerated' %}
+                            2-8°C
+                            {% elif log.batch.item.storage_condition == 'frozen' %}
+                            ≤ -15°C
+                            {% else %}
+                            15-25°C
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-semibold {% if log.is_within_range %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ log.temperature }}°C
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ log.measured_at|date:"d.m.Y H:i" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if log.batch.cold_chain_break %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                ❌ Unterbrochen
+                            </span>
+                            {% elif not log.is_within_range %}
+                            <span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-semibold">
+                                ⚠️ Abweichung
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                ✅ OK
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">
+                                Verlauf →
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                            <div class="text-4xl mb-4">❄️</div>
+                            <p class="text-lg font-medium text-gray-900 mb-2">Keine Temperatur-Logs</p>
+                            <p class="text-sm">Es wurden noch keine Temperaturen protokolliert.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lieferanten & Hersteller - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'organization:dashboard' %}" class="text-gray-500 hover:text-gray-700">Organisation</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Lieferanten & Hersteller</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6">
+
+    <!-- Context Actions Bar -->
+    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm mt-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'organization:dashboard' %}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    ← Dashboard
+                </a>
+                <a href="{% url 'organization:supplier_create' %}" class="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium text-sm">
+                    ➕ Neuer Lieferant
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-6">
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-teal-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Gesamt</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_suppliers }}</p>
+                    </div>
+                    <div class="bg-teal-100 rounded-full p-3">
+                        <span class="text-3xl">🏭</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Aktiv</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-2">{{ active_suppliers }}</p>
+                    </div>
+                    <div class="bg-green-100 rounded-full p-3">
+                        <span class="text-3xl">✅</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:flex gap-6">
+
+            <!-- Filter Sidebar -->
+            <aside class="hidden lg:block w-64 flex-shrink-0">
+                <div class="bg-white rounded-lg shadow p-6 sticky top-28">
+                    <h3 class="font-semibold text-gray-900 mb-4">Filter</h3>
+
+                    <form method="get" class="space-y-4">
+                        <!-- Search -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Suche</label>
+                            <input
+                                type="text"
+                                name="search"
+                                value="{{ search_query }}"
+                                placeholder="Name, Nummer, Stadt..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            >
+                        </div>
+
+                        <!-- Status -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                            <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                <option value="">Alle</option>
+                                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Aktiv</option>
+                                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inaktiv</option>
+                            </select>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="flex gap-2 pt-4">
+                            <button type="submit" class="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium">
+                                Anwenden
+                            </button>
+                            <a href="{% url 'organization:supplier_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                                ✕
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </aside>
+
+            <!-- Supplier List -->
+            <div class="flex-1">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                        <h2 class="text-lg font-bold text-gray-900">Lieferanten & Hersteller ({{ page_obj.paginator.count }})</h2>
+                    </div>
+
+                    {% if suppliers %}
+                    <!-- Desktop: Table View -->
+                    <div class="overflow-x-auto hidden md:block">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lieferanten-Nr.</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stadt</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kontakt</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for supplier in suppliers %}
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <span class="text-2xl mr-3">🏭</span>
+                                            <div>
+                                                <a href="{% url 'organization:supplier_detail' supplier.pk %}" class="text-sm font-medium text-teal-600 hover:text-teal-700">
+                                                    {{ supplier.name }}
+                                                </a>
+                                                {% if supplier.contact_person %}
+                                                <p class="text-xs text-gray-500">{{ supplier.contact_person }}</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {{ supplier.supplier_number }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {% if supplier.city %}
+                                            {{ supplier.city }}
+                                        {% else %}
+                                            <span class="text-gray-400">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm">
+                                        {% if supplier.email %}
+                                            <p class="text-gray-900">📧 {{ supplier.email }}</p>
+                                        {% endif %}
+                                        {% if supplier.phone %}
+                                            <p class="text-gray-500 text-xs">📞 {{ supplier.phone }}</p>
+                                        {% endif %}
+                                        {% if not supplier.email and not supplier.phone %}
+                                            <span class="text-gray-400">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        {% if supplier.is_active %}
+                                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                Aktiv
+                                            </span>
+                                        {% else %}
+                                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                Inaktiv
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <a href="{% url 'organization:supplier_detail' supplier.pk %}" class="text-teal-600 hover:text-teal-900 mr-3">Details</a>
+                                        <a href="{% url 'organization:supplier_edit' supplier.pk %}" class="text-blue-600 hover:text-blue-900 mr-3">Bearbeiten</a>
+                                        <a href="{% url 'organization:supplier_delete' supplier.pk %}" class="text-red-600 hover:text-red-900">Löschen</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile: Card View -->
+                    <div class="md:hidden divide-y divide-gray-200">
+                        {% for supplier in suppliers %}
+                        <div class="p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center">
+                                    <span class="text-2xl mr-2">🏭</span>
+                                    <a href="{% url 'organization:supplier_detail' supplier.pk %}" class="font-medium text-teal-600">
+                                        {{ supplier.name }}
+                                    </a>
+                                </div>
+                                {% if supplier.is_active %}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Aktiv</span>
+                                {% else %}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Inaktiv</span>
+                                {% endif %}
+                            </div>
+                            <p class="text-sm text-gray-600 mb-2">{{ supplier.supplier_number }}</p>
+                            {% if supplier.city %}
+                            <p class="text-sm text-gray-600 mb-2">📍 {{ supplier.city }}</p>
+                            {% endif %}
+                            <div class="flex gap-2 mt-3">
+                                <a href="{% url 'organization:supplier_edit' supplier.pk %}" class="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">Bearbeiten</a>
+                                <a href="{% url 'organization:supplier_delete' supplier.pk %}" class="px-3 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">Löschen</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {% else %}
+                    <div class="px-6 py-12 text-center">
+                        <span class="text-6xl mb-4 block">🏭</span>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Lieferanten gefunden</h3>
+                        <p class="text-gray-500 mb-6">Erstellen Sie den ersten Lieferanten.</p>
+                        <a href="{% url 'organization:supplier_create' %}" class="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium text-sm">
+                            ➕ Neuer Lieferant
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <!-- Pagination -->
+                    {% if is_paginated %}
+                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-700">
+                                Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                            </div>
+                            <div class="flex gap-2">
+                                {% if page_obj.has_previous %}
+                                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">Zurück</a>
+                                {% endif %}
+                                {% if page_obj.has_next %}
+                                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">Weiter</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,402 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Personal-Verwaltung - Rettungsdienst - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Personal-Verwaltung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-red-600 to-red-800 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">👥</span>
+                    <h1 class="text-3xl font-bold">Personal-Verwaltung</h1>
+                </div>
+                <p class="text-red-100 text-lg">
+                    Bearbeiter und Lesende für das Rettungsdienst-Modul verwalten
+                </p>
+            </div>
+            <div class="hidden lg:block">
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20">
+                    <p class="text-red-100 text-sm mb-1">Gesamt-Personal</p>
+                    <p class="text-4xl font-bold">{{ total_staff }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-600">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Bearbeiter</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ editors_count }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <span class="text-3xl">✏️</span>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-3">Voller CRUD-Zugriff</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-600">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Lesende</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ readers_count }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <span class="text-3xl">👁️</span>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-3">Nur Leserechte</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-600">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Verfügbare Benutzer</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ available_users.count }}</p>
+                </div>
+                <div class="bg-purple-100 rounded-full p-3">
+                    <span class="text-3xl">➕</span>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-3">Noch nicht zugewiesen</p>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Bearbeiter (Editors) -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span>✏️</span>
+                <span>Bearbeiter ({{ editors_count }})</span>
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Bearbeiter haben volle CRUD-Rechte auf alle Rettungsdienst-Daten.
+            </p>
+
+            {% if editors %}
+            <div class="space-y-2">
+                {% for editor in editors %}
+                <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-900">{{ editor.get_full_name }}</p>
+                            <p class="text-xs text-gray-500">{{ editor.email }}</p>
+                            {% if editor.personnel_number %}
+                            <p class="text-xs text-gray-400 mt-1">PN: {{ editor.personnel_number }}</p>
+                            {% endif %}
+                        </div>
+                        {% if is_module_admin %}
+                        <div class="flex gap-1">
+                            <!-- Downgrade to Reader -->
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="downgrade">
+                                <input type="hidden" name="user_id" value="{{ editor.id }}">
+                                <button type="submit"
+                                        class="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs"
+                                        title="Zu Lesender herabstufen"
+                                        onclick="return confirm('{{ editor.get_full_name }} zu Lesender herabstufen?')">
+                                    👁️
+                                </button>
+                            </form>
+                            <!-- Remove -->
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="remove">
+                                <input type="hidden" name="user_id" value="{{ editor.id }}">
+                                <button type="submit"
+                                        class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs"
+                                        title="Entfernen"
+                                        onclick="return confirm('{{ editor.get_full_name }} aus dem Team entfernen?')">
+                                    ✕
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <span class="text-4xl block mb-2">✏️</span>
+                <p class="text-sm">Noch keine Bearbeiter zugewiesen</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Lesende (Readers) -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span>👁️</span>
+                <span>Lesende ({{ readers_count }})</span>
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Lesende können Daten nur einsehen, aber nicht bearbeiten.
+            </p>
+
+            {% if readers %}
+            <div class="space-y-2">
+                {% for reader in readers %}
+                <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-900">{{ reader.get_full_name }}</p>
+                            <p class="text-xs text-gray-500">{{ reader.email }}</p>
+                            {% if reader.personnel_number %}
+                            <p class="text-xs text-gray-400 mt-1">PN: {{ reader.personnel_number }}</p>
+                            {% endif %}
+                        </div>
+                        {% if is_module_admin %}
+                        <div class="flex gap-1">
+                            <!-- Upgrade to Editor -->
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="upgrade">
+                                <input type="hidden" name="user_id" value="{{ reader.id }}">
+                                <button type="submit"
+                                        class="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded text-xs"
+                                        title="Zu Bearbeiter hochstufen"
+                                        onclick="return confirm('{{ reader.get_full_name }} zu Bearbeiter hochstufen?')">
+                                    ✏️
+                                </button>
+                            </form>
+                            <!-- Remove -->
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="remove">
+                                <input type="hidden" name="user_id" value="{{ reader.id }}">
+                                <button type="submit"
+                                        class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs"
+                                        title="Entfernen"
+                                        onclick="return confirm('{{ reader.get_full_name }} aus dem Team entfernen?')">
+                                    ✕
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <span class="text-4xl block mb-2">👁️</span>
+                <p class="text-sm">Noch keine Lesende zugewiesen</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Zuweisung (Assignment Form) -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span>➕</span>
+                <span>Benutzer zuweisen</span>
+            </h2>
+
+            {% if is_module_admin %}
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign">
+
+                <!-- Benutzer mit Suchfeld -->
+                <div x-data="{ open: false, search: '', selected: null, users: [] }" x-init="
+                    users = [
+                        {% for user in all_users %}
+                        {
+                            value: '{{ user.id }}',
+                            name: '{{ user.get_full_name|escapejs }}',
+                            username: '{{ user.username|escapejs }}',
+                            email: '{{ user.email|escapejs }}',
+                            personnel_number: '{{ user.personnel_number|default:""|escapejs }}'
+                        }{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ];
+                ">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Benutzer auswählen:
+                    </label>
+
+                    <!-- Hidden Original Select -->
+                    <input type="hidden" name="user_id" id="user_id_hidden" required :value="selected ? selected.value : ''">
+
+                    <!-- Custom Searchable Dropdown -->
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-left bg-white flex items-center justify-between"
+                        >
+                            <span class="truncate">
+                                <span x-show="!selected" class="text-gray-500">Benutzer auswählen...</span>
+                                <span x-show="selected" x-text="selected ? `${selected.name} (${selected.username})` : ''"></span>
+                            </span>
+                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-96 overflow-hidden"
+                        >
+                            <!-- Search Input -->
+                            <div class="p-2 border-b border-gray-200 sticky top-0 bg-white">
+                                <input
+                                    type="text"
+                                    x-model="search"
+                                    @click.stop
+                                    placeholder="Benutzer suchen (Name, Username, Email, PN)..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm"
+                                >
+                            </div>
+
+                            <!-- Options List -->
+                            <div class="overflow-y-auto max-h-80">
+                                <template x-for="user in users.filter(u => {
+                                    const searchLower = search.toLowerCase();
+                                    return u.name.toLowerCase().includes(searchLower) ||
+                                           u.username.toLowerCase().includes(searchLower) ||
+                                           u.email.toLowerCase().includes(searchLower) ||
+                                           u.personnel_number.toLowerCase().includes(searchLower);
+                                })" :key="user.value">
+                                    <button
+                                        type="button"
+                                        @click="selected = user; open = false; search = ''"
+                                        class="w-full text-left px-4 py-3 hover:bg-red-50 border-b border-gray-100 last:border-0"
+                                        :class="selected && selected.value === user.value ? 'bg-red-100' : ''"
+                                    >
+                                        <div class="font-medium text-gray-900" x-text="user.name"></div>
+                                        <div class="text-xs text-gray-500 mt-0.5">
+                                            <span x-text="user.username"></span>
+                                            <span x-show="user.email"> • </span>
+                                            <span x-text="user.email"></span>
+                                        </div>
+                                        <div x-show="user.personnel_number" class="text-xs text-gray-400 mt-0.5">
+                                            PN: <span x-text="user.personnel_number"></span>
+                                        </div>
+                                    </button>
+                                </template>
+                                <!-- No results -->
+                                <div
+                                    x-show="users.filter(u => {
+                                        const searchLower = search.toLowerCase();
+                                        return u.name.toLowerCase().includes(searchLower) ||
+                                               u.username.toLowerCase().includes(searchLower) ||
+                                               u.email.toLowerCase().includes(searchLower) ||
+                                               u.personnel_number.toLowerCase().includes(searchLower);
+                                    }).length === 0"
+                                    class="px-4 py-8 text-center text-gray-500 text-sm"
+                                >
+                                    <span class="block text-2xl mb-2">🔍</span>
+                                    Keine Benutzer gefunden
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="mt-1 text-sm text-gray-500">💡 Tipp: Beginnen Sie mit der Eingabe, um nach Name, Username, Email oder Personalnummer zu filtern</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Rolle:
+                    </label>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-green-50 cursor-pointer">
+                            <input type="radio" name="role" value="editor" required class="mr-3">
+                            <div>
+                                <p class="font-medium text-gray-900">✏️ Bearbeiter</p>
+                                <p class="text-xs text-gray-500">Volle CRUD-Rechte</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 cursor-pointer">
+                            <input type="radio" name="role" value="reader" required class="mr-3">
+                            <div>
+                                <p class="font-medium text-gray-900">👁️ Lesender</p>
+                                <p class="text-xs text-gray-500">Nur Leserechte</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    ➕ Benutzer zuweisen
+                </button>
+            </form>
+
+            <!-- Help Box -->
+            <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="flex items-start gap-2">
+                    <span class="text-xl">💡</span>
+                    <div>
+                        <h4 class="font-bold text-yellow-900 text-sm mb-1">Hinweise</h4>
+                        <ul class="text-xs text-yellow-800 space-y-1">
+                            <li>• Bearbeiter können Daten anlegen, ändern und löschen</li>
+                            <li>• Lesende können nur Daten einsehen</li>
+                            <li>• Benutzer können jederzeit hoch-/herabgestuft werden</li>
+                            <li>• Änderungen werden sofort wirksam</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="flex items-start gap-2">
+                    <span class="text-2xl">⚠️</span>
+                    <div>
+                        <h4 class="font-bold text-yellow-900 mb-1">Keine Berechtigung</h4>
+                        <p class="text-sm text-yellow-800">
+                            Sie benötigen Modulverantwortlichen-Rechte, um Personal zu verwalten.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Info Section -->
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">ℹ️</span>
+            <div>
+                <h3 class="font-bold text-blue-900 mb-2">Berechtigungskonzept</h3>
+                <div class="text-sm text-blue-800 space-y-2">
+                    <p><strong>Bearbeiter (Editors):</strong> Haben volle CRUD-Rechte (Create, Read, Update, Delete) auf alle Daten des Rettungsdienst-Moduls, inklusive Stammdaten, Geräte-Instanzen, Chargen, BTM-Bereich und Lagerbewegungen.</p>
+                    <p><strong>Lesende (Readers):</strong> Können alle Daten einsehen, aber keine Änderungen vornehmen. Ideal für Mitarbeiter, die Informationen abrufen müssen, aber keine Bearbeitungsrechte benötigen.</p>
+                    <p><strong>Modulverantwortliche:</strong> Administratoren und Modulverantwortliche können diese Personal-Verwaltung nutzen, um Rechte zu vergeben und zu entziehen.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
+{% endblock %}

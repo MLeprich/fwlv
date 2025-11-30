@@ -1,0 +1,290 @@
+<!-- Module Section (nur für Admins) -->
+{% if user.is_staff or user.is_superuser %}
+<div x-show="activeSection === 'modules'" x-cloak class="p-6">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">Module</h2>
+
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r mb-6">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <div class="ml-3">
+                <p class="text-sm text-blue-700 font-medium">Modul-Verwaltung</p>
+                <p class="text-sm text-blue-600 mt-1">
+                    Aktivieren oder deaktivieren Sie Module für Ihre Organisation. Deaktivierte Module werden in der Navigation ausgeblendet.
+                    Änderungen werden sofort nach dem Speichern wirksam.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Module aktivieren/deaktivieren -->
+    <form method="post" action="{% url 'core:settings' %}">
+        {% csrf_token %}
+        <input type="hidden" name="section" value="modules">
+
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                Verfügbare Module
+            </h3>
+
+            <div class="space-y-3">
+                <!-- Wiki Modul -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">📚</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Wiki</h4>
+                                    {% if modules.wiki_enabled %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktiv</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inaktiv</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Interne Wissensdatenbank mit Block-Editor für Dokumentation, Anleitungen und Checklisten.
+                                </p>
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                        Kategorien, Versionierung, Berechtigungen
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="wiki_enabled" value="true" class="sr-only peer" {% if modules.wiki_enabled %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Procurement Modul -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">🛒</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Bestellwesen</h4>
+                                    {% if modules.procurement_enabled %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktiv</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inaktiv</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Beschaffungs- und Bestellverwaltung mit Freigabe-Workflow und Lieferanten-Management.
+                                </p>
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                        </svg>
+                                        Bestellungen, Freigaben, Lieferanten
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="procurement_enabled" value="true" class="sr-only peer" {% if modules.procurement_enabled %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory Check Modul -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">📋</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Inventur</h4>
+                                    {% if modules.inventory_check_enabled %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktiv</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inaktiv</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Vollständige Inventur-Verwaltung mit Zähl-Listen, Differenzen-Erfassung und Freigabe-Workflow.
+                                </p>
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                        </svg>
+                                        Zählungen, Differenzen, Berichte
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="inventory_check_enabled" value="true" class="sr-only peer" {% if modules.inventory_check_enabled %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Monitors Modul -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">📺</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Info-Monitore</h4>
+                                    {% if modules.info_monitors_enabled %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktiv</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inaktiv</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Dashboard-Builder für öffentliche Monitore und Anzeigetafeln in der Wache.
+                                </p>
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                                        </svg>
+                                        Widgets, Layouts, Fullscreen
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="info_monitors_enabled" value="true" class="sr-only peer" {% if modules.info_monitors_enabled %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IT-Hardware Modul -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">💻</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">IT-Hardware</h4>
+                                    {% if modules.it_hardware_enabled %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktiv</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inaktiv</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    IT-Hardware Verwaltung mit Inventarisierung, Zuweisung und Lifecycle-Management.
+                                </p>
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                        </svg>
+                                        Geräte, Zuweisungen, Wartung
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="it_hardware_enabled" value="true" class="sr-only peer" {% if modules.it_hardware_enabled %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tickets Modul -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">🎫</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Ticketsystem</h4>
+                                    {% if modules.tickets_enabled %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktiv</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inaktiv</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Internes Ticketsystem für Anfragen, Meldungen und Aufgabenverfolgung.
+                                </p>
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                        </svg>
+                                        Tickets, Kommentare, Zuweisung
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="tickets_enabled" value="true" class="sr-only peer" {% if modules.tickets_enabled %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+            <button
+                type="submit"
+                class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 transition-colors font-medium shadow-sm"
+            >
+                Änderungen speichern
+            </button>
+        </div>
+    </form>
+
+    <!-- Hinweis -->
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r mt-6">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 text-yellow-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                    <span class="font-medium">Hinweis:</span> Deaktivierte Module sind weiterhin in der Datenbank vorhanden und können jederzeit wieder aktiviert werden.
+                    Die Daten bleiben erhalten.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endif %}

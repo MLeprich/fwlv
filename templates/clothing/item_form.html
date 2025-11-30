@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}{{ object.name }} bearbeiten{% else %}Neuer Artikel{% endif %} - Kleiderkammer - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'clothing:dashboard' %}" class="text-gray-500 hover:text-gray-700">Kleiderkammer</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'clothing:item_list' %}" class="text-gray-500 hover:text-gray-700">Artikel</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neu{% endif %}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ title }}</h1>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <span class="text-red-600">❌</span>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Name <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. "Einsatzjacke HuPF Teil 1", "Feuerwehrstiefel Gr. 43"</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Artikelnummer
+                        </label>
+                        {{ form.item_number }}
+                        {% if form.item_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.item_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Barcode
+                        </label>
+                        {{ form.barcode }}
+                        {% if form.barcode.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.barcode.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Beschreibung
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kleidungsdetails -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Kleidungsdetails</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Typ <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.clothing_type }}
+                        {% if form.clothing_type.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.clothing_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Größe <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.size }}
+                        {% if form.size.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.size.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Schnitt/Geschlecht
+                        </label>
+                        {{ form.gender }}
+                        {% if form.gender.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.gender.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Farbe
+                        </label>
+                        {{ form.color }}
+                        {% if form.color.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.color.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Material
+                        </label>
+                        {{ form.material }}
+                        {% if form.material.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.material.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. "Nomex III", "Gore-Tex", "Baumwolle"</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Hersteller
+                        </label>
+                        {{ form.manufacturer }}
+                        {% if form.manufacturer.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.manufacturer.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- PSA-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    🦺 PSA-Informationen
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="flex items-center">
+                            {{ form.is_psa }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Persönliche Schutzausrüstung (PSA)</span>
+                        </label>
+                        {% if form.is_psa.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.is_psa.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Schutzstufe
+                        </label>
+                        {{ form.protection_level }}
+                        {% if form.protection_level.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.protection_level.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Norm/Standard
+                        </label>
+                        {{ form.norm_standard }}
+                        {% if form.norm_standard.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.norm_standard.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. "EN 469", "EN ISO 20345"</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Zertifizierungsnummer
+                        </label>
+                        {{ form.certification_number }}
+                        {% if form.certification_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.certification_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Zertifikat gültig bis
+                        </label>
+                        {{ form.certification_expires }}
+                        {% if form.certification_expires.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.certification_expires.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prüfung & Wartung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔍 Prüfung & Wartung</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="flex items-center">
+                            {{ form.requires_inspection }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Prüfpflichtig</span>
+                        </label>
+                        {% if form.requires_inspection.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.requires_inspection.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Prüfintervall (Monate)
+                        </label>
+                        {{ form.inspection_interval_months }}
+                        {% if form.inspection_interval_months.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.inspection_interval_months.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nächste Prüfung
+                        </label>
+                        {{ form.next_inspection_date }}
+                        {% if form.next_inspection_date.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.next_inspection_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Max. Nutzungsdauer (Jahre)
+                        </label>
+                        {{ form.max_usage_years }}
+                        {% if form.max_usage_years.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.max_usage_years.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Max. Waschzyklen
+                        </label>
+                        {{ form.max_washing_cycles }}
+                        {% if form.max_washing_cycles.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.max_washing_cycles.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lagerung & Bestand -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📦 Lagerung & Bestand</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Kategorie
+                        </label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div x-data="{ open: false, search: '', selected: null, locations: [] }" x-init="
+                        locations = Array.from(document.querySelectorAll('#id_location option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(loc => loc.value);
+                        const currentValue = document.getElementById('id_location').value;
+                        if (currentValue) {
+                            selected = locations.find(loc => loc.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_location').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.location.label }}</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.location }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Lagerort auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Lagerort suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="location in locations.filter(loc => loc.text.toLowerCase().includes(search.toLowerCase()))" :key="location.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = location; document.getElementById('id_location').value = location.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === location.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="location.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.location.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.location.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Einheit
+                        </label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.unit.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. "Stk", "Paar", "Satz"</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Mindestbestand
+                        </label>
+                        {{ form.min_quantity }}
+                        {% if form.min_quantity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.min_quantity.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Maximalbestand
+                        </label>
+                        {{ form.max_quantity }}
+                        {% if form.max_quantity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.max_quantity.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Lieferant
+                        </label>
+                        {{ form.supplier }}
+                        {% if form.supplier.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.supplier.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Stückpreis (€)
+                        </label>
+                        {{ form.unit_price }}
+                        {% if form.unit_price.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.unit_price.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dokument-Upload -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Dokumente</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.manual_document.label }}
+                    </label>
+                    {{ form.manual_document }}
+                    {% if form.manual_document.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.manual_document.help_text }}</p>
+                    {% endif %}
+                    {% if form.manual_document.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.manual_document.errors.0 }}</p>
+                    {% endif %}
+                    {% if form.instance.manual_document %}
+                    <div class="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <a href="{{ form.instance.manual_document.url }}" target="_blank" class="text-blue-600 hover:underline">
+                            Aktuelles Dokument anzeigen
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Notizen -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Notizen
+                </label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'clothing:item_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    {{ submit_text }}
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

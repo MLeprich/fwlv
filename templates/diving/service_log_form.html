@@ -1,0 +1,520 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title|default:"Service dokumentieren" }} - Taucher{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center space-x-2 text-sm mb-6">
+        <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        <span class="text-gray-400">/</span>
+        <a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a>
+        <span class="text-gray-400">/</span>
+        <a href="{% url 'diving:inspection_list' %}" class="text-gray-500 hover:text-gray-700">Service-Protokolle</a>
+        <span class="text-gray-400">/</span>
+        <span class="text-gray-900 font-medium">{{ title|default:"Service dokumentieren" }}</span>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">🔧 {{ title|default:"Service dokumentieren" }}</h1>
+        <p class="mt-1 text-sm text-gray-600">Service-Protokoll für Tauchausrüstung erstellen</p>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white shadow-sm rounded-lg border border-gray-200">
+        <form method="post" enctype="multipart/form-data" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📋 Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Ausrüstung -->
+                    <div x-data="{ open: false, search: '', selected: null, devices: [] }" x-init="
+                        devices = Array.from(document.querySelectorAll('#id_device option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(device => device.value);
+                        const currentValue = document.getElementById('id_device').value;
+                        if (currentValue) {
+                            selected = devices.find(device => device.value === currentValue);
+                        }
+
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_device').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.device.label }} *</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.device }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Gerät auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Gerät suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="device in devices.filter(d => d.text.toLowerCase().includes(search.toLowerCase()))" :key="device.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = device; document.getElementById('id_device').value = device.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === device.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="device.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.device.errors %}<p class="mt-1 text-sm text-red-600">{{ form.device.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- Service-Datum -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.service_date.label }} *</label>
+                        {{ form.service_date }}
+                        {% if form.service_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.service_date.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- Wartungstyp (mit Checkliste) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.service_type_obj.label }}</label>
+                        {{ form.service_type_obj }}
+                        <p class="mt-1 text-xs text-gray-500">Wählen Sie einen Wartungstyp mit Checkliste (optional)</p>
+                        {% if form.service_type_obj.errors %}<p class="mt-1 text-sm text-red-600">{{ form.service_type_obj.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- Einfache Service-Art (Fallback) -->
+                    <div id="simple-service-type-container">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.service_type.label }} *</label>
+                        {{ form.service_type }}
+                        <p class="mt-1 text-xs text-gray-500">Wird verwendet, wenn kein Wartungstyp gewählt</p>
+                        {% if form.service_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.service_type.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- Techniker -->
+                    <div x-data="{ open: false, search: '', selected: null, technicians: [] }" x-init="
+                        technicians = Array.from(document.querySelectorAll('#id_technician option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(tech => tech.value);
+                        const currentValue = document.getElementById('id_technician').value;
+                        if (currentValue) {
+                            selected = technicians.find(tech => tech.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_technician').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.technician.label }} *</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.technician }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Techniker auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Techniker suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="technician in technicians.filter(tech => tech.text.toLowerCase().includes(search.toLowerCase()))" :key="technician.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = technician; document.getElementById('id_technician').value = technician.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === technician.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="technician.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.technician.errors %}<p class="mt-1 text-sm text-red-600">{{ form.technician.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamische Checkliste (wird angezeigt wenn Wartungstyp gewählt) -->
+            <div id="dynamic-checklist-container" class="border-b border-gray-200 pb-6 hidden">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">✅ Prüfungs-Checkliste</h2>
+                <div id="checklist-progress" class="mb-4">
+                    <p class="text-sm text-gray-600 mb-2">
+                        <span id="checked-count">0</span> von <span id="total-count">0</span> Punkten erledigt
+                    </p>
+                    <div class="bg-gray-100 rounded-full h-2.5">
+                        <div id="progress-bar" class="bg-green-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div id="checklist-items" class="space-y-3">
+                    <!-- Checklisten-Items werden hier dynamisch eingefügt -->
+                </div>
+            </div>
+
+            <!-- Dynamische Messwerte (wird angezeigt wenn Wartungstyp mit custom_fields gewählt) -->
+            <div id="dynamic-measurements-container" class="border-b border-gray-200 pb-6 hidden">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📏 Messwerte</h2>
+                <div id="measurement-fields" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Messfelder werden hier dynamisch eingefügt -->
+                </div>
+            </div>
+
+            <!-- Hidden fields für JSON-Daten -->
+            {{ form.checklist_results }}
+            {{ form.measurement_results }}
+
+            <!-- Service-Status -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">✅ Service-Status</h2>
+                <div>
+                    <label class="flex items-center">
+                        {{ form.passed }}
+                        <span class="ml-2 text-sm font-medium text-gray-700">Prüfung bestanden</span>
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500">Aktivieren, wenn die Ausrüstung alle Tests bestanden hat und einsatzbereit ist</p>
+                    {% if form.passed.errors %}<p class="mt-1 text-sm text-red-600">{{ form.passed.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Technische Tests -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔬 Technische Tests</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.cracking_pressure_mbar.label }}</label>
+                        {{ form.cracking_pressure_mbar }}
+                        <p class="mt-1 text-xs text-gray-500">Sollwert: 18-25 mbar (Atemregler)</p>
+                        {% if form.cracking_pressure_mbar.errors %}<p class="mt-1 text-sm text-red-600">{{ form.cracking_pressure_mbar.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.flow_rate_l_min.label }}</label>
+                        {{ form.flow_rate_l_min }}
+                        <p class="mt-1 text-xs text-gray-500">Durchflussrate in l/min</p>
+                        {% if form.flow_rate_l_min.errors %}<p class="mt-1 text-sm text-red-600">{{ form.flow_rate_l_min.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="flex items-center">
+                            {{ form.leak_test_passed }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Dichtigkeitsprüfung bestanden</span>
+                        </label>
+                        {% if form.leak_test_passed.errors %}<p class="mt-1 text-sm text-red-600">{{ form.leak_test_passed.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Arbeitsdetails -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔧 Arbeitsdetails</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.findings.label }}</label>
+                        {{ form.findings }}
+                        <p class="mt-1 text-xs text-gray-500">Festgestellte Mängel oder Auffälligkeiten</p>
+                        {% if form.findings.errors %}<p class="mt-1 text-sm text-red-600">{{ form.findings.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.work_performed.label }}</label>
+                        {{ form.work_performed }}
+                        <p class="mt-1 text-xs text-gray-500">Durchgeführte Arbeiten und Reparaturen</p>
+                        {% if form.work_performed.errors %}<p class="mt-1 text-sm text-red-600">{{ form.work_performed.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.parts_replaced.label }}</label>
+                        {{ form.parts_replaced }}
+                        <p class="mt-1 text-xs text-gray-500">Ausgetauschte Teile mit Teilenummern</p>
+                        {% if form.parts_replaced.errors %}<p class="mt-1 text-sm text-red-600">{{ form.parts_replaced.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kosten -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">💰 Kosten</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.labor_cost.label }}</label>
+                        {{ form.labor_cost }}
+                        <p class="mt-1 text-xs text-gray-500">Arbeitskosten in Euro</p>
+                        {% if form.labor_cost.errors %}<p class="mt-1 text-sm text-red-600">{{ form.labor_cost.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.parts_cost.label }}</label>
+                        {{ form.parts_cost }}
+                        <p class="mt-1 text-xs text-gray-500">Materialkosten in Euro</p>
+                        {% if form.parts_cost.errors %}<p class="mt-1 text-sm text-red-600">{{ form.parts_cost.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nächster Service -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📅 Nächster Service</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.next_service_due.label }}</label>
+                    {{ form.next_service_due }}
+                    <p class="mt-1 text-xs text-gray-500">Datum für den nächsten Service-Termin</p>
+                    {% if form.next_service_due.errors %}<p class="mt-1 text-sm text-red-600">{{ form.next_service_due.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Dokumentation -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📎 Dokumentation</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.service_report.label }}</label>
+                    {{ form.service_report }}
+                    <p class="mt-1 text-xs text-gray-500">Service-Bericht als PDF hochladen (optional)</p>
+                    {% if form.service_report.errors %}<p class="mt-1 text-sm text-red-600">{{ form.service_report.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'diving:inspection_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    {{ submit_text|default:"Protokoll speichern" }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Service Type Daten (wird vom Server gefüllt)
+const serviceTypeData = {{ service_types_json|default:"{}"|safe }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const serviceTypeSelect = document.getElementById('id_service_type_obj');
+    const simpleServiceTypeContainer = document.getElementById('simple-service-type-container');
+    const checklistContainer = document.getElementById('dynamic-checklist-container');
+    const measurementsContainer = document.getElementById('dynamic-measurements-container');
+    const checklistItemsDiv = document.getElementById('checklist-items');
+    const measurementFieldsDiv = document.getElementById('measurement-fields');
+
+    // JSON Hidden Fields
+    const checklistResultsInput = document.getElementById('id_checklist_results');
+    const measurementResultsInput = document.getElementById('id_measurement_results');
+
+    function updateProgress() {
+        const checkboxes = checklistItemsDiv.querySelectorAll('input[type="checkbox"]');
+        const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const total = checkboxes.length;
+        const percentage = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+        document.getElementById('checked-count').textContent = checked;
+        document.getElementById('total-count').textContent = total;
+        document.getElementById('progress-bar').style.width = percentage + '%';
+    }
+
+    function collectChecklistResults() {
+        const results = {};
+        const checkboxes = checklistItemsDiv.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            results[cb.name] = cb.checked;
+        });
+        checklistResultsInput.value = JSON.stringify(results);
+    }
+
+    function collectMeasurementResults() {
+        const results = {};
+        const inputs = measurementFieldsDiv.querySelectorAll('input');
+        inputs.forEach(input => {
+            results[input.name] = input.value;
+        });
+        measurementResultsInput.value = JSON.stringify(results);
+    }
+
+    function loadServiceType(serviceTypeId) {
+        if (!serviceTypeId || !serviceTypeData[serviceTypeId]) {
+            // Keine Wartungstyp gewählt - zeige einfache Auswahl
+            simpleServiceTypeContainer.classList.remove('hidden');
+            checklistContainer.classList.add('hidden');
+            measurementsContainer.classList.add('hidden');
+            checklistItemsDiv.innerHTML = '';
+            measurementFieldsDiv.innerHTML = '';
+            return;
+        }
+
+        const data = serviceTypeData[serviceTypeId];
+
+        // Verstecke einfache Serviceart wenn Wartungstyp gewählt
+        simpleServiceTypeContainer.classList.add('hidden');
+
+        // Checkliste laden
+        if (data.checklist && data.checklist.length > 0) {
+            checklistContainer.classList.remove('hidden');
+            checklistItemsDiv.innerHTML = '';
+
+            data.checklist.forEach((item, index) => {
+                // Unterstütze sowohl String-Arrays als auch Objekt-Arrays
+                const itemText = typeof item === 'string' ? item : (item.text || item);
+                const itemRequired = typeof item === 'object' ? item.required : false;
+                const itemId = typeof item === 'object' && item.id ? item.id : `item_${index}`;
+
+                const div = document.createElement('div');
+                div.className = 'flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100';
+                div.innerHTML = `
+                    <div class="flex items-center h-6">
+                        <input type="checkbox" id="check_${itemId}" name="checklist_${itemId}"
+                               class="rounded border-gray-300 text-green-600 focus:ring-green-500">
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <label for="check_${itemId}" class="text-sm font-medium text-gray-700 cursor-pointer">
+                            ${itemText}
+                            ${itemRequired ? '<span class="text-red-500 ml-1">*</span>' : ''}
+                        </label>
+                    </div>
+                `;
+                checklistItemsDiv.appendChild(div);
+
+                // Event Listener für Progress-Update
+                div.querySelector('input').addEventListener('change', function() {
+                    updateProgress();
+                    collectChecklistResults();
+                });
+            });
+
+            updateProgress();
+        } else {
+            checklistContainer.classList.add('hidden');
+        }
+
+        // Messwerte laden
+        if (data.custom_fields && data.custom_fields.length > 0) {
+            measurementsContainer.classList.remove('hidden');
+            measurementFieldsDiv.innerHTML = '';
+
+            data.custom_fields.forEach((field, index) => {
+                const fieldName = field.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+                const div = document.createElement('div');
+
+                if (field.type === 'boolean') {
+                    // Checkbox für Boolean-Felder
+                    div.innerHTML = `
+                        <label class="flex items-center">
+                            <input type="checkbox" name="measurement_${fieldName}"
+                                   class="rounded border-gray-300 text-green-600 focus:ring-green-500">
+                            <span class="ml-2 text-sm font-medium text-gray-700">
+                                ${field.name}
+                                ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                            </span>
+                        </label>
+                    `;
+                } else {
+                    // Number-Feld
+                    const hasMin = field.min !== undefined && field.min !== null;
+                    const hasMax = field.max !== undefined && field.max !== null;
+                    div.innerHTML = `
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            ${field.name}
+                            ${field.unit ? '<span class="text-gray-500">(' + field.unit + ')</span>' : ''}
+                            ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                        </label>
+                        <input type="number" name="measurement_${fieldName}" step="any"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                               ${hasMin ? 'min="' + field.min + '"' : ''}
+                               ${hasMax ? 'max="' + field.max + '"' : ''}>
+                        ${hasMin || hasMax ? `
+                            <p class="mt-1 text-xs text-gray-500">
+                                ${hasMin && hasMax ? 'Sollbereich: ' + field.min + ' - ' + field.max + ' ' + (field.unit || '') :
+                                  hasMin ? 'Min: ' + field.min + ' ' + (field.unit || '') :
+                                  'Max: ' + field.max + ' ' + (field.unit || '')}
+                            </p>
+                        ` : ''}
+                    `;
+                }
+                measurementFieldsDiv.appendChild(div);
+
+                // Event Listener für JSON-Update
+                const input = div.querySelector('input');
+                if (input) {
+                    input.addEventListener('change', collectMeasurementResults);
+                }
+            });
+        } else {
+            measurementsContainer.classList.add('hidden');
+        }
+    }
+
+    // Event Listener für Service Type Auswahl
+    if (serviceTypeSelect) {
+        serviceTypeSelect.addEventListener('change', function() {
+            loadServiceType(this.value);
+        });
+
+        // Initial laden falls bereits gewählt
+        if (serviceTypeSelect.value) {
+            loadServiceType(serviceTypeSelect.value);
+        }
+    }
+
+    // Vor dem Submit: JSON-Daten sammeln
+    document.querySelector('form').addEventListener('submit', function() {
+        collectChecklistResults();
+        collectMeasurementResults();
+    });
+});
+</script>
+{% endblock %}

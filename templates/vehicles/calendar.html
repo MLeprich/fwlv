@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static %}
+{% load vehicle_filters %}
+
+{% block title %}Prüfungskalender - Fahrzeugverwaltung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Prüfungskalender</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">📅</span>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Prüfungskalender</h1>
+                    <p class="text-sm text-gray-600">Übersicht über HU/TÜV und UVV-Prüfungen</p>
+                </div>
+            </div>
+            <a href="{% url 'vehicles:dashboard' %}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                ← Zurück zum Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Kalender-Navigation -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <a href="?year={{ prev_year }}&month={{ prev_month }}"
+               class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                ← Vorheriger Monat
+            </a>
+            <h2 class="text-xl font-bold text-gray-900">{{ month_name }} {{ year }}</h2>
+            <a href="?year={{ next_year }}&month={{ next_month }}"
+               class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                Nächster Monat →
+            </a>
+        </div>
+    </div>
+
+    <!-- 2-Spalten Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Linke Spalte: Tagesdetails -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow sticky top-6">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <span>🔍</span>
+                        Tagesübersicht
+                    </h2>
+                </div>
+                <div id="day-details" class="p-6">
+                    {% include 'vehicles/partials/calendar_day_detail.html' %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Rechte Spalte: Kalender-Grid -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow p-6">
+
+                <!-- Kalender-Grid -->
+                <div class="grid grid-cols-7 gap-2">
+
+                    <!-- Wochentage-Header -->
+                    {% for day in "Mo,Di,Mi,Do,Fr,Sa,So"|split:"," %}
+                    <div class="text-center font-semibold text-gray-700 py-3 text-sm">{{ day }}</div>
+                    {% endfor %}
+
+                    <!-- Kalendertage -->
+                    {% for week in calendar %}
+                        {% for day in week %}
+                        {% if day == 0 %}
+                            <!-- Leerer Tag (aus anderem Monat) -->
+                            <div class="min-h-28 bg-gray-50 rounded-lg"></div>
+                        {% else %}
+                            <!-- Aktiver Tag -->
+                            <div
+                                hx-get="{% url 'vehicles:calendar' %}?year={{ year }}&month={{ month }}&day={{ day }}"
+                                hx-target="#day-details"
+                                hx-swap="innerHTML"
+                                class="min-h-28 border rounded-lg p-2 cursor-pointer transition-all
+                                       {% if day == selected_day %}border-blue-500 bg-blue-50 ring-2 ring-blue-200{% else %}border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300{% endif %}">
+
+                                <div class="font-semibold text-gray-900 mb-1 text-sm">{{ day }}</div>
+
+                                {% if day in inspections_by_day %}
+                                    <div class="space-y-1">
+                                        {% for inspection in inspections_by_day|get_item:day %}
+                                        <div class="text-xs px-1.5 py-0.5 rounded truncate
+                                                    {% if inspection.color == 'red' %}bg-red-100 text-red-800
+                                                    {% elif inspection.color == 'orange' %}bg-orange-100 text-orange-800
+                                                    {% elif inspection.color == 'green' %}bg-green-100 text-green-800
+                                                    {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                            <div class="font-medium truncate">
+                                                {{ inspection.vehicle.call_sign|default:inspection.vehicle.name|truncatewords:2 }}
+                                            </div>
+                                            <div class="text-xs opacity-75">{{ inspection.type }}</div>
+                                        </div>
+                                        {% endfor %}
+
+                                        <!-- Zeige Anzahl wenn mehr als 2 Prüfungen -->
+                                        {% if inspections_by_day|get_item:day|length > 2 %}
+                                        <div class="text-xs text-gray-500 font-medium text-center mt-1">
+                                            +{{ inspections_by_day|get_item:day|length|add:"-2" }} weitere
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+
+                <!-- Legende -->
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-3">Legende</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+                            <span class="text-sm text-gray-700">Überfällig</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-orange-100 border border-orange-200 rounded"></div>
+                            <span class="text-sm text-gray-700">Fällig (30 Tage)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+                            <span class="text-sm text-gray-700">HU/TÜV</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-blue-100 border border-blue-200 rounded"></div>
+                            <span class="text-sm text-gray-700">UVV</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

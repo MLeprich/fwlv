@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ template.name }} - Checklisten-Vorlagen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:template_list' %}" class="text-gray-500 hover:text-gray-700">Vorlagen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ template.name }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">{{ template.name }}</h1>
+                <p class="mt-2 text-sm text-gray-600">
+                    {{ template.description|default:"Keine Beschreibung" }}
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'vehicle_handover:template_update' template.pk %}"
+                   class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                    ✏️ Bearbeiten
+                </a>
+                <a href="{% url 'vehicle_handover:template_duplicate' template.pk %}"
+                   class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium">
+                    📋 Duplizieren
+                </a>
+                <a href="{% url 'vehicle_handover:template_delete' template.pk %}"
+                   class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                   onclick="return confirm('Möchten Sie diese Vorlage wirklich löschen?')">
+                    🗑️ Löschen
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Sidebar Info -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Status Card -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-900 mb-4">Status</h3>
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-sm text-gray-600">Aktiv:</span>
+                        <span class="ml-2">
+                            {% if template.is_active %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">✓ Ja</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">○ Nein</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-sm text-gray-600">Standard:</span>
+                        <span class="ml-2">
+                            {% if template.is_default %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">⭐ Ja</span>
+                            {% else %}
+                            <span class="text-sm text-gray-500">Nein</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Card -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-900 mb-4">Statistik</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Kategorien:</span>
+                        <span class="font-semibold text-gray-900">{{ template.get_category_count }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Items:</span>
+                        <span class="font-semibold text-gray-900">{{ template.get_item_count }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Verwendet:</span>
+                        <span class="font-semibold text-gray-900">{{ template.usage_count }}x</span>
+                    </div>
+                    {% if template.last_used %}
+                    <div class="pt-3 border-t border-gray-200">
+                        <span class="text-xs text-gray-500">
+                            Zuletzt: {{ template.last_used|date:"d.m.Y H:i" }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Vehicle Types -->
+            {% if template.vehicle_types %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-900 mb-4">Fahrzeugtypen</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for vtype in template.vehicle_types %}
+                    <span class="px-2 py-1 bg-blue-50 text-blue-700 text-sm rounded">{{ vtype }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:col-span-3">
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">Checkliste</h2>
+                    <a href="{% url 'vehicle_handover:category_create' template.pk %}"
+                       class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm">
+                        ➕ Kategorie hinzufügen
+                    </a>
+                </div>
+
+                <div class="p-6">
+                    {% if template.categories.all %}
+                    <div class="space-y-6">
+                        {% for category in template.categories.all %}
+                        <div class="border border-gray-200 rounded-lg">
+                            <!-- Category Header -->
+                            <div class="bg-gray-50 px-4 py-3 rounded-t-lg flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-sm font-medium text-gray-500">{{ category.order }}</span>
+                                    <h3 class="font-semibold text-gray-900">{{ category.name }}</h3>
+                                    {% if category.description %}
+                                    <p class="text-sm text-gray-600">- {{ category.description }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <a href="{% url 'vehicle_handover:item_create' category.pk %}"
+                                       class="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm font-medium">
+                                        ➕ Item
+                                    </a>
+                                    <a href="{% url 'vehicle_handover:category_update' category.pk %}"
+                                       class="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm">
+                                        ✏️
+                                    </a>
+                                    <a href="{% url 'vehicle_handover:category_delete' category.pk %}"
+                                       class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
+                                       onclick="return confirm('Kategorie und alle Items löschen?')">
+                                        🗑️
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Category Items -->
+                            {% if category.items.all %}
+                            <div class="divide-y divide-gray-100">
+                                {% for item in category.items.all %}
+                                <div class="px-4 py-3 hover:bg-gray-50 flex items-center justify-between">
+                                    <div class="flex items-center gap-4 flex-1">
+                                        <span class="text-sm text-gray-400 w-8">{{ item.order }}</span>
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-medium text-gray-900">{{ item.name }}</span>
+                                                {% if item.expected_quantity > 1 %}
+                                                <span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">
+                                                    {{ item.expected_quantity }}x
+                                                </span>
+                                                {% endif %}
+                                                {% if item.requires_serial %}
+                                                <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded">
+                                                    SN
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                            {% if item.description %}
+                                            <p class="text-sm text-gray-600 mt-1">{{ item.description }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <a href="{% url 'vehicle_handover:item_update' item.pk %}"
+                                           class="px-2 py-1 text-blue-600 hover:text-blue-800 text-sm">
+                                            ✏️
+                                        </a>
+                                        <a href="{% url 'vehicle_handover:item_delete' item.pk %}"
+                                           class="px-2 py-1 text-red-600 hover:text-red-800 text-sm"
+                                           onclick="return confirm('Item löschen?')">
+                                            🗑️
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="px-4 py-8 text-center text-gray-500">
+                                <p class="text-sm">Noch keine Items in dieser Kategorie.</p>
+                                <a href="{% url 'vehicle_handover:item_create' category.pk %}"
+                                   class="mt-2 inline-block text-sm text-blue-600 hover:text-blue-800">
+                                    ➕ Erstes Item hinzufügen
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-12">
+                        <span class="text-6xl">📂</span>
+                        <h3 class="mt-4 text-lg font-medium text-gray-900">Noch keine Kategorien</h3>
+                        <p class="mt-2 text-sm text-gray-600">
+                            Fügen Sie die erste Kategorie zu dieser Vorlage hinzu.
+                        </p>
+                        <a href="{% url 'vehicle_handover:category_create' template.pk %}"
+                           class="mt-4 inline-block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm">
+                            ➕ Erste Kategorie erstellen
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

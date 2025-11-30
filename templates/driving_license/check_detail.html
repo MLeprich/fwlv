@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Fuehrerscheinueberpruefung - {{ check.person }} - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h1 class="text-2xl font-bold">{{ check.person.get_full_name }}</h1>
+                <p class="text-gray-600">Ueberpruefung vom {{ check.check_date|date:"d.m.Y" }}</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'driving_license:check_update' check.pk %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Bearbeiten</a>
+                <a href="{% url 'driving_license:check_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Zurueck</a>
+            </div>
+        </div>
+        <div class="border-b pb-6 mb-6">
+            <h2 class="font-semibold mb-4">Status</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div><span class="text-sm text-gray-600">Fuehrerschein vorgezeigt:</span>{% if check.license_presented %}<span class="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded text-sm">Ja</span>{% else %}<span class="ml-2 px-2 py-1 bg-red-100 text-red-800 rounded text-sm">Nein</span>{% endif %}</div>
+                <div><span class="text-sm text-gray-600">Ueberprueft von:</span><span class="ml-2 font-medium">{{ check.checked_by.get_full_name }}</span></div>
+            </div>
+        </div>
+        <div class="border-b pb-6 mb-6">
+            <h2 class="font-semibold mb-4">Fuehrerscheinklassen</h2>
+            <div class="flex flex-wrap gap-2">
+                {% if check.has_class_B %}<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded">B</span>{% endif %}
+                {% if check.has_class_BE %}<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded">BE</span>{% endif %}
+                {% if check.has_class_C %}<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded">C</span>{% endif %}
+                {% if check.has_class_CE %}<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded">CE</span>{% endif %}
+                {% if check.has_class_C1 %}<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded">C1</span>{% endif %}
+                {% if check.has_class_C1E %}<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded">C1E</span>{% endif %}
+                {% if check.has_class_D %}<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded">D</span>{% endif %}
+                {% if check.has_class_A %}<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded">A</span>{% endif %}
+            </div>
+        </div>
+        {% if check.license_expiry_date or check.class_c_expiry_date or check.class_ce_expiry_date or check.class_d_expiry_date %}
+        <div class="border-b pb-6 mb-6">
+            <h2 class="font-semibold mb-4">Gueltigkeitsdaten</h2>
+            <div class="space-y-3">
+                {% if check.license_expiry_date %}<div><span class="text-sm text-gray-600">Fuehrerschein gueltig bis:</span> <span class="font-medium">{{ check.license_expiry_date|date:"d.m.Y" }}</span></div>{% endif %}
+                {% if check.class_c_expiry_date %}<div><span class="text-sm text-gray-600">Klasse C/C1 gueltig bis:</span> <span class="font-medium">{{ check.class_c_expiry_date|date:"d.m.Y" }}</span></div>{% endif %}
+                {% if check.class_c_medical_expiry_date %}<div><span class="text-sm text-gray-600">Aerztl. Untersuchung C/C1 gueltig bis:</span> <span class="font-medium">{{ check.class_c_medical_expiry_date|date:"d.m.Y" }}</span></div>{% endif %}
+                {% if check.class_ce_expiry_date %}<div><span class="text-sm text-gray-600">Klasse CE/C1E gueltig bis:</span> <span class="font-medium">{{ check.class_ce_expiry_date|date:"d.m.Y" }}</span></div>{% endif %}
+                {% if check.class_ce_medical_expiry_date %}<div><span class="text-sm text-gray-600">Aerztl. Untersuchung CE/C1E gueltig bis:</span> <span class="font-medium">{{ check.class_ce_medical_expiry_date|date:"d.m.Y" }}</span></div>{% endif %}
+                {% if check.class_d_expiry_date %}<div><span class="text-sm text-gray-600">Klasse D/D1 gueltig bis:</span> <span class="font-medium">{{ check.class_d_expiry_date|date:"d.m.Y" }}</span></div>{% endif %}
+                {% if check.class_d_medical_expiry_date %}<div><span class="text-sm text-gray-600">Aerztl. Untersuchung D/D1 gueltig bis:</span> <span class="font-medium">{{ check.class_d_medical_expiry_date|date:"d.m.Y" }}</span></div>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% if check.notes %}
+        <div>
+            <h2 class="font-semibold mb-4">Notizen</h2>
+            <p class="text-gray-700 whitespace-pre-wrap">{{ check.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

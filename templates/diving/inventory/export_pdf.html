@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventur {{ check.check_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+        }
+
+        h1 {
+            color: #DC2626;
+            font-size: 20pt;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #374151;
+            font-size: 14pt;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #DC2626;
+            padding-bottom: 5px;
+        }
+
+        .header-info {
+            background-color: #FEF2F2;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #DC2626;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 5px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            width: 150px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 9pt;
+        }
+
+        th {
+            background-color: #DC2626;
+            color: white;
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 6px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        tr:nth-child(even) {
+            background-color: #F9FAFB;
+        }
+
+        tr.discrepancy {
+            background-color: #FEE2E2;
+        }
+
+        .btm-badge {
+            background-color: #9333EA;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+
+        .summary-box {
+            background-color: #F3F4F6;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid #D1D5DB;
+        }
+
+        .summary-item {
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #D1D5DB;
+            font-size: 8pt;
+            color: #6B7280;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <h1>📊 Inventur-Bericht</h1>
+
+    <div class="header-info">
+        <div class="info-row">
+            <div class="info-label">Inventur-Nr.:</div>
+            <div>{{ check.check_number }}</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Titel:</div>
+            <div>{{ check.title }}</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Typ:</div>
+            <div>{{ check.get_check_type_display }}</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Status:</div>
+            <div>{{ check.get_status_display }}</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Verantwortlich:</div>
+            <div>{{ check.responsible_person.get_full_name }}</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Lagerort:</div>
+            <div>{{ check.location.name|default:"Alle Lagerorte" }}</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Zeitraum:</div>
+            <div>{{ check.scheduled_start_date|date:"d.m.Y" }} - {{ check.scheduled_end_date|date:"d.m.Y" }}</div>
+        </div>
+        {% if check.actual_start_date %}
+        <div class="info-row">
+            <div class="info-label">Tatsächlich:</div>
+            <div>
+                {{ check.actual_start_date|date:"d.m.Y H:i" }}
+                {% if check.actual_end_date %} - {{ check.actual_end_date|date:"d.m.Y H:i" }}{% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Progress Summary -->
+    <div class="summary-box">
+        <div class="summary-item">
+            <strong>Fortschritt:</strong> {{ check.counted_items }} / {{ check.total_items }} Artikel ({{ check.get_progress_percentage }}%)
+        </div>
+        <div class="summary-item">
+            <strong>Abweichungen:</strong> {{ check.items_with_discrepancies }} Artikel
+        </div>
+        {% if check.include_btm %}
+        <div class="summary-item">
+            <strong>BTM-Artikel:</strong> {{ items|length }} (Inkludiert)
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Items Table -->
+    <h2>Artikel-Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Artikel-Nr.</th>
+                <th>Artikelname</th>
+                <th>Lagerort</th>
+                <th>Charge / MHD</th>
+                <th style="text-align: right;">Erwartet</th>
+                <th style="text-align: right;">Gezählt</th>
+                <th style="text-align: right;">Diff.</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr {% if item.has_discrepancy %}class="discrepancy"{% endif %}>
+                <td>{{ item.item_number }}</td>
+                <td>
+                    {{ item.item_name }}
+                    {% if item.is_btm %}
+                    <span class="btm-badge">BTM</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.location.name|default:"-" }}</td>
+                <td>
+                    {% if item.batch_number %}
+                    {{ item.batch_number }}<br>
+                    {% endif %}
+                    {% if item.expiry_date %}
+                    MHD: {{ item.expiry_date|date:"d.m.Y" }}
+                    {% endif %}
+                </td>
+                <td style="text-align: right;">{{ item.expected_quantity }}</td>
+                <td style="text-align: right;">
+                    {% if item.is_counted %}{{ item.counted_quantity }}{% else %}-{% endif %}
+                </td>
+                <td style="text-align: right;">
+                    {% if item.is_counted %}
+                        {% with diff=item.get_discrepancy %}
+                        {% if diff > 0 %}+{% endif %}{{ diff }}
+                        {% endwith %}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center;">Keine Artikel vorhanden</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Statistics -->
+    <h2>Statistik</h2>
+
+    <div class="summary-box">
+        <div class="summary-item">
+            <strong>Gesamt Artikel:</strong> {{ check.total_items }}
+        </div>
+        <div class="summary-item">
+            <strong>Gezählte Artikel:</strong> {{ check.counted_items }}
+        </div>
+        <div class="summary-item">
+            <strong>Ausstehend:</strong> {{ check.total_items|add:"-"|add:check.counted_items }}
+        </div>
+        <div class="summary-item">
+            <strong>Artikel mit Abweichungen:</strong> {{ check.items_with_discrepancies }}
+        </div>
+        {% if check.include_btm %}
+        <div class="summary-item">
+            <strong>BTM-Artikel gesamt:</strong> {{ items|length }}
+        </div>
+        {% endif %}
+    </div>
+
+    {% if check.notes %}
+    <h2>Notizen</h2>
+    <div style="padding: 10px; background-color: #F9FAFB; border-left: 3px solid #9CA3AF;">
+        {{ check.notes|linebreaks }}
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="footer">
+        <div>Exportiert am: {{ export_date|date:"d.m.Y H:i" }} Uhr</div>
+        <div>FLVS - Feuerwehr Lagerverwaltungssystem</div>
+    </div>
+
+</body>
+</html>

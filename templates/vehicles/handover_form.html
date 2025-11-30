@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Fahrzeugübernahme - {{ vehicle.call_sign }} - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="handoverForm()">
+
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'core:dashboard' %}" class="text-gray-700 hover:text-primary-600">
+                    🏠 Dashboard
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <a href="{% url 'vehicles:list' %}" class="ml-1 text-gray-700 hover:text-primary-600">
+                        🚒 Fahrzeuge
+                    </a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <a href="{% url 'vehicles:detail' vehicle.pk %}" class="ml-1 text-gray-700 hover:text-primary-600">
+                        {{ vehicle.call_sign }}
+                    </a>
+                </div>
+            </li>
+            <li aria-current="page">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="ml-1 text-gray-500 font-medium">Fahrzeugübernahme</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Header with Progress -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Fahrzeugübernahme</h1>
+                <p class="mt-2 text-sm text-gray-600">{{ vehicle.name }} - {{ vehicle.call_sign }}</p>
+            </div>
+
+            <!-- Progress Indicator -->
+            <div class="flex items-center gap-3">
+                <div class="text-right">
+                    <div class="text-2xl font-bold text-primary-600" x-text="progress + '%'"></div>
+                    <div class="text-xs text-gray-500">Fortschritt</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div class="h-full bg-primary-600 transition-all duration-300" :style="`width: ${progress}%`"></div>
+        </div>
+
+        <!-- Step Indicators -->
+        <div class="grid grid-cols-5 gap-2 mt-4">
+            <div class="text-center" :class="currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'">
+                <div class="text-sm font-medium">1. Basis</div>
+            </div>
+            <div class="text-center" :class="currentStep >= 2 ? 'text-primary-600' : 'text-gray-400'">
+                <div class="text-sm font-medium">2. Checklist</div>
+            </div>
+            <div class="text-center" :class="currentStep >= 3 ? 'text-primary-600' : 'text-gray-400'">
+                <div class="text-sm font-medium">3. Fotos</div>
+            </div>
+            <div class="text-center" :class="currentStep >= 4 ? 'text-primary-600' : 'text-gray-400'">
+                <div class="text-sm font-medium">4. Mängel</div>
+            </div>
+            <div class="text-center" :class="currentStep >= 5 ? 'text-primary-600' : 'text-gray-400'">
+                <div class="text-sm font-medium">5. Abschluss</div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Step 1: Basic Information -->
+        <div x-show="currentStep === 1" class="space-y-6">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Grunddaten</h2>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Art der Übergabe <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.handover_type }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Übergabezeitpunkt <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.handover_date }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Übergeben von
+                        </label>
+                        {{ form.handover_from }}
+                        <p class="mt-1 text-xs text-gray-500">Bei erster Übernahme leer lassen</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Übergeben an <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.handover_to }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Kilometerstand <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.odometer_reading }}
+                        <p class="mt-1 text-xs text-gray-500">Aktuell: {{ vehicle.current_mileage|stringformat:"d" }} km</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Tankfüllung (%) <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.fuel_level }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Sauberkeit Innenraum (1-5)
+                        </label>
+                        <div class="flex gap-2">
+                            {% for i in "12345" %}
+                            <label class="flex items-center">
+                                <input type="radio" name="cleanliness_interior" value="{{ i }}" class="mr-1" {% if i == "5" %}checked{% endif %}>
+                                <span class="text-sm">{{ i }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">1 = sehr schmutzig, 5 = sehr sauber</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Sauberkeit Außen (1-5)
+                        </label>
+                        <div class="flex gap-2">
+                            {% for i in "12345" %}
+                            <label class="flex items-center">
+                                <input type="radio" name="cleanliness_exterior" value="{{ i }}" class="mr-1" {% if i == "5" %}checked{% endif %}>
+                                <span class="text-sm">{{ i }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Standort
+                        </label>
+                        {{ form.location }}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Allgemeine Bemerkungen
+                        </label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Checklist -->
+        <div x-show="currentStep === 2" class="space-y-6">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">Vollständigkeitsprüfung</h2>
+                    <div class="text-sm text-gray-600">
+                        <span x-text="checkedItems"></span> / <span x-text="totalItems"></span> geprüft
+                    </div>
+                </div>
+                <div class="p-6">
+                    <!-- Checklist Categories -->
+                    {% for category, items in checklist_items.items %}
+                    <div class="mb-6">
+                        <h3 class="text-md font-semibold text-gray-800 mb-3">{{ category }}</h3>
+                        <div class="space-y-2">
+                            {% for item in items %}
+                            <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox"
+                                       name="checklist_{{ item.id }}"
+                                       class="mt-1"
+                                       @change="updateChecklist()">
+                                <div class="flex-1">
+                                    <div class="text-sm font-medium text-gray-900">{{ item.name }}</div>
+                                    {% if item.description %}
+                                    <div class="text-xs text-gray-500 mt-0.5">{{ item.description }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex gap-2">
+                                    <label class="flex items-center gap-1 text-xs">
+                                        <input type="checkbox" name="present_{{ item.id }}" checked>
+                                        <span>Vorhanden</span>
+                                    </label>
+                                    <label class="flex items-center gap-1 text-xs">
+                                        <input type="checkbox" name="functional_{{ item.id }}" checked>
+                                        <span>OK</span>
+                                    </label>
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Photos -->
+        <div x-show="currentStep === 3" class="space-y-6">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Foto-Dokumentation</h2>
+                    <p class="text-sm text-gray-600 mt-1">Bitte dokumentieren Sie das Fahrzeug rundherum (360°)</p>
+                </div>
+                <div class="p-6">
+                    <!-- 360° Photo Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        {% for position in photo_positions %}
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary-500 cursor-pointer">
+                            <input type="file"
+                                   name="photo_{{ position.key }}"
+                                   accept="image/*"
+                                   capture="environment"
+                                   class="hidden"
+                                   id="photo_{{ position.key }}"
+                                   @change="previewPhoto($event, '{{ position.key }}')">
+                            <label for="photo_{{ position.key }}" class="cursor-pointer">
+                                <div class="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center mb-2"
+                                     :id="'preview_{{ position.key }}'">
+                                    <span class="text-4xl">{{ position.icon }}</span>
+                                </div>
+                                <div class="text-sm font-medium text-gray-700">{{ position.label }}</div>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Additional Photos -->
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-md font-semibold text-gray-800 mb-3">Zusätzliche Fotos</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Innenraum</label>
+                                <input type="file" name="photos_interior" accept="image/*" multiple class="w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Armaturenbrett</label>
+                                <input type="file" name="photos_dashboard" accept="image/*" multiple class="w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Laderaum/Beladung</label>
+                                <input type="file" name="photos_cargo" accept="image/*" multiple class="w-full">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Defects -->
+        <div x-show="currentStep === 4" class="space-y-6">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">Mängel erfassen</h2>
+                    <button type="button"
+                            @click="addDefect()"
+                            class="px-3 py-1 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm">
+                        + Mangel hinzufügen
+                    </button>
+                </div>
+                <div class="p-6">
+                    <template x-if="defects.length === 0">
+                        <div class="text-center py-8 text-gray-500">
+                            <svg class="w-16 h-16 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p class="text-sm font-medium">Keine Mängel festgestellt</p>
+                            <p class="text-sm mt-1">Fahrzeug in einwandfreiem Zustand</p>
+                        </div>
+                    </template>
+
+                    <div class="space-y-4">
+                        <template x-for="(defect, index) in defects" :key="index">
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Mangel-Titel</label>
+                                        <input type="text"
+                                               :name="'defect_title_' + index"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                               placeholder="z.B. Kratzer Beifahrertür">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie</label>
+                                        <select :name="'defect_category_' + index" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                            <option value="bodywork">Karosserie</option>
+                                            <option value="glass">Verglasung</option>
+                                            <option value="lights">Beleuchtung</option>
+                                            <option value="tires">Reifen/Räder</option>
+                                            <option value="interior">Innenraum</option>
+                                            <option value="equipment">Ausrüstung</option>
+                                            <option value="engine">Motor/Antrieb</option>
+                                            <option value="other">Sonstiges</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Schweregrad</label>
+                                        <select :name="'defect_severity_' + index" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                            <option value="info">Information</option>
+                                            <option value="minor" selected>Gering</option>
+                                            <option value="moderate">Mittel</option>
+                                            <option value="major">Erheblich</option>
+                                            <option value="critical">Kritisch</option>
+                                        </select>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                                        <textarea :name="'defect_description_' + index"
+                                                  rows="3"
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg"></textarea>
+                                    </div>
+                                    <div class="md:col-span-2 flex items-center gap-4">
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" :name="'defect_immediate_' + index">
+                                            <span class="text-sm">Sofortige Maßnahme erforderlich</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" :name="'defect_affects_readiness_' + index">
+                                            <span class="text-sm">Beeinträchtigt Einsatzbereitschaft</span>
+                                        </label>
+                                        <button type="button"
+                                                @click="removeDefect(index)"
+                                                class="ml-auto text-red-600 hover:text-red-700 text-sm">
+                                            Entfernen
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5: Confirmation -->
+        <div x-show="currentStep === 5" class="space-y-6">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Abschluss & Bestätigung</h2>
+                </div>
+                <div class="p-6 space-y-6">
+                    <!-- Summary -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h3 class="text-md font-semibold text-blue-900 mb-3">Zusammenfassung</h3>
+                        <dl class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <dt class="font-medium text-blue-700">Checklist</dt>
+                                <dd class="text-blue-900" x-text="checkedItems + ' / ' + totalItems + ' Punkte'"></dd>
+                            </div>
+                            <div>
+                                <dt class="font-medium text-blue-700">Fotos</dt>
+                                <dd class="text-blue-900" x-text="photoCount + ' hochgeladen'"></dd>
+                            </div>
+                            <div>
+                                <dt class="font-medium text-blue-700">Mängel</dt>
+                                <dd class="text-blue-900" x-text="defects.length + ' erfasst'"></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <!-- Confirmations -->
+                    <div class="space-y-4">
+                        {% if form.instance.handover_from %}
+                        <label class="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox" name="confirmed_by_giver" class="mt-1" required>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">Bestätigung Übergeber</div>
+                                <div class="text-sm text-gray-600 mt-1">
+                                    Ich bestätige, dass die Angaben zum Fahrzeugzustand korrekt sind.
+                                </div>
+                            </div>
+                        </label>
+                        {% endif %}
+
+                        <label class="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox" name="confirmed_by_receiver" class="mt-1" required>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">Bestätigung Empfänger</div>
+                                <div class="text-sm text-gray-600 mt-1">
+                                    Ich habe das Fahrzeug in dem beschriebenen Zustand übernommen.
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <p class="text-sm text-yellow-800">
+                            ⚠️ Nach dem Absenden kann die Übergabe nicht mehr bearbeitet werden.
+                            Bitte prüfen Sie alle Angaben sorgfältig.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+            <button type="button"
+                    @click="prevStep()"
+                    x-show="currentStep > 1"
+                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
+                ← Zurück
+            </button>
+
+            <div class="flex gap-3">
+                <a href="{% url 'vehicles:detail' vehicle.pk %}"
+                   class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
+                    Abbrechen
+                </a>
+
+                <button type="button"
+                        @click="nextStep()"
+                        x-show="currentStep < 5"
+                        class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+                    Weiter →
+                </button>
+
+                <button type="submit"
+                        x-show="currentStep === 5"
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                    ✓ Übergabe abschließen
+                </button>
+            </div>
+        </div>
+
+    </form>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function handoverForm() {
+        return {
+            currentStep: 1,
+            totalItems: {{ checklist_items|length|default:0 }},
+            checkedItems: 0,
+            photoCount: 0,
+            defects: [],
+
+            get progress() {
+                return Math.round((this.currentStep / 5) * 100);
+            },
+
+            nextStep() {
+                if (this.currentStep < 5) {
+                    this.currentStep++;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            },
+
+            prevStep() {
+                if (this.currentStep > 1) {
+                    this.currentStep--;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            },
+
+            updateChecklist() {
+                this.checkedItems = document.querySelectorAll('input[name^="checklist_"]:checked').length;
+            },
+
+            previewPhoto(event, position) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const preview = document.getElementById('preview_' + position);
+                        preview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover rounded-lg">`;
+                    };
+                    reader.readAsDataURL(file);
+                    this.photoCount++;
+                }
+            },
+
+            addDefect() {
+                this.defects.push({});
+            },
+
+            removeDefect(index) {
+                this.defects.splice(index, 1);
+            }
+        }
+    }
+
+    // Keyboard Navigation
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'ArrowRight') {
+            e.preventDefault();
+            const nextBtn = document.querySelector('[x-show="currentStep < 5"]');
+            if (nextBtn) nextBtn.click();
+        }
+        if (e.ctrlKey && e.key === 'ArrowLeft') {
+            e.preventDefault();
+            const prevBtn = document.querySelector('[x-show="currentStep > 1"]');
+            if (prevBtn) prevBtn.click();
+        }
+    });
+</script>
+{% endblock %}

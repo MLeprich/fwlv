@@ -1,0 +1,260 @@
+<!-- Schnelle Prüfungseintragung (HTMX Modal) -->
+<div id="modal-backdrop" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) closeModal()">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-auto">
+        <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-900">
+            ⚡ Schnelle Prüfungseintragung
+        </h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+            <span class="text-2xl">×</span>
+        </button>
+    </div>
+
+    <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+        <p class="text-sm text-gray-700">
+            <span class="font-semibold">Fahrzeug:</span> {{ vehicle.call_sign }} - {{ vehicle.name }}
+        </p>
+        <p class="text-sm text-gray-500 mt-1">
+            Für detaillierte Prüfungseinträge nutzen Sie bitte das vollständige Formular
+        </p>
+    </div>
+
+    <form hx-post="{% url 'vehicles:inspection_modal' vehicle.pk %}"
+          hx-target="#modal-content"
+          hx-swap="innerHTML"
+          class="space-y-4">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-2 gap-4">
+            <!-- Inspection Type -->
+            <div>
+                <label for="inspection_type" class="block text-sm font-medium text-gray-700 mb-1">
+                    Prüfungstyp *
+                </label>
+                <select id="inspection_type"
+                        name="inspection_type"
+                        required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        autofocus>
+                    <option value="">-- Typ wählen --</option>
+                    <option value="hu">🔍 HU/TÜV (Hauptuntersuchung)</option>
+                    <option value="uvv">⚙️ UVV (Unfallverhütungsvorschrift)</option>
+                    <option value="maintenance">🔧 Wartung</option>
+                    <option value="repair">🔨 Reparatur</option>
+                    <option value="safety_check">🛡️ Sicherheitsprüfung</option>
+                    <option value="emission_test">💨 Abgasuntersuchung (AU)</option>
+                </select>
+            </div>
+
+            <!-- Inspection Date -->
+            <div>
+                <label for="inspection_date" class="block text-sm font-medium text-gray-700 mb-1">
+                    Prüfungsdatum *
+                </label>
+                <input type="date"
+                       id="inspection_date"
+                       name="inspection_date"
+                       value="{{ today|date:'Y-m-d' }}"
+                       max="{{ today|date:'Y-m-d' }}"
+                       required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <!-- Status -->
+            <div>
+                <label for="inspection_status" class="block text-sm font-medium text-gray-700 mb-1">
+                    Status *
+                </label>
+                <select id="inspection_status"
+                        name="status"
+                        required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Status wählen --</option>
+                    <option value="passed">✅ Bestanden</option>
+                    <option value="passed_defects">⚠️ Bestanden mit Mängeln</option>
+                    <option value="failed">❌ Nicht bestanden</option>
+                    <option value="in_progress">🔄 In Bearbeitung</option>
+                    <option value="scheduled">📅 Geplant</option>
+                </select>
+            </div>
+
+            <!-- Next Inspection Date -->
+            <div id="next-inspection-field">
+                <label for="next_inspection_date" class="block text-sm font-medium text-gray-700 mb-1">
+                    Nächste Prüfung
+                </label>
+                <input type="date"
+                       id="next_inspection_date"
+                       name="next_inspection_date"
+                       min="{{ today|date:'Y-m-d' }}"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <!-- Organization -->
+            <div>
+                <label for="organization" class="block text-sm font-medium text-gray-700 mb-1">
+                    Prüforganisation
+                </label>
+                <input type="text"
+                       id="organization"
+                       name="organization"
+                       placeholder="z.B. TÜV Süd, DEKRA..."
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            <!-- Cost -->
+            <div>
+                <label for="cost" class="block text-sm font-medium text-gray-700 mb-1">
+                    Kosten (€)
+                </label>
+                <input type="number"
+                       id="cost"
+                       name="cost"
+                       step="0.01"
+                       min="0"
+                       placeholder="0.00"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+        </div>
+
+        <!-- Mileage -->
+        <div>
+            <label for="mileage" class="block text-sm font-medium text-gray-700 mb-1">
+                Kilometerstand
+            </label>
+            <input type="number"
+                   id="mileage"
+                   name="mileage"
+                   step="0.1"
+                   min="0"
+                   value="{{ vehicle.current_mileage|default:'' }}"
+                   placeholder="z.B. 15234"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <!-- Findings -->
+        <div>
+            <label for="findings" class="block text-sm font-medium text-gray-700 mb-1">
+                Feststellungen / Bemerkungen
+            </label>
+            <textarea id="findings"
+                      name="findings"
+                      rows="3"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Kurze Beschreibung der Prüfung und Feststellungen..."></textarea>
+        </div>
+
+        <!-- Defects (conditional) -->
+        <div id="defects-field" class="hidden">
+            <label for="defects" class="block text-sm font-medium text-gray-700 mb-1">
+                Mängel <span class="text-red-600">*</span>
+            </label>
+            <textarea id="defects"
+                      name="defects"
+                      rows="3"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Detaillierte Beschreibung der festgestellten Mängel..."></textarea>
+            <p class="mt-1 text-xs text-red-600">
+                Bei Mängeln müssen diese dokumentiert werden
+            </p>
+        </div>
+
+        <!-- Repairs Needed Checkbox -->
+        <div id="repairs-checkbox" class="hidden">
+            <label class="flex items-center gap-2">
+                <input type="checkbox" id="repairs_needed" name="repairs_needed" class="rounded border-gray-300">
+                <span class="text-sm text-gray-700">🔧 Reparaturen erforderlich</span>
+            </label>
+        </div>
+
+        <div class="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="submit"
+                    class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                💾 Prüfung speichern
+            </button>
+            <a href="{% url 'vehicles:inspection_create' vehicle.pk %}"
+               class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium">
+                📝 Vollständiges Formular
+            </a>
+            <button type="button"
+                    onclick="closeModal()"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">
+                Abbrechen
+            </button>
+        </div>
+    </form>
+    </div><!-- End white background modal -->
+</div><!-- End modal-backdrop -->
+
+<script>
+function closeModal() {
+    document.getElementById('modal-backdrop').remove();
+}
+
+// Show/hide defects field based on status
+document.getElementById('inspection_status').addEventListener('change', function() {
+    const status = this.value;
+    const defectsField = document.getElementById('defects-field');
+    const repairsCheckbox = document.getElementById('repairs-checkbox');
+    const nextInspectionField = document.getElementById('next-inspection-field');
+    const defectsTextarea = document.getElementById('defects');
+
+    if (status === 'passed_defects' || status === 'failed') {
+        defectsField.classList.remove('hidden');
+        repairsCheckbox.classList.remove('hidden');
+        defectsTextarea.required = true;
+    } else {
+        defectsField.classList.add('hidden');
+        repairsCheckbox.classList.add('hidden');
+        defectsTextarea.required = false;
+    }
+
+    // Show next inspection date only for passed statuses
+    if (status === 'passed' || status === 'passed_defects') {
+        nextInspectionField.classList.remove('hidden');
+    } else {
+        nextInspectionField.classList.add('hidden');
+    }
+});
+
+// Auto-calculate next inspection date based on type
+document.getElementById('inspection_type').addEventListener('change', function() {
+    const type = this.value;
+    const inspectionDate = document.getElementById('inspection_date').value;
+    const nextInspectionField = document.getElementById('next_inspection_date');
+
+    if (!inspectionDate) return;
+
+    const date = new Date(inspectionDate);
+
+    // Add months based on inspection type
+    if (type === 'hu') {
+        date.setMonth(date.getMonth() + 24); // HU alle 2 Jahre
+    } else if (type === 'uvv') {
+        date.setMonth(date.getMonth() + 12); // UVV jährlich
+    } else if (type === 'maintenance') {
+        date.setMonth(date.getMonth() + 6); // Wartung halbjährlich
+    } else if (type === 'emission_test') {
+        date.setMonth(date.getMonth() + 24); // AU alle 2 Jahre
+    }
+
+    // Format date as YYYY-MM-DD
+    if (type === 'hu' || type === 'uvv' || type === 'maintenance' || type === 'emission_test') {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        nextInspectionField.value = `${year}-${month}-${day}`;
+    }
+});
+
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeModal();
+    }
+});
+</script>

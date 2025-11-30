@@ -1,0 +1,22 @@
+<!-- Widget Display Template -->
+<div class="widget-card h-full" style="{% if widget.config.background_color %}background-color: {{ widget.config.background_color }};{% endif %} {% if widget.config.text_color %}color: {{ widget.config.text_color }};{% endif %}">
+    {% if widget.widget_type == 'clock' %}
+        {% include 'info_monitors/widgets/clock.html' with widget=widget %}
+    {% elif widget.widget_type == 'text' %}
+        {% include 'info_monitors/widgets/text.html' with widget=widget %}
+    {% elif widget.widget_type == 'pdf' %}
+        {% include 'info_monitors/widgets/pdf.html' with widget=widget %}
+    {% elif widget.widget_type == 'announcements' %}
+        {% include 'info_monitors/widgets/announcements.html' with widget=widget %}
+    {% elif widget.widget_type == 'events' %}
+        {% include 'info_monitors/widgets/events.html' with widget=widget %}
+    {% elif widget.widget_type == 'kpi' %}
+        {% include 'info_monitors/widgets/kpi.html' with widget=widget %}
+    {% elif widget.widget_type == 'chart' %}
+        {% include 'info_monitors/widgets/chart.html' with widget=widget %}
+    {% elif widget.widget_type == 'weather' %}
+        {% include 'info_monitors/widgets/weather.html' with widget=widget %}
+    {% else %}
+        {% include 'info_monitors/widgets/default.html' with widget=widget %}
+    {% endif %}
+</div>

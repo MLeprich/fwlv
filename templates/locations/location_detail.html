@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ location.name }} - Lagerorte - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex items-center justify-between">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'locations:list' %}" class="text-gray-500 hover:text-gray-700">Lagerorte</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{{ location.name }}</span>
+            </li>
+        </ol>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'locations:update' location.pk %}" class="px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded text-sm font-medium">
+                ✏️ Bearbeiten
+            </a>
+            <a href="{% url 'locations:delete' location.pk %}" class="px-3 py-1.5 text-red-700 hover:bg-red-50 rounded text-sm font-medium">
+                🗑️ Löschen
+            </a>
+        </div>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <div class="flex gap-6">
+        <!-- Main Content (70%) -->
+        <div class="flex-1">
+
+            <!-- Header Card -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start gap-4">
+                        <span class="text-5xl">
+                            {% if location.location_type == 'site' %}🏛️
+                            {% elif location.location_type == 'building' %}🏢
+                            {% elif location.location_type == 'area' %}🌳
+                            {% elif location.location_type == 'room' %}🚪
+                            {% elif location.location_type == 'parking_spot' %}🅿️
+                            {% elif location.location_type == 'rack' %}📚
+                            {% elif location.location_type == 'cabinet' %}🗄️
+                            {% elif location.location_type == 'shelf' %}📋
+                            {% elif location.location_type == 'drawer' %}📥
+                            {% elif location.location_type == 'box' %}📦
+                            {% elif location.location_type == 'vehicle' %}🚗
+                            {% elif location.location_type == 'container' %}📦
+                            {% else %}📍
+                            {% endif %}
+                        </span>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ location.name }}</h1>
+                            <div class="flex items-center gap-3 mb-3">
+                                <span class="text-sm text-gray-600 font-mono bg-gray-100 px-3 py-1 rounded">
+                                    {{ location.code }}
+                                </span>
+                                <span class="text-sm text-gray-600">
+                                    {{ location.get_location_type_display }}
+                                </span>
+                            </div>
+                            {% if location.description %}
+                            <p class="text-sm text-gray-700">{{ location.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hierarchy Path -->
+            {% if location.get_ancestors %}
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg mb-6">
+                <h3 class="text-blue-900 font-semibold text-sm mb-2">📍 Hierarchie</h3>
+                <p class="text-blue-800 text-sm">{{ location.get_full_path }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Tabs -->
+            <div class="bg-white rounded-lg shadow" x-data="{ activeTab: 'info' }">
+                <nav class="flex -mb-px overflow-x-auto border-b border-gray-200">
+                    <button
+                        @click="activeTab = 'info'"
+                        :class="activeTab === 'info' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="flex-shrink-0 px-6 py-3 text-sm font-medium border-b-2 transition-colors"
+                    >
+                        📋 Basis-Info
+                    </button>
+                    <button
+                        @click="activeTab = 'children'"
+                        :class="activeTab === 'children' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="flex-shrink-0 px-6 py-3 text-sm font-medium border-b-2 transition-colors"
+                    >
+                        🗂️ Unter-Lagerorte ({{ children.count }})
+                    </button>
+                    <button
+                        @click="activeTab = 'items'"
+                        :class="activeTab === 'items' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="flex-shrink-0 px-6 py-3 text-sm font-medium border-b-2 transition-colors"
+                    >
+                        📦 Artikel (0)
+                    </button>
+                    <button
+                        @click="activeTab = 'access'"
+                        :class="activeTab === 'access' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="flex-shrink-0 px-6 py-3 text-sm font-medium border-b-2 transition-colors"
+                    >
+                        🔐 Zugang
+                    </button>
+                </nav>
+
+                <!-- Tab Content -->
+                <div class="p-6">
+                    <!-- Basis-Info Tab -->
+                    <div x-show="activeTab === 'info'">
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Code</p>
+                                <p class="text-sm font-medium text-gray-900">{{ location.code }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Typ</p>
+                                <p class="text-sm font-medium text-gray-900">{{ location.get_location_type_display }}</p>
+                            </div>
+
+                            {% if location.capacity %}
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Kapazität</p>
+                                <p class="text-sm font-medium text-gray-900">{{ location.capacity }} {{ location.capacity_unit }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if location.climate_controlled %}
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Klimatisierung</p>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                                        ❄️ Klimatisiert
+                                    </span>
+                                    {% if location.temperature_min and location.temperature_max %}
+                                    <span class="text-sm text-gray-600">
+                                        {{ location.temperature_min }}°C - {{ location.temperature_max }}°C
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if location.get_address %}
+                            <div class="col-span-2">
+                                <p class="text-xs text-gray-500 mb-1">Adresse</p>
+                                <p class="text-sm font-medium text-gray-900">{{ location.get_address }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if location.notes %}
+                            <div class="col-span-2">
+                                <p class="text-xs text-gray-500 mb-1">Notizen</p>
+                                <p class="text-sm text-gray-700">{{ location.notes }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Children Tab -->
+                    <div x-show="activeTab === 'children'">
+                        {% if children %}
+                        <div class="space-y-3">
+                            {% for child in children %}
+                            <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-2xl">
+                                        {% if child.location_type == 'site' %}🏛️
+                                        {% elif child.location_type == 'building' %}🏢
+                                        {% elif child.location_type == 'area' %}🌳
+                                        {% elif child.location_type == 'room' %}🚪
+                                        {% elif child.location_type == 'parking_spot' %}🅿️
+                                        {% elif child.location_type == 'rack' %}📚
+                                        {% elif child.location_type == 'cabinet' %}🗄️
+                                        {% elif child.location_type == 'shelf' %}📋
+                                        {% elif child.location_type == 'drawer' %}📥
+                                        {% elif child.location_type == 'box' %}📦
+                                        {% elif child.location_type == 'vehicle' %}🚗
+                                        {% elif child.location_type == 'container' %}📦
+                                        {% else %}📍
+                                        {% endif %}
+                                    </span>
+                                    <div>
+                                        <a href="{% url 'locations:detail' child.pk %}" class="font-medium text-gray-900 hover:text-blue-600">
+                                            {{ child.name }}
+                                        </a>
+                                        <p class="text-xs text-gray-500">{{ child.code }} • {{ child.get_location_type_display }}</p>
+                                    </div>
+                                </div>
+                                <a href="{% url 'locations:detail' child.pk %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    Details →
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-12">
+                            <div class="text-4xl mb-4">🗂️</div>
+                            <p class="text-gray-600">Keine Unter-Lagerorte vorhanden</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Items Tab -->
+                    <div x-show="activeTab === 'items'">
+                        <div class="text-center py-12">
+                            <div class="text-4xl mb-4">📦</div>
+                            <p class="text-gray-600">Keine Artikel an diesem Lagerort</p>
+                        </div>
+                    </div>
+
+                    <!-- Access Tab -->
+                    <div x-show="activeTab === 'access'">
+                        <div class="space-y-4">
+                            {% if location.access_restricted %}
+                            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                                <p class="text-red-900 font-semibold mb-2">🔒 Zugriff beschränkt</p>
+                                {% if location.access_instructions %}
+                                <p class="text-red-800 text-sm">{{ location.access_instructions }}</p>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
+                                <p class="text-green-900 font-semibold">✅ Freier Zugang</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sidebar (30%) -->
+        <aside class="w-80 flex-shrink-0">
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 class="font-semibold text-gray-900 mb-4">Aktionen</h3>
+                <div class="space-y-2">
+                    <a href="{% url 'locations:create' %}?parent={{ location.pk }}" class="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium text-center">
+                        ➕ Unter-Lagerort anlegen
+                    </a>
+                    <a href="{% url 'locations:update' location.pk %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium text-center">
+                        ✏️ Bearbeiten
+                    </a>
+                    <button class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                        🏷️ QR-Code generieren
+                    </button>
+                </div>
+            </div>
+
+            <!-- QR Code -->
+            {% if location.qr_code %}
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 class="font-semibold text-gray-900 mb-4">QR-Code</h3>
+                <div class="bg-gray-100 p-4 rounded-lg text-center">
+                    <img src="{{ location.qr_code.url }}" alt="QR Code" class="mx-auto">
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Info Box -->
+            <div class="bg-gray-50 rounded-lg p-6">
+                <h3 class="font-semibold text-gray-900 mb-4">Informationen</h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <p class="text-gray-500">Erstellt</p>
+                        <p class="text-gray-900">{{ location.created_at|date:"d.m.Y H:i" }}</p>
+                        <p class="text-xs text-gray-500">von {{ location.created_by.get_full_name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Aktualisiert</p>
+                        <p class="text-gray-900">{{ location.updated_at|date:"d.m.Y H:i" }}</p>
+                        <p class="text-xs text-gray-500">von {{ location.updated_by.get_full_name }}</p>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+    </div>
+
+</div>
+{% endblock %}

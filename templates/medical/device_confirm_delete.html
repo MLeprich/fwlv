@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gerät außer Betrieb nehmen - Rettungsdienst - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'medical:device_list' %}" class="text-gray-500 hover:text-gray-700">Geräte-Instanzen</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'medical:device_detail' object.pk %}" class="text-gray-500 hover:text-gray-700">{{ object.inventory_number }}</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Außer Betrieb nehmen</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-start gap-4 mb-6">
+            <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <span class="text-2xl">⚠️</span>
+                </div>
+            </div>
+            <div class="flex-1">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">Gerät außer Betrieb nehmen?</h1>
+                <p class="text-gray-600">
+                    Möchten Sie das Gerät mit der Inventarnummer <strong>{{ object.inventory_number }}</strong> wirklich außer Betrieb nehmen?
+                </p>
+            </div>
+        </div>
+
+        <!-- Details -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">Details zum Gerät</h3>
+            <dl class="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                    <dt class="text-gray-500">Inventarnummer</dt>
+                    <dd class="text-gray-900 font-mono font-semibold">{{ object.inventory_number }}</dd>
+                </div>
+                <div>
+                    <dt class="text-gray-500">Stammdaten</dt>
+                    <dd class="text-gray-900">{{ object.master.name }}</dd>
+                </div>
+                {% if object.serial_number %}
+                <div>
+                    <dt class="text-gray-500">Seriennummer</dt>
+                    <dd class="text-gray-900 font-mono">{{ object.serial_number }}</dd>
+                </div>
+                {% endif %}
+                {% if object.location %}
+                <div>
+                    <dt class="text-gray-500">Lagerort</dt>
+                    <dd class="text-gray-900">{{ object.location.name }}</dd>
+                </div>
+                {% endif %}
+                {% if object.condition %}
+                <div>
+                    <dt class="text-gray-500">Zustand</dt>
+                    <dd class="text-gray-900">{{ object.get_condition_display }}</dd>
+                </div>
+                {% endif %}
+                <div>
+                    <dt class="text-gray-500">Status</dt>
+                    <dd class="text-gray-900">
+                        {% if object.is_operational %}Einsatzbereit{% else %}Nicht einsatzbereit{% endif %}
+                    </dd>
+                </div>
+            </dl>
+        </div>
+
+        <!-- Info Box -->
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <span class="text-blue-600">ℹ️</span>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">Hinweis</h3>
+                    <div class="mt-2 text-sm text-blue-700">
+                        <p>Das Gerät wird nicht physisch gelöscht, sondern als "außer Betrieb genommen" markiert. Die Historie bleibt erhalten und kann bei Bedarf wiederhergestellt werden.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bestätigungsformular -->
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Grund für Außerbetriebnahme (optional) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Grund für Außerbetriebnahme (optional)</label>
+                <textarea
+                    name="decommission_reason"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="z.B. Defekt, Verschleiß, Ersatzbeschaffung..."
+                ></textarea>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p class="text-sm text-amber-800 font-medium">
+                    Bitte bestätigen Sie, dass Sie dieses Gerät außer Betrieb nehmen möchten.
+                </p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'medical:device_detail' object.pk %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                    🗑️ Außer Betrieb nehmen
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

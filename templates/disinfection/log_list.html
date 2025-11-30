@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Desinfektionsprotokolle - Desinfektion - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'disinfection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Desinfektion</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Protokolle</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6">
+    <!-- Context Actions Bar (Sticky) -->
+    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'disinfection:log_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    ➕ Neue Desinfektion protokollieren
+                </a>
+                <a href="{% url 'disinfection:dashboard' %}" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                    📋 Dashboard
+                </a>
+                <a href="{% url 'disinfection:calendar' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                    📅 Kalender
+                </a>
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                        📤 Export
+                    </button>
+                    <div x-show="open" @click.away="open = false" x-cloak class="absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            📊 Excel (.xlsx)
+                        </a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            📄 PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-6 mt-6">
+    <div class="flex gap-6">
+
+        <!-- Filter-Sidebar -->
+        <aside class="w-64 flex-shrink-0">
+            <div class="bg-white rounded-lg shadow p-6 sticky top-28">
+                <h3 class="text-sm font-bold text-gray-900 mb-4">Filter</h3>
+
+                <form method="get" class="space-y-6">
+                    <!-- Fahrzeug -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Fahrzeug</label>
+                        <select name="vehicle" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">Alle Fahrzeuge</option>
+                            {% for vehicle in vehicles %}
+                            <option value="{{ vehicle.id }}" {% if vehicle_filter == vehicle.id|stringformat:"s" %}selected{% endif %}>
+                                {{ vehicle.call_sign|default:vehicle.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Zeitraum Von -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Von Datum</label>
+                        <input
+                            type="date"
+                            name="date_from"
+                            value="{{ date_from }}"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <!-- Zeitraum Bis -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">Bis Datum</label>
+                        <input
+                            type="date"
+                            name="date_to"
+                            value="{{ date_to }}"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="pt-4 border-t border-gray-200 space-y-2">
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                            Filter anwenden
+                        </button>
+                        <a href="{% url 'disinfection:log_list' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                            Zurücksetzen
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="flex-1 min-w-0">
+
+            <!-- Toolbar -->
+            <div class="bg-white rounded-t-lg border border-gray-200 px-6 py-3 flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    <span class="font-semibold text-gray-900">{{ logs.count }}</span> Desinfektionsprotokolle gefunden
+                </div>
+            </div>
+
+            <!-- Protokolle Liste -->
+            <div class="bg-white border-x border-b border-gray-200 rounded-b-lg overflow-hidden">
+                {% if logs %}
+                <div class="divide-y divide-gray-200">
+                    {% for log in logs %}
+                    <div class="p-6 hover:bg-gray-50 transition-colors">
+                        <div class="flex items-start gap-4">
+                            <!-- Icon -->
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">🧼</span>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between mb-2">
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">{{ log.object_description }}</h3>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold">
+                                                {{ log.get_method_display }}
+                                            </span>
+                                            <span class="px-2 py-0.5 bg-gray-100 text-gray-800 text-xs rounded-full font-semibold">
+                                                {{ log.object_type }}
+                                            </span>
+                                            {% if log.vehicle %}
+                                            <span class="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full font-semibold">
+                                                {{ log.vehicle.call_sign|default:log.vehicle.name }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <span class="text-green-600 text-2xl">✅</span>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4 text-sm mt-3">
+                                    <div>
+                                        <span class="text-gray-500">Datum:</span>
+                                        <span class="font-medium text-gray-900">{{ log.disinfection_date|date:"d.m.Y H:i" }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">Durchgeführt von:</span>
+                                        <span class="font-medium text-gray-900">{{ log.performed_by.get_full_name }}</span>
+                                    </div>
+                                    {% if log.disinfection_item %}
+                                    <div>
+                                        <span class="text-gray-500">Desinfektionsmittel:</span>
+                                        <span class="font-medium text-gray-900">{{ log.disinfection_item.name }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if log.contact_time_minutes %}
+                                    <div>
+                                        <span class="text-gray-500">Einwirkzeit:</span>
+                                        <span class="font-medium text-gray-900">{{ log.contact_time_minutes }} Min.</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                {% if log.protocol %}
+                                <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+                                    <p class="text-sm text-gray-700">{{ log.protocol }}</p>
+                                </div>
+                                {% endif %}
+
+                                {% if log.reason %}
+                                <div class="mt-2">
+                                    <span class="text-xs text-gray-500">Grund: </span>
+                                    <span class="text-xs text-gray-700">{{ log.reason }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-12 text-gray-500">
+                    <span class="text-6xl block mb-4">📝</span>
+                    <p class="text-lg font-medium text-gray-900 mb-2">Keine Protokolle gefunden</p>
+                    <p class="text-sm">Versuchen Sie, Ihre Filter anzupassen oder ein neues Protokoll zu erstellen.</p>
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}

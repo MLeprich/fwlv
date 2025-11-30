@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Hersteller bearbeiten{% else %}Neuer Hersteller{% endif %} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'vehicles:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugverwaltung</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'vehicles:manufacturer_list' %}" class="text-gray-500 hover:text-gray-700">Hersteller</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neu{% endif %}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-8">
+
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">
+            {% if object %}
+                🏭 Hersteller bearbeiten
+            {% else %}
+                🏭 Neuer Hersteller
+            {% endif %}
+        </h1>
+        <p class="mt-2 text-sm text-gray-600">
+            Pflegen Sie die Stammdaten der Fahrzeughersteller.
+        </p>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-lg shadow-md p-8">
+        <form method="post" class="space-y-8">
+            {% csrf_token %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📝 Basis-Informationen</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Name -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Name *
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">
+                            Offizieller Name des Herstellers (z.B. "Mercedes-Benz", "Rosenbauer")
+                        </p>
+                    </div>
+
+                    <!-- Land -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Land
+                        </label>
+                        {{ form.country }}
+                        {% if form.country.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.country.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">
+                            Hauptsitz des Herstellers (z.B. "Deutschland", "Österreich")
+                        </p>
+                    </div>
+
+                    <!-- Website -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Website
+                        </label>
+                        {{ form.website }}
+                        {% if form.website.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.website.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">
+                            Vollständige URL zur Website (z.B. "https://www.beispiel.de")
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ansprechpartner -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">👤 Ansprechpartner</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Ansprechpartner Name -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Name
+                        </label>
+                        {{ form.contact_person }}
+                        {% if form.contact_person.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.contact_person.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">
+                            Vor- und Nachname des Ansprechpartners
+                        </p>
+                    </div>
+
+                    <!-- E-Mail -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            E-Mail
+                        </label>
+                        {{ form.contact_email }}
+                        {% if form.contact_email.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.contact_email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Telefon -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Telefon
+                        </label>
+                        {{ form.contact_phone }}
+                        {% if form.contact_phone.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.contact_phone.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Mobiltelefon -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Mobiltelefon
+                        </label>
+                        {{ form.contact_mobile }}
+                        {% if form.contact_mobile.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.contact_mobile.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Adresse -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📍 Adresse</h2>
+
+                <div class="space-y-6">
+                    <!-- Straße -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Straße und Hausnummer
+                        </label>
+                        {{ form.address_street }}
+                        {% if form.address_street.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.address_street.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- PLZ und Ort -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                PLZ
+                            </label>
+                            {{ form.address_postal_code }}
+                            {% if form.address_postal_code.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.address_postal_code.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Ort
+                            </label>
+                            {{ form.address_city }}
+                            {% if form.address_city.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.address_city.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service & Support -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔧 Service & Support</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Support Hotline -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Support-Hotline
+                        </label>
+                        {{ form.support_hotline }}
+                        {% if form.support_hotline.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.support_hotline.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">
+                            Technischer Support / Notfall-Hotline
+                        </p>
+                    </div>
+
+                    <!-- Ersatzteil-Abteilung -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Ersatzteil-Abteilung
+                        </label>
+                        {{ form.parts_department_phone }}
+                        {% if form.parts_department_phone.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.parts_department_phone.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">
+                            Telefonnummer für Ersatzteilbestellungen
+                        </p>
+                    </div>
+
+                    <!-- Service E-Mail -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Service-E-Mail
+                        </label>
+                        {{ form.service_email }}
+                        {% if form.service_email.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.service_email.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">
+                            E-Mail-Adresse für Serviceanfragen
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">⚙️ Status</h2>
+
+                <div>
+                    <label class="flex items-center">
+                        {{ form.is_active }}
+                        <span class="ml-2 text-sm text-gray-700">Hersteller ist aktiv</span>
+                    </label>
+                    {% if form.is_active.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-2 text-xs text-gray-500">
+                        Nur aktive Hersteller werden in Auswahlfeldern angezeigt.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Notizen -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📋 Notizen</h2>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Interne Notizen
+                    </label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        Zusätzliche Informationen zum Hersteller (nur intern sichtbar)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% url 'vehicles:manufacturer_list' %}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    {% if object %}
+                        💾 Änderungen speichern
+                    {% else %}
+                        ➕ Hersteller anlegen
+                    {% endif %}
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+<style>
+    /* Form Field Styles */
+    input[type="text"],
+    input[type="url"],
+    textarea {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    input[type="text"]:focus,
+    input[type="url"]:focus,
+    textarea:focus {
+        outline: none;
+        ring: 2px;
+        ring-color: #3B82F6;
+        border-color: #3B82F6;
+    }
+
+    textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    input[type="checkbox"] {
+        width: 1rem;
+        height: 1rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.25rem;
+        color: #3B82F6;
+    }
+</style>
+{% endblock %}

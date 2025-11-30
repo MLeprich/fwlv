@@ -1,0 +1,111 @@
+{% comment %}
+KPI Card Component
+
+Parameters:
+- title: Card title (required)
+- value: Main value to display (required)
+- icon: Emoji icon (optional)
+- color: red, yellow, orange, blue, green, purple, gray (default: primary)
+- subtitle: Additional info below value (optional)
+- trend_value: Trend percentage (optional)
+- trend_direction: up, down (optional)
+- progress_current: Current progress value (optional)
+- progress_total: Total progress value (optional)
+- url: Link URL (optional)
+- link_text: Link text (optional, default: "Details →")
+{% endcomment %}
+
+{% with color_classes=color|default:"primary" %}
+
+<div class="bg-white rounded-lg shadow-sm border-l-4
+    {% if color_classes == 'red' %}border-red-500
+    {% elif color_classes == 'yellow' %}border-yellow-500
+    {% elif color_classes == 'orange' %}border-orange-500
+    {% elif color_classes == 'blue' %}border-blue-500
+    {% elif color_classes == 'green' %}border-green-500
+    {% elif color_classes == 'purple' %}border-purple-500
+    {% elif color_classes == 'gray' %}border-gray-500
+    {% else %}border-primary-500{% endif %}
+    hover:shadow-md transition-shadow p-5">
+
+    <div class="flex items-start justify-between mb-3">
+        <div class="flex-1">
+            <p class="text-sm font-medium text-gray-600 mb-1">{{ title }}</p>
+            <div class="flex items-baseline gap-2">
+                <p class="text-3xl font-bold
+                    {% if color_classes == 'red' %}text-red-600
+                    {% elif color_classes == 'yellow' %}text-yellow-600
+                    {% elif color_classes == 'orange' %}text-orange-600
+                    {% elif color_classes == 'blue' %}text-blue-600
+                    {% elif color_classes == 'green' %}text-green-600
+                    {% elif color_classes == 'purple' %}text-purple-600
+                    {% elif color_classes == 'gray' %}text-gray-600
+                    {% else %}text-primary-600{% endif %}">
+                    {{ value|default:"0" }}
+                </p>
+
+                {% if trend_value %}
+                <span class="text-sm font-medium
+                    {% if trend_direction == 'up' %}text-green-600
+                    {% elif trend_direction == 'down' %}text-red-600
+                    {% else %}text-gray-500{% endif %}">
+                    {% if trend_direction == 'up' %}↗{% elif trend_direction == 'down' %}↘{% endif %}
+                    {{ trend_value }}%
+                </span>
+                {% endif %}
+            </div>
+
+            {% if subtitle %}
+            <p class="text-sm text-gray-500 mt-1">{{ subtitle }}</p>
+            {% endif %}
+        </div>
+
+        {% if icon %}
+        <div class="text-4xl opacity-80">{{ icon }}</div>
+        {% endif %}
+    </div>
+
+    {% if progress_current and progress_total %}
+    <!-- Progress Bar -->
+    <div class="mt-3 mb-3">
+        <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+            <span>{{ progress_current }} / {{ progress_total }}</span>
+            <span>{% widthratio progress_current progress_total 100 %}%</span>
+        </div>
+        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            {% widthratio progress_current progress_total 100 as progress_percent %}
+            <div class="h-full
+                {% if color_classes == 'red' %}bg-red-500
+                {% elif color_classes == 'yellow' %}bg-yellow-500
+                {% elif color_classes == 'orange' %}bg-orange-500
+                {% elif color_classes == 'blue' %}bg-blue-500
+                {% elif color_classes == 'green' %}bg-green-500
+                {% elif color_classes == 'purple' %}bg-purple-500
+                {% elif color_classes == 'gray' %}bg-gray-500
+                {% else %}bg-primary-500{% endif %}
+                transition-all duration-300"
+                style="width: {{ progress_percent }}%">
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if url and url != "#" %}
+    <a href="{{ url }}" class="text-sm
+        {% if color_classes == 'red' %}text-red-600 hover:text-red-700
+        {% elif color_classes == 'yellow' %}text-yellow-600 hover:text-yellow-700
+        {% elif color_classes == 'orange' %}text-orange-600 hover:text-orange-700
+        {% elif color_classes == 'blue' %}text-blue-600 hover:text-blue-700
+        {% elif color_classes == 'green' %}text-green-600 hover:text-green-700
+        {% elif color_classes == 'purple' %}text-purple-600 hover:text-purple-700
+        {% elif color_classes == 'gray' %}text-gray-600 hover:text-gray-700
+        {% else %}text-primary-600 hover:text-primary-700{% endif %}
+        font-medium inline-flex items-center gap-1">
+        {{ link_text|default:"Details →" }}
+    </a>
+    {% elif url == "#" %}
+    <span class="text-sm text-gray-400 font-medium">{{ link_text|default:"Bald verfügbar" }}</span>
+    {% endif %}
+</div>
+
+{% endwith %}

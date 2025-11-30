@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reports & KPIs - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Reports & KPIs</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">📊</span>
+                    <h1 class="text-3xl font-bold">Reports & KPIs</h1>
+                </div>
+                <p class="text-indigo-100 text-lg">
+                    Übersicht aller wichtigen Kennzahlen und Berichte
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hauptkennzahlen -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Gesamt Inventar -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Inventarartikel gesamt</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_inventory_items }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <span class="text-3xl">📦</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Niedrige Bestände -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Niedrige Bestände</p>
+                    <p class="text-3xl font-bold text-orange-600 mt-2">{{ total_low_stock_items }}</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <span class="text-3xl">⚠️</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ablaufende Artikel -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Ablaufend (90 Tage)</p>
+                    <p class="text-3xl font-bold text-red-600 mt-2">{{ total_expiring_items }}</p>
+                </div>
+                <div class="bg-red-100 rounded-full p-3">
+                    <span class="text-3xl">⏰</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fahrzeuge -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Einsatzbereit</p>
+                    <p class="text-3xl font-bold text-green-600 mt-2">{{ vehicles_operational_percentage }}%</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ vehicles_operational }} von {{ vehicles_total }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <span class="text-3xl">🚒</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modulübersicht -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Lagermodule -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>📦</span>
+                    <span>Lagermodule</span>
+                </h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <!-- Kleiderkammer -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">👔</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">Kleiderkammer</p>
+                            <p class="text-sm text-gray-600">{{ clothing_total }} Artikel</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        {% if clothing_low_stock > 0 %}
+                        <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded">{{ clothing_low_stock }} niedrig</span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">OK</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Magazin -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">📋</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">Magazin</p>
+                            <p class="text-sm text-gray-600">{{ magazine_total }} Artikel</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        {% if magazine_low_stock > 0 %}
+                        <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded">{{ magazine_low_stock }} niedrig</span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">OK</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Medizin -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">💊</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">Medizin</p>
+                            <p class="text-sm text-gray-600">{{ medication_total }} Medikamente, {{ medical_equipment_total }} Geräte</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        {% if expiring_medications > 0 %}
+                        <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded">{{ expiring_medications }} ablaufend</span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">OK</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Ausrüstung -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🎒</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">Ausrüstung</p>
+                            <p class="text-sm text-gray-600">{{ equipment_total }} Artikel</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">OK</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Betrieb & Personal -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>🚒</span>
+                    <span>Betrieb & Personal</span>
+                </h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <!-- Fahrzeuge -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🚒</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">Fahrzeuge</p>
+                            <p class="text-sm text-gray-600">{{ vehicles_total }} gesamt</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="flex flex-col gap-1">
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">{{ vehicles_operational }} einsatzbereit</span>
+                            {% if vehicles_maintenance > 0 %}
+                            <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded">{{ vehicles_maintenance }} Wartung</span>
+                            {% endif %}
+                            {% if vehicles_inspection_due > 0 %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded">{{ vehicles_inspection_due }} HU fällig</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personal -->
+                <a href="{% url 'reporting:personnel_report' %}" class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-purple-300 transition-all">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">👥</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">Personal</p>
+                            <p class="text-sm text-gray-600">{{ personnel_total }} Personen</p>
+                        </div>
+                    </div>
+                    <div class="text-right flex flex-col gap-1 items-end">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">{{ qualifications_total }} Qualifikationen</span>
+                        <span class="text-xs text-purple-600 font-medium">Details →</span>
+                    </div>
+                </a>
+
+                <!-- Qualifikationen -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">📜</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">Qualifikationen</p>
+                            <p class="text-sm text-gray-600">Ablaufüberwachung</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        {% if qualifications_expiring > 0 %}
+                        <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded">{{ qualifications_expiring }} ablaufend</span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">OK</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Lieferanten -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🏭</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">Lieferanten</p>
+                            <p class="text-sm text-gray-600">{{ suppliers_total }} aktiv</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <a href="/organization/suppliers/" class="text-sm text-purple-600 hover:text-purple-700 font-medium">Verwalten →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hinweis-Box -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div>
+                <h3 class="font-bold text-blue-900 mb-2">Hinweis</h3>
+                <p class="text-sm text-blue-800">
+                    Diese Übersicht zeigt die wichtigsten Kennzahlen aus allen Modulen. Detaillierte Reports und
+                    Export-Funktionen werden in zukünftigen Updates hinzugefügt.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

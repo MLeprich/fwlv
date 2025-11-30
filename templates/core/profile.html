@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+
+{% block title %}Mein Profil{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">
+                    Dashboard
+                </a>
+            </li>
+            <li>
+                <span class="text-gray-400">/</span>
+            </li>
+            <li>
+                <span class="text-gray-900 font-medium">Mein Profil</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- 2-Spalten Layout: Sidebar (30%) + Content (70%) -->
+    <div class="profile-layout">
+
+        <!-- Sidebar (Sticky) -->
+        <div class="sidebar-profile">
+            <div class="bg-white rounded-lg shadow sticky top-20">
+                <div class="p-6">
+                    <!-- Avatar -->
+                    <div class="flex justify-center mb-4">
+                        <div class="relative">
+                            {% if user.profile_picture %}
+                            <img
+                                src="{{ user.profile_picture.url }}"
+                                alt="{{ user.get_full_name }}"
+                                class="w-32 h-32 rounded-full object-cover border-4 border-gray-100"
+                            />
+                            {% else %}
+                            <div class="w-32 h-32 rounded-full bg-primary-100 flex items-center justify-center border-4 border-gray-100">
+                                <span class="text-4xl text-primary-600 font-bold">
+                                    {{ user.first_name.0|default:user.username.0|upper }}{{ user.last_name.0|default:""|upper }}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            <!-- Edit Button Overlay -->
+                            <button
+                                onclick="document.getElementById('avatar-upload').click()"
+                                class="absolute bottom-0 right-0 w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors shadow-lg"
+                                title="Profilbild ändern"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            </button>
+                            <input type="file" id="avatar-upload" class="hidden" accept="image/*">
+                        </div>
+                    </div>
+
+                    <!-- Name & Position -->
+                    <div class="text-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-900">
+                            {{ user.get_full_name|default:user.username }}
+                        </h2>
+                        {% if user.position %}
+                        <p class="text-gray-600 mt-1">{{ user.position }}</p>
+                        {% endif %}
+                        {% if user.department %}
+                        <p class="text-sm text-gray-500">{{ user.department }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Badges -->
+                    <div class="flex justify-center gap-2 mb-6">
+                        {% if user.is_staff %}
+                        <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                            Admin
+                        </span>
+                        {% endif %}
+                        <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                            Aktiv
+                        </span>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="border-t border-gray-200 pt-4 space-y-4">
+                        <!-- Qualifikationen (Placeholder) -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-gray-600">Qualifikationen</span>
+                                <span class="text-sm font-semibold text-gray-900">12</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: 85%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">85% aktuell</p>
+                        </div>
+
+                        <!-- Pflichtstunden (Placeholder) -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-gray-600">Pflichtstunden</span>
+                                <span class="text-sm font-semibold text-gray-900">45/60</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-yellow-500 h-2 rounded-full" style="width: 75%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Noch 15 Std. bis 31.12.2024</p>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="border-t border-gray-200 pt-4 mt-4 space-y-2">
+                        <a
+                            href="{% url 'core:profile' %}"
+                            class="block w-full px-4 py-2 bg-primary-600 text-white text-center rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                        >
+                            ✏️ Profil bearbeiten
+                        </a>
+                        <a
+                            href="{% url 'core:password_change' %}"
+                            class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                        >
+                            🔒 Passwort ändern
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content-main">
+            <!-- Tabs -->
+            <div class="bg-white rounded-lg shadow mb-6" x-data="{ activeTab: 'overview' }">
+                <div class="border-b border-gray-200">
+                    <nav class="flex -mb-px overflow-x-auto">
+                        <button
+                            @click="activeTab = 'overview'"
+                            :class="activeTab === 'overview' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors"
+                        >
+                            Übersicht
+                        </button>
+                        <button
+                            @click="activeTab = 'data'"
+                            :class="activeTab === 'data' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors"
+                        >
+                            Persönliche Daten
+                        </button>
+                        <button
+                            @click="activeTab = 'qualifications'"
+                            :class="activeTab === 'qualifications' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors"
+                        >
+                            Qualifikationen
+                            <span class="ml-2 px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">12</span>
+                        </button>
+                        <button
+                            @click="activeTab = 'activity'"
+                            :class="activeTab === 'activity' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors"
+                        >
+                            Aktivitäten
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="p-6">
+
+                    <!-- Tab: Übersicht -->
+                    <div x-show="activeTab === 'overview'" x-cloak>
+
+                        <!-- Anstehende Aufgaben -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">⚠️ Anstehende Aufgaben</h3>
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r">
+                                <ul class="space-y-2 text-sm">
+                                    <li class="flex items-start">
+                                        <span class="text-yellow-600 mr-2">•</span>
+                                        <span>Atemschutz-Prüfung in 14 Tagen (28.03.2024)</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="text-yellow-600 mr-2">•</span>
+                                        <span>Erste-Hilfe-Kurs in 45 Tagen (15.04.2024)</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Statistiken -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Statistiken</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                                    <div class="text-3xl font-bold text-blue-700 mb-1">28</div>
+                                    <div class="text-sm text-blue-600">Qualifikationen</div>
+                                </div>
+                                <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                                    <div class="text-3xl font-bold text-green-700 mb-1">156</div>
+                                    <div class="text-sm text-green-600">Schichten 2024</div>
+                                </div>
+                                <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                                    <div class="text-3xl font-bold text-purple-700 mb-1">12</div>
+                                    <div class="text-sm text-purple-600">Schulungen 2024</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Letzte Aktivitäten (Timeline) -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">🕐 Letzte Aktivitäten</h3>
+                            <div class="relative border-l-2 border-gray-200 pl-6 space-y-6">
+                                <div class="relative">
+                                    <div class="absolute -left-8 w-4 h-4 bg-green-500 rounded-full border-4 border-white"></div>
+                                    <div class="text-sm text-gray-500 mb-1">15.03.2024</div>
+                                    <div class="font-medium text-gray-900">Atemschutz erneuert</div>
+                                    <div class="text-sm text-gray-600">Gültig bis: 15.03.2025</div>
+                                </div>
+                                <div class="relative">
+                                    <div class="absolute -left-8 w-4 h-4 bg-blue-500 rounded-full border-4 border-white"></div>
+                                    <div class="text-sm text-gray-500 mb-1">10.03.2024</div>
+                                    <div class="font-medium text-gray-900">Schulung Höhenrettung</div>
+                                    <div class="text-sm text-gray-600">8 Stunden • Trainer: Schmidt</div>
+                                </div>
+                                <div class="relative">
+                                    <div class="absolute -left-8 w-4 h-4 bg-purple-500 rounded-full border-4 border-white"></div>
+                                    <div class="text-sm text-gray-500 mb-1">01.03.2024</div>
+                                    <div class="font-medium text-gray-900">Kleidung ausgegeben</div>
+                                    <div class="text-sm text-gray-600">Einsatzjacke • Wert: 450 €</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Persönliche Daten -->
+                    <div x-show="activeTab === 'data'" x-cloak>
+
+                        <!-- Formular -->
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <!-- Basis-Informationen -->
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <span class="text-xl mr-2">📋</span>
+                                    Basis-Informationen
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            {{ form.first_name.label }}
+                                        </label>
+                                        {{ form.first_name }}
+                                        {% if form.first_name.errors %}
+                                        <p class="mt-1 text-sm text-red-600">{{ form.first_name.errors.0 }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            {{ form.last_name.label }}
+                                        </label>
+                                        {{ form.last_name }}
+                                        {% if form.last_name.errors %}
+                                        <p class="mt-1 text-sm text-red-600">{{ form.last_name.errors.0 }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            {{ form.department.label }}
+                                        </label>
+                                        {{ form.department }}
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            {{ form.position.label }}
+                                        </label>
+                                        {{ form.position }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Kontaktdaten -->
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <span class="text-xl mr-2">📞</span>
+                                    Kontaktdaten
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            {{ form.email.label }}
+                                        </label>
+                                        {{ form.email }}
+                                        {% if form.email.help_text %}
+                                        <p class="mt-1 text-sm text-gray-500">{{ form.email.help_text }}</p>
+                                        {% endif %}
+                                        {% if form.email.errors %}
+                                        <p class="mt-1 text-sm text-red-600">{{ form.email.errors.0 }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            {{ form.phone.label }}
+                                        </label>
+                                        {{ form.phone }}
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            {{ form.mobile.label }}
+                                        </label>
+                                        {{ form.mobile }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Profilbild -->
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <span class="text-xl mr-2">📸</span>
+                                    Profilbild
+                                </h3>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        {{ form.profile_picture.label }}
+                                    </label>
+                                    {{ form.profile_picture }}
+                                    {% if form.profile_picture.help_text %}
+                                    <p class="mt-1 text-sm text-gray-500">{{ form.profile_picture.help_text }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Submit Buttons -->
+                            <div class="flex justify-end gap-3">
+                                <a
+                                    href="{% url 'core:dashboard' %}"
+                                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    Abbrechen
+                                </a>
+                                <button
+                                    type="submit"
+                                    class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                                >
+                                    Änderungen speichern
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tab: Qualifikationen -->
+                    <div x-show="activeTab === 'qualifications'" x-cloak>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Qualifikationen (12)</h3>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Qualifikation Card -->
+                            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-xl">🎓</span>
+                                            <h4 class="font-semibold text-gray-900">Atemschutzgeräteträger</h4>
+                                            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                                ✅ Gültig
+                                            </span>
+                                        </div>
+                                        <div class="text-sm text-gray-600 space-y-1">
+                                            <p>Code: AGT • Unbefristet</p>
+                                            <p>Erworben: 15.03.2015</p>
+                                            <p>Zertifikat: AGT-12345</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Weitere Qualifikationen (Placeholder) -->
+                            <div class="text-center py-8 text-gray-500">
+                                <p class="text-sm">Weitere Qualifikationen werden hier angezeigt...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Aktivitäten -->
+                    <div x-show="activeTab === 'activity'" x-cloak>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Aktivitätsverlauf</h3>
+
+                        <div class="text-center py-12 text-gray-500">
+                            <span class="text-4xl mb-2 block">📋</span>
+                            <p class="text-sm">Aktivitätsverlauf wird in einer späteren Version implementiert.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
+
+{% endblock %}

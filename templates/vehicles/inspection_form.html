@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Prüfung bearbeiten{% else %}Neue Prüfung{% endif %} - Fahrzeugverwaltung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:inspection_list' %}" class="text-gray-500 hover:text-gray-700">Prüfungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neue Prüfung{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">
+            {% if object %}
+                🔍 Prüfung bearbeiten
+            {% else %}
+                🔍 Neue Prüfung anlegen
+            {% endif %}
+        </h1>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600">❌</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📋 Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Fahrzeugauswahl mit Suchfeld -->
+                    <div class="md:col-span-2" x-data="{ open: false, search: '', selected: null, vehicles: [] }" x-init="
+                        vehicles = Array.from(document.querySelectorAll('#id_vehicle option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(vehicle => vehicle.value);
+                        const currentValue = document.getElementById('id_vehicle').value;
+                        if (currentValue) {
+                            selected = vehicles.find(vehicle => vehicle.value === currentValue);
+                        }
+
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_vehicle').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.vehicle.label }} *</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.vehicle }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Fahrzeug auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="🔍 Fahrzeug suchen (Funkrufname, Kennzeichen)..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="vehicle in vehicles.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="vehicle.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = vehicle; document.getElementById('id_vehicle').value = vehicle.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === vehicle.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="vehicle.text"
+                                        ></button>
+                                    </template>
+                                    <!-- No results message -->
+                                    <div x-show="vehicles.filter(v => v.text.toLowerCase().includes(search.toLowerCase())).length === 0" class="px-4 py-8 text-center text-gray-500 text-sm">
+                                        Keine Fahrzeuge gefunden
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.vehicle.errors %}<p class="mt-1 text-sm text-red-600">{{ form.vehicle.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Wählen Sie das Fahrzeug aus, das geprüft werden soll</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.inspection_type.label }} *</label>
+                        {{ form.inspection_type }}
+                        {% if form.inspection_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.inspection_type.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Art der Prüfung (HU, UVV, Wartung, etc.)</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.status.label }} *</label>
+                        {{ form.status }}
+                        {% if form.status.errors %}<p class="mt-1 text-sm text-red-600">{{ form.status.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.inspection_date.label }} *</label>
+                        {{ form.inspection_date }}
+                        {% if form.inspection_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.inspection_date.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Datum der durchgeführten Prüfung</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.next_inspection_date.label }}</label>
+                        {{ form.next_inspection_date }}
+                        {% if form.next_inspection_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.next_inspection_date.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Datum der nächsten fälligen Prüfung</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.mileage_at_inspection.label }}</label>
+                        {{ form.mileage_at_inspection }}
+                        {% if form.mileage_at_inspection.errors %}<p class="mt-1 text-sm text-red-600">{{ form.mileage_at_inspection.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Kilometerstand bei Prüfung</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prüfer & Organisation -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">👤 Prüfer & Organisation</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.organization.label }}</label>
+                        {{ form.organization }}
+                        {% if form.organization.errors %}<p class="mt-1 text-sm text-red-600">{{ form.organization.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. TÜV Süd, DEKRA</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.inspector.label }}</label>
+                        {{ form.inspector }}
+                        {% if form.inspector.errors %}<p class="mt-1 text-sm text-red-600">{{ form.inspector.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Verantwortlicher Prüfer/Techniker</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ergebnis & Befunde -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📝 Ergebnis & Befunde</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.findings.label }}</label>
+                        {{ form.findings }}
+                        {% if form.findings.errors %}<p class="mt-1 text-sm text-red-600">{{ form.findings.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Feststellungen und Mängel</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.repairs_needed.label }}</label>
+                        {{ form.repairs_needed }}
+                        {% if form.repairs_needed.errors %}<p class="mt-1 text-sm text-red-600">{{ form.repairs_needed.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Notwendige Reparaturen</p>
+                    </div>
+
+                    <div class="flex items-center">
+                        <label class="flex items-center cursor-pointer">
+                            {{ form.repairs_completed }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.repairs_completed.label }}</span>
+                        </label>
+                        {% if form.repairs_completed.errors %}<p class="mt-1 text-sm text-red-600">{{ form.repairs_completed.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kosten & Dokumente -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">💰 Kosten & Dokumente</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.cost.label }}</label>
+                        {{ form.cost }}
+                        {% if form.cost.errors %}<p class="mt-1 text-sm text-red-600">{{ form.cost.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Kosten in EUR</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.inspection_report.label }}</label>
+                        {{ form.inspection_report }}
+                        {% if form.inspection_report.errors %}<p class="mt-1 text-sm text-red-600">{{ form.inspection_report.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Prüfbericht als PDF/Bild hochladen</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notizen -->
+            <div class="pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📄 Notizen</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>{% endif %}
+                    <p class="mt-1 text-xs text-gray-500">Zusätzliche Hinweise und Anmerkungen</p>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% url 'vehicles:inspection_list' %}"
+                   class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                    {% if object %}
+                        💾 Änderungen speichern
+                    {% else %}
+                        ➕ Prüfung anlegen
+                    {% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Flaschentyp bearbeiten{% else %}Neuer Flaschentyp{% endif %} - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'diving:type_management' %}" class="text-gray-500 hover:text-gray-700">Typenverwaltung</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neu{% endif %}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">
+            {% if object %}
+            Flaschentyp bearbeiten
+            {% else %}
+            Neuer Flaschentyp
+            {% endif %}
+        </h1>
+        <p class="text-gray-600">Definieren Sie einen neuen Typ für Tauchflaschen</p>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <!-- Name -->
+            <div>
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {{ form.name.label }} <span class="text-red-600">*</span>
+                </label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                {% endif %}
+                {% if form.name.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.name.help_text }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Code -->
+            <div>
+                <label for="{{ form.code.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {{ form.code.label }} <span class="text-red-600">*</span>
+                </label>
+                {{ form.code }}
+                {% if form.code.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.code.errors.0 }}</p>
+                {% endif %}
+                {% if form.code.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.code.help_text }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Material -->
+            <div>
+                <label for="{{ form.material.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {{ form.material.label }}
+                </label>
+                {{ form.material }}
+                {% if form.material.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.material.errors.0 }}</p>
+                {% endif %}
+                {% if form.material.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.material.help_text }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {{ form.description.label }}
+                </label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                {% endif %}
+                {% if form.description.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.description.help_text }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Sort Order -->
+            <div>
+                <label for="{{ form.sort_order.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {{ form.sort_order.label }}
+                </label>
+                {{ form.sort_order }}
+                {% if form.sort_order.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.sort_order.errors.0 }}</p>
+                {% endif %}
+                {% if form.sort_order.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.sort_order.help_text }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Is Active -->
+            <div>
+                <label class="flex items-center">
+                    {{ form.is_active }}
+                    <span class="ml-2 text-sm font-medium text-gray-700">{{ form.is_active.label }}</span>
+                </label>
+                {% if form.is_active.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% url 'diving:type_management' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                    {% if object %}Aktualisieren{% else %}Erstellen{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

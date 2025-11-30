@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Entsorgung - Medical{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Rettungsdienst</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'medical:stock_movements' %}" class="text-gray-500 hover:text-gray-700">Lagerbewegungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Entsorgung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">🗑️ Entsorgung (MHD abgelaufen/Beschädigt)</h1>
+
+        <!-- Warning für BTM -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg mb-6">
+            <div class="flex">
+                <span class="text-yellow-600">⚠️</span>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">Wichtiger Hinweis</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p><strong>BTM-Entsorgung:</strong> Bei Betäubungsmitteln wird automatisch das Vier-Augen-Prinzip aktiviert. Die Entsorgung muss von einem BTM-Beauftragten freigegeben werden.</p>
+                        <p class="mt-2"><strong>MHD abgelaufen:</strong> Bitte dokumentieren Sie das Verfallsdatum in den Chargen-Informationen.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600">❌</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Hidden Movement Type -->
+            <input type="hidden" name="movement_type" value="disposal">
+
+            <!-- Artikel & Menge -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Artikel & Menge</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.item.label }} *</label>
+                        {{ form.item }}
+                        {% if form.item.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.item.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.quantity.label }} *</label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.quantity.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.unit.label }} *</label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.unit.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chargen-Information -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Chargen-Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.batch_number.label }}</label>
+                        {{ form.batch_number }}
+                        <p class="mt-1 text-sm text-gray-500">Chargen-/Batch-/Lot-Nummer</p>
+                        {% if form.batch_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.batch_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.expiry_date.label }}</label>
+                        {{ form.expiry_date }}
+                        <p class="mt-1 text-sm text-gray-500">Insbesondere bei MHD-Ablauf wichtig</p>
+                        {% if form.expiry_date.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.expiry_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quelllagerort -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Quelllagerort</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.from_location.label }} *</label>
+                    {{ form.from_location }}
+                    <p class="mt-1 text-sm text-gray-500">Aus welchem Lagerort wird entsorgt?</p>
+                    {% if form.from_location.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.from_location.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Entsorgungsgrund & Notizen -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Entsorgungsgrund</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.reference_number.label }}</label>
+                        {{ form.reference_number }}
+                        <p class="mt-1 text-sm text-gray-500">z.B. Verfallsdatum, Schaden, Rückruf</p>
+                        {% if form.reference_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.reference_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }} *</label>
+                        {{ form.notes }}
+                        <p class="mt-1 text-sm text-gray-500"><strong>Bitte angeben:</strong> Grund der Entsorgung (MHD abgelaufen, beschädigt, kontaminiert, Rückruf, etc.)</p>
+                        {% if form.notes.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'medical:stock_movements' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                    🗑️ Entsorgung erfassen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

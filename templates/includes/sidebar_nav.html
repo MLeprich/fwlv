@@ -1,0 +1,627 @@
+<!-- templates/includes/sidebar_nav.html -->
+
+<div class="space-y-1" x-data="{
+    expandedCategories: ['inventory'],  // Default expanded
+    currentModule: '{{ current_module|default:'' }}'
+}">
+
+    <!-- Dashboard (immer sichtbar) -->
+    <a
+        href="{% url 'core:dashboard' %}"
+        class="flex items-center py-2 mx-2 rounded-lg transition-colors
+               {% if request.resolver_match.url_name == 'dashboard' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+        :class="$store.sidebar.expanded ? 'gap-3 px-3' : 'justify-center'"
+        x-tooltip="'Dashboard'"
+    >
+        <span class="text-xl flex-shrink-0">🏠</span>
+        <span
+            class="text-sm font-medium truncate transition-all duration-200"
+            x-show="$store.sidebar.expanded"
+            x-transition
+        >
+            Dashboard
+        </span>
+    </a>
+
+    <!-- Kategorie 1: Lager & Inventar -->
+    <div class="mt-4">
+        <!-- Kategorie Header - clickbar nur wenn sidebar expanded -->
+        <button
+            @click="expandedCategories.includes('inventory') ? expandedCategories = expandedCategories.filter(c => c !== 'inventory') : expandedCategories.push('inventory')"
+            class="w-full flex items-center gap-3 px-3 py-2 mx-2 text-left text-gray-600 hover:bg-gray-100 rounded-lg"
+            x-show="$store.sidebar.expanded"
+        >
+            <span class="text-xl">📦</span>
+            <span class="text-xs font-semibold uppercase tracking-wider flex-1">Lager & Inventar</span>
+            <svg
+                class="w-4 h-4 transition-transform"
+                :class="expandedCategories.includes('inventory') ? 'rotate-180' : ''"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Kategorie Icon als Button bei eingeklappter Sidebar -->
+    <button
+        x-show="!$store.sidebar.expanded"
+        @click="$store.sidebar.expanded = true; if (!expandedCategories.includes('inventory')) expandedCategories.push('inventory')"
+        class="flex items-center justify-center py-2 px-3 mx-2 rounded-lg transition-colors mt-4 hover:bg-gray-100 text-gray-700"
+        x-tooltip="'Lager & Inventar'"
+    >
+        <span class="text-xl">📦</span>
+    </button>
+
+    <div>
+
+        <!-- Kategorie-Items -->
+        <div
+            x-show="$store.sidebar.expanded && expandedCategories.includes('inventory')"
+            x-collapse
+            class="space-y-1 mt-1"
+        >
+            <!-- Rettungsdienst -->
+            {% if perms.medical.view_medication or perms.medical.view_medicalequipment %}
+            <a
+                href="{% url 'medical:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'medical' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Rettungsdienst'"
+            >
+                <span class="text-xl flex-shrink-0">💊</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Rettungsdienst
+                </span>
+                {% if critical_medications_count > 0 %}
+                <span
+                    class="ml-auto bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-semibold"
+                    x-show="$store.sidebar.expanded"
+                >
+                    {{ critical_medications_count }}
+                </span>
+                {% endif %}
+            </a>
+            {% endif %}
+
+            <!-- Kleiderkammer -->
+            {% if perms.clothing.view_clothingitem %}
+            <a
+                href="{% url 'clothing:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'clothing' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Kleiderkammer'"
+            >
+                <span class="text-xl flex-shrink-0">👕</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Kleiderkammer
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Magazin -->
+            {% if perms.magazine.view_magazineitem %}
+            <a
+                href="{% url 'magazine:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'magazine' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Magazin'"
+            >
+                <span class="text-xl flex-shrink-0">📦</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Magazin
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Ausrüstung -->
+            {% if perms.equipment.view_equipment %}
+            <a
+                href="{% url 'equipment:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'equipment' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Ausrüstung & Geräte'"
+            >
+                <span class="text-xl flex-shrink-0">🧰</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Ausrüstung
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- IT-Hardware -->
+            {% if modules.it_hardware_enabled and perms.it_hardware.view_hardware %}
+            <a
+                href="{% url 'it_hardware:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'it_hardware' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'IT-Hardware'"
+            >
+                <span class="text-xl flex-shrink-0">💻</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    IT-Hardware
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Höhenrettung -->
+            {% if perms.height_rescue.view_equipment %}
+            <a
+                href="{% url 'height_rescue:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'height_rescue' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Höhenrettung'"
+            >
+                <span class="text-xl flex-shrink-0">🧗</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Höhenrettung
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Taucher -->
+            {% if perms.diving.view_equipment %}
+            <a
+                href="{% url 'diving:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'diving' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Taucher'"
+            >
+                <span class="text-xl flex-shrink-0">🤿</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Taucher
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- KFZ-Werkstatt -->
+            {% if perms.workshop.view_workshopitem %}
+            <a
+                href="{% url 'workshop:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'workshop' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'KFZ-Werkstatt'"
+            >
+                <span class="text-xl flex-shrink-0">🔧</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    KFZ-Werkstatt
+                </span>
+                {% if pending_inspections > 0 %}
+                <span
+                    class="ml-auto bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full font-semibold"
+                    x-show="$store.sidebar.expanded"
+                >
+                    {{ pending_inspections }}
+                </span>
+                {% endif %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Kategorie 2: Fahrzeuge -->
+    <div class="mt-4">
+        <button
+            @click="expandedCategories.includes('vehicles') ? expandedCategories = expandedCategories.filter(c => c !== 'vehicles') : expandedCategories.push('vehicles')"
+            class="w-full flex items-center gap-3 px-3 py-2 mx-2 text-left text-gray-600 hover:bg-gray-100 rounded-lg"
+            x-show="$store.sidebar.expanded"
+        >
+            <span class="text-xl">🚒</span>
+            <span class="text-xs font-semibold uppercase tracking-wider flex-1">Fahrzeuge</span>
+            <svg
+                class="w-4 h-4 transition-transform"
+                :class="expandedCategories.includes('vehicles') ? 'rotate-180' : ''"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+    </div>
+
+    <button
+        x-show="!$store.sidebar.expanded"
+        @click="$store.sidebar.expanded = true; if (!expandedCategories.includes('vehicles')) expandedCategories.push('vehicles')"
+        class="flex items-center justify-center py-2 px-3 mx-2 rounded-lg transition-colors mt-4 hover:bg-gray-100 text-gray-700"
+        x-tooltip="'Fahrzeuge'"
+    >
+        <span class="text-xl">🚒</span>
+    </button>
+
+    <div>
+
+        <div
+            x-show="$store.sidebar.expanded && expandedCategories.includes('vehicles')"
+            x-collapse
+            class="space-y-1 mt-1"
+        >
+            <!-- Fahrzeugverwaltung -->
+            {% if perms.vehicles.view_vehicle %}
+            <a
+                href="{% url 'vehicles:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'vehicles' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Fahrzeugverwaltung'"
+            >
+                <span class="text-xl flex-shrink-0">🚙</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Fahrzeuge
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Desinfektion -->
+            {% if perms.disinfection.view_disinfectionitem %}
+            <a
+                href="{% url 'disinfection:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'disinfection' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Desinfektion'"
+            >
+                <span class="text-xl flex-shrink-0">🧼</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Desinfektion
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Fahrzeugübernahme -->
+            {% if perms.vehicle_handover.add_vehiclehandover %}
+            <a
+                href="{% url 'vehicle_handover:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'vehicle_handover' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Fahrzeugübernahme'"
+            >
+                <span class="text-xl flex-shrink-0">✅</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Übernahme
+                </span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Kategorie 3: Personal & Verwaltung -->
+    <div class="mt-4">
+        <button
+            @click="expandedCategories.includes('admin') ? expandedCategories = expandedCategories.filter(c => c !== 'admin') : expandedCategories.push('admin')"
+            class="w-full flex items-center gap-3 px-3 py-2 mx-2 text-left text-gray-600 hover:bg-gray-100 rounded-lg"
+            x-show="$store.sidebar.expanded"
+        >
+            <span class="text-xl">👥</span>
+            <span class="text-xs font-semibold uppercase tracking-wider flex-1">Personal & Verwaltung</span>
+            <svg
+                class="w-4 h-4 transition-transform"
+                :class="expandedCategories.includes('admin') ? 'rotate-180' : ''"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+    </div>
+
+    <button
+        x-show="!$store.sidebar.expanded"
+        @click="$store.sidebar.expanded = true; if (!expandedCategories.includes('admin')) expandedCategories.push('admin')"
+        class="flex items-center justify-center py-2 px-3 mx-2 rounded-lg transition-colors mt-4 hover:bg-gray-100 text-gray-700"
+        x-tooltip="'Personal & Verwaltung'"
+    >
+        <span class="text-xl">👥</span>
+    </button>
+
+    <div>
+
+        <div
+            x-show="$store.sidebar.expanded && expandedCategories.includes('admin')"
+            x-collapse
+            class="space-y-1 mt-1"
+        >
+            <!-- Personal -->
+            {% if perms.personnel.view_person %}
+            <a
+                href="{% url 'personnel:list' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'personnel' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Personal'"
+            >
+                <span class="text-xl flex-shrink-0">👤</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Personal
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Telefonbuch -->
+            <a
+                href="{% url 'personnel:phonebook' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       text-gray-700 hover:bg-gray-100"
+                x-tooltip="'Telefonbuch'"
+            >
+                <span class="text-xl flex-shrink-0">📞</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Telefonbuch
+                </span>
+            </a>
+
+            <!-- Führerscheinüberprüfung -->
+            {% if perms.driving_license.view_drivinglicensecheck %}
+            <a
+                href="{% url 'driving_license:check_list' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'driving_license' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Führerscheinüberprüfung'"
+            >
+                <span class="text-xl flex-shrink-0">🪪</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Führerschein
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Organisation -->
+            <a
+                href="{% url 'organization:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'organization' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Organisationsstruktur'"
+            >
+                <span class="text-xl flex-shrink-0">🏛️</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Organisation
+                </span>
+            </a>
+
+            <!-- Tickets -->
+            {% if modules.tickets_enabled %}
+            {% if perms.tickets.create_ticket or perms.tickets.process_ticket %}
+            <a
+                href="{% url 'tickets:list' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'tickets' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Tickets'"
+            >
+                <span class="text-xl flex-shrink-0">🎫</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Tickets
+                </span>
+            </a>
+            {% endif %}
+            {% endif %}
+
+            <!-- Standorte & Lagerorte -->
+            {% if perms.locations.view_location %}
+            <a
+                href="{% url 'locations:list' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'locations' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Standorte & Lagerorte'"
+            >
+                <span class="text-xl flex-shrink-0">🏢</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Standorte & Lagerorte
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Dokumente -->
+            <a
+                href="{% url 'documents:document_list' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'documents' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Dokumente'"
+            >
+                <span class="text-xl flex-shrink-0">📄</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Dokumente
+                </span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Kategorie 4: Information -->
+    {% if modules.wiki_enabled or modules.info_monitors_enabled %}
+    <div class="mt-4">
+        <button
+            @click="expandedCategories.includes('information') ? expandedCategories = expandedCategories.filter(c => c !== 'information') : expandedCategories.push('information')"
+            class="w-full flex items-center gap-3 px-3 py-2 mx-2 text-left text-gray-600 hover:bg-gray-100 rounded-lg"
+            x-show="$store.sidebar.expanded"
+        >
+            <span class="text-xl">📚</span>
+            <span class="text-xs font-semibold uppercase tracking-wider flex-1">Information</span>
+            <svg
+                class="w-4 h-4 transition-transform"
+                :class="expandedCategories.includes('information') ? 'rotate-180' : ''"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+    </div>
+
+    <button
+        x-show="!$store.sidebar.expanded"
+        @click="$store.sidebar.expanded = true; if (!expandedCategories.includes('information')) expandedCategories.push('information')"
+        class="flex items-center justify-center py-2 px-3 mx-2 rounded-lg transition-colors mt-4 hover:bg-gray-100 text-gray-700"
+        x-tooltip="'Information'"
+    >
+        <span class="text-xl">📚</span>
+    </button>
+
+    <div>
+        <div
+            x-show="$store.sidebar.expanded && expandedCategories.includes('information')"
+            x-collapse
+            class="space-y-1 mt-1"
+        >
+            <!-- Wiki -->
+            {% if modules.wiki_enabled and perms.wiki.view_wikipage %}
+            <a
+                href="{% url 'wiki:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'wiki' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Wiki'"
+            >
+                <span class="text-xl flex-shrink-0">📖</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Wiki
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Info-Monitore -->
+            {% if modules.info_monitors_enabled and perms.info_monitors.view_dashboard %}
+            <a
+                href="{% url 'info_monitors:dashboard_list' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'info_monitors' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Info-Monitore'"
+            >
+                <span class="text-xl flex-shrink-0">📺</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Info-Monitore
+                </span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Kategorie 5: Berichte & System -->
+    <div class="mt-4">
+        <button
+            @click="expandedCategories.includes('reports') ? expandedCategories = expandedCategories.filter(c => c !== 'reports') : expandedCategories.push('reports')"
+            class="w-full flex items-center gap-3 px-3 py-2 mx-2 text-left text-gray-600 hover:bg-gray-100 rounded-lg"
+            x-show="$store.sidebar.expanded"
+        >
+            <span class="text-xl">📈</span>
+            <span class="text-xs font-semibold uppercase tracking-wider flex-1">Berichte & System</span>
+            <svg
+                class="w-4 h-4 transition-transform"
+                :class="expandedCategories.includes('reports') ? 'rotate-180' : ''"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+    </div>
+
+    <button
+        x-show="!$store.sidebar.expanded"
+        @click="$store.sidebar.expanded = true; if (!expandedCategories.includes('reports')) expandedCategories.push('reports')"
+        class="flex items-center justify-center py-2 px-3 mx-2 rounded-lg transition-colors mt-4 hover:bg-gray-100 text-gray-700"
+        x-tooltip="'Berichte & System'"
+    >
+        <span class="text-xl">📈</span>
+    </button>
+
+    <div>
+
+        <div
+            x-show="$store.sidebar.expanded && expandedCategories.includes('reports')"
+            x-collapse
+            class="space-y-1 mt-1"
+        >
+            <!-- Reports & KPIs -->
+            {% if perms.reporting.view_reporting_dashboard %}
+            <a
+                href="{% url 'reporting:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'reporting' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Reports & KPIs'"
+            >
+                <span class="text-xl flex-shrink-0">📊</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Reports & KPIs
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- System (nur für Admins) -->
+            {% if perms.core.system_configuration %}
+            <a
+                href="{% url 'admin:index' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-100"
+                x-tooltip="'System'"
+            >
+                <span class="text-xl flex-shrink-0">⚙️</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    System
+                </span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Tooltip Component (Alpine.js) -->
+<style>
+    [x-cloak] { display: none !important; }
+</style>

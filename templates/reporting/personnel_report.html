@@ -1,0 +1,650 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Personal-Reporting - FLVS{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js für grafische Darstellungen -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'reporting:dashboard' %}" class="text-gray-500 hover:text-gray-700">Reporting</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Personal-Auswertung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">👥</span>
+                    <h1 class="text-3xl font-bold">Personal-Auswertung</h1>
+                </div>
+                <p class="text-purple-100 text-lg">
+                    Grafische Kennzahlen und Statistiken
+                </p>
+            </div>
+            <div class="text-right">
+                <p class="text-purple-100 text-sm">Gesamt Personal</p>
+                <p class="text-5xl font-bold">{{ total_personnel }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hauptkennzahlen -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Durchschnittsalter -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Durchschnittsalter</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ avg_age }} Jahre</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <span class="text-3xl">🎂</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dienstjahre -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Ø Dienstjahre</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ avg_service_years }} Jahre</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <span class="text-3xl">⭐</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ablaufende Qualifikationen -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Qualif. ablaufend (90 T.)</p>
+                    <p class="text-3xl font-bold text-orange-600 mt-2">{{ expiring_quals }}</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <span class="text-3xl">⚠️</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Abgelaufene Qualifikationen -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Qualif. abgelaufen</p>
+                    <p class="text-3xl font-bold text-red-600 mt-2">{{ expired_quals }}</p>
+                </div>
+                <div class="bg-red-100 rounded-full p-3">
+                    <span class="text-3xl">❌</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Altersstatistiken -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Altersverteilung Gesamt -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>📊</span>
+                    <span>Altersverteilung Gesamt</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="ageDistributionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Altersverteilung nach Abteilungen -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>🏢</span>
+                    <span>Durchschnittsalter nach Abteilung</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="ageDepartmentChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Altersverteilung nach Wachabteilungen -->
+    {% if age_by_watch_crew %}
+    <div class="bg-white rounded-lg shadow border border-gray-200 mb-6">
+        <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4 rounded-t-lg">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <span>🚒</span>
+                <span>Durchschnittsalter nach Wachmannschaft</span>
+            </h2>
+        </div>
+        <div class="p-6">
+            <canvas id="ageWatchCrewChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Führerschein-Klassen -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Führerschein Übersicht -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>🪪</span>
+                    <span>Führerschein-Klassen</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="licenseChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Dienstjahre Verteilung -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-teal-500 to-teal-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>📆</span>
+                    <span>Dienstjahre Verteilung</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="serviceYearsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Qualifikationen und Funktionen -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Top Qualifikationen -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>📜</span>
+                    <span>Top 10 Qualifikationen</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="qualificationsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Funktionen -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>👔</span>
+                    <span>Top 10 Funktionen</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="functionsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dienstgrade und Tätigkeiten -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Dienstgrade -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>⭐</span>
+                    <span>Top 10 Dienstgrade</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="ranksChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Tätigkeiten -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-pink-500 to-pink-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>💼</span>
+                    <span>Tätigkeitsverteilung</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="activitiesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Organisationszugehörigkeit und Abteilungen -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Organisationszugehörigkeit -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-cyan-500 to-cyan-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>🚒</span>
+                    <span>Organisationszugehörigkeit</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="organizationChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Abteilungsverteilung -->
+        <div class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="bg-gradient-to-r from-violet-500 to-violet-600 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>🏢</span>
+                    <span>Abteilungsverteilung</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="departmentsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hinweis -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div>
+                <h3 class="font-bold text-blue-900 mb-2">Hinweis</h3>
+                <p class="text-sm text-blue-800">
+                    Diese Auswertungen basieren auf den aktuellen Daten des Personal-Moduls. Alle Grafiken
+                    sind interaktiv - fahren Sie mit der Maus über die Diagramme für detaillierte Informationen.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Chart.js Standard-Konfiguration
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+Chart.defaults.responsive = true;
+Chart.defaults.maintainAspectRatio = true;
+
+// Farbpalette
+const colors = {
+    blue: 'rgba(59, 130, 246, 0.8)',
+    purple: 'rgba(147, 51, 234, 0.8)',
+    green: 'rgba(34, 197, 94, 0.8)',
+    orange: 'rgba(249, 115, 22, 0.8)',
+    red: 'rgba(239, 68, 68, 0.8)',
+    yellow: 'rgba(234, 179, 8, 0.8)',
+    teal: 'rgba(20, 184, 166, 0.8)',
+    indigo: 'rgba(99, 102, 241, 0.8)',
+    pink: 'rgba(236, 72, 153, 0.8)',
+    cyan: 'rgba(6, 182, 212, 0.8)',
+};
+
+// 1. Altersverteilung Gesamt
+const ageDistCtx = document.getElementById('ageDistributionChart').getContext('2d');
+new Chart(ageDistCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ age_groups.keys|safe }},
+        datasets: [{
+            label: 'Anzahl Personen',
+            data: {{ age_groups.values|safe }},
+            backgroundColor: colors.blue,
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            },
+            title: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// 2. Durchschnittsalter nach Abteilung
+{% if age_by_department %}
+const ageDeptCtx = document.getElementById('ageDepartmentChart').getContext('2d');
+new Chart(ageDeptCtx, {
+    type: 'horizontalBar',
+    data: {
+        labels: [{% for dept, data in age_by_department.items %}'{{ dept }}',{% endfor %}],
+        datasets: [{
+            label: 'Durchschnittsalter',
+            data: [{% for dept, data in age_by_department.items %}{{ data.avg }},{% endfor %}],
+            backgroundColor: colors.purple,
+            borderColor: 'rgba(147, 51, 234, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+{% endif %}
+
+// 3. Durchschnittsalter nach Wachmannschaft
+{% if age_by_watch_crew %}
+const ageWatchCtx = document.getElementById('ageWatchCrewChart').getContext('2d');
+new Chart(ageWatchCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for crew, data in age_by_watch_crew.items %}'{{ crew }}',{% endfor %}],
+        datasets: [{
+            label: 'Durchschnittsalter',
+            data: [{% for crew, data in age_by_watch_crew.items %}{{ data.avg }},{% endfor %}],
+            backgroundColor: colors.indigo,
+            borderColor: 'rgba(99, 102, 241, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+{% endif %}
+
+// 4. Führerschein-Klassen
+const licenseCtx = document.getElementById('licenseChart').getContext('2d');
+new Chart(licenseCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for key in license_stats.keys %}'{{ key }}',{% endfor %}],
+        datasets: [{
+            label: 'Anzahl',
+            data: [{% for value in license_stats.values %}{{ value }},{% endfor %}],
+            backgroundColor: colors.green,
+            borderColor: 'rgba(34, 197, 94, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// 5. Dienstjahre Verteilung
+const serviceYearsCtx = document.getElementById('serviceYearsChart').getContext('2d');
+new Chart(serviceYearsCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ service_groups.keys|safe }},
+        datasets: [{
+            data: {{ service_groups.values|safe }},
+            backgroundColor: [
+                colors.blue,
+                colors.green,
+                colors.yellow,
+                colors.orange,
+                colors.red,
+                colors.purple,
+                colors.indigo
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'right'
+            }
+        }
+    }
+});
+
+// 6. Top Qualifikationen
+const qualsCtx = document.getElementById('qualificationsChart').getContext('2d');
+new Chart(qualsCtx, {
+    type: 'horizontalBar',
+    data: {
+        labels: [{% for q in qual_counts %}'{{ q.name }}',{% endfor %}],
+        datasets: [{
+            label: 'Anzahl',
+            data: [{% for q in qual_counts %}{{ q.count }},{% endfor %}],
+            backgroundColor: colors.orange,
+            borderColor: 'rgba(249, 115, 22, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// 7. Top Funktionen
+const functionsCtx = document.getElementById('functionsChart').getContext('2d');
+new Chart(functionsCtx, {
+    type: 'horizontalBar',
+    data: {
+        labels: [{% for f in function_stats %}'{{ f.name }}',{% endfor %}],
+        datasets: [{
+            label: 'Anzahl',
+            data: [{% for f in function_stats %}{{ f.count }},{% endfor %}],
+            backgroundColor: colors.red,
+            borderColor: 'rgba(239, 68, 68, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// 8. Dienstgrade
+const ranksCtx = document.getElementById('ranksChart').getContext('2d');
+new Chart(ranksCtx, {
+    type: 'horizontalBar',
+    data: {
+        labels: [{% for r in rank_counts %}'{{ r.rank }}',{% endfor %}],
+        datasets: [{
+            label: 'Anzahl',
+            data: [{% for r in rank_counts %}{{ r.count }},{% endfor %}],
+            backgroundColor: colors.yellow,
+            borderColor: 'rgba(234, 179, 8, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// 9. Tätigkeiten
+const activitiesCtx = document.getElementById('activitiesChart').getContext('2d');
+const activityLabels = {
+    'fire_protection': 'Brandschutz',
+    'day_service': 'Tagesdienst',
+    'command_service': 'Führungsdienst',
+    'intern': 'Praktikant'
+};
+new Chart(activitiesCtx, {
+    type: 'pie',
+    data: {
+        labels: [{% for a in activity_counts %}activityLabels['{{ a.activity }}'] || '{{ a.activity }}',{% endfor %}],
+        datasets: [{
+            data: [{% for a in activity_counts %}{{ a.count }},{% endfor %}],
+            backgroundColor: [colors.pink, colors.purple, colors.indigo, colors.cyan],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'right'
+            }
+        }
+    }
+});
+
+// 10. Organisationszugehörigkeit
+const orgCtx = document.getElementById('organizationChart').getContext('2d');
+new Chart(orgCtx, {
+    type: 'bar',
+    data: {
+        labels: ['Jugendfeuerwehr', 'Freiwillige FF', 'Berufsfeuerwehr'],
+        datasets: [{
+            label: 'Anzahl',
+            data: [{{ org_stats.youth }}, {{ org_stats.volunteer }}, {{ org_stats.professional }}],
+            backgroundColor: [colors.cyan, colors.teal, colors.indigo],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// 11. Abteilungsverteilung
+const deptCtx = document.getElementById('departmentsChart').getContext('2d');
+new Chart(deptCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for d in dept_counts %}'{{ d.department__name|default:"Keine Abteilung" }}',{% endfor %}],
+        datasets: [{
+            data: [{% for d in dept_counts %}{{ d.count }},{% endfor %}],
+            backgroundColor: [
+                colors.purple,
+                colors.blue,
+                colors.green,
+                colors.orange,
+                colors.red,
+                colors.yellow,
+                colors.teal,
+                colors.indigo,
+                colors.pink,
+                colors.cyan
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'right'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

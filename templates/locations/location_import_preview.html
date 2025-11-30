@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Import-Vorschau - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'locations:list' %}" class="text-gray-500 hover:text-gray-700">Lagerorte</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'locations:import' %}" class="text-gray-500 hover:text-gray-700">Import</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Vorschau</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center mb-6">
+            <span class="text-4xl mr-4">👁️</span>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Import-Vorschau</h1>
+                <p class="text-sm text-gray-600 mt-1">Prüfen Sie die Daten vor dem Import</p>
+            </div>
+        </div>
+
+        <!-- Statistiken -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="bg-green-50 rounded-lg p-4 text-center">
+                <div class="text-3xl font-bold text-green-600">{{ result.totals.new }}</div>
+                <div class="text-sm text-gray-600 mt-1">Neue Lagerorte</div>
+            </div>
+            <div class="bg-blue-50 rounded-lg p-4 text-center">
+                <div class="text-3xl font-bold text-blue-600">{{ result.totals.update }}</div>
+                <div class="text-sm text-gray-600 mt-1">Aktualisierungen</div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4 text-center">
+                <div class="text-3xl font-bold text-gray-600">{{ result.totals.skip }}</div>
+                <div class="text-sm text-gray-600 mt-1">Übersprungen</div>
+            </div>
+            <div class="bg-red-50 rounded-lg p-4 text-center">
+                <div class="text-3xl font-bold text-red-600">{{ result.totals.error }}</div>
+                <div class="text-sm text-gray-600 mt-1">Fehler</div>
+            </div>
+        </div>
+
+        <!-- Daten-Tabelle -->
+        <div class="overflow-x-auto mb-6">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Übergeordnet</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beschreibung</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for row in result.rows %}
+                    <tr class="{% if row.import_type == 'new' %}bg-green-50{% elif row.import_type == 'update' %}bg-blue-50{% endif %}">
+                        <td class="px-3 py-2 whitespace-nowrap">
+                            {% if row.import_type == 'new' %}
+                            <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">Neu</span>
+                            {% elif row.import_type == 'update' %}
+                            <span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">Update</span>
+                            {% elif row.import_type == 'skip' %}
+                            <span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">Skip</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-3 py-2 text-sm text-gray-900">{{ row.diff.name }}</td>
+                        <td class="px-3 py-2 text-sm text-gray-600">{{ row.diff.location_type }}</td>
+                        <td class="px-3 py-2 text-sm text-gray-600">{{ row.diff.parent|default:"-" }}</td>
+                        <td class="px-3 py-2 text-sm text-gray-600">{{ row.diff.description|truncatewords:10 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bestätigung -->
+        <form method="post" action="{% url 'locations:import' %}">
+            {% csrf_token %}
+            <input type="hidden" name="confirm_import" value="1">
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div class="flex">
+                    <span class="text-blue-600 text-xl mr-3">ℹ️</span>
+                    <div>
+                        <h3 class="text-sm font-medium text-blue-800">Import bestätigen</h3>
+                        <p class="mt-1 text-sm text-blue-700">
+                            Bitte prüfen Sie die Daten sorgfältig. Nach der Bestätigung werden die Änderungen in der Datenbank gespeichert.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <a href="{% url 'locations:import' %}"
+                   class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                    ← Zurück
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                    ✅ Import bestätigen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

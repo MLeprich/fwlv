@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title|default:"Neue Lagerbewegung" }} - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:movement_list' %}" class="text-gray-500 hover:text-gray-700">Lagerbewegungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title|default:"Neue Bewegung" }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ title|default:"Neue Lagerbewegung erfassen" }}</h1>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <span class="text-red-600">❌</span>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
+                        <div class="mt-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basis-Informationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📦 Basis-Informationen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Ausrüstung -->
+                    <div class="md:col-span-2" x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                        items = Array.from(document.querySelectorAll('#id_item option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(item => item.value);
+                        const currentValue = document.getElementById('id_item').value;
+                        if (currentValue) {
+                            selected = items.find(item => item.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_item').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.item.label }} *</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.item }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Ausrüstung auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Ausrüstung suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="item in items.filter(i => i.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = item; document.getElementById('id_item').value = item.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === item.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="item.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.item.errors %}<p class="mt-1 text-sm text-red-600">{{ form.item.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.movement_type.label }} *</label>
+                        {{ form.movement_type }}
+                        {% if form.movement_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.movement_type.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.quantity.label }} *</label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}<p class="mt-1 text-sm text-red-600">{{ form.quantity.errors.0 }}</p>{% endif %}
+                    </div>
+                    <!-- Von Lagerort -->
+                    <div x-data="{ open: false, search: '', selected: null, locations: [] }" x-init="
+                        locations = Array.from(document.querySelectorAll('#id_from_location option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(loc => loc.value);
+                        const currentValue = document.getElementById('id_from_location').value;
+                        if (currentValue) {
+                            selected = locations.find(loc => loc.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_from_location').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.from_location.label }}</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.from_location }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Von Lagerort auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Lagerort suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="location in locations.filter(loc => loc.text.toLowerCase().includes(search.toLowerCase()))" :key="location.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = location; document.getElementById('id_from_location').value = location.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === location.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="location.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="mt-1 text-xs text-gray-500">Aktueller Lagerort (bei Ausgang/Umlagerung)</p>
+                        {% if form.from_location.errors %}<p class="mt-1 text-sm text-red-600">{{ form.from_location.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <!-- Nach Lagerort -->
+                    <div x-data="{ open: false, search: '', selected: null, locations: [] }" x-init="
+                        locations = Array.from(document.querySelectorAll('#id_to_location option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(loc => loc.value);
+                        const currentValue = document.getElementById('id_to_location').value;
+                        if (currentValue) {
+                            selected = locations.find(loc => loc.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_to_location').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.to_location.label }}</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.to_location }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Nach Lagerort auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Lagerort suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="location in locations.filter(loc => loc.text.toLowerCase().includes(search.toLowerCase()))" :key="location.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = location; document.getElementById('id_to_location').value = location.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === location.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="location.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="mt-1 text-xs text-gray-500">Ziel-Lagerort (bei Eingang/Umlagerung)</p>
+                        {% if form.to_location.errors %}<p class="mt-1 text-sm text-red-600">{{ form.to_location.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.reference_number.label }}</label>
+                        {{ form.reference_number }}
+                        {% if form.reference_number.errors %}<p class="mt-1 text-sm text-red-600">{{ form.reference_number.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. Lieferschein-Nr., Einsatznummer</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gasfüllung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">💨 Gasfüllung (für Flaschen)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="flex items-center">
+                            {{ form.gas_filled }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Gas gefüllt</span>
+                        </label>
+                        {% if form.gas_filled.errors %}<p class="mt-1 text-sm text-red-600">{{ form.gas_filled.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.gas_type.label }}</label>
+                        {{ form.gas_type }}
+                        {% if form.gas_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.gas_type.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.fill_pressure_bar.label }}</label>
+                        {{ form.fill_pressure_bar }}
+                        {% if form.fill_pressure_bar.errors %}<p class="mt-1 text-sm text-red-600">{{ form.fill_pressure_bar.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.oxygen_percentage.label }}</label>
+                        {{ form.oxygen_percentage }}
+                        {% if form.oxygen_percentage.errors %}<p class="mt-1 text-sm text-red-600">{{ form.oxygen_percentage.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">z.B. 32 für Nitrox 32</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tauchgang -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🤿 Tauchgangsdokumentation</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.dive_date.label }}</label>
+                        {{ form.dive_date }}
+                        {% if form.dive_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.dive_date.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.dive_location.label }}</label>
+                        {{ form.dive_location }}
+                        {% if form.dive_location.errors %}<p class="mt-1 text-sm text-red-600">{{ form.dive_location.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.max_depth_m.label }}</label>
+                        {{ form.max_depth_m }}
+                        {% if form.max_depth_m.errors %}<p class="mt-1 text-sm text-red-600">{{ form.max_depth_m.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.dive_duration_minutes.label }}</label>
+                        {{ form.dive_duration_minutes }}
+                        {% if form.dive_duration_minutes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.dive_duration_minutes.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.dive_purpose.label }}</label>
+                        {{ form.dive_purpose }}
+                        {% if form.dive_purpose.errors %}<p class="mt-1 text-sm text-red-600">{{ form.dive_purpose.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service/Wartung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">🔧 Service/Wartung</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="flex items-center">
+                            {{ form.service_performed }}
+                            <span class="ml-2 text-sm font-medium text-gray-700">Service durchgeführt</span>
+                        </label>
+                        {% if form.service_performed.errors %}<p class="mt-1 text-sm text-red-600">{{ form.service_performed.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.service_type.label }}</label>
+                        {{ form.service_type }}
+                        {% if form.service_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.service_type.errors.0 }}</p>{% endif %}
+                    </div>
+                    <!-- Service Techniker -->
+                    <div x-data="{ open: false, search: '', selected: null, technicians: [] }" x-init="
+                        technicians = Array.from(document.querySelectorAll('#id_service_technician option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(tech => tech.value);
+                        const currentValue = document.getElementById('id_service_technician').value;
+                        if (currentValue) {
+                            selected = technicians.find(tech => tech.value === currentValue);
+                        }
+                    
+                        // Remove required attribute from hidden select
+                        document.getElementById('id_service_technician').removeAttribute('required');
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.service_technician.label }}</label>
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.service_technician }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Techniker auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Techniker suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="technician in technicians.filter(tech => tech.text.toLowerCase().includes(search.toLowerCase()))" :key="technician.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = technician; document.getElementById('id_service_technician').value = technician.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-green-50 text-sm"
+                                            :class="selected && selected.value === technician.value ? 'bg-green-100 font-medium' : ''"
+                                            x-text="technician.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.service_technician.errors %}<p class="mt-1 text-sm text-red-600">{{ form.service_technician.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.service_notes.label }}</label>
+                        {{ form.service_notes }}
+                        {% if form.service_notes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.service_notes.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.parts_replaced.label }}</label>
+                        {{ form.parts_replaced }}
+                        {% if form.parts_replaced.errors %}<p class="mt-1 text-sm text-red-600">{{ form.parts_replaced.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zustand & Notizen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">📋 Zustand & Notizen</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.condition_before.label }}</label>
+                        {{ form.condition_before }}
+                        {% if form.condition_before.errors %}<p class="mt-1 text-sm text-red-600">{{ form.condition_before.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.condition_after.label }}</label>
+                        {{ form.condition_after }}
+                        {% if form.condition_after.errors %}<p class="mt-1 text-sm text-red-600">{{ form.condition_after.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'diving:movement_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                    {{ submit_text|default:"Bewegung speichern" }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

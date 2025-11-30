@@ -1,0 +1,59 @@
+{% comment %}
+Wiederverwendbare Table-Component
+Usage:
+    {% include 'includes/components/table.html' with headers=headers items=items %}
+
+Params:
+    - headers (required): Liste von Header-Dicts [{'text': 'Name', 'sortable': True}, ...]
+    - items (required): Liste von Objekten
+    - striped (optional): Boolean für zebra-striping
+    - compact (optional): Boolean für kompaktere Darstellung
+    - hover (optional): Boolean für hover-effect
+{% endcomment %}
+
+<div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+        <!-- Table Header -->
+        <thead class="bg-gray-50">
+            <tr>
+                {% for header in headers %}
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider
+                    {% if header.sortable %}cursor-pointer hover:bg-gray-100{% endif %}">
+
+                    {% if header.sortable %}
+                    <div class="flex items-center gap-1">
+                        {{ header.text }}
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                        </svg>
+                    </div>
+                    {% else %}
+                    {{ header.text }}
+                    {% endif %}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+
+        <!-- Table Body -->
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for item in items %}
+            <tr class="{% if hover|default:True %}hover:bg-gray-50{% endif %}
+                       {% if striped and forloop.counter|divisibleby:2 %}bg-gray-25{% endif %}">
+                {{ item }}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="{{ headers|length }}" class="px-6 py-12 text-center text-gray-500">
+                    <div class="flex flex-col items-center gap-2">
+                        <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                        </svg>
+                        <p class="text-sm font-medium">Keine Einträge gefunden</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

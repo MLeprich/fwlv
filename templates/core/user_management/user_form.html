@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load permission_tags %}
+
+{% block title %}{{ form_title }} - Benutzerverwaltung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li>
+                <a href="{% url 'core:user_list' %}" class="text-gray-500 hover:text-gray-700">Benutzerverwaltung</a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li>
+                <span class="text-gray-900 font-semibold">{{ form_title }}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-3xl">
+    <!-- Header -->
+    <div class="mb-6">
+        <a href="{% url 'core:user_list' %}" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Zurück zur Benutzerliste
+        </a>
+
+        <h1 class="text-3xl font-bold text-gray-900">{{ form_title }}</h1>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Username (nur bei Create) -->
+            {% if not object %}
+            <div>
+                <label for="id_username" class="block text-sm font-medium text-gray-700 mb-1">
+                    Username *
+                </label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.username.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">
+                    Eindeutiger Benutzername für den Login. Nur Buchstaben, Zahlen und @/./+/-/_ erlaubt.
+                </p>
+            </div>
+            {% endif %}
+
+            <!-- Email -->
+            <div>
+                <label for="id_email" class="block text-sm font-medium text-gray-700 mb-1">
+                    Email-Adresse *
+                </label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.email.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Name -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="id_first_name" class="block text-sm font-medium text-gray-700 mb-1">
+                        Vorname *
+                    </label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.first_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="id_last_name" class="block text-sm font-medium text-gray-700 mb-1">
+                        Nachname *
+                    </label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.last_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Personnel Info -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="id_personnel_number" class="block text-sm font-medium text-gray-700 mb-1">
+                        Personalnummer
+                    </label>
+                    {{ form.personnel_number }}
+                    {% if form.personnel_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.personnel_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="id_phone" class="block text-sm font-medium text-gray-700 mb-1">
+                        Telefon
+                    </label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.phone.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Position & Department -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="id_position" class="block text-sm font-medium text-gray-700 mb-1">
+                        Position
+                    </label>
+                    {{ form.position }}
+                    {% if form.position.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.position.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="id_department" class="block text-sm font-medium text-gray-700 mb-1">
+                        Abteilung
+                    </label>
+                    {{ form.department }}
+                    {% if form.department.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.department.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div>
+                <label class="flex items-center">
+                    {{ form.is_active }}
+                    <span class="ml-2 text-sm text-gray-700">Benutzer ist aktiv</span>
+                </label>
+                {% if form.is_active.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">
+                    Inaktive Benutzer können sich nicht anmelden
+                </p>
+            </div>
+
+            <!-- Info Box für neuen Benutzer -->
+            {% if not object %}
+            <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex">
+                    <svg class="h-5 w-5 text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-medium text-blue-800">Hinweis zum initialen Passwort</h3>
+                        <p class="mt-1 text-sm text-blue-700">
+                            Ein zufälliges initiales Passwort wird automatisch generiert und angezeigt.
+                            Der Benutzer muss das Passwort beim ersten Login ändern.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Form Actions -->
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'core:user_list' %}"
+                   class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    Abbrechen
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                    {{ submit_text }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Django Form Field Styling */
+    input[type="text"],
+    input[type="email"],
+    select {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    select:focus {
+        outline: none;
+        border-color: #DC2626;
+        ring: 2px;
+        ring-color: #DC2626;
+    }
+
+    input[type="checkbox"] {
+        width: 1rem;
+        height: 1rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.25rem;
+    }
+</style>
+{% endblock %}

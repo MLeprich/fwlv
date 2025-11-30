@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'disinfection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Desinfektion</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'disinfection:item_list' %}" class="text-gray-500 hover:text-gray-700">Desinfektionsmittel</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+            <p class="text-sm text-gray-600">Erfassen Sie alle Details zum Desinfektionsmittel</p>
+        </div>
+        <a href="{% url 'disinfection:item_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm">
+            ← Zurück zur Liste
+        </a>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <!-- Grundinformationen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Grundinformationen</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-600">*</span></label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Artikelnummer</label>
+                        {{ form.item_number }}
+                        {% if form.item_number.errors %}<p class="mt-1 text-sm text-red-600">{{ form.item_number.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Typ <span class="text-red-600">*</span></label>
+                        {{ form.disinfection_type }}
+                        {% if form.disinfection_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.disinfection_type.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie</label>
+                        {{ form.category }}
+                        {% if form.category.errors %}<p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        {{ form.disinfection_status }}
+                        {% if form.disinfection_status.errors %}<p class="mt-1 text-sm text-red-600">{{ form.disinfection_status.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Lagerort</label>
+                        {{ form.location }}
+                        {% if form.location.errors %}<p class="mt-1 text-sm text-red-600">{{ form.location.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}<p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wirkung & Anwendung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Wirkung & Anwendung</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Wirkstoff</label>
+                        {{ form.active_ingredient }}
+                        {% if form.active_ingredient.help_text %}<p class="mt-1 text-sm text-gray-500">{{ form.active_ingredient.help_text }}</p>{% endif %}
+                        {% if form.active_ingredient.errors %}<p class="mt-1 text-sm text-red-600">{{ form.active_ingredient.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Anwendungsmethode</label>
+                        {{ form.application_method }}
+                        {% if form.application_method.errors %}<p class="mt-1 text-sm text-red-600">{{ form.application_method.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Einwirkzeit (Min.)</label>
+                        {{ form.contact_time_minutes }}
+                        {% if form.contact_time_minutes.help_text %}<p class="mt-1 text-sm text-gray-500">{{ form.contact_time_minutes.help_text }}</p>{% endif %}
+                        {% if form.contact_time_minutes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.contact_time_minutes.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Verdünnungsverhältnis</label>
+                        {{ form.dilution_ratio }}
+                        {% if form.dilution_ratio.help_text %}<p class="mt-1 text-sm text-gray-500">{{ form.dilution_ratio.help_text }}</p>{% endif %}
+                        {% if form.dilution_ratio.errors %}<p class="mt-1 text-sm text-red-600">{{ form.dilution_ratio.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bestandsverwaltung Hinweis -->
+            <div class="border-b border-gray-200 pb-6">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <h3 class="text-sm font-medium text-blue-800">Bestandsverwaltung über Magazin</h3>
+                            <p class="mt-1 text-sm text-blue-700">
+                                Der Bestand von Desinfektionsmitteln wird zentral über das <a href="{% url 'magazine:item_list' %}" class="font-semibold underline hover:text-blue-900">Magazin (Verbrauchsmaterial)</a> verwaltet.
+                                Bitte legen Sie dort einen entsprechenden Artikel an und verwalten Sie Ein- und Ausgänge über Lagerbewegungen.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zulassung & Listungen -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Zulassung & Listungen</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Zulassungsnummer</label>
+                        {{ form.registration_number }}
+                        {% if form.registration_number.errors %}<p class="mt-1 text-sm text-red-600">{{ form.registration_number.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="flex gap-6">
+                        <div class="flex items-center">
+                            {{ form.vah_listed }}
+                            <label for="{{ form.vah_listed.id_for_label }}" class="ml-2 text-sm text-gray-700">VAH-gelistet</label>
+                        </div>
+                        <div class="flex items-center">
+                            {{ form.dghm_listed }}
+                            <label for="{{ form.dghm_listed.id_for_label }}" class="ml-2 text-sm text-gray-700">DGHM-gelistet</label>
+                        </div>
+                        <div class="flex items-center">
+                            {{ form.rki_listed }}
+                            <label for="{{ form.rki_listed.id_for_label }}" class="ml-2 text-sm text-gray-700">RKI-gelistet</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gefahrstoff -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Gefahrstoff-Informationen</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        {{ form.is_hazardous }}
+                        <label for="{{ form.is_hazardous.id_for_label }}" class="ml-2 text-sm text-gray-700">Ist Gefahrstoff</label>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Gefahrensymbole (GHS)</label>
+                        {{ form.hazard_symbols }}
+                        {% if form.hazard_symbols.errors %}<p class="mt-1 text-sm text-red-600">{{ form.hazard_symbols.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Sicherheitsdatenblatt</label>
+                        {{ form.safety_data_sheet }}
+                        {% if form.safety_data_sheet.errors %}<p class="mt-1 text-sm text-red-600">{{ form.safety_data_sheet.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lagerung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Lagerung</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Min. Lagertemperatur (°C)</label>
+                        {{ form.storage_temperature_min }}
+                        {% if form.storage_temperature_min.errors %}<p class="mt-1 text-sm text-red-600">{{ form.storage_temperature_min.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Max. Lagertemperatur (°C)</label>
+                        {{ form.storage_temperature_max }}
+                        {% if form.storage_temperature_max.errors %}<p class="mt-1 text-sm text-red-600">{{ form.storage_temperature_max.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Haltbarkeit (Monate)</label>
+                        {{ form.shelf_life_months }}
+                        {% if form.shelf_life_months.help_text %}<p class="mt-1 text-sm text-gray-500">{{ form.shelf_life_months.help_text }}</p>{% endif %}
+                        {% if form.shelf_life_months.errors %}<p class="mt-1 text-sm text-red-600">{{ form.shelf_life_months.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Haltbarkeit geöffnet (Monate)</label>
+                        {{ form.shelf_life_opened_months }}
+                        {% if form.shelf_life_opened_months.help_text %}<p class="mt-1 text-sm text-gray-500">{{ form.shelf_life_opened_months.help_text }}</p>{% endif %}
+                        {% if form.shelf_life_opened_months.errors %}<p class="mt-1 text-sm text-red-600">{{ form.shelf_life_opened_months.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="col-span-2 flex items-center">
+                        {{ form.protect_from_light }}
+                        <label for="{{ form.protect_from_light.id_for_label }}" class="ml-2 text-sm text-gray-700">Vor Licht schützen</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lieferant & Preis -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Lieferant & Preis</h2>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hersteller</label>
+                        {{ form.manufacturer }}
+                        {% if form.manufacturer.errors %}<p class="mt-1 text-sm text-red-600">{{ form.manufacturer.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Lieferant</label>
+                        {{ form.supplier }}
+                        {% if form.supplier.errors %}<p class="mt-1 text-sm text-red-600">{{ form.supplier.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Stückpreis (€)</label>
+                        {{ form.unit_price }}
+                        {% if form.unit_price.errors %}<p class="mt-1 text-sm text-red-600">{{ form.unit_price.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fahrzeugzuordnung -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Fahrzeugzuordnung</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Zugeordnete Fahrzeuge</label>
+                    {{ form.assigned_vehicles }}
+                    <p class="mt-1 text-sm text-gray-500">Halten Sie Strg/Cmd gedrückt, um mehrere auszuwählen</p>
+                    {% if form.assigned_vehicles.errors %}<p class="mt-1 text-sm text-red-600">{{ form.assigned_vehicles.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Status</h2>
+                <div class="flex items-center">
+                    {{ form.is_active }}
+                    <label for="{{ form.is_active.id_for_label }}" class="ml-2 text-sm text-gray-700">Artikel ist aktiv</label>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'disinfection:item_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    {% if item %}Änderungen speichern{% else %}Desinfektionsmittel erstellen{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

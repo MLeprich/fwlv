@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Pflichtstunden-Anforderungen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'organization:dashboard' %}" class="text-gray-500 hover:text-gray-700">Organisation</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Pflichtstunden-Anforderungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">⏱️</span>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Pflichtstunden-Anforderungen</h1>
+                <p class="text-sm text-gray-500">Verwaltung der Pflichtstunden nach Kategorie</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'organization:duty_hours_category_list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                <span class="text-lg">🏷️</span>
+                <span class="font-medium">Kategorien verwalten</span>
+            </a>
+            <a href="{% url 'organization:duty_hours_requirement_create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                <span class="text-lg">➕</span>
+                <span class="font-medium">Neue Anforderung</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="bg-white rounded-lg shadow mb-6 p-4">
+        <form method="get" class="flex gap-4">
+            <select name="year" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <option value="">Alle Jahre</option>
+                {% for y in years %}
+                <option value="{{ y }}" {% if year_filter == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+            <select name="category" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <option value="">Alle Kategorien</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <option value="">Alle Status</option>
+                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Aktiv</option>
+                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inaktiv</option>
+            </select>
+            <button type="submit" class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">Filtern</button>
+        </form>
+    </div>
+
+    <!-- List -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategorie</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jahr</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Erforderliche Stunden</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Beschreibung</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for req in requirements %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="inline-flex items-center gap-2 px-2 py-1 bg-gray-100 rounded-lg">
+                            <div class="w-3 h-3 rounded-full" style="background-color: {{ req.category.color }};"></div>
+                            <span class="text-xs font-medium text-gray-900">{{ req.category.name }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                        {{ req.year }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl font-bold text-orange-600">{{ req.required_hours }}</span>
+                            <span class="text-sm text-gray-500">Stunden</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900">
+                        {% if req.description %}
+                            {{ req.description|truncatewords:15 }}
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if req.is_active %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Aktiv</span>
+                        {% else %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inaktiv</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{% url 'organization:duty_hours_requirement_update' req.pk %}" class="text-orange-600 hover:text-orange-900 mr-3">Bearbeiten</a>
+                        <a href="{% url 'organization:duty_hours_requirement_delete' req.pk %}" class="text-red-600 hover:text-red-900">Löschen</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center">
+                        <div class="text-gray-400">
+                            <span class="text-6xl mb-4 block">📋</span>
+                            <p class="text-lg font-medium">Keine Anforderungen gefunden</p>
+                            <p class="text-sm mt-1">Legen Sie Ihre erste Pflichtstunden-Anforderung an</p>
+                            <a href="{% url 'organization:duty_hours_requirement_create' %}" class="mt-4 inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+                                Anforderung anlegen
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Magazin - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:dashboard' %}" class="text-gray-500 hover:text-gray-700">Magazin</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'magazine:master_list' %}" class="text-gray-500 hover:text-gray-700">Stammdaten</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center gap-3">
+            <span class="text-4xl">📦</span>
+            <div>
+                <h1 class="text-2xl font-bold">{{ title }}</h1>
+                <p class="text-purple-100">Produktstammdaten für Verbrauchsmaterial</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Identifikation -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Identifikation</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Stammdaten-Nr. *</label>
+                    {{ form.master_number }}
+                    {% if form.master_number.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.master_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Produktname *</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                    {{ form.description }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Klassifizierung -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Klassifizierung</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Artikeltyp</label>
+                    {{ form.item_type }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie</label>
+                    {{ form.category }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Hersteller & Lieferant -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Hersteller & Lieferant</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hersteller</label>
+                    {{ form.manufacturer }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hersteller-Artikelnummer</label>
+                    {{ form.manufacturer_part_number }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Lieferant</label>
+                    {{ form.supplier }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Lieferanten-Artikelnummer</label>
+                    {{ form.supplier_part_number }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Physische Eigenschaften -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Physische Eigenschaften</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Einheit</label>
+                    {{ form.unit }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Größe/Maße</label>
+                    {{ form.size }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Material</label>
+                    {{ form.material }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Farbe</label>
+                    {{ form.color }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Gewicht/Einheit (kg)</label>
+                    {{ form.weight_per_unit }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Volumen/Einheit (L)</label>
+                    {{ form.volume_per_unit }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Gefahrgut -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Gefahrgut</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-center">
+                    {{ form.is_hazardous }}
+                    <label class="ml-2 text-sm font-medium text-gray-700">Ist Gefahrgut</label>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Gefahrenklasse</label>
+                    {{ form.hazard_class }}
+                    {% if form.hazard_class.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.hazard_class.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Sicherheitsdatenblatt</label>
+                    {{ form.safety_data_sheet }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Haltbarkeit & Lagerung -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Haltbarkeit & Lagerung</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-center">
+                    {{ form.has_expiry_date }}
+                    <label class="ml-2 text-sm font-medium text-gray-700">Hat Verfallsdatum</label>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Haltbarkeit (Monate)</label>
+                    {{ form.shelf_life_months }}
+                </div>
+                <div></div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Min. Temperatur (°C)</label>
+                    {{ form.storage_temperature_min }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Max. Temperatur (°C)</label>
+                    {{ form.storage_temperature_max }}
+                </div>
+                <div></div>
+                <div class="md:col-span-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Lageranweisungen</label>
+                    {{ form.storage_instructions }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Bestellung -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Bestellung</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mindestbestand</label>
+                    {{ form.min_quantity }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Bestellpunkt</label>
+                    {{ form.reorder_point }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Standard-Bestellmenge</label>
+                    {{ form.standard_order_quantity }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Stückpreis (EUR)</label>
+                    {{ form.unit_price }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Technische Informationen -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Technische Informationen</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Technische Spezifikationen</label>
+                    {{ form.technical_specifications }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Verwendungshinweise</label>
+                    {{ form.usage_instructions }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Dokumente & Bild -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Dokumente & Bild</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Handbuch/Produktinfo</label>
+                    {{ form.manual_document }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Produktbild</label>
+                    {{ form.image }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-4">
+            <a href="{% url 'magazine:master_list' %}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+                Abbrechen
+            </a>
+            <button type="submit" class="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors">
+                Speichern
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ category.name }} - Wiki{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li class="text-gray-400">/</li>
+            <li><a href="{% url 'wiki:dashboard' %}" class="text-gray-500 hover:text-gray-700">Wiki</a></li>
+            <li class="text-gray-400">/</li>
+            <li><span class="text-gray-900 font-semibold">{{ category.icon }} {{ category.name }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-4 mb-2">
+            <span class="text-5xl">{{ category.icon }}</span>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">{{ category.name }}</h1>
+                {% if category.description %}
+                <p class="mt-2 text-gray-600">{{ category.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Seiten -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="p-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Artikel in dieser Kategorie</h2>
+        </div>
+        <div class="divide-y divide-gray-200">
+            {% for page in pages %}
+            <a href="{% url 'wiki:page_detail' page.slug %}" class="block p-4 hover:bg-gray-50 transition-colors">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h3 class="text-base font-medium text-gray-900">{{ page.title }}</h3>
+                        {% if page.description %}
+                        <p class="mt-1 text-sm text-gray-600">{{ page.description|truncatewords:30 }}</p>
+                        {% endif %}
+                        <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                            <span>{{ page.created_by.get_full_name }}</span>
+                            <span>•</span>
+                            <span>{{ page.updated_at|date:"d.m.Y" }}</span>
+                            <span>•</span>
+                            <span>{{ page.view_count }} Aufrufe</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="p-8 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="mt-2 text-sm text-gray-500">Noch keine Artikel in dieser Kategorie</p>
+                {% if perms.wiki.add_wikipage %}
+                <a href="{% url 'wiki:page_create' %}" class="mt-4 inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm">
+                    Ersten Artikel erstellen
+                </a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

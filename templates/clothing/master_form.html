@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Kleiderkammer - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'clothing:dashboard' %}" class="text-gray-500 hover:text-gray-700">Kleiderkammer</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'clothing:master_list' %}" class="text-gray-500 hover:text-gray-700">Stammdaten</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">📚</span>
+            <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Basic Info -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Grundinformationen</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Name <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.name.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Kategorie <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.category.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.product_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Produkttyp <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.product_type }}
+                    {% if form.product_type.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.product_type.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.manufacturer.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Hersteller
+                    </label>
+                    {{ form.manufacturer }}
+                    {% if form.manufacturer.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.manufacturer.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.model_number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Modellnummer/Artikelnummer
+                    </label>
+                    {{ form.model_number }}
+                    {% if form.model_number.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.model_number.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.material.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Material
+                    </label>
+                    {{ form.material }}
+                    {% if form.material.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.material.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.unit_price.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Stückpreis (EUR)
+                    </label>
+                    {{ form.unit_price }}
+                    {% if form.unit_price.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.unit_price.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Beschreibung
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.description.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- PSA Info -->
+        <div class="bg-orange-50 rounded-lg border border-orange-200 p-6">
+            <h3 class="text-lg font-bold text-orange-900 mb-4">🦺 PSA-Informationen</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="flex items-center gap-2">
+                        {{ form.is_psa }}
+                        <span class="text-sm font-medium text-gray-700">Dies ist PSA (Persönliche Schutzausrüstung)</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label for="{{ form.protection_level.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Schutzklasse
+                    </label>
+                    {{ form.protection_level }}
+                    {% if form.protection_level.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.protection_level.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.norm_standard.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Norm/Standard
+                    </label>
+                    {{ form.norm_standard }}
+                    {% if form.norm_standard.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.norm_standard.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.max_usage_years.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Max. Nutzungsdauer (Jahre)
+                    </label>
+                    {{ form.max_usage_years }}
+                    {% if form.max_usage_years.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.max_usage_years.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.max_washing_cycles.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Max. Waschzyklen
+                    </label>
+                    {{ form.max_washing_cycles }}
+                    {% if form.max_washing_cycles.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.max_washing_cycles.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="flex items-center gap-2 mb-2">
+                        {{ form.requires_inspection }}
+                        <span class="text-sm font-medium text-gray-700">Regelmäßige Prüfung erforderlich</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label for="{{ form.inspection_interval_months.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Prüfintervall (Monate)
+                    </label>
+                    {{ form.inspection_interval_months }}
+                    {% if form.inspection_interval_months.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.inspection_interval_months.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Care & Maintenance -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Pflege & Wartung</h3>
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ form.washing_instructions.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Waschanleitung/Pflegehinweise
+                    </label>
+                    {{ form.washing_instructions }}
+                    {% if form.washing_instructions.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.washing_instructions.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.special_features.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Besondere Merkmale
+                    </label>
+                    {{ form.special_features }}
+                    {% if form.special_features.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.special_features.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-3">
+            <a href="{% url 'clothing:master_list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium transition-colors">
+                Abbrechen
+            </a>
+            <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                Speichern
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

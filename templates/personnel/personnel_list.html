@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Personal - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'core:dashboard' %}" class="text-gray-700 hover:text-primary-600">
+                    🏠 Dashboard
+                </a>
+            </li>
+            <li aria-current="page">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="ml-1 text-gray-500 font-medium">👥 Personal</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Personalverwaltung</h1>
+                <p class="mt-2 text-sm text-gray-600">
+                    {{ personnel.paginator.count }} Personen |
+                    {{ active_count }} aktiv |
+                    {{ expired_qualifications_count }} Qualifikationen abgelaufen
+                </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Quick Stats -->
+                <div class="hidden lg:flex items-center gap-4 mr-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600">{{ active_count }}</div>
+                        <div class="text-xs text-gray-500">Aktiv</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600">{{ with_qualifications_count }}</div>
+                        <div class="text-xs text-gray-500">Qualifiziert</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-red-600">{{ expired_qualifications_count }}</div>
+                        <div class="text-xs text-gray-500">Abgelaufen</div>
+                    </div>
+                </div>
+
+                <!-- Export Button -->
+                {% include 'includes/components/button.html' with text="Exportieren" type="secondary" icon="📤" size="md" %}
+
+                <!-- Add Button -->
+                {% include 'includes/components/button.html' with text="Neue Person" type="primary" icon="➕" size="md" href="/personnel/create/" %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Search -->
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Suche</label>
+                <input
+                    type="search"
+                    placeholder="Name, Personalnummer..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    hx-get="{% url 'personnel:personnel_list' %}"
+                    hx-trigger="keyup changed delay:300ms"
+                    hx-target="#personnel-list"
+                    hx-include="[name='department'], [name='rank'], [name='status']"
+                    name="search"
+                />
+            </div>
+
+            <!-- Department Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Abteilung</label>
+                <select
+                    name="department"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    hx-get="{% url 'personnel:personnel_list' %}"
+                    hx-trigger="change"
+                    hx-target="#personnel-list"
+                    hx-include="[name='search'], [name='rank'], [name='status']"
+                >
+                    <option value="">Alle Abteilungen</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept }}">{{ dept }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                    name="status"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    hx-get="{% url 'personnel:personnel_list' %}"
+                    hx-trigger="change"
+                    hx-target="#personnel-list"
+                    hx-include="[name='search'], [name='department'], [name='rank']"
+                >
+                    <option value="">Alle</option>
+                    <option value="active">Aktiv</option>
+                    <option value="inactive">Inaktiv</option>
+                    <option value="qualifications_expired">Qualifikationen abgelaufen</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Quick Filters -->
+        <div class="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+            <span class="text-sm text-gray-600 mr-2">Schnellfilter:</span>
+            <button
+                hx-get="{% url 'personnel:personnel_list' %}?status=active"
+                hx-target="#personnel-list"
+                class="px-3 py-1 text-sm bg-green-100 text-green-800 rounded-full hover:bg-green-200">
+                ✅ Aktiv
+            </button>
+            <button
+                hx-get="{% url 'personnel:personnel_list' %}?status=qualifications_expired"
+                hx-target="#personnel-list"
+                class="px-3 py-1 text-sm bg-red-100 text-red-800 rounded-full hover:bg-red-200">
+                ⚠️ Qualifikationen abgelaufen
+            </button>
+            <button
+                hx-get="{% url 'personnel:personnel_list' %}?department=Einsatzabteilung"
+                hx-target="#personnel-list"
+                class="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200">
+                🚒 Einsatzabteilung
+            </button>
+        </div>
+    </div>
+
+    <!-- Personnel List -->
+    <div id="personnel-list">
+        {% include 'personnel/partials/personnel_table.html' %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Keyboard Shortcut: Ctrl+N für neue Person
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            window.location.href = '{% url "personnel:personnel_create" %}';
+        }
+    });
+
+    // Keyboard Shortcut: Ctrl+F für Search-Focus
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            document.querySelector('input[name="search"]').focus();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,55 @@
+<!-- Weather Widget -->
+<div class="h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-400 to-blue-600 text-white">
+    {% if widget.title %}
+    <h3 class="text-xl font-semibold mb-4">{{ widget.title }}</h3>
+    {% endif %}
+
+    {% if widget.config.location %}
+        <div class="text-center">
+            <div class="text-7xl mb-4">
+                {% if widget.config.condition == 'sunny' %}☀️
+                {% elif widget.config.condition == 'cloudy' %}☁️
+                {% elif widget.config.condition == 'rainy' %}🌧️
+                {% elif widget.config.condition == 'snowy' %}❄️
+                {% elif widget.config.condition == 'stormy' %}⛈️
+                {% else %}🌤️
+                {% endif %}
+            </div>
+
+            <div class="text-5xl font-bold mb-2">
+                {{ widget.config.temperature|default:"--" }}°C
+            </div>
+
+            <div class="text-xl mb-4">
+                {{ widget.config.location }}
+            </div>
+
+            {% if widget.config.description %}
+            <div class="text-lg opacity-90">
+                {{ widget.config.description }}
+            </div>
+            {% endif %}
+
+            <div class="mt-6 grid grid-cols-2 gap-4 text-sm">
+                {% if widget.config.humidity %}
+                <div>
+                    <div class="opacity-75">Luftfeuchtigkeit</div>
+                    <div class="font-semibold">{{ widget.config.humidity }}%</div>
+                </div>
+                {% endif %}
+                {% if widget.config.wind_speed %}
+                <div>
+                    <div class="opacity-75">Wind</div>
+                    <div class="font-semibold">{{ widget.config.wind_speed }} km/h</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center opacity-75">
+            <div class="text-6xl mb-4">🌤️</div>
+            <p class="text-sm">Keine Wetter-Daten konfiguriert</p>
+            <p class="text-xs mt-2">Fügen Sie location, temperature, condition im config-Feld hinzu</p>
+        </div>
+    {% endif %}
+</div>

@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title|default:"Wartungsart zuweisen" }} - Taucher - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Taucher</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+            <h1 class="text-2xl font-bold text-gray-900">🔗 {{ title }}</h1>
+            {% if item %}
+            <p class="mt-1 text-sm text-gray-600">
+                Wählen Sie eine Wartungsart für <span class="font-semibold">{{ item.name }}</span>
+            </p>
+            {% endif %}
+        </div>
+
+        {% if existing_assignments %}
+        <div class="p-6 bg-yellow-50 border-b border-yellow-200">
+            <h3 class="text-sm font-medium text-yellow-800 mb-2">Bereits zugewiesene Wartungsarten:</h3>
+            <div class="flex flex-wrap gap-2">
+                {% for assignment in existing_assignments %}
+                <span class="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full">
+                    {{ assignment.service_type.name }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            {% if not item %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.item.label }} *
+                </label>
+                {{ form.item }}
+                {% if form.item.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.item.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% else %}
+            <input type="hidden" name="item" value="{{ item.pk }}">
+            {% endif %}
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.service_type.label }} *
+                </label>
+                {{ form.service_type }}
+                {% if form.service_type.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.service_type.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.custom_interval_months.label }}
+                </label>
+                {{ form.custom_interval_months }}
+                <p class="mt-1 text-xs text-gray-500">
+                    Optional: Überschreibt das Standard-Intervall der Wartungsart
+                </p>
+                {% if form.custom_interval_months.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.custom_interval_months.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.next_service_date.label }}
+                </label>
+                {{ form.next_service_date }}
+                <p class="mt-1 text-xs text-gray-500">
+                    Datum der nächsten fälligen Wartung
+                </p>
+                {% if form.next_service_date.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.next_service_date.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.notes.label }}
+                </label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-4">
+                <a href="{% url 'diving:service_management' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-medium">
+                    Wartungsart zuweisen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% comment %}
+Wiederverwendbare Badge-Component
+Usage:
+    {% include 'includes/components/badge.html' with text="Aktiv" color="success" %}
+    {% include 'includes/components/badge.html' with text="Kritisch" color="danger" icon="⚠️" %}
+
+Params:
+    - text (required): Badge-Text
+    - color (optional): success, warning, danger, info, gray (default)
+    - icon (optional): Icon vor Text
+    - size (optional): sm, md (default), lg
+{% endcomment %}
+
+<span class="inline-flex items-center gap-1 font-medium rounded-full
+    {% if size == 'sm' %}px-2 py-0.5 text-xs
+    {% elif size == 'lg' %}px-3 py-1.5 text-sm
+    {% else %}px-2.5 py-1 text-xs{% endif %}
+
+    {% if color == 'success' %}bg-green-100 text-green-800
+    {% elif color == 'warning' %}bg-yellow-100 text-yellow-800
+    {% elif color == 'danger' %}bg-red-100 text-red-800
+    {% elif color == 'critical' %}bg-red-800 text-white
+    {% elif color == 'info' %}bg-blue-100 text-blue-800
+    {% elif color == 'primary' %}bg-primary-100 text-primary-800
+    {% else %}bg-gray-100 text-gray-800{% endif %}">
+
+    {% if icon %}
+    <span>{{ icon }}</span>
+    {% endif %}
+
+    {{ text }}
+</span>
