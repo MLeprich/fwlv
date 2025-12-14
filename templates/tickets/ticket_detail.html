@@ -36,18 +36,37 @@
                         {{ ticket.get_status_display }}
                     </span>
                     <span class="px-2 py-1 text-xs rounded-full font-medium {{ ticket.priority_color }}">
+                        <span class="inline-block w-2 h-2 rounded-full {{ ticket.priority_dot_color }} mr-1"></span>
                         {{ ticket.get_priority_display }}
                     </span>
-                    <span class="px-2 py-1 text-xs rounded-full bg-indigo-500 text-white">
-                        {{ ticket.get_category_display }}
+                    {% if ticket.category %}
+                    <span class="px-2 py-1 text-xs rounded-full text-white flex items-center gap-1" style="background-color: {{ ticket.category.color }};">
+                        <span>{{ ticket.category.icon }}</span>
+                        <span>{{ ticket.category.name }}</span>
                     </span>
+                    {% endif %}
                 </div>
             </div>
-            {% if is_processor %}
-            <a href="{% url 'tickets:update' ticket.pk %}" class="bg-white text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-colors">
-                Bearbeiten
-            </a>
-            {% endif %}
+            <div class="flex items-center gap-3">
+                {% if has_both_roles %}
+                <!-- Rollen-Switch -->
+                <div class="flex items-center gap-2 bg-indigo-700/50 rounded-lg p-2">
+                    <span class="text-xs text-indigo-200">Rolle:</span>
+                    <form method="post" action="{% url 'tickets:switch_role' %}" class="flex items-center">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" name="role" value="creator"
+                                class="px-2 py-1 rounded-l text-xs font-medium transition-colors {% if active_role == 'creator' %}bg-white text-indigo-700{% else %}bg-indigo-600 text-white hover:bg-indigo-500{% endif %}">
+                            Ersteller
+                        </button>
+                        <button type="submit" name="role" value="processor"
+                                class="px-2 py-1 rounded-r text-xs font-medium transition-colors {% if active_role == 'processor' %}bg-white text-indigo-700{% else %}bg-indigo-600 text-white hover:bg-indigo-500{% endif %}">
+                            Bearbeiter
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 
@@ -61,6 +80,24 @@
                 <div class="prose prose-sm max-w-none text-gray-700">
                     {{ ticket.description|linebreaks }}
                 </div>
+
+                {% if ticket.images.exists %}
+                <!-- Bilder -->
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Angehängte Bilder</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {% for image in ticket.images.all %}
+                        <a href="{{ image.image.url }}" target="_blank" class="block relative group">
+                            <img src="{{ image.image.url }}" alt="{{ image.caption }}"
+                                 class="w-full h-32 object-cover rounded-lg border border-gray-200 hover:border-indigo-500 transition-colors">
+                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg transition-all flex items-center justify-center">
+                                <span class="text-white opacity-0 group-hover:opacity-100 text-sm">Vergrößern</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Comments -->
@@ -81,6 +118,16 @@
                             <span class="text-xs text-gray-500">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
                         </div>
                         <p class="text-sm text-gray-700">{{ comment.content|linebreaks }}</p>
+                        {% if comment.images.exists %}
+                        <div class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {% for image in comment.images.all %}
+                            <a href="{{ image.image.url }}" target="_blank" class="block">
+                                <img src="{{ image.image.url }}" alt="Kommentar-Bild"
+                                     class="w-full h-24 object-cover rounded border border-gray-200 hover:border-indigo-500 transition-colors">
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -89,12 +136,18 @@
                 {% endif %}
 
                 <!-- Add Comment Form -->
-                <form method="post" action="{% url 'tickets:add_comment' ticket.pk %}" class="border-t border-gray-200 pt-4">
+                <form method="post" action="{% url 'tickets:add_comment' ticket.pk %}" enctype="multipart/form-data" class="border-t border-gray-200 pt-4">
                     {% csrf_token %}
                     <div class="mb-3">
                         {{ comment_form.content }}
                     </div>
-                    {% if is_processor %}
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Bilder anhängen (optional)</label>
+                        <input type="file" name="images" accept="image/*" multiple
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                        <p class="mt-1 text-xs text-gray-500">Mehrere Bilder möglich. Bilder werden automatisch skaliert.</p>
+                    </div>
+                    {% if can_process %}
                     <div class="flex items-center mb-3">
                         {{ comment_form.is_internal }}
                         <label for="{{ comment_form.is_internal.id_for_label }}" class="ml-2 text-sm text-gray-700">
@@ -113,45 +166,107 @@
         <!-- Sidebar -->
         <div class="space-y-6">
 
-            <!-- Status Actions (for processors) -->
-            {% if is_processor %}
+            <!-- Status Actions (for processors in processor role) -->
+            {% if can_process %}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Schnellaktionen</h2>
 
-                <!-- Change Status -->
-                <form method="post" action="{% url 'tickets:change_status' ticket.pk %}" class="mb-4">
+                {% if ticket.status != 'closed' %}
+                <!-- Kombiniertes Formular für Status, Priorität, Zuweisung -->
+                <form method="post" action="{% url 'tickets:update_ticket' ticket.pk %}" class="space-y-4">
                     {% csrf_token %}
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status ändern</label>
-                    <div class="flex gap-2">
-                        <select name="status" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>Offen</option>
                             <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>In Bearbeitung</option>
                             <option value="waiting" {% if ticket.status == 'waiting' %}selected{% endif %}>Wartend</option>
                             <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>Gelöst</option>
-                            <option value="closed" {% if ticket.status == 'closed' %}selected{% endif %}>Geschlossen</option>
                         </select>
-                        <button type="submit" class="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
-                            OK
-                        </button>
                     </div>
-                </form>
 
-                <!-- Assign -->
-                <form method="post" action="{% url 'tickets:assign' ticket.pk %}">
-                    {% csrf_token %}
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Zuweisen an</label>
-                    <div class="flex gap-2">
-                        <select name="assigned_to" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    <!-- Priorität -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Priorität</label>
+                        <select name="priority" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="low" {% if ticket.priority == 'low' %}selected{% endif %}>Niedrig</option>
+                            <option value="normal" {% if ticket.priority == 'normal' %}selected{% endif %}>Normal</option>
+                            <option value="high" {% if ticket.priority == 'high' %}selected{% endif %}>Hoch</option>
+                            <option value="urgent" {% if ticket.priority == 'urgent' %}selected{% endif %}>Dringend</option>
+                        </select>
+                    </div>
+
+                    <!-- Zuweisung -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Zugewiesen an</label>
+                        <select name="assigned_to" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">-- Niemand --</option>
-                            {% for user in request.user|add:0 %}
-                            <!-- This is a placeholder - we'll populate via the view -->
+                            {% for processor in processors %}
+                            <option value="{{ processor.pk }}" {% if ticket.assigned_to == processor %}selected{% endif %}>
+                                {{ processor.get_full_name|default:processor.username }}
+                            </option>
                             {% endfor %}
                         </select>
-                        <button type="submit" class="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
-                            OK
-                        </button>
                     </div>
+
+                    <!-- Speichern Button -->
+                    <button type="submit" class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Änderungen speichern
+                    </button>
                 </form>
+
+                <!-- Ticket abschließen -->
+                <div class="border-t border-gray-200 mt-4 pt-4" x-data="{ showCloseForm: false }">
+                    <button @click="showCloseForm = !showCloseForm"
+                            class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Ticket abschließen
+                    </button>
+
+                    <form method="post" action="{% url 'tickets:close' ticket.pk %}"
+                          x-show="showCloseForm" x-cloak
+                          class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        {% csrf_token %}
+                        <label class="block text-sm font-medium text-green-800 mb-2">
+                            Abschluss-Kommentar (optional)
+                        </label>
+                        <textarea name="close_comment" rows="3"
+                                  placeholder="z.B. Problem wurde gelöst durch..."
+                                  class="w-full px-3 py-2 border border-green-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 mb-2"></textarea>
+                        <div class="flex gap-2">
+                            <button type="submit" class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
+                                Abschließen
+                            </button>
+                            <button type="button" @click="showCloseForm = false" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm">
+                                Abbrechen
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% else %}
+                <!-- Ticket ist bereits geschlossen -->
+                <div class="text-center py-4">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Ticket ist abgeschlossen
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+            {% elif has_both_roles and active_role == 'creator' %}
+            <div class="bg-yellow-50 rounded-lg shadow-sm border border-yellow-200 p-4">
+                <p class="text-sm text-yellow-800">
+                    <strong>Hinweis:</strong> Sie sind derzeit als Ersteller aktiv. Um den Status zu ändern oder das Ticket zuzuweisen, wechseln Sie zur Bearbeiter-Rolle.
+                </p>
             </div>
             {% endif %}
 
