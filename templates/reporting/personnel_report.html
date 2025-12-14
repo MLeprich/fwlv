@@ -4,8 +4,8 @@
 {% block title %}Personal-Reporting - FLVS{% endblock %}
 
 {% block extra_head %}
-<!-- Chart.js für grafische Darstellungen -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Chart.js für grafische Darstellungen (lokal) -->
+<script src="{% static 'vendor/js/chart.min.js' %}"></script>
 {% endblock %}
 
 {% block breadcrumb %}
