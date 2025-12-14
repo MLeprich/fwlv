@@ -55,35 +55,103 @@
 </div>
 {% endif %}
 
-<!-- KPI Cards Grid -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    {% url 'core:inventory_critical' as inventory_url %}
-    {% include 'includes/components/kpi_card.html' with title="Kritische Bestände" value=critical_stock_count icon="📉" color="red" trend_value=stock_trend trend_direction=stock_trend_direction url=inventory_url link_text="Details ansehen" %}
+<!-- Schnellzugriff: Telefonbuch, Dokumente, Standorte -->
+<div class="mb-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Schnellzugriff</h2>
 
-    {% url 'core:inspections_upcoming' as inspections_url %}
-    {% include 'includes/components/kpi_card.html' with title="Prüfungen (30 Tage)" value=upcoming_inspections icon="📋" color="yellow" subtitle="HU/UVV fällig" url=inspections_url link_text="Kalender öffnen" %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Telefonbuch Kachel -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-5 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="text-3xl">📞</span>
+                    <div>
+                        <h3 class="font-semibold text-gray-900">Telefonbuch</h3>
+                        <p class="text-xs text-gray-600">Kontakte durchsuchen</p>
+                    </div>
+                </div>
+                <form action="{% url 'personnel:phonebook' %}" method="get" class="flex gap-2">
+                    <input type="text"
+                           name="q"
+                           placeholder="Name, Telefon..."
+                           class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+            <div class="px-5 py-3 bg-gray-50">
+                <a href="{% url 'personnel:phonebook' %}" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    Alle Kontakte anzeigen &rarr;
+                </a>
+            </div>
+        </div>
 
-    {% url 'procurement:order_list' as orders_url %}
-    {% include 'includes/components/kpi_card.html' with title="Offene Bestellungen" value=pending_orders icon="📦" color="blue" subtitle="In Bearbeitung" url=orders_url link_text="Übersicht" %}
+        <!-- Dokumente Kachel -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-5 border-b border-gray-200 bg-gradient-to-r from-green-50 to-green-100">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="text-3xl">📄</span>
+                    <div>
+                        <h3 class="font-semibold text-gray-900">Dokumente</h3>
+                        <p class="text-xs text-gray-600">Dokumente durchsuchen</p>
+                    </div>
+                </div>
+                <form action="{% url 'documents:document_list' %}" method="get" class="flex gap-2">
+                    <input type="text"
+                           name="query"
+                           placeholder="Titel, Nummer, Tags..."
+                           class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <button type="submit" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+            <div class="px-5 py-3 bg-gray-50">
+                <a href="{% url 'documents:document_list' %}" class="text-sm text-green-600 hover:text-green-800 font-medium">
+                    Alle Dokumente anzeigen &rarr;
+                </a>
+            </div>
+        </div>
 
-    {% url 'vehicles:list' as vehicles_url %}
-    {% include 'includes/components/kpi_card.html' with title="Fahrzeuge" value=operational_vehicles icon="🚒" color="green" subtitle="Einsatzbereit" progress_current=operational_vehicles progress_total=total_vehicles url=vehicles_url link_text="Alle Fahrzeuge" %}
-</div>
-
-<!-- Additional KPIs Row -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    {% url 'medical:expiring_batches' as medical_url %}
-    {% include 'includes/components/kpi_card.html' with title="Ablaufende Medikamente" value=expiring_medications icon="💊" color="orange" subtitle="Nächste 90 Tage" url=medical_url link_text="Liste anzeigen" %}
-
-    {% url 'personnel:list' as personnel_url %}
-    {% include 'includes/components/kpi_card.html' with title="Abgelaufene Qualifikationen" value=expired_qualifications icon="📜" color="red" subtitle="Personen betroffen" url=personnel_url link_text="Personal anzeigen" %}
-
-    {% include 'includes/components/kpi_card.html' with title="Laufende Inventuren" value=active_inventory_checks icon="📋" color="blue" progress_current=inventory_progress progress_total=100 url="#" link_text="Inventuren" %}
+        <!-- Standorte Kachel -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-5 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="text-3xl">📍</span>
+                    <div>
+                        <h3 class="font-semibold text-gray-900">Standorte</h3>
+                        <p class="text-xs text-gray-600">Lagerorte durchsuchen</p>
+                    </div>
+                </div>
+                <form action="{% url 'locations:list' %}" method="get" class="flex gap-2">
+                    <input type="text"
+                           name="q"
+                           placeholder="Name, Code..."
+                           class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    <button type="submit" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+            <div class="px-5 py-3 bg-gray-50">
+                <a href="{% url 'locations:list' %}" class="text-sm text-purple-600 hover:text-purple-800 font-medium">
+                    Alle Standorte anzeigen &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Heute Wichtig Section -->
 <div class="mb-6">
-    <h2 class="text-lg font-semibold text-gray-900 mb-4">📌 Heute wichtig</h2>
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Heute wichtig</h2>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Meine Aufgaben -->
