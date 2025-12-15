@@ -1,0 +1,2 @@
+# Dieses Verzeichnis enthält SSL-Zertifikate von Let's Encrypt
+# Zertifikate werden von Git ignoriert (.dockerignore)

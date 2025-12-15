@@ -94,12 +94,14 @@ coverage.xml
 .hypothesis/
 
 # -----------------------------------------------------------------------------
-# Docker (local data)
+# Docker (local data, keep .gitkeep files)
 # -----------------------------------------------------------------------------
 docker/backup/*.sql
 docker/backup/*.gz
-docker/certbot/conf/
-docker/certbot/www/
+docker/certbot/conf/*
+!docker/certbot/conf/.gitkeep
+docker/certbot/www/*
+!docker/certbot/www/.gitkeep
 
 # -----------------------------------------------------------------------------
 # Logs

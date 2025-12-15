@@ -52,11 +52,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create necessary directories
+# Create necessary directories and make entrypoint executable
 RUN mkdir -p /app/staticfiles /app/media /app/logs \
+    && chmod +x /app/docker/scripts/entrypoint.sh \
     && chown -R flvs:flvs /app
 
-# Collect static files
+# Collect static files (initial collection, entrypoint will update)
 RUN python manage.py collectstatic --noinput --settings=flvs_project.settings.production || true
 
 # Switch to non-root user
@@ -66,8 +67,11 @@ USER flvs
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')" || exit 1
+
+# Entrypoint handles migrations and startup tasks
+ENTRYPOINT ["/app/docker/scripts/entrypoint.sh"]
 
 # Default command (can be overridden in docker-compose)
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60", "flvs_project.wsgi:application"]
