@@ -124,7 +124,7 @@
             {% endif %}
 
             <!-- Ausrüstung -->
-            {% if perms.equipment.view_equipment %}
+            {% if perms.equipment.view_equipmentitem %}
             <a
                 href="{% url 'equipment:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
@@ -160,7 +160,7 @@
             {% endif %}
 
             <!-- Höhenrettung -->
-            {% if perms.height_rescue.view_equipment %}
+            {% if perms.height_rescue.view_heightrescueitem %}
             <a
                 href="{% url 'height_rescue:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
@@ -178,7 +178,7 @@
             {% endif %}
 
             <!-- Taucher -->
-            {% if perms.diving.view_equipment %}
+            {% if perms.diving.view_divingitem %}
             <a
                 href="{% url 'diving:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
@@ -363,6 +363,24 @@
                     x-show="$store.sidebar.expanded"
                 >
                     Personal
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- FF-Verwaltung (Dienstgrade, Jubilaeen, Befoerderungen) -->
+            {% if perms.personnel.view_person and modules.ff_dashboard_enabled %}
+            <a
+                href="{% url 'personnel:ff_dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'ff' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'FF-Verwaltung'"
+            >
+                <span class="text-xl flex-shrink-0">🚒</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    FF
                 </span>
             </a>
             {% endif %}

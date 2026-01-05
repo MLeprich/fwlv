@@ -56,10 +56,6 @@
                     <a href="{% url 'medical:master_detail' batch.master.pk %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
                         Zum Artikel →
                     </a>
-                    {% elif batch.item %}
-                    <a href="{% url 'medical:item_detail' batch.item.pk %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
-                        Zum Artikel →
-                    </a>
                     {% endif %}
                 </div>
             </div>

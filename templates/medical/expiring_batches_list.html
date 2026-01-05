@@ -274,9 +274,9 @@
                         </td>
                         <td class="px-6 py-4">
                             <div>
-                                <a href="{% url 'medical:item_detail' batch.item.pk %}" class="text-sm font-medium text-gray-900 hover:text-blue-600">
+                                <span class="text-sm font-medium text-gray-900">
                                     {{ batch.item.name }}
-                                </a>
+                                </span>
                                 <div class="flex items-center gap-2 mt-1">
                                     {% if batch.item.is_btm %}
                                     <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">

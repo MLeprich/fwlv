@@ -11,7 +11,7 @@
             <li><span class="text-gray-400">/</span></li>
             <li><a href="{% url 'height_rescue:dashboard' %}" class="text-gray-500 hover:text-gray-700">Höhenrettung</a></li>
             <li><span class="text-gray-400">/</span></li>
-            <li><a href="{% url 'height_rescue:item_list' %}" class="text-gray-500 hover:text-gray-700">Ausrüstung</a></li>
+            <li><a href="{% url 'height_rescue:device_list' %}" class="text-gray-500 hover:text-gray-700">Ausrüstung</a></li>
             <li><span class="text-gray-400">/</span></li>
             <li><span class="text-gray-900 font-medium">Kategorien</span></li>
         </ol>
@@ -30,7 +30,7 @@
                     <p class="mt-1 text-sm text-gray-600">Verwaltung der Höhenrettungsausrüstung-Kategorien (hierarchisch)</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <a href="{% url 'height_rescue:item_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    <a href="{% url 'height_rescue:device_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
                         ← Zurück zur Ausrüstung
                     </a>
                     <a href="{% url 'height_rescue:category_create' %}" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-sm">

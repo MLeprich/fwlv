@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}Dienstgrade - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <nav class="flex mb-2" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                    <li><a href="{% url 'personnel:ff_dashboard' %}" class="text-gray-500 hover:text-gray-700">FF-Verwaltung</a></li>
+                    <li class="flex items-center">
+                        <svg class="w-4 h-4 mx-2 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+                        <span class="text-gray-900 font-medium">Dienstgrade</span>
+                    </li>
+                </ol>
+            </nav>
+            <h1 class="text-2xl font-bold text-gray-900">Dienstgrade verwalten</h1>
+            <p class="mt-1 text-sm text-gray-500">Definieren Sie Dienstgrade und Befoerderungsvoraussetzungen</p>
+        </div>
+        <a href="{% url 'personnel:rank_create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Dienstgrad erstellen
+        </a>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex flex-wrap gap-4 items-center">
+            <span class="text-sm font-medium text-gray-700">Filter:</span>
+            <a href="{% url 'personnel:rank_list' %}" class="px-3 py-1.5 text-sm rounded-lg {% if not selected_org_type %}bg-gray-900 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                Alle
+            </a>
+            <a href="?org_type=volunteer" class="px-3 py-1.5 text-sm rounded-lg {% if selected_org_type == 'volunteer' %}bg-blue-600 text-white{% else %}bg-blue-50 text-blue-700 hover:bg-blue-100{% endif %}">
+                Freiwillige Feuerwehr
+            </a>
+            <a href="?org_type=youth" class="px-3 py-1.5 text-sm rounded-lg {% if selected_org_type == 'youth' %}bg-yellow-500 text-white{% else %}bg-yellow-50 text-yellow-700 hover:bg-yellow-100{% endif %}">
+                Jugendfeuerwehr
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabelle -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sortierung</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bezeichnung</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organisation</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Befoerderungsvoraussetzungen</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personen</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for rank in ranks %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ rank.sort_order }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">{{ rank.name }}</div>
+                                <div class="text-sm text-gray-500">{{ rank.abbreviation }}</div>
+                            </div>
+                            {% if rank.is_functional_rank %}
+                            <span class="ml-2 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded">Funktion</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if rank.organization_type == 'volunteer' %}
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Freiwillige Feuerwehr</span>
+                        {% else %}
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Jugendfeuerwehr</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {% if rank.min_years_in_previous %}
+                        <span class="block">{{ rank.min_years_in_previous }} J. im Vorgaenger</span>
+                        {% endif %}
+                        {% if rank.min_total_years %}
+                        <span class="block">{{ rank.min_total_years }} J. Gesamtdienstzeit</span>
+                        {% endif %}
+                        {% if rank.requires_course %}
+                        <span class="block text-xs text-gray-400">Lehrgang: {{ rank.requires_course }}</span>
+                        {% endif %}
+                        {% if not rank.min_years_in_previous and not rank.min_total_years and not rank.requires_course %}
+                        <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium {% if rank.person_count > 0 %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ rank.person_count }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if rank.is_active %}
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aktiv</span>
+                        {% else %}
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Inaktiv</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{% url 'personnel:rank_update' rank.pk %}" class="text-blue-600 hover:text-blue-900 mr-4">Bearbeiten</a>
+                        {% if rank.person_count == 0 %}
+                        <a href="{% url 'personnel:rank_delete' rank.pk %}" class="text-red-600 hover:text-red-900">Loeschen</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                        <span class="text-4xl block mb-2">🎖</span>
+                        <p>Keine Dienstgrade gefunden</p>
+                        <a href="{% url 'personnel:rank_create' %}" class="mt-2 inline-block text-red-600 hover:text-red-800">Erstellen Sie den ersten Dienstgrad</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

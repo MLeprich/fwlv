@@ -391,7 +391,37 @@
                                 {{ form.youth_exit_date }}
                                 {% if form.youth_exit_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.youth_exit_date.errors.0 }}</p>{% endif %}
                             </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.youth_rank.label }}</label>
+                                {{ form.youth_rank }}
+                                {% if form.youth_rank.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.youth_rank.help_text }}</p>{% endif %}
+                                {% if form.youth_rank.errors %}<p class="mt-1 text-sm text-red-600">{{ form.youth_rank.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.youth_rank_since.label }}</label>
+                                {{ form.youth_rank_since }}
+                                {% if form.youth_rank_since.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.youth_rank_since.help_text }}</p>{% endif %}
+                                {% if form.youth_rank_since.errors %}<p class="mt-1 text-sm text-red-600">{{ form.youth_rank_since.errors.0 }}</p>{% endif %}
+                            </div>
                         </div>
+                        {% if youth_promotion_info and youth_promotion_info.next_rank %}
+                        <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
+                            <p class="text-sm font-medium text-yellow-800">Naechste Befoerderung</p>
+                            <p class="text-sm text-yellow-700">
+                                {{ youth_promotion_info.next_rank.name }}
+                                {% if youth_promotion_info.eligible %}
+                                <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs font-medium">Moeglich</span>
+                                {% else %}
+                                <span class="ml-2 px-2 py-0.5 bg-orange-100 text-orange-800 rounded text-xs font-medium">
+                                    {% if youth_promotion_info.eligible_date %}ab {{ youth_promotion_info.eligible_date|date:"d.m.Y" }}{% endif %}
+                                </span>
+                                {% endif %}
+                            </p>
+                            {% for req in youth_promotion_info.missing_requirements %}
+                            <p class="text-xs text-yellow-600 mt-1">{{ req }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Freiwillige Feuerwehr -->
@@ -411,7 +441,37 @@
                                 {{ form.volunteer_unit }}
                                 {% if form.volunteer_unit.errors %}<p class="mt-1 text-sm text-red-600">{{ form.volunteer_unit.errors.0 }}</p>{% endif %}
                             </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.volunteer_rank.label }}</label>
+                                {{ form.volunteer_rank }}
+                                {% if form.volunteer_rank.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.volunteer_rank.help_text }}</p>{% endif %}
+                                {% if form.volunteer_rank.errors %}<p class="mt-1 text-sm text-red-600">{{ form.volunteer_rank.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.volunteer_rank_since.label }}</label>
+                                {{ form.volunteer_rank_since }}
+                                {% if form.volunteer_rank_since.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.volunteer_rank_since.help_text }}</p>{% endif %}
+                                {% if form.volunteer_rank_since.errors %}<p class="mt-1 text-sm text-red-600">{{ form.volunteer_rank_since.errors.0 }}</p>{% endif %}
+                            </div>
                         </div>
+                        {% if volunteer_promotion_info and volunteer_promotion_info.next_rank %}
+                        <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+                            <p class="text-sm font-medium text-blue-800">Naechste Befoerderung</p>
+                            <p class="text-sm text-blue-700">
+                                {{ volunteer_promotion_info.next_rank.name }}
+                                {% if volunteer_promotion_info.eligible %}
+                                <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs font-medium">Moeglich</span>
+                                {% else %}
+                                <span class="ml-2 px-2 py-0.5 bg-orange-100 text-orange-800 rounded text-xs font-medium">
+                                    {% if volunteer_promotion_info.eligible_date %}ab {{ volunteer_promotion_info.eligible_date|date:"d.m.Y" }}{% endif %}
+                                </span>
+                                {% endif %}
+                            </p>
+                            {% for req in volunteer_promotion_info.missing_requirements %}
+                            <p class="text-xs text-blue-600 mt-1">{{ req }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Berufsfeuerwehr -->
@@ -455,12 +515,84 @@
                             </div>
                         </div>
                     </div>
+
+                    {% if form.instance.pk and interruption_formset %}
+                    <!-- Dienstunterbrechungen -->
+                    <div class="border-l-4 border-orange-400 pl-4">
+                        <h3 class="text-sm font-medium text-gray-900 mb-3">Dienstunterbrechungen</h3>
+                        <p class="text-xs text-gray-600 mb-4">Pausenzeiten oder Zeiten bei anderen Feuerwehren. Diese werden von der effektiven Dienstzeit abgezogen.</p>
+
+                        {{ interruption_formset.management_form }}
+
+                        <div id="interruption-forms" class="space-y-4">
+                            {% for interruption_form in interruption_formset %}
+                            <div class="interruption-form p-4 bg-orange-50 rounded-lg border border-orange-200" {% if interruption_form.instance.pk %}data-id="{{ interruption_form.instance.pk }}"{% endif %}>
+                                {% if interruption_form.instance.pk %}
+                                <input type="hidden" name="{{ interruption_form.prefix }}-id" value="{{ interruption_form.instance.pk }}">
+                                {% endif %}
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Organisation</label>
+                                        {{ interruption_form.organization_type }}
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Art</label>
+                                        {{ interruption_form.interruption_type }}
+                                    </div>
+                                    <div class="flex items-end">
+                                        <label class="flex items-center text-xs text-red-600 cursor-pointer">
+                                            {{ interruption_form.DELETE }}
+                                            <span class="ml-1">Loeschen</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Von</label>
+                                        {{ interruption_form.start_date }}
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Bis (leer = noch aktiv)</label>
+                                        {{ interruption_form.end_date }}
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Andere Feuerwehr</label>
+                                        {{ interruption_form.other_department_name }}
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Grund</label>
+                                    {{ interruption_form.reason }}
+                                </div>
+
+                                {% if interruption_form.errors %}
+                                <div class="mt-2 text-xs text-red-600">
+                                    {% for error in interruption_form.non_field_errors %}{{ error }}{% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% empty %}
+                            <div id="no-interruptions" class="text-center py-4 text-gray-400 text-sm">
+                                Keine Unterbrechungen erfasst
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="button" onclick="addInterruptionForm()" class="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-orange-600 text-white rounded text-sm hover:bg-orange-700 transition-colors">
+                            <span>+</span>
+                            <span>Unterbrechung hinzufuegen</span>
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
         <!-- Benutzer & Foto -->
-        <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
+        <div class="bg-white rounded-lg shadow" x-data="{ open: {% if not form.instance.pk or not form.instance.user %}true{% else %}false{% endif %} }">
             <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
                 <div class="flex items-center">
                     <span class="text-xl mr-3">🔐</span>
@@ -475,7 +607,7 @@
             </button>
             <div x-show="open" x-collapse class="px-6 pb-6">
                 <div class="space-y-6">
-                    {% if not form.instance.pk %}
+                    {% if not form.instance.pk or not form.instance.user %}
                     <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
                         <div class="flex">
                             <span class="text-blue-600">ℹ️</span>
@@ -503,8 +635,7 @@
                         {% if form.user.errors %}<p class="mt-1 text-sm text-red-600">{{ form.user.errors.0 }}</p>{% endif %}
                     </div>
 
-                    <!-- Rollen-Zuweisung -->
-                    {% if form.instance.user or not form.instance.pk %}
+                    <!-- Rollen-Zuweisung (immer anzeigen) -->
                     <div class="border-t border-gray-200 pt-6">
                         <h3 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                             <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -518,7 +649,7 @@
                         </p>
                         {% else %}
                         <p class="text-sm text-gray-600 mb-4">
-                            Wählen Sie die Rollen für den neuen Benutzer-Account
+                            Wählen Sie die Rollen für den neuen Benutzer-Account (werden bei Aktivierung von "Neuen Benutzer anlegen" zugewiesen)
                         </p>
                         {% endif %}
 
@@ -542,9 +673,8 @@
                         <p class="mt-2 text-sm text-red-600">{{ form.roles.errors.0 }}</p>
                         {% endif %}
                     </div>
-                    {% endif %}
 
-                    <div class="{% if form.instance.user or not form.instance.pk %}border-t border-gray-200 pt-6{% endif %}">
+                    <div class="border-t border-gray-200 pt-6">
                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.photo.label }}</label>
                         {{ form.photo }}
                         {% if form.photo.errors %}<p class="mt-1 text-sm text-red-600">{{ form.photo.errors.0 }}</p>{% endif %}
@@ -786,4 +916,79 @@
         </div>
     </form>
 </div>
+
+{% if form.instance.pk and interruption_formset %}
+<script>
+// JavaScript fuer dynamisches Hinzufuegen von Dienstunterbrechungs-Formularen
+let interruptionFormCount = {{ interruption_formset.total_form_count }};
+
+function addInterruptionForm() {
+    const container = document.getElementById('interruption-forms');
+    const noInterruptions = document.getElementById('no-interruptions');
+
+    if (noInterruptions) {
+        noInterruptions.remove();
+    }
+
+    const newFormHtml = `
+        <div class="interruption-form p-4 bg-orange-50 rounded-lg border border-orange-200">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Organisation</label>
+                    <select name="interruptions-${interruptionFormCount}-organization_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="">---------</option>
+                        <option value="youth">Jugendfeuerwehr</option>
+                        <option value="volunteer">Freiwillige Feuerwehr</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Art</label>
+                    <select name="interruptions-${interruptionFormCount}-interruption_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="pause">Pause/Ruhend</option>
+                        <option value="other_department">Andere Feuerwehr</option>
+                        <option value="illness">Krankheit</option>
+                        <option value="military">Wehrdienst/Bundeswehr</option>
+                        <option value="other">Sonstiges</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="button" onclick="removeInterruptionForm(this)" class="text-xs text-red-600 hover:text-red-800">
+                        Entfernen
+                    </button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Von</label>
+                    <input type="date" name="interruptions-${interruptionFormCount}-start_date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Bis (leer = noch aktiv)</label>
+                    <input type="date" name="interruptions-${interruptionFormCount}-end_date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Andere Feuerwehr</label>
+                    <input type="text" name="interruptions-${interruptionFormCount}-other_department_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="z.B. FF Musterhausen">
+                </div>
+            </div>
+            <div class="mt-3">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Grund</label>
+                <input type="text" name="interruptions-${interruptionFormCount}-reason" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Grund fuer die Unterbrechung">
+            </div>
+        </div>
+    `;
+
+    container.insertAdjacentHTML('beforeend', newFormHtml);
+
+    // Update total forms count
+    interruptionFormCount++;
+    document.querySelector('[name="interruptions-TOTAL_FORMS"]').value = interruptionFormCount;
+}
+
+function removeInterruptionForm(button) {
+    const form = button.closest('.interruption-form');
+    form.remove();
+}
+</script>
+{% endif %}
 {% endblock %}

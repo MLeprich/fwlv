@@ -6,8 +6,18 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
+from django.http import JsonResponse
+
+
+def health_check(request):
+    """Health check endpoint for Docker/Kubernetes."""
+    return JsonResponse({'status': 'ok'})
+
 
 urlpatterns = [
+    # Health Check (for Docker)
+    path('health/', health_check, name='health_check'),
+
     # Admin Interface
     path('admin/', admin.site.urls),
 

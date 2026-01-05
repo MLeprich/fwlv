@@ -59,7 +59,7 @@
                             {{ inspection.inspection_date|date:"d.m.Y" }}
                         </td>
                         <td class="px-6 py-4 text-sm">
-                            <a href="{% url 'height_rescue:item_detail' inspection.item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                            <a href="{% url 'height_rescue:device_detail' inspection.item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
                                 {{ inspection.item.name }}
                             </a>
                             <p class="text-xs text-gray-500">{{ inspection.item.get_item_type_display }}</p>

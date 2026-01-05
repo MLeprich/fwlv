@@ -167,6 +167,11 @@ LOGIN_REDIRECT_URL = 'core:dashboard'
 LOGOUT_REDIRECT_URL = 'core:login'
 
 
+# Personnel Settings
+# Standard-Passwort für neue Benutzer (wird bei erster Anmeldung geändert)
+PERSONNEL_DEFAULT_PASSWORD = env('PERSONNEL_DEFAULT_PASSWORD', default='Feuerwehr.0112')
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 

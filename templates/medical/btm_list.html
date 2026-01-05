@@ -122,9 +122,9 @@
                             <div class="flex items-center gap-2">
                                 <span class="text-xl">☢️</span>
                                 <div>
-                                    <a href="{% url 'medical:item_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-red-600">
+                                    <span class="text-sm font-medium text-gray-900">
                                         {{ item.name }}
-                                    </a>
+                                    </span>
                                     <p class="text-xs text-gray-500">{{ item.item_number }}</p>
                                 </div>
                             </div>
@@ -163,9 +163,9 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <a href="{% url 'medical:item_detail' item.pk %}" class="text-red-600 hover:text-red-800 text-sm font-medium">
-                                Details →
-                            </a>
+                            <span class="text-gray-500 text-sm">
+                                Details nicht verfügbar
+                            </span>
                         </td>
                     </tr>
                     {% empty %}

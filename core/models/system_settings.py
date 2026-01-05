@@ -57,6 +57,12 @@ class SystemSettings(models.Model):
         help_text="Internes Ticketsystem für Anfragen und Meldungen"
     )
 
+    ff_dashboard_enabled = models.BooleanField(
+        default=True,
+        verbose_name="FF-Dashboard",
+        help_text="Feuerwehr-Verwaltung (Dienstgrade, Jubiläen, Beförderungen)"
+    )
+
     # ============================================================================
     # FEATURE FLAGS
     # ============================================================================
@@ -168,4 +174,6 @@ class SystemSettings(models.Model):
             modules.append('it_hardware')
         if self.tickets_enabled:
             modules.append('tickets')
+        if self.ff_dashboard_enabled:
+            modules.append('ff_dashboard')
         return modules

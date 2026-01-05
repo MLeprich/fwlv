@@ -55,17 +55,8 @@
                 <p class="text-sm text-gray-600">Stammdaten-Nr.: <span class="font-mono font-semibold">{{ master.master_number }}</span></p>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{% url 'workshop:master_qrcode' master.pk %}" target="_blank" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
-                    📱 QR-Code
-                </a>
-                <a href="{% url 'workshop:master_barcode' master.pk %}" target="_blank" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
-                    🏷️ Barcode
-                </a>
-                <a href="{% url 'workshop:master_edit' master.pk %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                <a href="{% url 'workshop:master_update' master.pk %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
                     ✏️ Bearbeiten
-                </a>
-                <a href="{% url 'workshop:master_delete' master.pk %}" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
-                    🗑️ Löschen
                 </a>
             </div>
         </div>

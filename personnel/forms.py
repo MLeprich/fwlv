@@ -9,7 +9,8 @@ from django.contrib.auth.models import Group
 
 from .models import (
     Person, Qualification, QualificationTemplate,
-    Inspection, DutyHoursEntry, DutyHoursRequirement, DutyHoursCategory
+    Inspection, DutyHoursEntry, DutyHoursRequirement, DutyHoursCategory,
+    Rank, PersonRank, ServiceInterruption, OrganizationType, InterruptionType
 )
 
 
@@ -36,6 +37,48 @@ class PersonForm(forms.ModelForm):
         help_text='Wählen Sie die Rollen für den Benutzer-Account',
         widget=forms.CheckboxSelectMultiple(attrs={
             'class': 'space-y-2',
+        })
+    )
+
+    # Dienstgrad-Felder für Jugendfeuerwehr
+    youth_rank = forms.ModelChoiceField(
+        queryset=Rank.objects.filter(organization_type=OrganizationType.YOUTH, is_active=True).order_by('sort_order'),
+        required=False,
+        label=_('Aktueller JF-Dienstgrad'),
+        help_text=_('Aktueller Dienstgrad in der Jugendfeuerwehr'),
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500',
+        })
+    )
+
+    youth_rank_since = forms.DateField(
+        required=False,
+        label=_('Dienstgrad seit'),
+        help_text=_('Seit wann hat die Person diesen JF-Dienstgrad?'),
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500',
+        })
+    )
+
+    # Dienstgrad-Felder für Freiwillige Feuerwehr
+    volunteer_rank = forms.ModelChoiceField(
+        queryset=Rank.objects.filter(organization_type=OrganizationType.VOLUNTEER, is_active=True).order_by('sort_order'),
+        required=False,
+        label=_('Aktueller FF-Dienstgrad'),
+        help_text=_('Aktueller Dienstgrad in der Freiwilligen Feuerwehr'),
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+        })
+    )
+
+    volunteer_rank_since = forms.DateField(
+        required=False,
+        label=_('Dienstgrad seit'),
+        help_text=_('Seit wann hat die Person diesen FF-Dienstgrad?'),
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
         })
     )
 
@@ -269,6 +312,20 @@ class PersonForm(forms.ModelForm):
             self.fields['roles'].initial = self.instance.user.groups.all()
             # create_user Feld verstecken, da User bereits existiert
             self.fields['create_user'].widget = forms.HiddenInput()
+
+        # Wenn Person existiert, lade die aktuellen Dienstgrade
+        if self.instance and self.instance.pk:
+            # Jugendfeuerwehr-Dienstgrad
+            youth_rank_obj = self.instance.get_current_rank('youth')
+            if youth_rank_obj:
+                self.fields['youth_rank'].initial = youth_rank_obj.rank
+                self.fields['youth_rank_since'].initial = youth_rank_obj.since_date
+
+            # FF-Dienstgrad
+            volunteer_rank_obj = self.instance.get_current_rank('volunteer')
+            if volunteer_rank_obj:
+                self.fields['volunteer_rank'].initial = volunteer_rank_obj.rank
+                self.fields['volunteer_rank_since'].initial = volunteer_rank_obj.since_date
 
     def clean_personnel_number(self):
         """Validierung: Personalnummer eindeutig"""
@@ -686,5 +743,200 @@ class DutyHoursRequirementForm(forms.ModelForm):
             }),
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500',
+            }),
+        }
+
+
+class ServiceInterruptionForm(forms.ModelForm):
+    """
+    Formular für Dienstunterbrechung erstellen/bearbeiten
+    """
+
+    class Meta:
+        model = ServiceInterruption
+        fields = [
+            'organization_type',
+            'interruption_type',
+            'start_date',
+            'end_date',
+            'other_department_name',
+            'reason',
+            'notes',
+        ]
+
+        widgets = {
+            'organization_type': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500',
+            }),
+            'interruption_type': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500',
+            }),
+            'start_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500',
+            }),
+            'end_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500',
+            }),
+            'other_department_name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500',
+                'placeholder': _('z.B. FF Musterhausen'),
+            }),
+            'reason': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500',
+                'placeholder': _('Grund für die Unterbrechung'),
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500',
+                'rows': 2,
+                'placeholder': _('Notizen...'),
+            }),
+        }
+
+    def clean(self):
+        """Validierung: end_date muss nach start_date sein"""
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        if start_date and end_date and end_date < start_date:
+            raise forms.ValidationError(
+                _('Das Enddatum kann nicht vor dem Startdatum liegen.')
+            )
+
+        # Wenn Typ "Andere Feuerwehr" ist, muss der Name ausgefüllt sein
+        interruption_type = cleaned_data.get('interruption_type')
+        other_department_name = cleaned_data.get('other_department_name')
+
+        if interruption_type == 'other_department' and not other_department_name:
+            self.add_error('other_department_name', _('Bitte geben Sie den Namen der anderen Feuerwehr an.'))
+
+        return cleaned_data
+
+
+# Formset für ServiceInterruption
+ServiceInterruptionFormSet = forms.inlineformset_factory(
+    Person,
+    ServiceInterruption,
+    form=ServiceInterruptionForm,
+    extra=0,
+    can_delete=True,
+    min_num=0,
+    validate_min=False,
+)
+
+
+class PersonRankForm(forms.ModelForm):
+    """
+    Formular für Dienstgrad-Zuweisung erstellen/bearbeiten
+    """
+
+    class Meta:
+        model = PersonRank
+        fields = [
+            'rank',
+            'since_date',
+            'is_current',
+            'promoted_by',
+            'certificate_number',
+            'certificate_file',
+            'notes',
+        ]
+
+        widgets = {
+            'rank': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+            }),
+            'since_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+            }),
+            'is_current': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500',
+            }),
+            'promoted_by': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('z.B. Bürgermeister Max Mustermann'),
+            }),
+            'certificate_number': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('Urkunden-Nr.'),
+            }),
+            'certificate_file': forms.FileInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'accept': '.pdf,.jpg,.jpeg,.png',
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'rows': 2,
+                'placeholder': _('Notizen...'),
+            }),
+        }
+
+
+class RankForm(forms.ModelForm):
+    """
+    Formular für Dienstgrad-Definition erstellen/bearbeiten
+    """
+
+    class Meta:
+        model = Rank
+        fields = [
+            'name',
+            'abbreviation',
+            'organization_type',
+            'sort_order',
+            'min_years_in_previous',
+            'min_total_years',
+            'requires_course',
+            'is_functional_rank',
+            'description',
+            'is_active',
+        ]
+
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('z.B. Oberfeuerwehrmann/-frau'),
+            }),
+            'abbreviation': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('z.B. OFM'),
+            }),
+            'organization_type': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+            }),
+            'sort_order': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('z.B. 20'),
+                'min': '0',
+            }),
+            'min_years_in_previous': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('z.B. 2'),
+                'min': '0',
+                'step': '0.5',
+            }),
+            'min_total_years': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('z.B. 5'),
+                'min': '0',
+                'step': '0.5',
+            }),
+            'requires_course': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('z.B. Truppführer-Lehrgang'),
+            }),
+            'is_functional_rank': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'rows': 3,
+                'placeholder': _('Beschreibung...'),
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500',
             }),
         }

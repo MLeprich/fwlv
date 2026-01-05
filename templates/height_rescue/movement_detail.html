@@ -90,7 +90,7 @@
                     <div>
                         <p class="text-sm text-gray-500">Ausrüstung</p>
                         <p class="font-medium text-blue-600">
-                            <a href="{% url 'height_rescue:item_detail' movement.item.pk %}" class="hover:underline">
+                            <a href="{% url 'height_rescue:device_detail' movement.item.pk %}" class="hover:underline">
                                 {{ movement.item.name }}
                             </a>
                         </p>
@@ -235,7 +235,7 @@
                 <h3 class="font-bold text-blue-900 mb-3">🧗 Ausrüstung</h3>
                 <p class="text-sm text-blue-800 mb-2">{{ movement.item.name }}</p>
                 <p class="text-xs text-blue-700">{{ movement.item.get_item_type_display }}</p>
-                <a href="{% url 'height_rescue:item_detail' movement.item.pk %}" class="text-blue-600 hover:underline text-sm mt-2 inline-block">
+                <a href="{% url 'height_rescue:device_detail' movement.item.pk %}" class="text-blue-600 hover:underline text-sm mt-2 inline-block">
                     Details anzeigen →
                 </a>
             </div>

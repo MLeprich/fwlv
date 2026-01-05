@@ -63,4 +63,11 @@ urlpatterns = [
 
     # Phonebook (Telefonbuch)
     path('phonebook/', views.PhonebookView.as_view(), name='phonebook'),
+
+    # FF-Verwaltung (Dienstgrade, Jubilaeen, Befoerderungen)
+    path('ff/', views.ff_dashboard, name='ff_dashboard'),
+    path('ff/ranks/', views.RankListView.as_view(), name='rank_list'),
+    path('ff/ranks/create/', views.RankCreateView.as_view(), name='rank_create'),
+    path('ff/ranks/<int:pk>/edit/', views.RankUpdateView.as_view(), name='rank_update'),
+    path('ff/ranks/<int:pk>/delete/', views.RankDeleteView.as_view(), name='rank_delete'),
 ]

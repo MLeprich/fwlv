@@ -443,6 +443,167 @@ class Person(AuditedModel):
 
         return orgs
 
+    def get_current_rank(self, org_type):
+        """
+        Gibt den aktuellen Dienstgrad für eine Organisation zurück
+        org_type: 'youth' oder 'volunteer'
+        """
+        return self.ranks.filter(
+            rank__organization_type=org_type,
+            is_current=True
+        ).select_related('rank').first()
+
+    def get_rank_history(self, org_type):
+        """Gibt die Dienstgrad-Historie für eine Organisation zurück"""
+        return self.ranks.filter(
+            rank__organization_type=org_type
+        ).select_related('rank').order_by('-since_date')
+
+    def get_total_interruption_days(self, org_type):
+        """Berechnet die Gesamtdauer aller Unterbrechungen in Tagen"""
+        from django.utils import timezone
+        total_days = 0
+        interruptions = self.service_interruptions.filter(
+            organization_type=org_type
+        )
+        for interruption in interruptions:
+            end = interruption.end_date or timezone.now().date()
+            total_days += (end - interruption.start_date).days
+        return total_days
+
+    def get_effective_service_years(self, org_type):
+        """
+        Berechnet die effektive Dienstzeit (abzüglich Unterbrechungen)
+        org_type: 'youth' oder 'volunteer'
+        """
+        from django.utils import timezone
+
+        today = timezone.now().date()
+
+        # Eintrittsdatum ermitteln
+        if org_type == 'youth':
+            entry_date = self.youth_entry_date
+            exit_date = self.youth_exit_date
+        elif org_type == 'volunteer':
+            entry_date = self.volunteer_entry_date
+            exit_date = None  # FF hat kein explizites Austrittsdatum im Model
+        else:
+            return 0
+
+        if not entry_date:
+            return 0
+
+        # Enddatum bestimmen
+        end_date = exit_date if exit_date else today
+
+        # Gesamttage berechnen
+        total_days = (end_date - entry_date).days
+
+        # Unterbrechungen abziehen
+        interruption_days = self.get_total_interruption_days(org_type)
+        effective_days = max(0, total_days - interruption_days)
+
+        # In Jahre umrechnen
+        return round(effective_days / 365.25, 2)
+
+    def get_years_in_current_rank(self, org_type):
+        """Berechnet die Jahre im aktuellen Dienstgrad"""
+        from django.utils import timezone
+
+        current_rank = self.get_current_rank(org_type)
+        if not current_rank:
+            return 0
+
+        today = timezone.now().date()
+        days = (today - current_rank.since_date).days
+        return round(days / 365.25, 2)
+
+    def get_next_promotion_info(self, org_type):
+        """
+        Berechnet Informationen zur nächsten möglichen Beförderung
+        Gibt ein Dictionary zurück mit:
+        - next_rank: Der nächste Dienstgrad
+        - eligible: Ob Beförderung möglich ist
+        - years_until_eligible: Jahre bis zur Beförderung (wenn noch nicht möglich)
+        - missing_requirements: Fehlende Anforderungen
+        """
+        from django.utils import timezone
+        from dateutil.relativedelta import relativedelta
+
+        current_person_rank = self.get_current_rank(org_type)
+        if not current_person_rank:
+            return None
+
+        current_rank = current_person_rank.rank
+        next_rank = current_rank.get_next_rank()
+
+        if not next_rank:
+            return {
+                'next_rank': None,
+                'eligible': False,
+                'message': 'Höchster Dienstgrad erreicht'
+            }
+
+        effective_years = self.get_effective_service_years(org_type)
+        years_in_rank = self.get_years_in_current_rank(org_type)
+
+        missing = []
+        eligible = True
+
+        # Mindestzeit im aktuellen Dienstgrad prüfen
+        if next_rank.min_years_in_previous:
+            if years_in_rank < float(next_rank.min_years_in_previous):
+                eligible = False
+                years_needed = float(next_rank.min_years_in_previous) - years_in_rank
+                missing.append(f"Noch {years_needed:.1f} Jahre im aktuellen Dienstgrad erforderlich")
+
+        # Mindest-Gesamtdienstzeit prüfen
+        if next_rank.min_total_years:
+            if effective_years < float(next_rank.min_total_years):
+                eligible = False
+                years_needed = float(next_rank.min_total_years) - effective_years
+                missing.append(f"Noch {years_needed:.1f} Jahre Gesamtdienstzeit erforderlich")
+
+        # Erforderlicher Lehrgang prüfen
+        if next_rank.requires_course:
+            missing.append(f"Lehrgang erforderlich: {next_rank.requires_course}")
+
+        # Datum der möglichen Beförderung berechnen
+        earliest_date = None
+        today = timezone.now().date()
+
+        if next_rank.min_years_in_previous:
+            rank_date = current_person_rank.since_date + relativedelta(
+                years=int(next_rank.min_years_in_previous),
+                months=int((float(next_rank.min_years_in_previous) % 1) * 12)
+            )
+            if not earliest_date or rank_date > earliest_date:
+                earliest_date = rank_date
+
+        if next_rank.min_total_years:
+            entry_date = self.youth_entry_date if org_type == 'youth' else self.volunteer_entry_date
+            if entry_date:
+                service_date = entry_date + relativedelta(
+                    years=int(next_rank.min_total_years),
+                    months=int((float(next_rank.min_total_years) % 1) * 12)
+                )
+                if not earliest_date or service_date > earliest_date:
+                    earliest_date = service_date
+
+        return {
+            'next_rank': next_rank,
+            'eligible': eligible and not next_rank.requires_course,
+            'eligible_date': earliest_date,
+            'missing_requirements': missing,
+            'years_in_current_rank': years_in_rank,
+            'effective_service_years': effective_years
+        }
+
+    def is_eligible_for_promotion(self, org_type):
+        """Prüft ob eine Beförderung möglich ist"""
+        info = self.get_next_promotion_info(org_type)
+        return info and info.get('eligible', False)
+
 
 class QualificationType(models.Model):
     """
@@ -1278,3 +1439,258 @@ class DutyHoursRequirement(models.Model):
 
     def __str__(self):
         return f"{self.category.name} {self.year}: {self.required_hours}h"
+
+
+class OrganizationType(models.TextChoices):
+    """Organisationstypen für Dienstgrade"""
+    YOUTH = 'youth', _('Jugendfeuerwehr')
+    VOLUNTEER = 'volunteer', _('Freiwillige Feuerwehr')
+
+
+class Rank(models.Model):
+    """
+    Dienstgrad-Definition für Jugendfeuerwehr und Freiwillige Feuerwehr
+    """
+    name = models.CharField(
+        max_length=100,
+        verbose_name=_('Bezeichnung'),
+        help_text=_('z.B. Feuerwehrmann, Oberfeuerwehrmann, Brandmeister')
+    )
+
+    abbreviation = models.CharField(
+        max_length=10,
+        verbose_name=_('Abkürzung'),
+        help_text=_('z.B. FM, OFM, BM')
+    )
+
+    organization_type = models.CharField(
+        max_length=20,
+        choices=OrganizationType.choices,
+        verbose_name=_('Organisationstyp'),
+        help_text=_('Jugendfeuerwehr oder Freiwillige Feuerwehr')
+    )
+
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Sortierung'),
+        help_text=_('Reihenfolge der Dienstgrade (niedrigere Werte = niedrigerer Dienstgrad)')
+    )
+
+    min_years_in_previous = models.DecimalField(
+        max_digits=4, decimal_places=1,
+        null=True, blank=True,
+        verbose_name=_('Min. Jahre im vorherigen Dienstgrad'),
+        help_text=_('Mindestzeit im vorherigen Dienstgrad für Beförderung')
+    )
+
+    min_total_years = models.DecimalField(
+        max_digits=4, decimal_places=1,
+        null=True, blank=True,
+        verbose_name=_('Min. Gesamtdienstzeit'),
+        help_text=_('Mindest-Gesamtdienstzeit für diesen Dienstgrad')
+    )
+
+    requires_course = models.CharField(
+        max_length=200, blank=True,
+        verbose_name=_('Erforderlicher Lehrgang'),
+        help_text=_('z.B. Truppführer-Lehrgang, Gruppenführer-Lehrgang')
+    )
+
+    is_functional_rank = models.BooleanField(
+        default=False,
+        verbose_name=_('Funktionsdienstgrad'),
+        help_text=_('Ist dies ein Funktionsdienstgrad (z.B. Jugendgruppenführer)?')
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv')
+    )
+
+    description = models.TextField(
+        blank=True,
+        verbose_name=_('Beschreibung'),
+        help_text=_('Zusätzliche Informationen zum Dienstgrad')
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _('Dienstgrad')
+        verbose_name_plural = _('Dienstgrade')
+        ordering = ['organization_type', 'sort_order']
+        unique_together = [['name', 'organization_type']]
+        indexes = [
+            models.Index(fields=['organization_type', 'is_active', 'sort_order']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.abbreviation}) - {self.get_organization_type_display()}"
+
+    def get_next_rank(self):
+        """Gibt den nächsthöheren Dienstgrad zurück"""
+        return Rank.objects.filter(
+            organization_type=self.organization_type,
+            is_active=True,
+            sort_order__gt=self.sort_order,
+            is_functional_rank=False
+        ).order_by('sort_order').first()
+
+
+class PersonRank(AuditedModel):
+    """
+    Dienstgrad einer Person mit Historie
+    Speichert alle Beförderungen einer Person
+    """
+    person = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+        related_name='ranks',
+        verbose_name=_('Person')
+    )
+
+    rank = models.ForeignKey(
+        Rank,
+        on_delete=models.PROTECT,
+        related_name='person_ranks',
+        verbose_name=_('Dienstgrad')
+    )
+
+    since_date = models.DateField(
+        verbose_name=_('Seit'),
+        help_text=_('Datum der Beförderung')
+    )
+
+    is_current = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktueller Dienstgrad'),
+        help_text=_('Ist dies der aktuelle Dienstgrad?')
+    )
+
+    promoted_by = models.CharField(
+        max_length=200, blank=True,
+        verbose_name=_('Befördert durch'),
+        help_text=_('Wer hat die Beförderung ausgesprochen?')
+    )
+
+    certificate_number = models.CharField(
+        max_length=100, blank=True,
+        verbose_name=_('Urkunden-Nr.')
+    )
+
+    certificate_file = models.FileField(
+        upload_to='personnel/rank_certificates/',
+        null=True, blank=True,
+        verbose_name=_('Beförderungsurkunde'),
+        help_text=_('PDF oder Bild der Urkunde')
+    )
+
+    notes = models.TextField(blank=True, verbose_name=_('Notizen'))
+
+    class Meta:
+        verbose_name = _('Dienstgrad (Person)')
+        verbose_name_plural = _('Dienstgrade (Personen)')
+        ordering = ['-since_date']
+        indexes = [
+            models.Index(fields=['person', 'is_current']),
+            models.Index(fields=['rank', 'since_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.person.get_full_name()} - {self.rank.name} (seit {self.since_date})"
+
+    def save(self, *args, **kwargs):
+        """Setzt is_current=False für andere Dienstgrade desselben Typs"""
+        if self.is_current:
+            # Andere aktuelle Dienstgrade desselben Organisationstyps deaktivieren
+            PersonRank.objects.filter(
+                person=self.person,
+                rank__organization_type=self.rank.organization_type,
+                is_current=True
+            ).exclude(pk=self.pk).update(is_current=False)
+        super().save(*args, **kwargs)
+
+
+class InterruptionType(models.TextChoices):
+    """Typen von Unterbrechungen"""
+    PAUSE = 'pause', _('Pause/Ruhend')
+    OTHER_DEPARTMENT = 'other_department', _('Andere Feuerwehr')
+    ILLNESS = 'illness', _('Krankheit')
+    MILITARY = 'military', _('Wehrdienst/Bundeswehr')
+    OTHER = 'other', _('Sonstiges')
+
+
+class ServiceInterruption(AuditedModel):
+    """
+    Unterbrechungen/Pausenzeiten im Feuerwehrdienst
+    Wird von der effektiven Dienstzeit abgezogen
+    """
+    person = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+        related_name='service_interruptions',
+        verbose_name=_('Person')
+    )
+
+    organization_type = models.CharField(
+        max_length=20,
+        choices=OrganizationType.choices,
+        verbose_name=_('Organisation'),
+        help_text=_('Für welche Organisation gilt die Unterbrechung?')
+    )
+
+    interruption_type = models.CharField(
+        max_length=20,
+        choices=InterruptionType.choices,
+        default=InterruptionType.PAUSE,
+        verbose_name=_('Art der Unterbrechung')
+    )
+
+    start_date = models.DateField(
+        verbose_name=_('Beginn'),
+        help_text=_('Beginn der Unterbrechung')
+    )
+
+    end_date = models.DateField(
+        null=True, blank=True,
+        verbose_name=_('Ende'),
+        help_text=_('Ende der Unterbrechung (leer wenn noch aktiv)')
+    )
+
+    other_department_name = models.CharField(
+        max_length=200, blank=True,
+        verbose_name=_('Name der anderen Feuerwehr'),
+        help_text=_('Falls bei anderer Feuerwehr: Name der Feuerwehr')
+    )
+
+    reason = models.CharField(
+        max_length=500, blank=True,
+        verbose_name=_('Grund'),
+        help_text=_('Grund für die Unterbrechung')
+    )
+
+    notes = models.TextField(blank=True, verbose_name=_('Notizen'))
+
+    class Meta:
+        verbose_name = _('Dienstunterbrechung')
+        verbose_name_plural = _('Dienstunterbrechungen')
+        ordering = ['-start_date']
+        indexes = [
+            models.Index(fields=['person', 'organization_type']),
+            models.Index(fields=['start_date', 'end_date']),
+        ]
+
+    def __str__(self):
+        end = self.end_date.strftime('%d.%m.%Y') if self.end_date else 'heute'
+        return f"{self.person.get_full_name()} - {self.get_interruption_type_display()} ({self.start_date.strftime('%d.%m.%Y')} - {end})"
+
+    def get_duration_days(self):
+        """Berechnet die Dauer der Unterbrechung in Tagen"""
+        from django.utils import timezone
+        end = self.end_date or timezone.now().date()
+        return (end - self.start_date).days
+
+    def is_active(self):
+        """Prüft ob die Unterbrechung noch aktiv ist"""
+        return self.end_date is None

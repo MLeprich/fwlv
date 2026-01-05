@@ -143,9 +143,9 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-3">
                                 <div>
-                                    <a href="{% url 'medical:item_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-blue-600">
+                                    <span class="text-sm font-medium text-gray-900">
                                         {{ item.name }}
-                                    </a>
+                                    </span>
                                     <div class="flex items-center gap-2 mt-1">
                                         {% if item.is_btm %}
                                         <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
@@ -202,9 +202,9 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
                             <div class="flex items-center justify-end gap-2">
-                                <a href="{% url 'medical:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                <span class="text-gray-400">
                                     👁️
-                                </a>
+                                </span>
                                 <a href="#" class="text-green-600 hover:text-green-800 font-medium">
                                     🛒
                                 </a>

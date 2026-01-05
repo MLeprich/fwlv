@@ -107,9 +107,9 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 text-sm">
-                            <a href="{% url 'medical:item_detail' movement.item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                            <span class="text-gray-900 font-medium">
                                 {{ movement.item.name }}
-                            </a>
+                            </span>
                             {% if movement.batch_number %}
                             <p class="text-xs text-gray-500 font-mono">Charge: {{ movement.batch_number }}</p>
                             {% endif %}

@@ -24,6 +24,19 @@ from core.forms import (
     PrivacySettingsForm,
 )
 
+# Imports für Profil-Ausrüstungsübersicht
+try:
+    from clothing.models import ClothingItem, ClothingStockMovement
+    CLOTHING_AVAILABLE = True
+except ImportError:
+    CLOTHING_AVAILABLE = False
+
+try:
+    from magazine.models import MagazineStockMovement
+    MAGAZINE_AVAILABLE = True
+except ImportError:
+    MAGAZINE_AVAILABLE = False
+
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     """
@@ -125,6 +138,57 @@ class ProfileView(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'profile'
+
+        user = self.request.user
+
+        # Prüfe ob User mit einer Person verknüpft ist
+        person = getattr(user, 'person', None)
+        context['has_person'] = person is not None
+
+        if person:
+            # Zugeordnete Kleidung
+            if CLOTHING_AVAILABLE:
+                assigned_clothing = ClothingItem.objects.filter(
+                    assigned_to=person,
+                    deleted_at__isnull=True
+                ).select_related('location', 'category').order_by('-assignment_date')
+                context['assigned_clothing'] = assigned_clothing
+                context['assigned_clothing_count'] = assigned_clothing.count()
+
+                # Berechne Gesamtwert der zugeordneten Kleidung
+                total_value = sum(
+                    item.unit_price or 0
+                    for item in assigned_clothing
+                )
+                context['assigned_clothing_value'] = total_value
+
+                # Letzte Kleidungs-Bewegungen (Ausgaben an diese Person)
+                clothing_movements = ClothingStockMovement.objects.filter(
+                    person=person
+                ).select_related('item').order_by('-movement_date')[:10]
+                context['clothing_movements'] = clothing_movements
+            else:
+                context['assigned_clothing'] = []
+                context['assigned_clothing_count'] = 0
+                context['assigned_clothing_value'] = 0
+                context['clothing_movements'] = []
+
+            # Letzte Magazin-Ausgaben
+            if MAGAZINE_AVAILABLE:
+                magazine_movements = MagazineStockMovement.objects.filter(
+                    person=person
+                ).select_related('item').order_by('-movement_date')[:10]
+                context['magazine_movements'] = magazine_movements
+            else:
+                context['magazine_movements'] = []
+        else:
+            # Keine Person verknüpft
+            context['assigned_clothing'] = []
+            context['assigned_clothing_count'] = 0
+            context['assigned_clothing_value'] = 0
+            context['clothing_movements'] = []
+            context['magazine_movements'] = []
+
         return context
 
     def form_valid(self, form):
@@ -232,6 +296,7 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.info_monitors_enabled = request.POST.get('info_monitors_enabled') == 'true'
                 sys_settings.it_hardware_enabled = request.POST.get('it_hardware_enabled') == 'true'
                 sys_settings.tickets_enabled = request.POST.get('tickets_enabled') == 'true'
+                sys_settings.ff_dashboard_enabled = request.POST.get('ff_dashboard_enabled') == 'true'
                 sys_settings.updated_by = user
                 sys_settings.save()
 

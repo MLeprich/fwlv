@@ -8,7 +8,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse, reverse_lazy
 from django.db.models import Q, Count, Case, When, IntegerField
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
@@ -24,8 +24,15 @@ import io
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 
-from .models import Person, Qualification, Training, TrainingParticipant, QualificationTemplate, Inspection, DutyHoursEntry, DutyHoursRequirement, DutyHoursCategory
-from .forms import PersonForm, QualificationForm, QualificationTemplateForm, InspectionForm, DutyHoursEntryForm
+from .models import (
+    Person, Qualification, Training, TrainingParticipant, QualificationTemplate,
+    Inspection, DutyHoursEntry, DutyHoursRequirement, DutyHoursCategory,
+    Rank, PersonRank, ServiceInterruption, OrganizationType
+)
+from .forms import (
+    PersonForm, QualificationForm, QualificationTemplateForm, InspectionForm,
+    DutyHoursEntryForm, ServiceInterruptionFormSet, RankForm
+)
 from driving_license.forms import DrivingLicenseSimpleForm, DrivingLicenseInlineForm
 from driving_license.models import DrivingLicenseCheck
 
@@ -712,8 +719,9 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
                 username = f"{base_username}{counter}"
                 counter += 1
 
-            # Standardpasswort: Feuerwehr.0112
-            default_password = "Feuerwehr.0112"
+            # Standardpasswort aus Konfiguration laden
+            from django.conf import settings
+            default_password = getattr(settings, 'PERSONNEL_DEFAULT_PASSWORD', 'Feuerwehr.0112')
 
             # Benutzer erstellen
             user = User.objects.create_user(
@@ -760,7 +768,70 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
             license.checked_by = self.request.user
             license.save()
 
+        # Dienstgrade speichern
+        self._save_ranks(form)
+
         return response
+
+    def _save_ranks(self, form):
+        """Speichert die Dienstgrade für JF und FF"""
+        # Jugendfeuerwehr-Dienstgrad
+        youth_rank = form.cleaned_data.get('youth_rank')
+        youth_rank_since = form.cleaned_data.get('youth_rank_since')
+
+        if youth_rank and youth_rank_since:
+            # Prüfen ob bereits ein aktueller JF-Dienstgrad existiert
+            existing = PersonRank.objects.filter(
+                person=self.object,
+                rank__organization_type='youth',
+                is_current=True
+            ).first()
+
+            if existing and existing.rank == youth_rank:
+                # Nur das Datum aktualisieren
+                if existing.since_date != youth_rank_since:
+                    existing.since_date = youth_rank_since
+                    existing.updated_by = self.request.user
+                    existing.save()
+            else:
+                # Neuen Dienstgrad erstellen (is_current=True setzt automatisch andere auf False)
+                PersonRank.objects.create(
+                    person=self.object,
+                    rank=youth_rank,
+                    since_date=youth_rank_since,
+                    is_current=True,
+                    created_by=self.request.user,
+                    updated_by=self.request.user
+                )
+
+        # Freiwillige Feuerwehr-Dienstgrad
+        volunteer_rank = form.cleaned_data.get('volunteer_rank')
+        volunteer_rank_since = form.cleaned_data.get('volunteer_rank_since')
+
+        if volunteer_rank and volunteer_rank_since:
+            # Prüfen ob bereits ein aktueller FF-Dienstgrad existiert
+            existing = PersonRank.objects.filter(
+                person=self.object,
+                rank__organization_type='volunteer',
+                is_current=True
+            ).first()
+
+            if existing and existing.rank == volunteer_rank:
+                # Nur das Datum aktualisieren
+                if existing.since_date != volunteer_rank_since:
+                    existing.since_date = volunteer_rank_since
+                    existing.updated_by = self.request.user
+                    existing.save()
+            else:
+                # Neuen Dienstgrad erstellen
+                PersonRank.objects.create(
+                    person=self.object,
+                    rank=volunteer_rank,
+                    since_date=volunteer_rank_since,
+                    is_current=True,
+                    created_by=self.request.user,
+                    updated_by=self.request.user
+                )
 
     def get_success_url(self):
         return reverse('personnel:detail', kwargs={'pk': self.object.pk})
@@ -786,16 +857,35 @@ class PersonUpdateView(LoginRequiredMixin, UpdateView):
                 instance=latest_check,
                 prefix='license'
             )
+            # ServiceInterruption Formset
+            context['interruption_formset'] = ServiceInterruptionFormSet(
+                self.request.POST,
+                instance=self.object,
+                prefix='interruptions'
+            )
         else:
             context['license_form'] = DrivingLicenseSimpleForm(
                 instance=latest_check,
                 prefix='license'
+            )
+            # ServiceInterruption Formset
+            context['interruption_formset'] = ServiceInterruptionFormSet(
+                instance=self.object,
+                prefix='interruptions'
             )
 
         # Qualifikationen der Person laden
         context['person_qualifications'] = self.object.qualifications.filter(
             is_active=True
         ).order_by('-issue_date')
+
+        # Dienstgrad-Historie laden
+        context['youth_rank_history'] = self.object.get_rank_history('youth')
+        context['volunteer_rank_history'] = self.object.get_rank_history('volunteer')
+
+        # Beförderungsinformationen laden
+        context['youth_promotion_info'] = self.object.get_next_promotion_info('youth')
+        context['volunteer_promotion_info'] = self.object.get_next_promotion_info('volunteer')
 
         # Pflichtstunden-Übersicht berechnen (aktuelles Jahr)
         # Nur Kategorien anzeigen, die für die Funktionen der Person erforderlich sind
@@ -848,8 +938,74 @@ class PersonUpdateView(LoginRequiredMixin, UpdateView):
         # Audit-Feld setzen
         form.instance.updated_by = self.request.user
 
-        # Wenn Person einen User hat, Rollen aktualisieren
-        if form.instance.user:
+        # Prüfen, ob ein neuer Benutzer angelegt werden soll (auch bei bestehenden Personen ohne User)
+        create_user = form.cleaned_data.get('create_user', False)
+
+        if create_user and not form.instance.user:
+            # Benutzernamen aus Vor- und Nachnamen generieren
+            first_name = form.cleaned_data['first_name'].lower()
+            last_name = form.cleaned_data['last_name'].lower()
+
+            # Umlaute und Sonderzeichen normalisieren
+            import unicodedata
+            import re
+
+            def normalize_name(name):
+                replacements = {
+                    'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss',
+                    'Ä': 'ae', 'Ö': 'oe', 'Ü': 'ue'
+                }
+                for old, new in replacements.items():
+                    name = name.replace(old, new)
+                name = unicodedata.normalize('NFKD', name)
+                name = name.encode('ASCII', 'ignore').decode('ASCII')
+                name = re.sub(r'[^a-zA-Z0-9]', '', name)
+                return name.lower()
+
+            first_part = normalize_name(first_name)
+            last_part = normalize_name(last_name)
+            username = f"{first_part}.{last_part}"
+
+            # Sicherstellen, dass der Benutzername eindeutig ist
+            base_username = username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+
+            # Standardpasswort aus Konfiguration laden
+            from django.conf import settings
+            default_password = getattr(settings, 'PERSONNEL_DEFAULT_PASSWORD', 'Feuerwehr.0112')
+
+            # Benutzer erstellen
+            user = User.objects.create_user(
+                username=username,
+                email=form.cleaned_data.get('email', ''),
+                password=default_password,
+                first_name=form.cleaned_data['first_name'],
+                last_name=form.cleaned_data['last_name'],
+                password_must_change=True
+            )
+
+            # Rollen zuweisen, falls ausgewählt
+            selected_roles = form.cleaned_data.get('roles', [])
+            if selected_roles:
+                user.groups.set(selected_roles)
+
+            # Benutzer mit Person verknüpfen
+            form.instance.user = user
+
+            # Success-Message mit Rollen-Info
+            roles_text = ", ".join([role.name for role in selected_roles]) if selected_roles else "keine Rollen"
+            messages.success(
+                self.request,
+                _('Benutzer-Account "{}" mit Standardpasswort wurde angelegt. Zugewiesene Rollen: {}. Passwort muss bei erster Anmeldung geändert werden.').format(
+                    username,
+                    roles_text
+                )
+            )
+        elif form.instance.user:
+            # Wenn Person einen User hat, Rollen aktualisieren
             selected_roles = form.cleaned_data.get('roles', [])
             form.instance.user.groups.set(selected_roles)
 
@@ -874,12 +1030,92 @@ class PersonUpdateView(LoginRequiredMixin, UpdateView):
                 license.checked_by = self.request.user
             license.save()
 
+        # Dienstgrade speichern
+        self._save_ranks(form)
+
+        # ServiceInterruption Formset speichern
+        interruption_formset = ServiceInterruptionFormSet(
+            self.request.POST,
+            instance=self.object,
+            prefix='interruptions'
+        )
+        if interruption_formset.is_valid():
+            instances = interruption_formset.save(commit=False)
+            for instance in instances:
+                if not instance.pk:
+                    instance.created_by = self.request.user
+                instance.updated_by = self.request.user
+                instance.save()
+            # Gelöschte Einträge entfernen
+            for obj in interruption_formset.deleted_objects:
+                obj.delete()
+
         messages.success(
             self.request,
             _('Person "{}" wurde erfolgreich aktualisiert.').format(form.instance.get_full_name())
         )
 
         return response
+
+    def _save_ranks(self, form):
+        """Speichert die Dienstgrade für JF und FF"""
+        # Jugendfeuerwehr-Dienstgrad
+        youth_rank = form.cleaned_data.get('youth_rank')
+        youth_rank_since = form.cleaned_data.get('youth_rank_since')
+
+        if youth_rank and youth_rank_since:
+            # Prüfen ob bereits ein aktueller JF-Dienstgrad existiert
+            existing = PersonRank.objects.filter(
+                person=self.object,
+                rank__organization_type='youth',
+                is_current=True
+            ).first()
+
+            if existing and existing.rank == youth_rank:
+                # Nur das Datum aktualisieren
+                if existing.since_date != youth_rank_since:
+                    existing.since_date = youth_rank_since
+                    existing.updated_by = self.request.user
+                    existing.save()
+            else:
+                # Neuen Dienstgrad erstellen (is_current=True setzt automatisch andere auf False)
+                PersonRank.objects.create(
+                    person=self.object,
+                    rank=youth_rank,
+                    since_date=youth_rank_since,
+                    is_current=True,
+                    created_by=self.request.user,
+                    updated_by=self.request.user
+                )
+
+        # Freiwillige Feuerwehr-Dienstgrad
+        volunteer_rank = form.cleaned_data.get('volunteer_rank')
+        volunteer_rank_since = form.cleaned_data.get('volunteer_rank_since')
+
+        if volunteer_rank and volunteer_rank_since:
+            # Prüfen ob bereits ein aktueller FF-Dienstgrad existiert
+            existing = PersonRank.objects.filter(
+                person=self.object,
+                rank__organization_type='volunteer',
+                is_current=True
+            ).first()
+
+            if existing and existing.rank == volunteer_rank:
+                # Nur das Datum aktualisieren
+                if existing.since_date != volunteer_rank_since:
+                    existing.since_date = volunteer_rank_since
+                    existing.updated_by = self.request.user
+                    existing.save()
+            else:
+                # Neuen Dienstgrad erstellen
+                PersonRank.objects.create(
+                    person=self.object,
+                    rank=volunteer_rank,
+                    since_date=volunteer_rank_since,
+                    is_current=True,
+                    created_by=self.request.user,
+                    updated_by=self.request.user
+                )
 
     def get_success_url(self):
         return reverse('personnel:detail', kwargs={'pk': self.object.pk})
@@ -1214,6 +1450,12 @@ def import_template(request):
     writer.writerow(['# Datumsformat: TT.MM.JJJJ (z.B. 31.12.2023)'])
     writer.writerow(['# Mehrere Funktionen: Komma-getrennt (z.B. "Truppführer, Atemschutzgeräteträger")'])
     writer.writerow(['# '])
+    writer.writerow(['# ABSCHNITT 4: BENUTZER-ERSTELLUNG (Optional)'])
+    writer.writerow(['#   - Benutzer anlegen: Ja = Benutzer-Account wird automatisch erstellt'])
+    writer.writerow(['#   - Benutzer-Rollen: Komma-getrennt (z.B. "Standard-Nutzer, Lagerverwalter")'])
+    writer.writerow(['#   - Benutzername wird automatisch generiert: vorname.nachname'])
+    writer.writerow(['#   - Standardpasswort muss bei erster Anmeldung geändert werden'])
+    writer.writerow(['# '])
     writer.writerow(['# -----------------------------------------------------------------------------------'])
     writer.writerow(['# '])
 
@@ -1267,6 +1509,9 @@ def import_template(request):
         'Vorherige FW Austritt',
         # Sonstiges
         'Notizen',
+        # Benutzer-Erstellung
+        'Benutzer anlegen',
+        'Benutzer-Rollen',
     ])
 
     # Beispielzeile
@@ -1318,6 +1563,9 @@ def import_template(request):
         '',  # Vorherige FW Austritt
         # Sonstiges
         'Beispielnotiz',  # Notizen
+        # Benutzer-Erstellung
+        'Ja',  # Benutzer anlegen
+        'Standard-Nutzer, Lagerverwalter',  # Benutzer-Rollen
     ])
 
     return response
@@ -1603,6 +1851,11 @@ def import_validate(request):
             # Sonstiges
             elif 'notizen' in col_lower:
                 col_map['notes'] = idx
+            # Benutzer-Erstellung
+            elif 'benutzer anlegen' in col_lower or 'user anlegen' in col_lower:
+                col_map['create_user'] = idx
+            elif 'benutzer-rollen' in col_lower or 'benutzerrollen' in col_lower or 'rollen' in col_lower:
+                col_map['user_roles'] = idx
 
         # Pflichtfelder prüfen
         required_fields = ['personnel_number', 'first_name', 'last_name']
@@ -1949,6 +2202,66 @@ def import_execute(request):
                         functions_to_add.append(valid_functions[func_name])
                 if functions_to_add:
                     person.functions.set(functions_to_add)
+
+            # BENUTZER-ERSTELLUNG
+            create_user_val = get_val('create_user')
+            if parse_bool(create_user_val) and not person.user:
+                # Benutzernamen aus Vor- und Nachnamen generieren
+                import unicodedata
+                import re
+
+                # Umlaute und Sonderzeichen normalisieren
+                def normalize_name(name):
+                    # Umlaute ersetzen
+                    replacements = {
+                        'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss',
+                        'Ä': 'ae', 'Ö': 'oe', 'Ü': 'ue'
+                    }
+                    for old, new in replacements.items():
+                        name = name.replace(old, new)
+                    # Nur alphanumerische Zeichen behalten
+                    name = unicodedata.normalize('NFKD', name)
+                    name = name.encode('ASCII', 'ignore').decode('ASCII')
+                    name = re.sub(r'[^a-zA-Z0-9]', '', name)
+                    return name.lower()
+
+                first_part = normalize_name(first_name)
+                last_part = normalize_name(last_name)
+                username = f"{first_part}.{last_part}"
+
+                # Sicherstellen, dass der Benutzername eindeutig ist
+                base_username = username
+                counter = 1
+                while User.objects.filter(username=username).exists():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
+                # Standardpasswort aus Konfiguration laden
+                from django.conf import settings
+                default_password = getattr(settings, 'PERSONNEL_DEFAULT_PASSWORD', 'Feuerwehr.0112')
+
+                # Benutzer erstellen
+                user = User.objects.create_user(
+                    username=username,
+                    email=person.email or '',
+                    password=default_password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password_must_change=True,  # Passwort muss bei erster Anmeldung geändert werden
+                    personnel_number=person.personnel_number  # Personalnummer auch im User speichern
+                )
+
+                # Rollen zuweisen (komma-separiert)
+                roles_val = get_val('user_roles')
+                if roles_val:
+                    from django.contrib.auth.models import Group
+                    role_names = [name.strip() for name in roles_val.split(',')]
+                    groups = Group.objects.filter(name__in=role_names)
+                    user.groups.set(groups)
+
+                # Benutzer mit Person verknüpfen
+                person.user = user
+                person.save()
 
         except Exception as e:
             failed_count += 1
@@ -2674,3 +2987,208 @@ class PhonebookView(LoginRequiredMixin, ListView):
         context['locations'] = Location.objects.filter(is_active=True).order_by('name')
 
         return context
+
+
+# ============================================================================
+# FF-VERWALTUNG (Dienstgrade, Jubilaeen, Befoerderungen)
+# ============================================================================
+
+@login_required
+def ff_dashboard(request):
+    """
+    FF-Dashboard mit Jubilaeen, Befoerderungsvorschlaegen, Dienstgrad-Statistiken
+    """
+    from django.db.models import Count
+    from datetime import date, timedelta
+    from dateutil.relativedelta import relativedelta
+
+    today = date.today()
+    current_year = today.year
+
+    # ===== 1. JUBILAEEN =====
+    # Personen mit anstehenden Jubilaeen (naechste 90 Tage)
+    jubilee_years = [10, 25, 40, 50]
+    upcoming_jubilees = []
+
+    personnel_with_ff = Person.objects.filter(
+        is_volunteer_fire_brigade=True,
+        is_active=True,
+        volunteer_entry_date__isnull=False
+    )
+
+    for person in personnel_with_ff:
+        entry_date = person.volunteer_entry_date
+
+        for years in jubilee_years:
+            jubilee_date = entry_date + relativedelta(years=years)
+
+            # Nur Jubilaeen in naechsten 365 Tagen
+            if today <= jubilee_date <= today + timedelta(days=365):
+                upcoming_jubilees.append({
+                    'person': person,
+                    'jubilee_date': jubilee_date,
+                    'years': years,
+                    'days_until': (jubilee_date - today).days
+                })
+
+    # Sortieren nach Datum
+    upcoming_jubilees = sorted(upcoming_jubilees, key=lambda x: x['jubilee_date'])
+
+    # ===== 2. BEFOERDERUNGSVORSCHLAEGE =====
+    promotion_suggestions = []
+
+    for person in personnel_with_ff:
+        # FF-Befoerderungen pruefen
+        promo_info = person.get_next_promotion_info('volunteer')
+        if promo_info and promo_info.get('eligible') and promo_info.get('next_rank'):
+            promotion_suggestions.append({
+                'person': person,
+                'current_rank': person.get_current_rank('volunteer'),
+                'next_rank': promo_info['next_rank'],
+                'years_in_current': promo_info.get('years_in_current_rank', 0),
+                'effective_years': promo_info.get('effective_service_years', 0),
+                'eligible_date': promo_info.get('eligible_date'),
+            })
+
+    # Sortieren nach Dienstjahren
+    promotion_suggestions = sorted(
+        promotion_suggestions,
+        key=lambda x: x['effective_years'],
+        reverse=True
+    )[:20]  # Max 20
+
+    # ===== 3. DIENSTGRAD-STATISTIKEN =====
+    # FF-Dienstgrade
+    ff_rank_stats = Rank.objects.filter(
+        organization_type='volunteer',
+        is_active=True
+    ).annotate(
+        person_count=Count('person_ranks', filter=Q(person_ranks__is_current=True))
+    ).order_by('sort_order')
+
+    # JF-Dienstgrade
+    jf_rank_stats = Rank.objects.filter(
+        organization_type='youth',
+        is_active=True
+    ).annotate(
+        person_count=Count('person_ranks', filter=Q(person_ranks__is_current=True))
+    ).order_by('sort_order')
+
+    # Gesamtstatistiken
+    total_ff_members = personnel_with_ff.count()
+    total_jf_members = Person.objects.filter(
+        is_youth_fire_brigade=True,
+        is_active=True,
+        youth_exit_date__isnull=True
+    ).count()
+    total_with_ff_rank = PersonRank.objects.filter(
+        rank__organization_type='volunteer',
+        is_current=True
+    ).count()
+    total_with_jf_rank = PersonRank.objects.filter(
+        rank__organization_type='youth',
+        is_current=True
+    ).count()
+
+    context = {
+        'upcoming_jubilees': upcoming_jubilees,
+        'promotion_suggestions': promotion_suggestions,
+        'ff_rank_stats': ff_rank_stats,
+        'jf_rank_stats': jf_rank_stats,
+        'stats': {
+            'total_ff_members': total_ff_members,
+            'total_jf_members': total_jf_members,
+            'total_with_ff_rank': total_with_ff_rank,
+            'total_with_jf_rank': total_with_jf_rank,
+            'upcoming_jubilees_count': len(upcoming_jubilees),
+            'promotion_suggestions_count': len(promotion_suggestions),
+        }
+    }
+
+    return render(request, 'personnel/ff_dashboard.html', context)
+
+
+class RankListView(LoginRequiredMixin, ListView):
+    """
+    Dienstgrad-Liste (FF und JF)
+    """
+    model = Rank
+    template_name = 'personnel/rank_list.html'
+    context_object_name = 'ranks'
+
+    def get_queryset(self):
+        queryset = Rank.objects.annotate(
+            person_count=Count('person_ranks', filter=Q(person_ranks__is_current=True))
+        ).order_by('organization_type', 'sort_order')
+
+        # Filter nach Organisationstyp
+        org_type = self.request.GET.get('org_type', '')
+        if org_type:
+            queryset = queryset.filter(organization_type=org_type)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['selected_org_type'] = self.request.GET.get('org_type', '')
+        return context
+
+
+class RankCreateView(LoginRequiredMixin, CreateView):
+    """
+    Dienstgrad erstellen
+    """
+    model = Rank
+    form_class = RankForm
+    template_name = 'personnel/rank_form.html'
+    success_url = reverse_lazy('personnel:rank_list')
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            _('Dienstgrad "{}" wurde erfolgreich erstellt.').format(form.instance.name)
+        )
+        return super().form_valid(form)
+
+
+class RankUpdateView(LoginRequiredMixin, UpdateView):
+    """
+    Dienstgrad bearbeiten
+    """
+    model = Rank
+    form_class = RankForm
+    template_name = 'personnel/rank_form.html'
+    success_url = reverse_lazy('personnel:rank_list')
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            _('Dienstgrad "{}" wurde erfolgreich aktualisiert.').format(form.instance.name)
+        )
+        return super().form_valid(form)
+
+
+class RankDeleteView(LoginRequiredMixin, DeleteView):
+    """
+    Dienstgrad loeschen
+    """
+    model = Rank
+    template_name = 'personnel/rank_confirm_delete.html'
+    success_url = reverse_lazy('personnel:rank_list')
+
+    def delete(self, request, *args, **kwargs):
+        rank = self.get_object()
+
+        # Pruefen ob Dienstgrad verwendet wird
+        if rank.person_ranks.exists():
+            messages.error(
+                request,
+                _('Dienstgrad "{}" kann nicht geloescht werden, da er noch verwendet wird.').format(rank.name)
+            )
+            return redirect('personnel:rank_list')
+
+        messages.success(
+            request,
+            _('Dienstgrad "{}" wurde erfolgreich geloescht.').format(rank.name)
+        )
+        return super().delete(request, *args, **kwargs)

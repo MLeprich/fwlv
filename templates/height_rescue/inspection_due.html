@@ -54,7 +54,7 @@
                             {{ item.get_item_type_display }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <a href="{% url 'height_rescue:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                            <a href="{% url 'height_rescue:device_detail' item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
                                 {{ item.name }}
                             </a>
                             {% if item.serial_number %}
@@ -72,7 +72,7 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <a href="{% url 'height_rescue:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800">
+                            <a href="{% url 'height_rescue:device_detail' item.pk %}" class="text-blue-600 hover:text-blue-800">
                                 Details →
                             </a>
                         </td>

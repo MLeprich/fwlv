@@ -28,7 +28,7 @@
                     <p class="mt-1 text-sm text-gray-600">Alle Ein- und Ausgänge, Umlagerungen und Einsatzdokumentation</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <a href="{% url 'height_rescue:item_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    <a href="{% url 'height_rescue:device_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
                         ← Zurück zur Ausrüstung
                     </a>
                     <a href="{% url 'height_rescue:movement_create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
@@ -112,7 +112,7 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 text-sm">
-                            <a href="{% url 'height_rescue:item_detail' movement.item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                            <a href="{% url 'height_rescue:device_detail' movement.item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
                                 {{ movement.item.name }}
                             </a>
                             <p class="text-xs text-gray-500">{{ movement.item.get_item_type_display }}</p>

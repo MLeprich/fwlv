@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}FF-Verwaltung - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">FF-Verwaltung</h1>
+            <p class="mt-1 text-sm text-gray-500">Dienstgrade, Jubilaeen und Befoerderungen</p>
+        </div>
+        <a href="{% url 'personnel:rank_list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            Dienstgrade verwalten
+        </a>
+    </div>
+
+    <!-- Statistik-Karten -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-100 rounded-full">
+                    <span class="text-2xl">🚒</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">FF-Mitglieder</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ stats.total_ff_members }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-yellow-100 rounded-full">
+                    <span class="text-2xl">🔥</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">JF-Mitglieder</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ stats.total_jf_members }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-green-100 rounded-full">
+                    <span class="text-2xl">🎖</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Anstehende Jubilaeen</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ stats.upcoming_jubilees_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-purple-100 rounded-full">
+                    <span class="text-2xl">⬆</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Befoerderungsvorschlaege</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ stats.promotion_suggestions_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Anstehende Jubilaeen -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Anstehende Jubilaeen</h2>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">naechste 12 Monate</span>
+            </div>
+            <div class="divide-y divide-gray-200">
+                {% for jubilee in upcoming_jubilees|slice:":10" %}
+                <div class="px-6 py-4 hover:bg-gray-50">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">
+                                {{ jubilee.years }}
+                            </div>
+                            <div class="ml-4">
+                                <a href="{% url 'personnel:detail' jubilee.person.pk %}" class="font-medium text-gray-900 hover:text-red-600">
+                                    {{ jubilee.person.get_full_name }}
+                                </a>
+                                <p class="text-sm text-gray-500">{{ jubilee.years }} Jahre Feuerwehrdienst</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-900">{{ jubilee.jubilee_date|date:"d.m.Y" }}</p>
+                            <p class="text-xs text-gray-500">
+                                {% if jubilee.days_until == 0 %}
+                                <span class="text-green-600 font-semibold">Heute!</span>
+                                {% elif jubilee.days_until <= 30 %}
+                                <span class="text-orange-600">in {{ jubilee.days_until }} Tagen</span>
+                                {% else %}
+                                in {{ jubilee.days_until }} Tagen
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="px-6 py-8 text-center text-gray-500">
+                    <span class="text-4xl block mb-2">🎉</span>
+                    <p>Keine anstehenden Jubilaeen im naechsten Jahr</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Befoerderungsvorschlaege -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Befoerderungsvorschlaege</h2>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">sofort moeglich</span>
+            </div>
+            <div class="divide-y divide-gray-200">
+                {% for promo in promotion_suggestions %}
+                <div class="px-6 py-4 hover:bg-gray-50">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                                <span class="text-lg">⬆</span>
+                            </div>
+                            <div class="ml-4">
+                                <a href="{% url 'personnel:detail' promo.person.pk %}" class="font-medium text-gray-900 hover:text-red-600">
+                                    {{ promo.person.get_full_name }}
+                                </a>
+                                <p class="text-sm text-gray-500">
+                                    {% if promo.current_rank %}
+                                    {{ promo.current_rank.rank.name }}
+                                    {% else %}
+                                    <span class="text-gray-400">Kein Dienstgrad</span>
+                                    {% endif %}
+                                    →
+                                    <span class="font-medium text-purple-600">{{ promo.next_rank.name }}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-900">{{ promo.effective_years|floatformat:1 }} Jahre</p>
+                            <p class="text-xs text-gray-500">Dienstzeit</p>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="px-6 py-8 text-center text-gray-500">
+                    <span class="text-4xl block mb-2">✨</span>
+                    <p>Keine Befoerderungsvorschlaege vorhanden</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Dienstgrad-Statistiken -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- FF Dienstgrade -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">FF-Dienstgrade</h2>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for rank in ff_rank_stats %}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-900">{{ rank.name }}</span>
+                            <span class="ml-2 text-xs text-gray-500">({{ rank.abbreviation }})</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-32 bg-gray-200 rounded-full h-2.5 mr-3">
+                                {% widthratio rank.person_count stats.total_ff_members 100 as pct %}
+                                <div class="bg-blue-600 h-2.5 rounded-full" style="width: {% if stats.total_ff_members > 0 %}{{ pct }}{% else %}0{% endif %}%"></div>
+                            </div>
+                            <span class="text-sm font-medium text-gray-700 w-8 text-right">{{ rank.person_count }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-center">Keine FF-Dienstgrade definiert</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- JF Dienstgrade -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">JF-Dienstgrade</h2>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for rank in jf_rank_stats %}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-900">{{ rank.name }}</span>
+                            <span class="ml-2 text-xs text-gray-500">({{ rank.abbreviation }})</span>
+                            {% if rank.is_functional_rank %}
+                            <span class="ml-2 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded">Funktion</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-32 bg-gray-200 rounded-full h-2.5 mr-3">
+                                {% widthratio rank.person_count stats.total_jf_members 100 as pct %}
+                                <div class="bg-yellow-500 h-2.5 rounded-full" style="width: {% if stats.total_jf_members > 0 %}{{ pct }}{% else %}0{% endif %}%"></div>
+                            </div>
+                            <span class="text-sm font-medium text-gray-700 w-8 text-right">{{ rank.person_count }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-center">Keine JF-Dienstgrade definiert</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

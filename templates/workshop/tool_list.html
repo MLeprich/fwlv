@@ -251,14 +251,8 @@
                                         <a href="{% url 'workshop:tool_detail' tool.pk %}" class="text-blue-600 hover:text-blue-800" title="Details ansehen">
                                             👁️
                                         </a>
-                                        <a href="{% url 'workshop:tool_edit' tool.pk %}" class="text-gray-600 hover:text-gray-800" title="Bearbeiten">
+                                        <a href="{% url 'workshop:tool_update' tool.pk %}" class="text-gray-600 hover:text-gray-800" title="Bearbeiten">
                                             ✏️
-                                        </a>
-                                        <a href="{% url 'workshop:tool_qrcode' tool.pk %}" target="_blank" class="text-gray-600 hover:text-gray-800" title="QR-Code">
-                                            📱
-                                        </a>
-                                        <a href="{% url 'workshop:tool_barcode' tool.pk %}" target="_blank" class="text-gray-600 hover:text-gray-800" title="Barcode">
-                                            🏷️
                                         </a>
                                     </div>
                                 </td>

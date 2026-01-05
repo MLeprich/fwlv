@@ -8,7 +8,11 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from .models import Person, Qualification, QualificationTemplate, Training, TrainingParticipant, Inspection, DutyHoursEntry, DutyHoursRequirement
+from .models import (
+    Person, Qualification, QualificationTemplate, Training, TrainingParticipant,
+    Inspection, DutyHoursEntry, DutyHoursRequirement,
+    Rank, PersonRank, ServiceInterruption, OrganizationType
+)
 
 
 class QualificationInline(admin.TabularInline):
@@ -32,6 +36,37 @@ class QualificationInline(admin.TabularInline):
         if obj:  # Editing
             return ['created_at', 'created_by', 'updated_at', 'updated_by']
         return []
+
+
+class PersonRankInline(admin.TabularInline):
+    """
+    Inline-Admin für Dienstgrade innerhalb der Person-Detailansicht
+    """
+    model = PersonRank
+    extra = 0
+    fields = [
+        'rank',
+        'since_date',
+        'is_current',
+        'promoted_by',
+        'certificate_number',
+    ]
+
+
+class ServiceInterruptionInline(admin.TabularInline):
+    """
+    Inline-Admin für Dienstunterbrechungen innerhalb der Person-Detailansicht
+    """
+    model = ServiceInterruption
+    extra = 0
+    fields = [
+        'organization_type',
+        'interruption_type',
+        'start_date',
+        'end_date',
+        'other_department_name',
+        'reason',
+    ]
 
 
 @admin.register(Person)
@@ -129,7 +164,7 @@ class PersonAdmin(admin.ModelAdmin):
 
     readonly_fields = []
 
-    inlines = [QualificationInline]
+    inlines = [QualificationInline, PersonRankInline, ServiceInterruptionInline]
 
     date_hierarchy = 'entry_date'
 
@@ -704,3 +739,225 @@ class DutyHoursRequirementAdmin(admin.ModelAdmin):
     ordering = ['-year', 'category']
 
     list_editable = ['is_active']
+
+
+@admin.register(Rank)
+class RankAdmin(admin.ModelAdmin):
+    """
+    Admin-Interface für Dienstgrade
+    """
+    list_display = [
+        'name',
+        'abbreviation',
+        'organization_type',
+        'sort_order',
+        'min_years_in_previous',
+        'min_total_years',
+        'is_functional_rank',
+        'is_active',
+    ]
+
+    list_filter = [
+        'organization_type',
+        'is_functional_rank',
+        'is_active',
+    ]
+
+    search_fields = [
+        'name',
+        'abbreviation',
+        'description',
+        'requires_course',
+    ]
+
+    fieldsets = (
+        (_('Dienstgrad'), {
+            'fields': (
+                'name',
+                'abbreviation',
+                'organization_type',
+                'sort_order',
+            )
+        }),
+        (_('Beförderungsvoraussetzungen'), {
+            'fields': (
+                'min_years_in_previous',
+                'min_total_years',
+                'requires_course',
+            )
+        }),
+        (_('Details'), {
+            'fields': (
+                'is_functional_rank',
+                'description',
+            )
+        }),
+        (_('Status'), {
+            'fields': (
+                'is_active',
+            )
+        }),
+    )
+
+    ordering = ['organization_type', 'sort_order']
+
+    list_editable = ['sort_order', 'is_active']
+
+
+@admin.register(PersonRank)
+class PersonRankAdmin(admin.ModelAdmin):
+    """
+    Admin-Interface für Dienstgrade von Personen
+    """
+    list_display = [
+        'person',
+        'rank',
+        'since_date',
+        'is_current',
+        'promoted_by',
+    ]
+
+    list_filter = [
+        'rank__organization_type',
+        'rank',
+        'is_current',
+        'since_date',
+    ]
+
+    search_fields = [
+        'person__first_name',
+        'person__last_name',
+        'person__personnel_number',
+        'rank__name',
+        'promoted_by',
+        'certificate_number',
+    ]
+
+    fieldsets = (
+        (_('Zuordnung'), {
+            'fields': (
+                'person',
+                'rank',
+                'since_date',
+                'is_current',
+            )
+        }),
+        (_('Details'), {
+            'fields': (
+                'promoted_by',
+                'certificate_number',
+                'certificate_file',
+            )
+        }),
+        (_('Notizen'), {
+            'fields': (
+                'notes',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+
+    readonly_fields = []
+
+    date_hierarchy = 'since_date'
+
+    ordering = ['-since_date']
+
+    autocomplete_fields = ['person', 'rank']
+
+    def get_readonly_fields(self, request, obj=None):
+        """Audit-Felder sind nur lesbar"""
+        if obj:  # Editing
+            return ['created_at', 'created_by', 'updated_at', 'updated_by']
+        return []
+
+
+@admin.register(ServiceInterruption)
+class ServiceInterruptionAdmin(admin.ModelAdmin):
+    """
+    Admin-Interface für Dienstunterbrechungen
+    """
+    list_display = [
+        'person',
+        'organization_type',
+        'interruption_type',
+        'start_date',
+        'end_date',
+        'duration_display',
+        'is_active_display',
+    ]
+
+    list_filter = [
+        'organization_type',
+        'interruption_type',
+        'start_date',
+    ]
+
+    search_fields = [
+        'person__first_name',
+        'person__last_name',
+        'person__personnel_number',
+        'other_department_name',
+        'reason',
+    ]
+
+    fieldsets = (
+        (_('Zuordnung'), {
+            'fields': (
+                'person',
+                'organization_type',
+                'interruption_type',
+            )
+        }),
+        (_('Zeitraum'), {
+            'fields': (
+                'start_date',
+                'end_date',
+            )
+        }),
+        (_('Details'), {
+            'fields': (
+                'other_department_name',
+                'reason',
+            )
+        }),
+        (_('Notizen'), {
+            'fields': (
+                'notes',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+
+    readonly_fields = []
+
+    date_hierarchy = 'start_date'
+
+    ordering = ['-start_date']
+
+    autocomplete_fields = ['person']
+
+    def duration_display(self, obj):
+        """Zeigt die Dauer der Unterbrechung"""
+        days = obj.get_duration_days()
+        years = days / 365.25
+        if years >= 1:
+            return f"{years:.1f} Jahre"
+        months = days / 30.44
+        if months >= 1:
+            return f"{months:.1f} Monate"
+        return f"{days} Tage"
+    duration_display.short_description = _('Dauer')
+
+    def is_active_display(self, obj):
+        """Zeigt ob Unterbrechung noch aktiv ist"""
+        if obj.is_active():
+            return format_html('<span style="color: orange; font-weight: bold;">Aktiv</span>')
+        return format_html('<span style="color: green;">Beendet</span>')
+    is_active_display.short_description = _('Status')
+
+    def get_readonly_fields(self, request, obj=None):
+        """Audit-Felder sind nur lesbar"""
+        if obj:  # Editing
+            return ['created_at', 'created_by', 'updated_at', 'updated_by']
+        return []
