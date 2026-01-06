@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Service löschen - KFZ-Werkstatt - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'workshop:dashboard' %}" class="text-gray-500 hover:text-gray-700">KFZ-Werkstatt</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'workshop:service_list' %}" class="text-gray-500 hover:text-gray-700">Services</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Löschen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <!-- Header -->
+        <div class="bg-red-50 border-b border-red-200 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <span class="text-2xl">⚠️</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-red-800">Service-Eintrag löschen</h1>
+                    <p class="text-sm text-red-600">Diese Aktion kann nicht rückgängig gemacht werden</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6">
+            <p class="text-gray-700 mb-6">
+                Möchten Sie den folgenden Service-Eintrag wirklich löschen?
+            </p>
+
+            <!-- Service Details -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <dl class="grid grid-cols-2 gap-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Fahrzeug</dt>
+                        <dd class="text-gray-900">{{ object.vehicle.license_plate }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Service-Typ</dt>
+                        <dd class="text-gray-900">{{ object.get_service_type_display }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Geplantes Datum</dt>
+                        <dd class="text-gray-900">{{ object.scheduled_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Status</dt>
+                        <dd class="text-gray-900">{{ object.get_service_status_display }}</dd>
+                    </div>
+                    {% if object.description %}
+                    <div class="col-span-2">
+                        <dt class="text-sm font-medium text-gray-500">Beschreibung</dt>
+                        <dd class="text-gray-900">{{ object.description|truncatewords:30 }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+
+            <!-- Warning -->
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div class="flex gap-3">
+                    <span class="text-xl">💡</span>
+                    <p class="text-sm text-yellow-800">
+                        <strong>Hinweis:</strong> Mit dem Löschen gehen auch alle damit verbundenen Lagerbewegungen verloren.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <form method="post">
+                {% csrf_token %}
+                <div class="flex justify-end gap-3">
+                    <a href="{% url 'workshop:service_detail' object.pk %}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        Abbrechen
+                    </a>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                        Endgültig löschen
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

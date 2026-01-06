@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Anstehende Services - KFZ-Werkstatt - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'workshop:dashboard' %}" class="text-gray-500 hover:text-gray-700">KFZ-Werkstatt</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Anstehende Services</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-4xl">📅</span>
+                    <h1 class="text-2xl font-bold">Anstehende Services</h1>
+                </div>
+                <p class="text-blue-100">Services in den nächsten 30 Tagen</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'workshop:service_list' %}" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg font-medium transition-colors">
+                    Alle Services
+                </a>
+                <a href="{% url 'workshop:service_create' %}" class="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium transition-colors">
+                    + Neuer Service
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">ℹ️</span>
+            <div>
+                <h3 class="font-semibold text-blue-800">Planung</h3>
+                <p class="text-blue-700 text-sm">Diese Services sind für die nächsten 30 Tage geplant.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        {% if services %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fahrzeug</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service-Typ</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Geplant für</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Techniker</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for service in services %}
+                <tr class="hover:bg-blue-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">🚗</span>
+                            <div>
+                                <span class="font-medium text-gray-900">{{ service.vehicle.license_plate }}</span>
+                                <p class="text-sm text-gray-500">{{ service.vehicle.vehicle_type|default:"-" }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ service.get_service_type_display }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-blue-600 font-medium">{{ service.scheduled_date|date:"d.m.Y" }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full
+                            {% if service.service_status == 'scheduled' %}bg-blue-100 text-blue-800
+                            {% elif service.service_status == 'in_progress' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ service.get_service_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if service.technician %}
+                            {{ service.technician.get_full_name|default:service.technician }}
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <a href="{% url 'workshop:service_detail' service.pk %}" class="text-blue-600 hover:text-blue-800 mr-3">Details</a>
+                        <a href="{% url 'workshop:service_update' service.pk %}" class="text-gray-600 hover:text-gray-800">Bearbeiten</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-12">
+            <span class="text-6xl">✅</span>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">Keine anstehenden Services</h3>
+            <p class="mt-2 text-gray-500">In den nächsten 30 Tagen sind keine Services geplant.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -68,22 +68,36 @@
     <!-- Warning Messages -->
     {% if device.is_maintenance_due or device.is_inspection_due %}
     <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg mb-6">
-        <div class="flex">
-            <div class="flex-shrink-0">
-                <span class="text-red-600 text-xl">⚠️</span>
-            </div>
-            <div class="ml-3">
-                <h3 class="text-sm font-medium text-red-800">Aktion erforderlich</h3>
-                <div class="mt-2 text-sm text-red-700">
-                    <ul class="list-disc list-inside space-y-1">
-                        {% if device.is_maintenance_due %}
-                        <li>Wartung ist fällig{% if device.next_maintenance_date %} (seit {{ device.next_maintenance_date|date:"d.m.Y" }}){% endif %}</li>
-                        {% endif %}
-                        {% if device.is_inspection_due %}
-                        <li>Prüfung ist fällig{% if device.next_inspection_date %} (seit {{ device.next_inspection_date|date:"d.m.Y" }}){% endif %}</li>
-                        {% endif %}
-                    </ul>
+        <div class="flex justify-between items-start">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <span class="text-red-600 text-xl">⚠️</span>
                 </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Aktion erforderlich</h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <ul class="list-disc list-inside space-y-1">
+                            {% if device.is_maintenance_due %}
+                            <li>Wartung ist fällig{% if device.next_maintenance_date %} (seit {{ device.next_maintenance_date|date:"d.m.Y" }}){% endif %}</li>
+                            {% endif %}
+                            {% if device.is_inspection_due %}
+                            <li>Prüfung ist fällig{% if device.next_inspection_date %} (seit {{ device.next_inspection_date|date:"d.m.Y" }}){% endif %}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2 ml-4">
+                {% if device.is_inspection_due %}
+                <a href="{% url 'equipment:inspection_record_create' %}?device={{ device.pk }}" class="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors">
+                    Prüfung durchführen
+                </a>
+                {% endif %}
+                {% if device.is_maintenance_due and maintenance_assignments %}
+                <a href="{% url 'equipment:maintenance_record_create' %}?device={{ device.pk }}" class="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors">
+                    Wartung durchführen
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -245,10 +259,116 @@
             </div>
             {% endif %}
 
+            <!-- Letzte Prüfungen -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">Letzte Prüfungen</h2>
+                    <a href="{% url 'equipment:inspection_record_create' %}?device={{ device.pk }}" class="text-sm text-blue-600 hover:text-blue-800">+ Neue Prüfung</a>
+                </div>
+                {% if recent_inspections %}
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Art</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ergebnis</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for record in recent_inspections %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-2 text-sm text-gray-900">{{ record.inspection_date|date:"d.m.Y" }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-600">{{ record.inspection_type.name }}</td>
+                            <td class="px-4 py-2">
+                                <span class="px-2 py-1 text-xs rounded-full {% if record.result == 'passed' %}bg-green-100 text-green-700{% elif record.result == 'failed' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                    {{ record.get_result_display }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-2 text-right">
+                                <a href="{% url 'equipment:inspection_record_detail' record.pk %}" class="text-blue-600 hover:text-blue-800 text-sm">Details</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="px-6 py-8 text-center text-gray-500 text-sm">
+                    Noch keine Prüfungen dokumentiert
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Letzte Wartungen -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">Letzte Wartungen</h2>
+                    {% if maintenance_assignments %}
+                    <a href="{% url 'equipment:maintenance_record_create' %}?device={{ device.pk }}" class="text-sm text-blue-600 hover:text-blue-800">+ Neue Wartung</a>
+                    {% endif %}
+                </div>
+                {% if recent_maintenances %}
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Art</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for record in recent_maintenances %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-2 text-sm text-gray-900">{{ record.maintenance_date|date:"d.m.Y" }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-600">{{ record.assignment.maintenance_type.name }}</td>
+                            <td class="px-4 py-2">
+                                <span class="px-2 py-1 text-xs rounded-full {% if record.status == 'completed' %}bg-green-100 text-green-700{% elif record.status == 'incomplete' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                    {{ record.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-2 text-right">
+                                <a href="{% url 'equipment:maintenance_record_detail' record.pk %}" class="text-blue-600 hover:text-blue-800 text-sm">Details</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="px-6 py-8 text-center text-gray-500 text-sm">
+                    {% if maintenance_assignments %}
+                    Noch keine Wartungen dokumentiert
+                    {% else %}
+                    Keine Wartungszuweisung vorhanden
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
         </div>
 
         <!-- Sidebar (1/3) -->
         <div class="space-y-6">
+
+            <!-- Schnellaktionen -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">Schnellaktionen</h3>
+                <div class="space-y-2">
+                    <a href="{% url 'equipment:inspection_record_create' %}?device={{ device.pk }}" class="flex items-center gap-2 w-full px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+                        <span>📋</span> Prüfung erfassen
+                    </a>
+                    {% if maintenance_assignments %}
+                    <a href="{% url 'equipment:maintenance_record_create' %}?device={{ device.pk }}" class="flex items-center gap-2 w-full px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium">
+                        <span>🔧</span> Wartung erfassen
+                    </a>
+                    {% else %}
+                    <div class="px-4 py-2 bg-gray-50 text-gray-500 rounded-lg text-sm">
+                        <span class="block font-medium">🔧 Wartung</span>
+                        <span class="text-xs">Keine Wartungszuweisung vorhanden</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
 
             <!-- Status -->
             <div class="bg-white rounded-lg shadow p-6">

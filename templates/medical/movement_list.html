@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lagerbewegungen - Medizinische Ausstattung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Medizinische Ausstattung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Lagerbewegungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Lagerbewegungen</h1>
+            <p class="text-gray-600">Übersicht aller Bewegungen medizinischer Artikel</p>
+        </div>
+        <a href="{% url 'medical:stock_movement_create' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            + Neue Bewegung
+        </a>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <form method="get" class="flex flex-wrap gap-4">
+            <select name="movement_type" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="">Alle Bewegungstypen</option>
+                <option value="INCOMING" {% if request.GET.movement_type == 'INCOMING' %}selected{% endif %}>Eingang</option>
+                <option value="OUTGOING" {% if request.GET.movement_type == 'OUTGOING' %}selected{% endif %}>Ausgang</option>
+                <option value="TRANSFER" {% if request.GET.movement_type == 'TRANSFER' %}selected{% endif %}>Umlagerung</option>
+                <option value="DISPOSAL" {% if request.GET.movement_type == 'DISPOSAL' %}selected{% endif %}>Entsorgung</option>
+            </select>
+            <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                Filtern
+            </button>
+        </form>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        {% if movements %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artikel</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Menge</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Von/Nach</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for movement in movements %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ movement.movement_date|date:"d.m.Y H:i" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full
+                            {% if movement.movement_type == 'INCOMING' %}bg-green-100 text-green-800
+                            {% elif movement.movement_type == 'OUTGOING' %}bg-red-100 text-red-800
+                            {% elif movement.movement_type == 'TRANSFER' %}bg-blue-100 text-blue-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ movement.get_movement_type_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="font-medium text-gray-900">{{ movement.item.name }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ movement.quantity }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if movement.from_location %}{{ movement.from_location.name }}{% endif %}
+                        {% if movement.from_location and movement.to_location %} → {% endif %}
+                        {% if movement.to_location %}{{ movement.to_location.name }}{% endif %}
+                        {% if not movement.from_location and not movement.to_location %}-{% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <a href="{% url 'medical:stock_movement_detail' movement.pk %}" class="text-blue-600 hover:text-blue-800">Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if is_paginated %}
+        <div class="px-6 py-4 border-t border-gray-200">
+            <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-700">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</span>
+                <div class="flex gap-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.movement_type %}&movement_type={{ request.GET.movement_type }}{% endif %}" class="px-3 py-1 border rounded hover:bg-gray-50">Zurück</a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.movement_type %}&movement_type={{ request.GET.movement_type }}{% endif %}" class="px-3 py-1 border rounded hover:bg-gray-50">Weiter</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-12">
+            <span class="text-6xl">📋</span>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">Keine Lagerbewegungen</h3>
+            <p class="mt-2 text-gray-500">Es wurden noch keine Lagerbewegungen erfasst.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Fahrzeug-Ausrüstung {{ vehicle.license_plate }} - Ausrüstung & Geräte - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'equipment:dashboard' %}" class="text-gray-500 hover:text-gray-700">Ausrüstung & Geräte</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ vehicle.license_plate }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Vehicle Header -->
+    <div class="bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                    <span class="text-3xl">🚒</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold">{{ vehicle.license_plate }}</h1>
+                    <p class="text-gray-300">{{ vehicle.vehicle_type|default:"Fahrzeug" }} - Ausrüstung</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'equipment:item_list' %}" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg font-medium transition-colors">
+                    Alle Geräte
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span class="text-xl">🔧</span>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Geräte gesamt</p>
+                    <p class="text-xl font-bold text-gray-900">{{ items.count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Equipment Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-lg font-semibold">Zugeordnete Ausrüstung</h2>
+        </div>
+        {% if items %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gerät</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artikel-Nr.</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zustand</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in items %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">🔧</span>
+                            <div>
+                                <span class="font-medium text-gray-900">{{ item.name }}</span>
+                                {% if item.serial_number %}
+                                <p class="text-sm text-gray-500">S/N: {{ item.serial_number }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ item.equipment_type|default:"-" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
+                        {{ item.item_number|default:"-" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full
+                            {% if item.condition == 'good' or item.is_operational %}bg-green-100 text-green-800
+                            {% elif item.condition == 'defective' %}bg-red-100 text-red-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {% if item.is_operational %}Einsatzbereit{% else %}{{ item.get_condition_display|default:"OK" }}{% endif %}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <a href="{% url 'equipment:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800">Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-12">
+            <span class="text-6xl">📋</span>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">Keine Ausrüstung zugeordnet</h3>
+            <p class="mt-2 text-gray-500">Diesem Fahrzeug ist noch keine Ausrüstung zugeordnet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

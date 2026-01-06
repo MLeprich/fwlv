@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Größen - {{ person.get_full_name }} - Bekleidung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'clothing:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bekleidung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Größen: {{ person.get_full_name }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-6">
+    <!-- Person Header -->
+    <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                    <span class="text-3xl">👤</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold">{{ person.get_full_name }}</h1>
+                    <p class="text-indigo-200">Größenverwaltung & zugewiesene Bekleidung</p>
+                </div>
+            </div>
+            <a href="{% url 'clothing:item_list' %}" class="bg-white text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-colors">
+                Alle Kleidungsstücke
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Sizes -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-lg font-semibold">Konfektionsgrößen</h2>
+            </div>
+            {% if size_assignments %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bekleidungstyp</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Größe</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for assignment in size_assignments %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ assignment.get_clothing_type_display|default:assignment.clothing_type }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 bg-indigo-100 text-indigo-800 text-sm font-medium rounded">
+                                {{ assignment.size }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-8">
+                <span class="text-4xl">📏</span>
+                <p class="mt-2 text-gray-500">Keine Größen hinterlegt</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Assigned Items -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-lg font-semibold">Zugewiesene Bekleidung</h2>
+            </div>
+            {% if assigned_items %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artikel</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Größe</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktion</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for item in assigned_items %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">👕</span>
+                                <div>
+                                    <span class="text-sm font-medium text-gray-900">{{ item.get_clothing_type_display|default:item.clothing_type }}</span>
+                                    {% if item.item_number %}
+                                    <p class="text-xs text-gray-500">{{ item.item_number }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ item.size|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <a href="{% url 'clothing:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800">Details</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-8">
+                <span class="text-4xl">👕</span>
+                <p class="mt-2 text-gray-500">Keine Bekleidung zugewiesen</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

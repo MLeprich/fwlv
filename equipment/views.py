@@ -411,6 +411,23 @@ class EquipmentDeviceDetailView(LoginRequiredMixin, DetailView):
     template_name = 'equipment/device_detail.html'
     context_object_name = 'device'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        device = self.object
+        # Wartungszuweisungen für dieses Gerät
+        context['maintenance_assignments'] = EquipmentMaintenanceAssignment.objects.filter(
+            device=device
+        ).select_related('maintenance_type')
+        # Letzte Prüfprotokolle
+        context['recent_inspections'] = InspectionRecord.objects.filter(
+            device=device
+        ).select_related('inspection_type', 'inspector').order_by('-inspection_date')[:5]
+        # Letzte Wartungsprotokolle
+        context['recent_maintenances'] = MaintenanceRecord.objects.filter(
+            assignment__device=device
+        ).select_related('assignment__maintenance_type', 'technician').order_by('-maintenance_date')[:5]
+        return context
+
 
 class EquipmentDeviceCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neues Ausrüstungs-Gerät anlegen"""
@@ -808,18 +825,16 @@ class MaintenanceManagementView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         today = timezone.now().date()
 
-        # Wartungsdaten
-        context['maintenance_due_count'] = EquipmentItem.objects.filter(
+        # Wartungsdaten - basierend auf EquipmentDeviceInstance
+        context['maintenance_due_count'] = EquipmentDeviceInstance.objects.filter(
             is_active=True,
-            requires_maintenance=True,
             next_maintenance_date__isnull=False,
             next_maintenance_date__lte=today
         ).count()
 
-        # Prüfungsdaten
-        context['inspection_due_count'] = EquipmentItem.objects.filter(
+        # Prüfungsdaten - basierend auf EquipmentDeviceInstance
+        context['inspection_due_count'] = EquipmentDeviceInstance.objects.filter(
             is_active=True,
-            requires_inspection=True,
             next_inspection_date__isnull=False,
             next_inspection_date__lte=today
         ).count()
@@ -828,66 +843,70 @@ class MaintenanceManagementView(LoginRequiredMixin, TemplateView):
 
 
 class MaintenanceListView(LoginRequiredMixin, ListView):
-    """Liste aller wartungspflichtigen Geräte"""
-    model = EquipmentItem
+    """Liste aller wartungspflichtigen Geräte (Device Instances)"""
+    model = EquipmentDeviceInstance
     template_name = 'equipment/maintenance_list.html'
     context_object_name = 'items'
     paginate_by = 50
 
     def get_queryset(self):
-        return EquipmentItem.objects.filter(
-            requires_maintenance=True
+        return EquipmentDeviceInstance.objects.filter(
+            is_active=True,
+            master__requires_maintenance=True
         ).select_related(
-            'assigned_vehicle'
+            'master', 'assigned_vehicle', 'location'
         ).order_by('next_maintenance_date')
 
 
 class MaintenanceDueView(LoginRequiredMixin, ListView):
-    """Fällige Wartungen"""
-    model = EquipmentItem
+    """Fällige Wartungen (Device Instances)"""
+    model = EquipmentDeviceInstance
     template_name = 'equipment/maintenance_due.html'
-    context_object_name = 'items'
+    context_object_name = 'devices'
 
     def get_queryset(self):
         today = timezone.now().date()
 
-        return EquipmentItem.objects.filter(
-            requires_maintenance=True,
+        return EquipmentDeviceInstance.objects.filter(
+            is_active=True,
+            next_maintenance_date__isnull=False,
             next_maintenance_date__lte=today
         ).select_related(
-            'assigned_vehicle'
+            'master', 'assigned_vehicle', 'location'
         ).order_by('next_maintenance_date')
 
 
 class InspectionListView(LoginRequiredMixin, ListView):
-    """Liste aller prüfpflichtigen Geräte"""
-    model = EquipmentItem
+    """Liste aller prüfpflichtigen Geräte (Device Instances)"""
+    model = EquipmentDeviceInstance
     template_name = 'equipment/inspection_list.html'
     context_object_name = 'items'
     paginate_by = 50
 
     def get_queryset(self):
-        return EquipmentItem.objects.filter(
-            requires_inspection=True
+        return EquipmentDeviceInstance.objects.filter(
+            is_active=True,
+            master__requires_inspection=True
         ).select_related(
-            'assigned_vehicle'
+            'master', 'assigned_vehicle', 'location'
         ).order_by('next_inspection_date')
 
 
 class InspectionDueView(LoginRequiredMixin, ListView):
-    """Fällige Prüfungen"""
-    model = EquipmentItem
+    """Fällige Prüfungen (Device Instances)"""
+    model = EquipmentDeviceInstance
     template_name = 'equipment/inspection_due.html'
-    context_object_name = 'items'
+    context_object_name = 'devices'
 
     def get_queryset(self):
         today = timezone.now().date()
 
-        return EquipmentItem.objects.filter(
-            requires_inspection=True,
+        return EquipmentDeviceInstance.objects.filter(
+            is_active=True,
+            next_inspection_date__isnull=False,
             next_inspection_date__lte=today
         ).select_related(
-            'assigned_vehicle'
+            'master', 'assigned_vehicle', 'location'
         ).order_by('next_inspection_date')
 
 
@@ -1243,7 +1262,23 @@ class InspectionRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, Cr
         context['devices'] = EquipmentDeviceInstance.objects.select_related(
             'master'
         ).filter(is_active=True).order_by('inventory_number')
+        # Vorausgewähltes Gerät (wenn device-Parameter übergeben wurde)
+        device_id = self.request.GET.get('device')
+        if device_id:
+            context['preselected_device_id'] = int(device_id)
         return context
+
+    def get_initial(self):
+        initial = super().get_initial()
+        # Gerät vorauswählen wenn device-Parameter übergeben wurde
+        device_id = self.request.GET.get('device')
+        if device_id:
+            try:
+                device = EquipmentDeviceInstance.objects.get(pk=device_id)
+                initial['device'] = device
+            except EquipmentDeviceInstance.DoesNotExist:
+                pass
+        return initial
 
     def form_valid(self, form):
         messages.success(
@@ -1731,6 +1766,29 @@ class MaintenanceRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, C
     template_name = 'equipment/maintenance_record_form.html'
     success_url = reverse_lazy('equipment:maintenance_record_list')
     permission_required = 'equipment.add_maintenancerecord'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Wenn device-Parameter übergeben wurde, nur Assignments für dieses Gerät anzeigen
+        device_id = self.request.GET.get('device')
+        if device_id:
+            context['preselected_device_id'] = int(device_id)
+            try:
+                device = EquipmentDeviceInstance.objects.get(pk=device_id)
+                context['preselected_device'] = device
+            except EquipmentDeviceInstance.DoesNotExist:
+                pass
+        return context
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Wenn device-Parameter übergeben wurde, Assignments filtern
+        device_id = self.request.GET.get('device')
+        if device_id:
+            form.fields['assignment'].queryset = EquipmentMaintenanceAssignment.objects.filter(
+                device_id=device_id
+            ).select_related('maintenance_type')
+        return form
 
     def form_valid(self, form):
         messages.success(

@@ -986,11 +986,13 @@ class WorkshopItem(AbstractInventoryItem):
         return f"{self.item_number} - {self.name} ({self.get_workshop_item_type_display()})"
 
     def is_expired(self):
-        """Prüft, ob Artikel abgelaufen ist"""
-        if not self.expiry_date:
+        """Prüft, ob Artikel abgelaufen ist (berechnet aus production_date + shelf_life_months)"""
+        if not self.production_date or not self.shelf_life_months:
             return False
         from django.utils import timezone
-        return self.expiry_date <= timezone.now().date()
+        from dateutil.relativedelta import relativedelta
+        expiry_date = self.production_date + relativedelta(months=self.shelf_life_months)
+        return expiry_date <= timezone.now().date()
 
     def is_low_stock(self):
         """Prüft, ob Mindestbestand unterschritten"""

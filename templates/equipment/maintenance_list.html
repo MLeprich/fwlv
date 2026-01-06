@@ -158,12 +158,12 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-3">
                                 <div>
-                                    <a href="{% url 'equipment:item_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-amber-600">
-                                        {{ item.name }}
+                                    <a href="{% url 'equipment:device_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-amber-600">
+                                        {{ item.master.name }}
                                     </a>
                                     <p class="text-xs text-gray-500">
-                                        {% if item.item_number %}{{ item.item_number }}{% endif %}
-                                        {% if item.serial_number %} • SN: {{ item.serial_number }}{% endif %}
+                                        {% if item.inventory_number %}{{ item.inventory_number }}{% endif %}
+                                        {% if item.serial_number %} | SN: {{ item.serial_number }}{% endif %}
                                     </p>
                                 </div>
                             </div>
@@ -173,6 +173,11 @@
                             <div class="flex items-center gap-1">
                                 <span>🚒</span>
                                 <span class="font-medium">{{ item.assigned_vehicle.license_plate }}</span>
+                            </div>
+                            {% elif item.location %}
+                            <div class="flex items-center gap-1">
+                                <span>📍</span>
+                                <span>{{ item.location.name }}</span>
                             </div>
                             {% else %}
                             <span class="text-gray-400">-</span>
@@ -187,7 +192,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             {% if item.next_maintenance_date %}
-                            <div class="{% if item.next_maintenance_date|date:'Y-m-d' < today %}text-red-600 font-bold{% elif item.next_maintenance_date|date:'Y-m-d' <= today|add:'30 days' %}text-orange-600 font-semibold{% else %}text-gray-900{% endif %}">
+                            <div class="{% if item.next_maintenance_date|date:'Y-m-d' < today %}text-red-600 font-bold{% else %}text-gray-900{% endif %}">
                                 {{ item.next_maintenance_date|date:"d.m.Y" }}
                             </div>
                             {% else %}
@@ -195,8 +200,8 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {% if item.maintenance_interval_days %}
-                            {{ item.maintenance_interval_days }} Tage
+                            {% if item.master.maintenance_interval_months %}
+                            {{ item.master.maintenance_interval_months }} Monate
                             {% else %}
                             <span class="text-gray-400">-</span>
                             {% endif %}
@@ -218,10 +223,10 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
                             <div class="flex items-center justify-end gap-2">
-                                <a href="{% url 'equipment:item_detail' item.pk %}" class="text-amber-600 hover:text-amber-800 font-medium">
+                                <a href="{% url 'equipment:device_detail' item.pk %}" class="text-amber-600 hover:text-amber-800 font-medium">
                                     👁️ Details
                                 </a>
-                                <a href="{% url 'equipment:item_update' item.pk %}" class="text-gray-600 hover:text-gray-800">
+                                <a href="{% url 'equipment:device_edit' item.pk %}" class="text-gray-600 hover:text-gray-800">
                                     ✏️
                                 </a>
                             </div>

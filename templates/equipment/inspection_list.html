@@ -159,16 +159,16 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-3">
                                 <div>
-                                    <a href="{% url 'equipment:item_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-blue-600">
-                                        {{ item.name }}
+                                    <a href="{% url 'equipment:device_detail' item.pk %}" class="text-sm font-medium text-gray-900 hover:text-blue-600">
+                                        {{ item.master.name }}
                                     </a>
                                     <p class="text-xs text-gray-500">
-                                        {% if item.item_number %}{{ item.item_number }}{% endif %}
-                                        {% if item.serial_number %} • SN: {{ item.serial_number }}{% endif %}
+                                        {% if item.inventory_number %}{{ item.inventory_number }}{% endif %}
+                                        {% if item.serial_number %} | SN: {{ item.serial_number }}{% endif %}
                                     </p>
-                                    {% if item.requires_certification %}
+                                    {% if item.master.requires_certification %}
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
-                                        📜 Zertifizierung erforderlich
+                                        Zertifizierung erforderlich
                                     </span>
                                     {% endif %}
                                 </div>
@@ -179,6 +179,11 @@
                             <div class="flex items-center gap-1">
                                 <span>🚒</span>
                                 <span class="font-medium">{{ item.assigned_vehicle.license_plate }}</span>
+                            </div>
+                            {% elif item.location %}
+                            <div class="flex items-center gap-1">
+                                <span>📍</span>
+                                <span>{{ item.location.name }}</span>
                             </div>
                             {% else %}
                             <span class="text-gray-400">-</span>
@@ -193,7 +198,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             {% if item.next_inspection_date %}
-                            <div class="{% if item.next_inspection_date|date:'Y-m-d' < today %}text-red-600 font-bold{% elif item.next_inspection_date|date:'Y-m-d' <= today|add:'30 days' %}text-orange-600 font-semibold{% else %}text-gray-900{% endif %}">
+                            <div class="{% if item.next_inspection_date|date:'Y-m-d' < today %}text-red-600 font-bold{% else %}text-gray-900{% endif %}">
                                 {{ item.next_inspection_date|date:"d.m.Y" }}
                             </div>
                             {% else %}
@@ -201,19 +206,19 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {% if item.inspection_interval_months %}
-                            {{ item.inspection_interval_months }} Monate
+                            {% if item.master.inspection_interval_months %}
+                            {{ item.master.inspection_interval_months }} Monate
                             {% else %}
                             <span class="text-gray-400">-</span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                {% if item.equipment_type == 'breathing_apparatus' %}
+                                {% if item.master.equipment_type == 'breathing_apparatus' %}
                                 DGUV 3
-                                {% elif item.equipment_type == 'ladder' %}
+                                {% elif item.master.equipment_type == 'ladder' %}
                                 UVV Leitern
-                                {% elif item.equipment_type == 'hose' %}
+                                {% elif item.master.equipment_type == 'hose' %}
                                 DIN 14811
                                 {% else %}
                                 UVV/DGUV
@@ -237,10 +242,10 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
                             <div class="flex items-center justify-end gap-2">
-                                <a href="{% url 'equipment:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                <a href="{% url 'equipment:device_detail' item.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">
                                     👁️ Details
                                 </a>
-                                <a href="{% url 'equipment:item_update' item.pk %}" class="text-gray-600 hover:text-gray-800">
+                                <a href="{% url 'equipment:device_edit' item.pk %}" class="text-gray-600 hover:text-gray-800">
                                     ✏️
                                 </a>
                             </div>

@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Abgelaufene Artikel - KFZ-Werkstatt - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'workshop:dashboard' %}" class="text-gray-500 hover:text-gray-700">KFZ-Werkstatt</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Abgelaufene Artikel</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-red-500 to-red-700 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-4xl">⏰</span>
+                    <h1 class="text-2xl font-bold">Abgelaufene Artikel</h1>
+                </div>
+                <p class="text-red-100">Artikel deren Haltbarkeitsdatum überschritten ist</p>
+            </div>
+            <a href="{% url 'workshop:item_list' %}" class="bg-white text-red-700 hover:bg-red-50 px-4 py-2 rounded-lg font-medium transition-colors">
+                Alle Artikel
+            </a>
+        </div>
+    </div>
+
+    <!-- Warning Box -->
+    <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">🚨</span>
+            <div>
+                <h3 class="font-semibold text-red-800">Achtung: Abgelaufene Artikel</h3>
+                <p class="text-red-700 text-sm">Diese Artikel sollten nicht mehr verwendet und fachgerecht entsorgt werden.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        {% if items %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artikel</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produktionsdatum</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Abgelaufen seit</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bestand</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in items %}
+                <tr class="hover:bg-red-50 bg-red-50/30">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">❌</span>
+                            <div>
+                                <a href="{% url 'workshop:item_detail' item.pk %}" class="font-medium text-gray-900 hover:text-red-600">
+                                    {{ item.name }}
+                                </a>
+                                <p class="text-sm text-gray-500">{{ item.item_number }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ item.get_workshop_item_type_display }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ item.production_date|date:"d.m.Y" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-red-600 font-bold">{{ item.calculated_expiry_date|date:"d.m.Y" }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ item.quantity }} {{ item.get_unit_display }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <a href="{% url 'workshop:item_detail' item.pk %}" class="text-red-600 hover:text-red-800 mr-3">Details</a>
+                        <a href="{% url 'workshop:movement_create' %}?item={{ item.pk }}&type=DISPOSAL" class="text-gray-600 hover:text-gray-800">Entsorgen</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-12">
+            <span class="text-6xl">✅</span>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">Keine abgelaufenen Artikel</h3>
+            <p class="mt-2 text-gray-500">Alle Artikel sind innerhalb ihrer Haltbarkeitsfrist.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

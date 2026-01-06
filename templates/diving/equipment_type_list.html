@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ausrüstungstypen - Tauchausrüstung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:dashboard' %}" class="text-gray-500 hover:text-gray-700">Tauchausrüstung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'diving:type_management' %}" class="text-gray-500 hover:text-gray-700">Typenverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Ausrüstungstypen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Ausrüstungstypen</h1>
+            <p class="text-gray-600">Verwaltung der Tauchausrüstungstypen</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'diving:type_management' %}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                Zurück
+            </a>
+            <a href="{% url 'diving:equipment_type_create' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                + Neuer Ausrüstungstyp
+            </a>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        {% if equipment_types %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beschreibung</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sortierung</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for equipment_type in equipment_types %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">🤿</span>
+                            <span class="font-medium text-gray-900">{{ equipment_type.name }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ equipment_type.description|default:"-"|truncatewords:15 }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ equipment_type.sort_order }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <a href="{% url 'diving:equipment_type_edit' equipment_type.pk %}" class="text-blue-600 hover:text-blue-800 mr-3">Bearbeiten</a>
+                        <a href="{% url 'diving:equipment_type_delete' equipment_type.pk %}" class="text-red-600 hover:text-red-800">Löschen</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-12">
+            <span class="text-6xl">🤿</span>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">Keine Ausrüstungstypen</h3>
+            <p class="mt-2 text-gray-500">Es wurden noch keine Ausrüstungstypen definiert.</p>
+            <a href="{% url 'diving:equipment_type_create' %}" class="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Ersten Ausrüstungstyp anlegen
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

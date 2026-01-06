@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Beladungsplan - {{ vehicle.call_sign }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:list' %}" class="text-gray-500 hover:text-gray-700">Fahrzeuge</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:detail' vehicle.pk %}" class="text-gray-500 hover:text-gray-700">{{ vehicle.call_sign }}</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Beladungsplan</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                    <span class="text-3xl">🚒</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold">Beladungsplan: {{ vehicle.call_sign }}</h1>
+                    <p class="text-gray-300">{{ vehicle.license_plate }} - {{ vehicle.vehicle_type|default:"Fahrzeug" }}</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'vehicles:detail' vehicle.pk %}" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg font-medium transition-colors">
+                    Zurück zum Fahrzeug
+                </a>
+                <a href="{% url 'vehicles:loading_plan_edit' vehicle.pk %}" class="bg-white text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-colors">
+                    Bearbeiten
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Plan Content -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-lg font-semibold">Beladung</h2>
+        </div>
+        <div class="p-6">
+            {% if vehicle.is_mobile_storage %}
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div class="flex gap-3">
+                    <span class="text-xl">📦</span>
+                    <p class="text-sm text-blue-800">
+                        <strong>Mobiles Lager:</strong> Dieses Fahrzeug ist als mobiles Lager konfiguriert.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="text-center py-12 text-gray-500">
+                <span class="text-6xl">📋</span>
+                <h3 class="mt-4 text-lg font-medium text-gray-900">Beladungsplan</h3>
+                <p class="mt-2">Der Beladungsplan für dieses Fahrzeug wird hier angezeigt.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

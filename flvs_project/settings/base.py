@@ -250,6 +250,7 @@ CRISPY_TEMPLATE_PACK = "tailwind"
 # ============================================================================
 
 AUTHENTICATION_BACKENDS = (
+    'axes.backends.AxesStandaloneBackend',  # django-axes für Brute-Force Protection
     'permissions.backends.CombinedPermissionBackend',  # Custom: Zeitbasierte + Delegierte Permissions
     'guardian.backends.ObjectPermissionBackend',  # django-guardian für Object-Level Permissions
     'django.contrib.auth.backends.ModelBackend',  # Fallback: Standard Django Auth

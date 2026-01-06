@@ -150,7 +150,7 @@ class ProfileView(LoginRequiredMixin, UpdateView):
             if CLOTHING_AVAILABLE:
                 assigned_clothing = ClothingItem.objects.filter(
                     assigned_to=person,
-                    deleted_at__isnull=True
+                    is_active=True
                 ).select_related('location', 'category').order_by('-assignment_date')
                 context['assigned_clothing'] = assigned_clothing
                 context['assigned_clothing_count'] = assigned_clothing.count()

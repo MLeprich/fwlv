@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Service-Historie {{ vehicle.license_plate }} - KFZ-Werkstatt - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'workshop:dashboard' %}" class="text-gray-500 hover:text-gray-700">KFZ-Werkstatt</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'workshop:service_list' %}" class="text-gray-500 hover:text-gray-700">Services</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ vehicle.license_plate }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Vehicle Header -->
+    <div class="bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                    <span class="text-3xl">🚒</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold">{{ vehicle.license_plate }}</h1>
+                    <p class="text-gray-300">{{ vehicle.vehicle_type|default:"Fahrzeug" }} - Service-Historie</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'workshop:service_list' %}" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg font-medium transition-colors">
+                    Alle Services
+                </a>
+                <a href="{% url 'workshop:service_create' %}?vehicle={{ vehicle.pk }}" class="bg-white text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-colors">
+                    + Neuer Service
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Info Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span class="text-xl">📊</span>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Gesamte Services</p>
+                    <p class="text-xl font-bold text-gray-900">{{ services.count }}</p>
+                </div>
+            </div>
+        </div>
+        {% if vehicle.current_mileage %}
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <span class="text-xl">🛣️</span>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Kilometerstand</p>
+                    <p class="text-xl font-bold text-gray-900">{{ vehicle.current_mileage|floatformat:0 }} km</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if vehicle.next_tuv %}
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <span class="text-xl">📅</span>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Nächster TÜV</p>
+                    <p class="text-xl font-bold text-gray-900">{{ vehicle.next_tuv|date:"m/Y" }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Service History Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-lg font-semibold">Service-Historie</h2>
+        </div>
+        {% if services %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service-Typ</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kilometerstand</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Techniker</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for service in services %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="font-medium text-gray-900">{{ service.scheduled_date|date:"d.m.Y" }}</span>
+                        {% if service.completed_date %}
+                        <p class="text-xs text-gray-500">Abgeschlossen: {{ service.completed_date|date:"d.m.Y" }}</p>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ service.get_service_type_display }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full
+                            {% if service.service_status == 'completed' %}bg-green-100 text-green-800
+                            {% elif service.service_status == 'in_progress' %}bg-yellow-100 text-yellow-800
+                            {% elif service.service_status == 'scheduled' %}bg-blue-100 text-blue-800
+                            {% elif service.service_status == 'cancelled' %}bg-gray-100 text-gray-800
+                            {% else %}bg-orange-100 text-orange-800{% endif %}">
+                            {{ service.get_service_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ service.mileage_at_service|floatformat:0 }} km
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if service.technician %}
+                            {{ service.technician.get_full_name|default:service.technician }}
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <a href="{% url 'workshop:service_detail' service.pk %}" class="text-blue-600 hover:text-blue-800">Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-12">
+            <span class="text-6xl">📋</span>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">Keine Service-Einträge</h3>
+            <p class="mt-2 text-gray-500">Für dieses Fahrzeug wurden noch keine Services dokumentiert.</p>
+            <a href="{% url 'workshop:service_create' %}?vehicle={{ vehicle.pk }}" class="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Ersten Service erfassen
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

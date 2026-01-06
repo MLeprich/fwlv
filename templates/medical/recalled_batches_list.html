@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Zurückgerufene Chargen - Medizinische Ausstattung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'medical:dashboard' %}" class="text-gray-500 hover:text-gray-700">Medizinische Ausstattung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Zurückgerufene Chargen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-red-600 to-red-800 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-4xl">🚫</span>
+                    <h1 class="text-2xl font-bold">Zurückgerufene Chargen</h1>
+                </div>
+                <p class="text-red-100">Chargen mit Produktrückruf</p>
+            </div>
+            <a href="{% url 'medical:batch_list' %}" class="bg-white text-red-700 hover:bg-red-50 px-4 py-2 rounded-lg font-medium transition-colors">
+                Alle Chargen
+            </a>
+        </div>
+    </div>
+
+    <!-- Warning Box -->
+    <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl">🚨</span>
+            <div>
+                <h3 class="font-semibold text-red-800">Achtung: Produktrückruf</h3>
+                <p class="text-red-700 text-sm">Diese Chargen wurden zurückgerufen und dürfen nicht mehr verwendet werden. Bitte stellen Sie sicher, dass alle Einheiten aus dem Bestand entfernt wurden.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        {% if batches %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Chargen-Nr.</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artikel</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rückrufdatum</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Restbestand</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lagerort</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for batch in batches %}
+                <tr class="hover:bg-red-50 bg-red-50/30">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">🚫</span>
+                            <span class="font-mono font-medium text-gray-900">{{ batch.batch_number }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <a href="{% url 'medical:master_detail' batch.item.pk %}" class="text-blue-600 hover:underline">
+                            {{ batch.item.name }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-red-600 font-bold">{{ batch.recall_date|date:"d.m.Y" }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if batch.quantity > 0 %}
+                        <span class="text-red-600 font-bold">{{ batch.quantity }}</span>
+                        {% else %}
+                        <span class="text-green-600">0 (entfernt)</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ batch.location.name|default:"-" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <a href="{% url 'medical:batch_detail' batch.pk %}" class="text-red-600 hover:text-red-800 mr-3">Details</a>
+                        {% if batch.quantity > 0 %}
+                        <a href="{% url 'medical:disposal_form' %}?batch={{ batch.pk }}" class="text-gray-600 hover:text-gray-800">Entsorgen</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if is_paginated %}
+        <div class="px-6 py-4 border-t border-gray-200">
+            <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-700">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</span>
+                <div class="flex gap-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border rounded hover:bg-gray-50">Zurück</a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border rounded hover:bg-gray-50">Weiter</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-12">
+            <span class="text-6xl">✅</span>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">Keine zurückgerufenen Chargen</h3>
+            <p class="mt-2 text-gray-500">Es gibt derzeit keine Chargen mit Produktrückruf.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Benachrichtigungen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Benachrichtigungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Benachrichtigungen</h1>
+            <p class="text-gray-600">{{ unread_count|default:0 }} ungelesene Nachricht{{ unread_count|pluralize:"en" }}</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'notifications:preferences' %}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                Einstellungen
+            </a>
+            {% if notifications %}
+            <form method="post" action="{% url 'notifications:mark_all_read' %}">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Alle als gelesen markieren
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <form method="get" class="flex flex-wrap gap-4">
+            <select name="category" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="">Alle Kategorien</option>
+                <option value="inventory" {% if request.GET.category == 'inventory' %}selected{% endif %}>Lager</option>
+                <option value="vehicles" {% if request.GET.category == 'vehicles' %}selected{% endif %}>Fahrzeuge</option>
+                <option value="personnel" {% if request.GET.category == 'personnel' %}selected{% endif %}>Personal</option>
+                <option value="inspections" {% if request.GET.category == 'inspections' %}selected{% endif %}>Prüfungen</option>
+                <option value="system" {% if request.GET.category == 'system' %}selected{% endif %}>System</option>
+            </select>
+            <label class="flex items-center gap-2">
+                <input type="checkbox" name="unread" value="true" {% if request.GET.unread == 'true' %}checked{% endif %} class="rounded border-gray-300">
+                <span class="text-sm text-gray-700">Nur ungelesene</span>
+            </label>
+            <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                Filtern
+            </button>
+        </form>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        {% if notifications %}
+        <ul class="divide-y divide-gray-200">
+            {% for notification in notifications %}
+            <li class="{% if not notification.is_read %}bg-blue-50{% endif %} hover:bg-gray-50">
+                <a href="{% if notification.link %}{{ notification.link }}{% else %}#{% endif %}" class="block px-6 py-4">
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0 mt-1">
+                            {% if notification.category == 'inventory' %}
+                            <span class="text-2xl">📦</span>
+                            {% elif notification.category == 'vehicles' %}
+                            <span class="text-2xl">🚗</span>
+                            {% elif notification.category == 'personnel' %}
+                            <span class="text-2xl">👤</span>
+                            {% elif notification.category == 'inspections' %}
+                            <span class="text-2xl">📋</span>
+                            {% else %}
+                            <span class="text-2xl">🔔</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 {% if not notification.is_read %}font-semibold{% endif %}">
+                                {{ notification.title }}
+                            </p>
+                            <p class="text-sm text-gray-600 mt-1">{{ notification.message|truncatechars:150 }}</p>
+                            <p class="text-xs text-gray-400 mt-2">{{ notification.created_at|timesince }} ago</p>
+                        </div>
+                        {% if not notification.is_read %}
+                        <div class="flex-shrink-0">
+                            <span class="inline-block w-2 h-2 bg-blue-600 rounded-full"></span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+
+        {% if is_paginated %}
+        <div class="px-6 py-4 border-t border-gray-200">
+            <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-700">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</span>
+                <div class="flex gap-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.unread %}&unread={{ request.GET.unread }}{% endif %}" class="px-3 py-1 border rounded hover:bg-gray-50">Zurück</a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.unread %}&unread={{ request.GET.unread }}{% endif %}" class="px-3 py-1 border rounded hover:bg-gray-50">Weiter</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-12">
+            <span class="text-6xl">🔔</span>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">Keine Benachrichtigungen</h3>
+            <p class="mt-2 text-gray-500">Sie haben derzeit keine Benachrichtigungen.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

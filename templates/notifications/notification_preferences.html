@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Benachrichtigungs-Einstellungen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'notifications:list' %}" class="text-gray-500 hover:text-gray-700">Benachrichtigungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Einstellungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h1 class="text-xl font-bold text-gray-900">Benachrichtigungs-Einstellungen</h1>
+            <p class="text-sm text-gray-500 mt-1">Konfigurieren Sie, wie und wann Sie benachrichtigt werden möchten.</p>
+        </div>
+
+        <form method="post" class="p-6">
+            {% csrf_token %}
+
+            <!-- Allgemeine Einstellungen -->
+            <div class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Allgemein</h2>
+                <div class="space-y-4">
+                    <label class="flex items-center gap-3">
+                        {{ form.email_enabled }}
+                        <span class="text-sm text-gray-700">E-Mail-Benachrichtigungen aktivieren</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        {{ form.inapp_enabled }}
+                        <span class="text-sm text-gray-700">In-App-Benachrichtigungen aktivieren</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- E-Mail-Benachrichtigungen -->
+            <div class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">E-Mail bei</h2>
+                <div class="space-y-4">
+                    <label class="flex items-center gap-3">
+                        {{ form.email_on_expiry }}
+                        <span class="text-sm text-gray-700">Ablaufenden Artikeln/Prüfungen</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        {{ form.email_on_low_stock }}
+                        <span class="text-sm text-gray-700">Niedrigem Lagerbestand</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        {{ form.email_on_approval_needed }}
+                        <span class="text-sm text-gray-700">Genehmigungen erforderlich</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Kategorien -->
+            <div class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Benachrichtigungs-Kategorien</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <label class="flex items-center gap-3">
+                        {{ form.notify_inventory }}
+                        <span class="text-sm text-gray-700">Lager/Inventar</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        {{ form.notify_vehicles }}
+                        <span class="text-sm text-gray-700">Fahrzeuge</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        {{ form.notify_personnel }}
+                        <span class="text-sm text-gray-700">Personal</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        {{ form.notify_inspections }}
+                        <span class="text-sm text-gray-700">Prüfungen</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        {{ form.notify_qualifications }}
+                        <span class="text-sm text-gray-700">Qualifikationen</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        {{ form.notify_orders }}
+                        <span class="text-sm text-gray-700">Bestellungen</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        {{ form.notify_system }}
+                        <span class="text-sm text-gray-700">System</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Zusammenfassungen -->
+            <div class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Zusammenfassungen</h2>
+                <div class="space-y-4">
+                    <label class="flex items-center gap-3">
+                        {{ form.daily_summary }}
+                        <span class="text-sm text-gray-700">Tägliche Zusammenfassung per E-Mail</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        {{ form.weekly_summary }}
+                        <span class="text-sm text-gray-700">Wöchentliche Zusammenfassung per E-Mail</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pt-6 border-t border-gray-200 flex justify-end gap-3">
+                <a href="{% url 'notifications:list' %}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Einstellungen speichern
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

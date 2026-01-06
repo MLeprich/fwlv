@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lagerbewegung Details - Ausrüstung & Geräte - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'equipment:dashboard' %}" class="text-gray-500 hover:text-gray-700">Ausrüstung & Geräte</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'equipment:movement_list' %}" class="text-gray-500 hover:text-gray-700">Lagerbewegungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Details</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-full flex items-center justify-center
+                    {% if movement.movement_type == 'INCOMING' %}bg-green-100{% elif movement.movement_type == 'OUTGOING' %}bg-red-100{% else %}bg-blue-100{% endif %}">
+                    <span class="text-3xl">
+                        {% if movement.movement_type == 'INCOMING' %}📥{% elif movement.movement_type == 'OUTGOING' %}📤{% else %}🔄{% endif %}
+                    </span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">{{ movement.get_movement_type_display }}</h1>
+                    <p class="text-gray-500">{{ movement.movement_date|date:"d.m.Y H:i" }}</p>
+                </div>
+            </div>
+            <a href="{% url 'equipment:movement_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Zurück zur Liste
+            </a>
+        </div>
+    </div>
+
+    <!-- Details -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-lg font-semibold">Bewegungsdetails</h2>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Artikel</dt>
+                    <dd class="mt-1 text-gray-900">
+                        {% if movement.item %}
+                        <a href="{% url 'equipment:item_detail' movement.item.pk %}" class="text-blue-600 hover:underline">
+                            {{ movement.item.name }}
+                        </a>
+                        {% elif movement.device %}
+                        <a href="{% url 'equipment:device_detail' movement.device.pk %}" class="text-blue-600 hover:underline">
+                            {{ movement.device.inventory_number }}
+                        </a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Menge</dt>
+                    <dd class="mt-1 text-gray-900 font-semibold">{{ movement.quantity }}</dd>
+                </div>
+                {% if movement.vehicle %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Fahrzeug</dt>
+                    <dd class="mt-1 text-gray-900">{{ movement.vehicle.license_plate }}</dd>
+                </div>
+                {% endif %}
+                {% if movement.person %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Person</dt>
+                    <dd class="mt-1 text-gray-900">{{ movement.person.get_full_name }}</dd>
+                </div>
+                {% endif %}
+                {% if movement.from_location %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Von Lagerort</dt>
+                    <dd class="mt-1 text-gray-900">{{ movement.from_location.name }}</dd>
+                </div>
+                {% endif %}
+                {% if movement.to_location %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Nach Lagerort</dt>
+                    <dd class="mt-1 text-gray-900">{{ movement.to_location.name }}</dd>
+                </div>
+                {% endif %}
+                {% if movement.reference_number %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Referenz-Nr.</dt>
+                    <dd class="mt-1 text-gray-900">{{ movement.reference_number }}</dd>
+                </div>
+                {% endif %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Erstellt von</dt>
+                    <dd class="mt-1 text-gray-900">{{ movement.created_by.get_full_name|default:movement.created_by.username }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Erstellt am</dt>
+                    <dd class="mt-1 text-gray-900">{{ movement.created_at|date:"d.m.Y H:i" }}</dd>
+                </div>
+            </dl>
+            {% if movement.notes %}
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <dt class="text-sm font-medium text-gray-500">Bemerkungen</dt>
+                <dd class="mt-1 text-gray-900">{{ movement.notes }}</dd>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
