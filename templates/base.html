@@ -225,7 +225,7 @@
                         @click="showProfile = !showProfile"
                         class="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100"
                     >
-                        <div class="w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center font-semibold">
+                        <div class="w-8 h-8 bg-primary-100 text-gray-900 rounded-full flex items-center justify-center font-semibold text-sm">
                             {% if request.user.first_name %}{{ request.user.first_name|first }}{% else %}{{ request.user.username|first }}{% endif %}{% if request.user.last_name %}{{ request.user.last_name|first }}{% endif %}
                         </div>
                         <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
