@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
@@ -38,11 +38,12 @@ class DrivingLicenseCheckListView(LoginRequiredMixin, ListView):
         return context
 
 
-class DrivingLicenseCheckCreateView(LoginRequiredMixin, CreateView):
+class DrivingLicenseCheckCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = DrivingLicenseCheck
     form_class = DrivingLicenseCheckForm
     template_name = 'driving_license/check_form.html'
     success_url = reverse_lazy('driving_license:check_list')
+    permission_required = 'driving_license.add_drivinglicensecheck'
 
     def form_valid(self, form):
         form.instance.checked_by = self.request.user
@@ -56,11 +57,12 @@ class DrivingLicenseCheckCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class DrivingLicenseCheckUpdateView(LoginRequiredMixin, UpdateView):
+class DrivingLicenseCheckUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = DrivingLicenseCheck
     form_class = DrivingLicenseCheckForm
     template_name = 'driving_license/check_form.html'
     success_url = reverse_lazy('driving_license:check_list')
+    permission_required = 'driving_license.change_drivinglicensecheck'
 
     def form_valid(self, form):
         messages.success(self.request, _('Führerscheinüberprüfung wurde erfolgreich aktualisiert.'))
@@ -82,10 +84,11 @@ class DrivingLicenseCheckDetailView(LoginRequiredMixin, DetailView):
         return super().get_queryset().select_related('person', 'checked_by')
 
 
-class DrivingLicenseCheckDeleteView(LoginRequiredMixin, DeleteView):
+class DrivingLicenseCheckDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = DrivingLicenseCheck
     template_name = 'driving_license/check_confirm_delete.html'
     success_url = reverse_lazy('driving_license:check_list')
+    permission_required = 'driving_license.delete_drivinglicensecheck'
 
     def delete(self, request, *args, **kwargs):
         messages.success(self.request, _('Führerscheinüberprüfung wurde erfolgreich gelöscht.'))

@@ -5,7 +5,7 @@ Views für das Info-Monitor-System
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -33,12 +33,13 @@ from permissions.constants import Roles
 # DASHBOARD VIEWS
 # =============================================================================
 
-class DashboardCreateView(LoginRequiredMixin, CreateView):
+class DashboardCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Dashboard erstellen mit Canvas/Grid Vorschau
     """
     model = Dashboard
     template_name = 'info_monitors/dashboard_create.html'
+    permission_required = 'info_monitors.add_dashboard'
     fields = ['name', 'description', 'profile', 'use_canvas_layout', 'canvas_width',
               'canvas_height', 'theme', 'is_public', 'auto_refresh',
               'refresh_interval', 'allowed_users']
@@ -172,11 +173,12 @@ class DashboardDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class DashboardDeleteView(LoginRequiredMixin, DeleteView):
+class DashboardDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Dashboard löschen
     """
     model = Dashboard
+    permission_required = 'info_monitors.delete_dashboard'
     success_url = reverse_lazy('info_monitors:dashboard_list')
 
     def get_queryset(self):
@@ -656,12 +658,13 @@ class ProfileListView(LoginRequiredMixin, ListView):
         return context
 
 
-class ProfileCreateView(LoginRequiredMixin, CreateView):
+class ProfileCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Neues Monitor-Profil erstellen
     """
     model = MonitorProfile
     template_name = 'info_monitors/profile_form.html'
+    permission_required = 'info_monitors.add_monitorprofile'
     fields = ['name', 'description', 'icon', 'color', 'is_active', 'is_default', 'display_order']
     success_url = reverse_lazy('info_monitors:profile_list')
 
@@ -696,12 +699,13 @@ class ProfileCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+class ProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Monitor-Profil bearbeiten
     """
     model = MonitorProfile
     template_name = 'info_monitors/profile_form.html'
+    permission_required = 'info_monitors.change_monitorprofile'
     fields = ['name', 'description', 'icon', 'color', 'is_active', 'is_default', 'display_order']
     success_url = reverse_lazy('info_monitors:profile_list')
 
@@ -832,12 +836,13 @@ class AccessTokenDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class AccessTokenCreateView(LoginRequiredMixin, CreateView):
+class AccessTokenCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Neuen Zugriffs-Token erstellen
     """
     model = MonitorAccessToken
     template_name = 'info_monitors/access_token_form.html'
+    permission_required = 'info_monitors.add_monitoraccesstoken'
     fields = ['dashboard', 'name', 'expires_at', 'max_uses', 'ip_whitelist']
 
     def get_form(self, form_class=None):
@@ -916,11 +921,12 @@ class AccessTokenToggleView(LoginRequiredMixin, View):
         })
 
 
-class AccessTokenDeleteView(LoginRequiredMixin, DeleteView):
+class AccessTokenDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Zugriffs-Token löschen
     """
     model = MonitorAccessToken
+    permission_required = 'info_monitors.delete_monitoraccesstoken'
     success_url = reverse_lazy('info_monitors:access_token_list')
 
     def get_queryset(self):

@@ -6,8 +6,8 @@ Views für Kleiderkammer-Verwaltung
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Q, Count, F, Sum
@@ -157,12 +157,13 @@ class ClothingCategoryListView(LoginRequiredMixin, ListView):
         ).order_by('sort_order', 'name')
 
 
-class ClothingCategoryCreateView(LoginRequiredMixin, CreateView):
+class ClothingCategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Kategorie erstellen"""
     model = ClothingCategory
     template_name = 'clothing/category_form.html'
     fields = ['name', 'code', 'description', 'color', 'sort_order']
     success_url = reverse_lazy('clothing:category_list')
+    permission_required = 'clothing.add_clothingcategory'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -171,12 +172,13 @@ class ClothingCategoryCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ClothingCategoryUpdateView(LoginRequiredMixin, UpdateView):
+class ClothingCategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Kategorie bearbeiten"""
     model = ClothingCategory
     template_name = 'clothing/category_form.html'
     fields = ['name', 'code', 'description', 'color', 'sort_order', 'is_active']
     success_url = reverse_lazy('clothing:category_list')
+    permission_required = 'clothing.change_clothingcategory'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -184,11 +186,12 @@ class ClothingCategoryUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ClothingCategoryDeleteView(LoginRequiredMixin, DeleteView):
+class ClothingCategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Kategorie löschen"""
     model = ClothingCategory
     template_name = 'clothing/category_confirm_delete.html'
     success_url = reverse_lazy('clothing:category_list')
+    permission_required = 'clothing.delete_clothingcategory'
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -274,11 +277,12 @@ class ClothingItemDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class ClothingItemCreateView(LoginRequiredMixin, CreateView):
+class ClothingItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neues Kleidungsstück anlegen"""
     model = ClothingItem
     form_class = ClothingItemForm
     template_name = 'clothing/item_form.html'
+    permission_required = 'clothing.add_clothingitem'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -296,11 +300,12 @@ class ClothingItemCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class ClothingItemUpdateView(LoginRequiredMixin, UpdateView):
+class ClothingItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Kleidungsstück bearbeiten"""
     model = ClothingItem
     form_class = ClothingItemForm
     template_name = 'clothing/item_form.html'
+    permission_required = 'clothing.change_clothingitem'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -317,11 +322,12 @@ class ClothingItemUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class ClothingItemDeleteView(LoginRequiredMixin, DeleteView):
+class ClothingItemDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Kleidungsstück löschen (Soft-Delete)"""
     model = ClothingItem
     template_name = 'clothing/item_confirm_delete.html'
     success_url = reverse_lazy('clothing:item_list')
+    permission_required = 'clothing.delete_clothingitem'
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -379,11 +385,12 @@ class ClothingStockMovementDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'movement'
 
 
-class ClothingStockMovementCreateView(LoginRequiredMixin, CreateView):
+class ClothingStockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Lagerbewegung erstellen"""
     model = ClothingStockMovement
     form_class = ClothingStockMovementForm
     template_name = 'clothing/movement_form.html'
+    permission_required = 'clothing.add_clothingstockmovement'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1231,12 +1238,13 @@ class ClothingMasterDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class ClothingMasterCreateView(LoginRequiredMixin, CreateView):
+class ClothingMasterCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Kleidungs-Stammdatensatz erstellen"""
     model = ClothingItemMaster
     form_class = ClothingItemMasterForm
     template_name = 'clothing/master_form.html'
     success_url = reverse_lazy('clothing:master_list')
+    permission_required = 'clothing.add_clothingitemmaster'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1251,12 +1259,13 @@ class ClothingMasterCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class ClothingMasterUpdateView(LoginRequiredMixin, UpdateView):
+class ClothingMasterUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Kleidungs-Stammdaten bearbeiten"""
     model = ClothingItemMaster
     form_class = ClothingItemMasterForm
     template_name = 'clothing/master_form.html'
     success_url = reverse_lazy('clothing:master_list')
+    permission_required = 'clothing.change_clothingitemmaster'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -1270,11 +1279,12 @@ class ClothingMasterUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class ClothingMasterDeleteView(LoginRequiredMixin, DeleteView):
+class ClothingMasterDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Kleidungs-Stammdaten löschen (soft delete)"""
     model = ClothingItemMaster
     template_name = 'clothing/master_confirm_delete.html'
     success_url = reverse_lazy('clothing:master_list')
+    permission_required = 'clothing.delete_clothingitemmaster'
 
     def delete(self, request, *args, **kwargs):
         master = self.get_object()
@@ -1312,12 +1322,13 @@ class ClothingProductTypeListView(LoginRequiredMixin, ListView):
         return context
 
 
-class ClothingProductTypeCreateView(LoginRequiredMixin, CreateView):
+class ClothingProductTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Produkttyp erstellen"""
     model = ClothingProductType
     template_name = 'clothing/producttype_form.html'
     fields = ['name', 'code', 'description', 'icon', 'is_psa_typical', 'sort_order']
     success_url = reverse_lazy('clothing:producttype_list')
+    permission_required = 'clothing.add_clothingproducttype'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1332,12 +1343,13 @@ class ClothingProductTypeCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class ClothingProductTypeUpdateView(LoginRequiredMixin, UpdateView):
+class ClothingProductTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Produkttyp bearbeiten"""
     model = ClothingProductType
     template_name = 'clothing/producttype_form.html'
     fields = ['name', 'code', 'description', 'icon', 'is_psa_typical', 'sort_order']
     success_url = reverse_lazy('clothing:producttype_list')
+    permission_required = 'clothing.change_clothingproducttype'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -1351,11 +1363,12 @@ class ClothingProductTypeUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class ClothingProductTypeDeleteView(LoginRequiredMixin, DeleteView):
+class ClothingProductTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Produkttyp löschen (soft delete)"""
     model = ClothingProductType
     template_name = 'clothing/producttype_confirm_delete.html'
     success_url = reverse_lazy('clothing:producttype_list')
+    permission_required = 'clothing.delete_clothingproducttype'
 
     def delete(self, request, *args, **kwargs):
         producttype = self.get_object()

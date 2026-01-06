@@ -4,8 +4,8 @@ CRUD-Ansichten für Fahrzeuge und Prüfungen
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
@@ -179,13 +179,14 @@ class VehicleDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class VehicleCreateView(LoginRequiredMixin, CreateView):
+class VehicleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Fahrzeug erstellen
     """
     model = Vehicle
     form_class = VehicleForm
     template_name = 'vehicles/vehicle_form.html'
+    permission_required = 'vehicles.add_vehicle'
 
     def form_valid(self, form):
         # Audit-Felder setzen
@@ -203,13 +204,14 @@ class VehicleCreateView(LoginRequiredMixin, CreateView):
         return reverse('vehicles:detail', kwargs={'pk': self.object.pk})
 
 
-class VehicleUpdateView(LoginRequiredMixin, UpdateView):
+class VehicleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Fahrzeug bearbeiten
     """
     model = Vehicle
     form_class = VehicleForm
     template_name = 'vehicles/vehicle_form.html'
+    permission_required = 'vehicles.change_vehicle'
 
     def form_valid(self, form):
         # Audit-Feld setzen
@@ -226,13 +228,14 @@ class VehicleUpdateView(LoginRequiredMixin, UpdateView):
         return reverse('vehicles:detail', kwargs={'pk': self.object.pk})
 
 
-class VehicleDeleteView(LoginRequiredMixin, DeleteView):
+class VehicleDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Fahrzeug löschen (mit Sicherheitsabfrage)
     """
     model = Vehicle
     template_name = 'vehicles/vehicle_confirm_delete.html'
     success_url = reverse_lazy('vehicles:list')
+    permission_required = 'vehicles.delete_vehicle'
 
     def delete(self, request, *args, **kwargs):
         vehicle = self.get_object()
@@ -247,13 +250,14 @@ class VehicleDeleteView(LoginRequiredMixin, DeleteView):
 # VEHICLE INSPECTION VIEWS
 # ============================================================================
 
-class VehicleInspectionCreateView(LoginRequiredMixin, CreateView):
+class VehicleInspectionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Prüfung zu Fahrzeug hinzufügen
     """
     model = VehicleInspection
     form_class = VehicleInspectionForm
     template_name = 'vehicles/inspection_form.html'
+    permission_required = 'vehicles.add_vehicleinspection'
 
     def get_initial(self):
         """Fahrzeug-ID aus URL vorausfüllen"""
@@ -299,13 +303,14 @@ class VehicleInspectionCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class InspectionCreateDirectView(LoginRequiredMixin, CreateView):
+class InspectionCreateDirectView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Prüfung direkt anlegen (ohne vorausgewähltes Fahrzeug)
     """
     model = VehicleInspection
     form_class = VehicleInspectionForm
     template_name = 'vehicles/inspection_form.html'
+    permission_required = 'vehicles.add_vehicleinspection'
 
     def form_valid(self, form):
         # Audit-Felder setzen
@@ -333,13 +338,14 @@ class InspectionCreateDirectView(LoginRequiredMixin, CreateView):
         return reverse('vehicles:inspection_detail', kwargs={'pk': self.object.pk})
 
 
-class VehicleInspectionUpdateView(LoginRequiredMixin, UpdateView):
+class VehicleInspectionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Prüfung bearbeiten
     """
     model = VehicleInspection
     form_class = VehicleInspectionForm
     template_name = 'vehicles/inspection_form.html'
+    permission_required = 'vehicles.change_vehicleinspection'
 
     def form_valid(self, form):
         # Audit-Feld setzen
@@ -371,12 +377,13 @@ class VehicleInspectionUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class VehicleInspectionDeleteView(LoginRequiredMixin, DeleteView):
+class VehicleInspectionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Prüfung löschen
     """
     model = VehicleInspection
     template_name = 'vehicles/inspection_confirm_delete.html'
+    permission_required = 'vehicles.delete_vehicleinspection'
 
     def get_success_url(self):
         return reverse('vehicles:detail', kwargs={'pk': self.object.vehicle.pk})
@@ -720,7 +727,7 @@ class VehicleModelListView(LoginRequiredMixin, ListView):
         return context
 
 
-class VehicleModelCreateView(LoginRequiredMixin, CreateView):
+class VehicleModelCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Modell erstellen
     """
@@ -728,6 +735,7 @@ class VehicleModelCreateView(LoginRequiredMixin, CreateView):
     template_name = 'vehicles/model_form.html'
     fields = ['manufacturer', 'name', 'vehicle_type', 'year_from', 'year_to', 'notes', 'is_active']
     success_url = reverse_lazy('vehicles:model_list')
+    permission_required = 'vehicles.add_vehiclemodel'
 
     def form_valid(self, form):
         messages.success(
@@ -743,7 +751,7 @@ class VehicleModelCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class VehicleModelUpdateView(LoginRequiredMixin, UpdateView):
+class VehicleModelUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Modell bearbeiten
     """
@@ -751,6 +759,7 @@ class VehicleModelUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'vehicles/model_form.html'
     fields = ['manufacturer', 'name', 'vehicle_type', 'year_from', 'year_to', 'notes', 'is_active']
     success_url = reverse_lazy('vehicles:model_list')
+    permission_required = 'vehicles.change_vehiclemodel'
 
     def form_valid(self, form):
         messages.success(
@@ -766,13 +775,14 @@ class VehicleModelUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class VehicleModelDeleteView(LoginRequiredMixin, DeleteView):
+class VehicleModelDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Modell löschen
     """
     model = VehicleModel
     template_name = 'vehicles/model_confirm_delete.html'
     success_url = reverse_lazy('vehicles:model_list')
+    permission_required = 'vehicles.delete_vehiclemodel'
 
     def delete(self, request, *args, **kwargs):
         model = self.get_object()
@@ -1014,10 +1024,12 @@ class DownloadTemplateView(LoginRequiredMixin, View):
         return response
 
 
-class ImportVehiclesView(LoginRequiredMixin, View):
+class ImportVehiclesView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """
     Importiert Fahrzeuge aus Excel
     """
+    permission_required = 'vehicles.add_vehicle'
+
     def post(self, request):
         excel_file = request.FILES.get('excel_file')
 
@@ -1095,10 +1107,12 @@ class ImportVehiclesView(LoginRequiredMixin, View):
 # ImportManufacturersView entfernt - verwende /organization/suppliers/ Import stattdessen
 
 
-class ImportModelsView(LoginRequiredMixin, View):
+class ImportModelsView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """
     Importiert Modelle aus Excel
     """
+    permission_required = 'vehicles.add_vehiclemodel'
+
     def post(self, request):
         excel_file = request.FILES.get('excel_file')
 
@@ -1188,13 +1202,14 @@ class ImportModelsView(LoginRequiredMixin, View):
 # LIFECYCLE MANAGEMENT VIEWS
 # ============================================================================
 
-class SetReplacementVehicleView(LoginRequiredMixin, UpdateView):
+class SetReplacementVehicleView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Nachfolgefahrzeug für ausscheidendes Fahrzeug festlegen
     """
     model = Vehicle
     template_name = 'vehicles/set_replacement.html'
     fields = ['replacement_vehicle', 'actual_retirement_date', 'retirement_reason']
+    permission_required = 'vehicles.change_vehicle'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -6,8 +6,8 @@ Views für KFZ-Werkstatt
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Q, Count, F, Sum
@@ -60,11 +60,12 @@ class WorkshopMasterListView(LoginRequiredMixin, ListView):
         return queryset.order_by('master_number')
 
 
-class WorkshopMasterCreateView(LoginRequiredMixin, CreateView):
+class WorkshopMasterCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Werkstatt-Artikel-Stammdaten erstellen"""
     model = WorkshopItemMaster
     form_class = WorkshopItemMasterForm
     template_name = 'workshop/master_form.html'
+    permission_required = 'workshop.add_workshopitemmaster'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -73,11 +74,12 @@ class WorkshopMasterCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class WorkshopMasterUpdateView(LoginRequiredMixin, UpdateView):
+class WorkshopMasterUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Werkstatt-Artikel-Stammdaten bearbeiten"""
     model = WorkshopItemMaster
     form_class = WorkshopItemMasterForm
     template_name = 'workshop/master_form.html'
+    permission_required = 'workshop.change_workshopitemmaster'
 
     def form_valid(self, form):
         messages.success(self.request, _('Stammdaten wurden erfolgreich aktualisiert.'))
@@ -122,11 +124,12 @@ class WorkshopToolListView(LoginRequiredMixin, ListView):
         return queryset.order_by('inventory_number')
 
 
-class WorkshopToolCreateView(LoginRequiredMixin, CreateView):
+class WorkshopToolCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Werkzeug-Instanz erstellen"""
     model = WorkshopToolInstance
     form_class = WorkshopToolInstanceForm
     template_name = 'workshop/tool_form.html'
+    permission_required = 'workshop.add_workshoptoolinstance'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -135,11 +138,12 @@ class WorkshopToolCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class WorkshopToolUpdateView(LoginRequiredMixin, UpdateView):
+class WorkshopToolUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Werkzeug-Instanz bearbeiten"""
     model = WorkshopToolInstance
     form_class = WorkshopToolInstanceForm
     template_name = 'workshop/tool_form.html'
+    permission_required = 'workshop.change_workshoptoolinstance'
 
     def form_valid(self, form):
         messages.success(self.request, _('Werkzeug-Instanz wurde erfolgreich aktualisiert.'))
@@ -350,10 +354,11 @@ class WorkshopItemDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class WorkshopItemCreateView(LoginRequiredMixin, CreateView):
+class WorkshopItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Werkstatt-Artikel anlegen"""
     model = WorkshopItem
     template_name = 'workshop/item_form.html'
+    permission_required = 'workshop.add_workshopitem'
     fields = [
         'item_number', 'name', 'description', 'category', 'supplier',
         'workshop_item_type', 'workshop_status',
@@ -377,10 +382,11 @@ class WorkshopItemCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('workshop:item_detail', kwargs={'pk': self.object.pk})
 
 
-class WorkshopItemUpdateView(LoginRequiredMixin, UpdateView):
+class WorkshopItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Werkstatt-Artikel bearbeiten"""
     model = WorkshopItem
     template_name = 'workshop/item_form.html'
+    permission_required = 'workshop.change_workshopitem'
     fields = [
         'name', 'description', 'category', 'supplier',
         'workshop_item_type', 'workshop_status',
@@ -403,11 +409,12 @@ class WorkshopItemUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('workshop:item_detail', kwargs={'pk': self.object.pk})
 
 
-class WorkshopItemDeleteView(LoginRequiredMixin, DeleteView):
+class WorkshopItemDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Werkstatt-Artikel löschen"""
     model = WorkshopItem
     template_name = 'workshop/item_confirm_delete.html'
     success_url = reverse_lazy('workshop:item_list')
+    permission_required = 'workshop.delete_workshopitem'
 
     def form_valid(self, form):
         item = self.get_object()
@@ -473,10 +480,11 @@ class WorkshopStockMovementDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'movement'
 
 
-class WorkshopStockMovementCreateView(LoginRequiredMixin, CreateView):
+class WorkshopStockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Werkstatt-Lagerbewegung erstellen"""
     model = WorkshopStockMovement
     template_name = 'workshop/movement_form.html'
+    permission_required = 'workshop.add_workshopstockmovement'
     fields = [
         'movement_type', 'movement_date', 'item', 'quantity', 'unit',
         'vehicle', 'service_record', 'vehicle_mileage',
@@ -556,11 +564,12 @@ class VehicleServiceRecordDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class VehicleServiceRecordCreateView(LoginRequiredMixin, CreateView):
+class VehicleServiceRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Fahrzeug-Serviceeintrag erstellen"""
     model = VehicleServiceRecord
     form_class = VehicleServiceRecordForm
     template_name = 'workshop/service_form.html'
+    permission_required = 'workshop.add_vehicleservicerecord'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -572,11 +581,12 @@ class VehicleServiceRecordCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('workshop:service_detail', kwargs={'pk': self.object.pk})
 
 
-class VehicleServiceRecordUpdateView(LoginRequiredMixin, UpdateView):
+class VehicleServiceRecordUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Fahrzeug-Serviceeintrag bearbeiten"""
     model = VehicleServiceRecord
     form_class = VehicleServiceRecordForm
     template_name = 'workshop/service_form.html'
+    permission_required = 'workshop.change_vehicleservicerecord'
 
     def form_valid(self, form):
         messages.success(self.request, _('Fahrzeug-Serviceeintrag wurde erfolgreich aktualisiert.'))
@@ -586,11 +596,12 @@ class VehicleServiceRecordUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('workshop:service_detail', kwargs={'pk': self.object.pk})
 
 
-class VehicleServiceRecordDeleteView(LoginRequiredMixin, DeleteView):
+class VehicleServiceRecordDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Fahrzeug-Serviceeintrag löschen"""
     model = VehicleServiceRecord
     template_name = 'workshop/service_confirm_delete.html'
     success_url = reverse_lazy('workshop:service_list')
+    permission_required = 'workshop.delete_vehicleservicerecord'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, _('Fahrzeug-Serviceeintrag wurde gelöscht.'))
@@ -739,12 +750,13 @@ class WorkshopToolTypeListView(LoginRequiredMixin, ListView):
         return WorkshopToolType.objects.all().order_by('category', 'sort_order', 'name')
 
 
-class WorkshopToolTypeCreateView(LoginRequiredMixin, CreateView):
+class WorkshopToolTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Werkzeug-/Artikeltyp erstellen"""
     model = WorkshopToolType
     form_class = WorkshopToolTypeForm
     template_name = 'workshop/tool_type_form.html'
     success_url = reverse_lazy('workshop:type_management')
+    permission_required = 'workshop.add_workshoptooltype'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -758,12 +770,13 @@ class WorkshopToolTypeCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class WorkshopToolTypeUpdateView(LoginRequiredMixin, UpdateView):
+class WorkshopToolTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Werkzeug-/Artikeltyp bearbeiten"""
     model = WorkshopToolType
     form_class = WorkshopToolTypeForm
     template_name = 'workshop/tool_type_form.html'
     success_url = reverse_lazy('workshop:type_management')
+    permission_required = 'workshop.change_workshoptooltype'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -776,11 +789,12 @@ class WorkshopToolTypeUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class WorkshopToolTypeDeleteView(LoginRequiredMixin, DeleteView):
+class WorkshopToolTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Werkzeug-/Artikeltyp löschen"""
     model = WorkshopToolType
     template_name = 'workshop/tool_type_confirm_delete.html'
     success_url = reverse_lazy('workshop:type_management')
+    permission_required = 'workshop.delete_workshoptooltype'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, _('Werkzeug-/Artikeltyp erfolgreich gelöscht.'))
@@ -1237,6 +1251,7 @@ def template_tools(request):
 # ============================================================================
 
 @login_required
+@permission_required('workshop.add_workshopitemmaster', raise_exception=True)
 def import_masters(request):
     """Import Workshop Masters aus CSV"""
     if request.method != 'POST':
@@ -1349,6 +1364,7 @@ def import_masters(request):
 
 
 @login_required
+@permission_required('workshop.add_workshoptoolinstance', raise_exception=True)
 def import_tools(request):
     """Import Workshop Tools aus CSV"""
     if request.method != 'POST':

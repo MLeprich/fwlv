@@ -4,7 +4,7 @@ Views für das Magazin-Modul (Verbrauchsmaterial)
 """
 
 from django.views.generic import ListView, DetailView, TemplateView, CreateView, UpdateView, DeleteView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import models
 from django.db.models import Q, Sum, Count, F
 from django.shortcuts import redirect
@@ -161,12 +161,13 @@ class MagazineMasterDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class MagazineMasterCreateView(LoginRequiredMixin, CreateView):
+class MagazineMasterCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Magazin-Stammdaten erstellen"""
     model = MagazineItemMaster
     form_class = MagazineItemMasterForm
     template_name = 'magazine/master_form.html'
     success_url = reverse_lazy('magazine:master_list')
+    permission_required = 'magazine.add_magazineitemmaster'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -181,11 +182,12 @@ class MagazineMasterCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class MagazineMasterUpdateView(LoginRequiredMixin, UpdateView):
+class MagazineMasterUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Magazin-Stammdaten bearbeiten"""
     model = MagazineItemMaster
     form_class = MagazineItemMasterForm
     template_name = 'magazine/master_form.html'
+    permission_required = 'magazine.change_magazineitemmaster'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -290,11 +292,12 @@ class MagazineItemListView(LoginRequiredMixin, ListView):
         return queryset
 
 
-class MagazineItemCreateView(LoginRequiredMixin, CreateView):
+class MagazineItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Magazin-Artikel erstellen"""
     model = MagazineItem
     form_class = MagazineItemForm
     template_name = 'magazine/item_form.html'
+    permission_required = 'magazine.add_magazineitem'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -306,11 +309,12 @@ class MagazineItemCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('magazine:item_detail', kwargs={'pk': self.object.pk})
 
 
-class MagazineItemUpdateView(LoginRequiredMixin, UpdateView):
+class MagazineItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Magazin-Artikel bearbeiten"""
     model = MagazineItem
     form_class = MagazineItemForm
     template_name = 'magazine/item_form.html'
+    permission_required = 'magazine.change_magazineitem'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -321,11 +325,12 @@ class MagazineItemUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('magazine:item_detail', kwargs={'pk': self.object.pk})
 
 
-class MagazineItemDeleteView(LoginRequiredMixin, DeleteView):
+class MagazineItemDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Magazin-Artikel löschen"""
     model = MagazineItem
     template_name = 'magazine/item_confirm_delete.html'
     success_url = reverse_lazy('magazine:item_list')
+    permission_required = 'magazine.delete_magazineitem'
 
     def form_valid(self, form):
         item = self.get_object()
@@ -536,11 +541,12 @@ class StockMovementDetailView(LoginRequiredMixin, DetailView):
         )
 
 
-class StockMovementCreateView(LoginRequiredMixin, CreateView):
+class StockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Lagerbewegung erstellen"""
     model = MagazineStockMovement
     form_class = MagazineStockMovementForm
     template_name = 'magazine/movement_form.html'
+    permission_required = 'magazine.add_magazinestockmovement'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -619,12 +625,13 @@ class CategoryListView(LoginRequiredMixin, ListView):
         return Category.objects.filter(is_active=True, module='magazine').order_by('tree_id', 'lft')
 
 
-class CategoryCreateView(LoginRequiredMixin, CreateView):
+class CategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Kategorie erstellen"""
     model = Category
     template_name = 'magazine/category_form.html'
     fields = ['name', 'parent', 'code', 'description']
     success_url = reverse_lazy('magazine:category_list')
+    permission_required = 'inventory_base.add_category'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -634,12 +641,13 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class CategoryUpdateView(LoginRequiredMixin, UpdateView):
+class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Kategorie bearbeiten"""
     model = Category
     template_name = 'magazine/category_form.html'
     fields = ['name', 'parent', 'code', 'description', 'is_active']
     success_url = reverse_lazy('magazine:category_list')
+    permission_required = 'inventory_base.change_category'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -647,11 +655,12 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class CategoryDeleteView(LoginRequiredMixin, DeleteView):
+class CategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Kategorie löschen"""
     model = Category
     template_name = 'magazine/category_confirm_delete.html'
     success_url = reverse_lazy('magazine:category_list')
+    permission_required = 'inventory_base.delete_category'
 
     def form_valid(self, form):
         category = self.get_object()

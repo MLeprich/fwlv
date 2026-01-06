@@ -4,7 +4,7 @@ CRUD-Ansichten für Personal-Stammdaten und Qualifikationen
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
@@ -679,12 +679,13 @@ class PersonDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class PersonCreateView(LoginRequiredMixin, CreateView):
+class PersonCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Person erstellen
     """
     model = Person
     form_class = PersonForm
+    permission_required = 'personnel.add_person'
     template_name = 'personnel/person_form.html'
 
     def get_context_data(self, **kwargs):
@@ -837,12 +838,13 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
         return reverse('personnel:detail', kwargs={'pk': self.object.pk})
 
 
-class PersonUpdateView(LoginRequiredMixin, UpdateView):
+class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Person bearbeiten
     """
     model = Person
     form_class = PersonForm
+    permission_required = 'personnel.change_person'
     template_name = 'personnel/person_form.html'
 
     def get_context_data(self, **kwargs):
@@ -1121,12 +1123,13 @@ class PersonUpdateView(LoginRequiredMixin, UpdateView):
         return reverse('personnel:detail', kwargs={'pk': self.object.pk})
 
 
-class PersonDeleteView(LoginRequiredMixin, DeleteView):
+class PersonDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Person löschen (mit Sicherheitsabfrage)
     """
     model = Person
     template_name = 'personnel/person_confirm_delete.html'
+    permission_required = 'personnel.delete_person'
     success_url = reverse_lazy('personnel:list')
 
     def delete(self, request, *args, **kwargs):
@@ -1142,12 +1145,13 @@ class PersonDeleteView(LoginRequiredMixin, DeleteView):
 # QUALIFICATION VIEWS
 # ============================================================================
 
-class QualificationCreateView(LoginRequiredMixin, CreateView):
+class QualificationCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Qualifikation zu Person hinzufügen
     """
     model = Qualification
     form_class = QualificationForm
+    permission_required = 'personnel.add_qualification'
     template_name = 'personnel/qualification_form.html'
 
     def get_template_names(self):
@@ -1202,12 +1206,13 @@ class QualificationCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class QualificationUpdateView(LoginRequiredMixin, UpdateView):
+class QualificationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Qualifikation bearbeiten
     """
     model = Qualification
     form_class = QualificationForm
+    permission_required = 'personnel.change_qualification'
     template_name = 'personnel/qualification_form.html'
 
     def get_template_names(self):
@@ -1248,12 +1253,13 @@ class QualificationUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class QualificationDeleteView(LoginRequiredMixin, DeleteView):
+class QualificationDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Qualifikation löschen
     """
     model = Qualification
     template_name = 'personnel/qualification_confirm_delete.html'
+    permission_required = 'personnel.delete_qualification'
 
     def get_success_url(self):
         return reverse('personnel:detail', kwargs={'pk': self.object.person.pk})
@@ -2401,12 +2407,13 @@ def template_data_json(request, pk):
 # INSPECTION VIEWS
 # ============================================================================
 
-class InspectionCreateView(LoginRequiredMixin, CreateView):
+class InspectionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Prüfung zu Person hinzufügen
     """
     model = Inspection
     form_class = InspectionForm
+    permission_required = 'personnel.add_inspection'
     template_name = 'personnel/inspection_form.html'
 
     def get_template_names(self):
@@ -2461,12 +2468,13 @@ class InspectionCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class InspectionUpdateView(LoginRequiredMixin, UpdateView):
+class InspectionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Prüfung bearbeiten
     """
     model = Inspection
     form_class = InspectionForm
+    permission_required = 'personnel.change_inspection'
     template_name = 'personnel/inspection_form.html'
 
     def get_template_names(self):
@@ -2506,12 +2514,13 @@ class InspectionUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class InspectionDeleteView(LoginRequiredMixin, DeleteView):
+class InspectionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Prüfung löschen
     """
     model = Inspection
     template_name = 'personnel/inspection_confirm_delete.html'
+    permission_required = 'personnel.delete_inspection'
 
     def get_success_url(self):
         return reverse('personnel:detail', kwargs={'pk': self.object.person.pk})
@@ -2566,12 +2575,13 @@ def inspection_complete(request, pk):
 # DUTY HOURS VIEWS
 # ============================================================================
 
-class DutyHoursEntryCreateView(LoginRequiredMixin, CreateView):
+class DutyHoursEntryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Pflichtstunden-Eintrag zu Person hinzufügen
     """
     model = DutyHoursEntry
     form_class = DutyHoursEntryForm
+    permission_required = 'personnel.add_dutyhoursentry'
     template_name = 'personnel/dutyhours_form.html'
 
     def get_template_names(self):
@@ -2625,12 +2635,13 @@ class DutyHoursEntryCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class DutyHoursEntryUpdateView(LoginRequiredMixin, UpdateView):
+class DutyHoursEntryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Pflichtstunden-Eintrag bearbeiten
     """
     model = DutyHoursEntry
     form_class = DutyHoursEntryForm
+    permission_required = 'personnel.change_dutyhoursentry'
     template_name = 'personnel/dutyhours_form.html'
 
     def get_template_names(self):
@@ -2670,12 +2681,13 @@ class DutyHoursEntryUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class DutyHoursEntryDeleteView(LoginRequiredMixin, DeleteView):
+class DutyHoursEntryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Pflichtstunden-Eintrag löschen
     """
     model = DutyHoursEntry
     template_name = 'personnel/dutyhours_confirm_delete.html'
+    permission_required = 'personnel.delete_dutyhoursentry'
 
     def get_success_url(self):
         return reverse('personnel:detail', kwargs={'pk': self.object.person.pk})
@@ -3134,12 +3146,13 @@ class RankListView(LoginRequiredMixin, ListView):
         return context
 
 
-class RankCreateView(LoginRequiredMixin, CreateView):
+class RankCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Dienstgrad erstellen
     """
     model = Rank
     form_class = RankForm
+    permission_required = 'personnel.add_rank'
     template_name = 'personnel/rank_form.html'
     success_url = reverse_lazy('personnel:rank_list')
 
@@ -3151,12 +3164,13 @@ class RankCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class RankUpdateView(LoginRequiredMixin, UpdateView):
+class RankUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Dienstgrad bearbeiten
     """
     model = Rank
     form_class = RankForm
+    permission_required = 'personnel.change_rank'
     template_name = 'personnel/rank_form.html'
     success_url = reverse_lazy('personnel:rank_list')
 
@@ -3168,12 +3182,13 @@ class RankUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class RankDeleteView(LoginRequiredMixin, DeleteView):
+class RankDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Dienstgrad loeschen
     """
     model = Rank
     template_name = 'personnel/rank_confirm_delete.html'
+    permission_required = 'personnel.delete_rank'
     success_url = reverse_lazy('personnel:rank_list')
 
     def delete(self, request, *args, **kwargs):

@@ -4,7 +4,7 @@ Views für Organisationsstruktur-Verwaltung
 """
 
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import models
 from django.urls import reverse, reverse_lazy
 from django.utils.translation import gettext_lazy as _
@@ -52,12 +52,13 @@ class DepartmentListView(LoginRequiredMixin, ListView):
         return context
 
 
-class DepartmentCreateView(LoginRequiredMixin, CreateView):
+class DepartmentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Abteilung erstellen"""
     model = Department
     form_class = DepartmentForm
     template_name = 'organization/department_form.html'
     success_url = reverse_lazy('organization:department_list')
+    permission_required = 'organization.add_department'
 
     def form_valid(self, form):
         messages.success(
@@ -67,12 +68,13 @@ class DepartmentCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class DepartmentUpdateView(LoginRequiredMixin, UpdateView):
+class DepartmentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Abteilung bearbeiten"""
     model = Department
     form_class = DepartmentForm
     template_name = 'organization/department_form.html'
     success_url = reverse_lazy('organization:department_list')
+    permission_required = 'organization.change_department'
 
     def form_valid(self, form):
         messages.success(
@@ -82,11 +84,12 @@ class DepartmentUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class DepartmentDeleteView(LoginRequiredMixin, DeleteView):
+class DepartmentDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Abteilung löschen"""
     model = Department
     template_name = 'organization/department_confirm_delete.html'
     success_url = reverse_lazy('organization:department_list')
+    permission_required = 'organization.delete_department'
 
     def delete(self, request, *args, **kwargs):
         department = self.get_object()
@@ -143,12 +146,13 @@ class VolunteerUnitListView(LoginRequiredMixin, ListView):
         return context
 
 
-class VolunteerUnitCreateView(LoginRequiredMixin, CreateView):
+class VolunteerUnitCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue FF-Einheit erstellen"""
     model = VolunteerUnit
     form_class = VolunteerUnitForm
     template_name = 'organization/volunteer_unit_form.html'
     success_url = reverse_lazy('organization:volunteer_unit_list')
+    permission_required = 'organization.add_volunteerunit'
 
     def form_valid(self, form):
         messages.success(
@@ -158,12 +162,13 @@ class VolunteerUnitCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class VolunteerUnitUpdateView(LoginRequiredMixin, UpdateView):
+class VolunteerUnitUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """FF-Einheit bearbeiten"""
     model = VolunteerUnit
     form_class = VolunteerUnitForm
     template_name = 'organization/volunteer_unit_form.html'
     success_url = reverse_lazy('organization:volunteer_unit_list')
+    permission_required = 'organization.change_volunteerunit'
 
     def form_valid(self, form):
         messages.success(
@@ -173,11 +178,12 @@ class VolunteerUnitUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class VolunteerUnitDeleteView(LoginRequiredMixin, DeleteView):
+class VolunteerUnitDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """FF-Einheit löschen"""
     model = VolunteerUnit
     template_name = 'organization/volunteer_unit_confirm_delete.html'
     success_url = reverse_lazy('organization:volunteer_unit_list')
+    permission_required = 'organization.delete_volunteerunit'
 
     def delete(self, request, *args, **kwargs):
         unit = self.get_object()
@@ -234,12 +240,13 @@ class WatchCrewListView(LoginRequiredMixin, ListView):
         return context
 
 
-class WatchCrewCreateView(LoginRequiredMixin, CreateView):
+class WatchCrewCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Wachmannschaft erstellen"""
     model = WatchCrew
     form_class = WatchCrewForm
     template_name = 'organization/watch_crew_form.html'
     success_url = reverse_lazy('organization:watch_crew_list')
+    permission_required = 'organization.add_watchcrew'
 
     def form_valid(self, form):
         messages.success(
@@ -249,12 +256,13 @@ class WatchCrewCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class WatchCrewUpdateView(LoginRequiredMixin, UpdateView):
+class WatchCrewUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Wachmannschaft bearbeiten"""
     model = WatchCrew
     form_class = WatchCrewForm
     template_name = 'organization/watch_crew_form.html'
     success_url = reverse_lazy('organization:watch_crew_list')
+    permission_required = 'organization.change_watchcrew'
 
     def form_valid(self, form):
         messages.success(
@@ -264,11 +272,12 @@ class WatchCrewUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class WatchCrewDeleteView(LoginRequiredMixin, DeleteView):
+class WatchCrewDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Wachmannschaft löschen"""
     model = WatchCrew
     template_name = 'organization/watch_crew_confirm_delete.html'
     success_url = reverse_lazy('organization:watch_crew_list')
+    permission_required = 'organization.delete_watchcrew'
 
     def delete(self, request, *args, **kwargs):
         crew = self.get_object()
@@ -322,12 +331,13 @@ class FunctionListView(LoginRequiredMixin, ListView):
         return context
 
 
-class FunctionCreateView(LoginRequiredMixin, CreateView):
+class FunctionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Funktion erstellen"""
     model = Function
     form_class = FunctionForm
     template_name = 'organization/function_form.html'
     success_url = reverse_lazy('organization:function_list')
+    permission_required = 'organization.add_function'
 
     def form_valid(self, form):
         messages.success(
@@ -337,12 +347,13 @@ class FunctionCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class FunctionUpdateView(LoginRequiredMixin, UpdateView):
+class FunctionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Funktion bearbeiten"""
     model = Function
     form_class = FunctionForm
     template_name = 'organization/function_form.html'
     success_url = reverse_lazy('organization:function_list')
+    permission_required = 'organization.change_function'
 
     def form_valid(self, form):
         messages.success(
@@ -352,11 +363,12 @@ class FunctionUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class FunctionDeleteView(LoginRequiredMixin, DeleteView):
+class FunctionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Funktion löschen"""
     model = Function
     template_name = 'organization/function_confirm_delete.html'
     success_url = reverse_lazy('organization:function_list')
+    permission_required = 'organization.delete_function'
 
     def delete(self, request, *args, **kwargs):
         function = self.get_object()
@@ -412,12 +424,13 @@ class QualificationTemplateListView(LoginRequiredMixin, ListView):
         return context
 
 
-class QualificationTemplateCreateView(LoginRequiredMixin, CreateView):
+class QualificationTemplateCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Qualifikations-Vorlage erstellen"""
     model = QualificationTemplate
     form_class = QualificationTemplateForm
     template_name = 'organization/qualification_template_form.html'
     success_url = reverse_lazy('organization:qualification_template_list')
+    permission_required = 'organization.add_qualificationtemplate'
 
     def form_valid(self, form):
         messages.success(
@@ -427,12 +440,13 @@ class QualificationTemplateCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class QualificationTemplateUpdateView(LoginRequiredMixin, UpdateView):
+class QualificationTemplateUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Qualifikations-Vorlage bearbeiten"""
     model = QualificationTemplate
     form_class = QualificationTemplateForm
     template_name = 'organization/qualification_template_form.html'
     success_url = reverse_lazy('organization:qualification_template_list')
+    permission_required = 'organization.change_qualificationtemplate'
 
     def form_valid(self, form):
         messages.success(
@@ -442,11 +456,12 @@ class QualificationTemplateUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class QualificationTemplateDeleteView(LoginRequiredMixin, DeleteView):
+class QualificationTemplateDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Qualifikations-Vorlage löschen"""
     model = QualificationTemplate
     template_name = 'organization/qualification_template_confirm_delete.html'
     success_url = reverse_lazy('organization:qualification_template_list')
+    permission_required = 'organization.delete_qualificationtemplate'
 
     def delete(self, request, *args, **kwargs):
         template = self.get_object()
@@ -508,12 +523,13 @@ class DutyHoursRequirementListView(LoginRequiredMixin, ListView):
         return context
 
 
-class DutyHoursRequirementCreateView(LoginRequiredMixin, CreateView):
+class DutyHoursRequirementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Pflichtstunden-Anforderung erstellen"""
     model = DutyHoursRequirement
     form_class = DutyHoursRequirementForm
     template_name = 'organization/duty_hours_requirement_form.html'
     success_url = reverse_lazy('organization:duty_hours_requirement_list')
+    permission_required = 'organization.add_dutyhoursrequirement'
 
     def form_valid(self, form):
         messages.success(
@@ -523,12 +539,13 @@ class DutyHoursRequirementCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class DutyHoursRequirementUpdateView(LoginRequiredMixin, UpdateView):
+class DutyHoursRequirementUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Pflichtstunden-Anforderung bearbeiten"""
     model = DutyHoursRequirement
     form_class = DutyHoursRequirementForm
     template_name = 'organization/duty_hours_requirement_form.html'
     success_url = reverse_lazy('organization:duty_hours_requirement_list')
+    permission_required = 'organization.change_dutyhoursrequirement'
 
     def form_valid(self, form):
         messages.success(
@@ -538,11 +555,12 @@ class DutyHoursRequirementUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class DutyHoursRequirementDeleteView(LoginRequiredMixin, DeleteView):
+class DutyHoursRequirementDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Pflichtstunden-Anforderung löschen"""
     model = DutyHoursRequirement
     template_name = 'organization/duty_hours_requirement_confirm_delete.html'
     success_url = reverse_lazy('organization:duty_hours_requirement_list')
+    permission_required = 'organization.delete_dutyhoursrequirement'
 
     def delete(self, request, *args, **kwargs):
         requirement = self.get_object()
@@ -606,11 +624,12 @@ class DutyHoursCategoryListView(LoginRequiredMixin, ListView):
         return context
 
 
-class DutyHoursCategoryCreateView(LoginRequiredMixin, CreateView):
+class DutyHoursCategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = DutyHoursCategory
     form_class = DutyHoursCategoryForm
     template_name = 'organization/duty_hours_category_form.html'
     success_url = reverse_lazy('organization:duty_hours_category_list')
+    permission_required = 'organization.add_dutyhourscategory'
 
     def form_valid(self, form):
         messages.success(
@@ -620,11 +639,12 @@ class DutyHoursCategoryCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class DutyHoursCategoryUpdateView(LoginRequiredMixin, UpdateView):
+class DutyHoursCategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = DutyHoursCategory
     form_class = DutyHoursCategoryForm
     template_name = 'organization/duty_hours_category_form.html'
     success_url = reverse_lazy('organization:duty_hours_category_list')
+    permission_required = 'organization.change_dutyhourscategory'
 
     def form_valid(self, form):
         messages.success(

@@ -4,7 +4,7 @@ Views für das Medical-Modul (Rettungsdienst & BTM)
 """
 
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, F, Sum
 from django.db import models
@@ -748,12 +748,13 @@ class StockMovementListView(LoginRequiredMixin, ListView):
         return context
 
 
-class StockMovementCreateView(LoginRequiredMixin, CreateView):
+class StockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Lagerbewegung erstellen (Wareneingang, Warenausgang, etc.)"""
     model = MedicalStockMovement
     form_class = MedicalStockMovementForm
     template_name = 'medical/stock_movement_form.html'
     success_url = reverse_lazy('medical:stock_movements')
+    permission_required = 'medical.add_medicalstockmovement'
 
     def get_initial(self):
         initial = super().get_initial()
@@ -806,12 +807,13 @@ class StockMovementDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class QuickIncomingView(LoginRequiredMixin, CreateView):
+class QuickIncomingView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Schnell-Wareneingang (vorbefüllt)"""
     model = MedicalStockMovement
     form_class = MedicalStockMovementForm
     template_name = 'medical/quick_incoming.html'
     success_url = reverse_lazy('medical:stock_movements')
+    permission_required = 'medical.add_medicalstockmovement'
 
     def get_initial(self):
         initial = super().get_initial()
@@ -897,12 +899,13 @@ class QuickIncomingView(LoginRequiredMixin, CreateView):
         return response
 
 
-class QuickOutgoingView(LoginRequiredMixin, CreateView):
+class QuickOutgoingView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Schnell-Warenausgang (vorbefüllt)"""
     model = MedicalStockMovement
     form_class = MedicalStockMovementForm
     template_name = 'medical/quick_outgoing.html'
     success_url = reverse_lazy('medical:stock_movements')
+    permission_required = 'medical.add_medicalstockmovement'
 
     def get_initial(self):
         initial = super().get_initial()
@@ -926,12 +929,13 @@ class QuickOutgoingView(LoginRequiredMixin, CreateView):
         return response
 
 
-class DisposalView(LoginRequiredMixin, CreateView):
+class DisposalView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Entsorgung (MHD abgelaufen, beschädigt, etc.)"""
     model = MedicalStockMovement
     form_class = MedicalStockMovementForm
     template_name = 'medical/disposal_form.html'
     success_url = reverse_lazy('medical:stock_movements')
+    permission_required = 'medical.add_medicalstockmovement'
 
     def get_initial(self):
         initial = super().get_initial()
@@ -973,12 +977,13 @@ class CategoryListView(LoginRequiredMixin, ListView):
         return Category.objects.filter(is_active=True).order_by('tree_id', 'lft')
 
 
-class CategoryCreateView(LoginRequiredMixin, CreateView):
+class CategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Kategorie erstellen"""
     model = Category
     template_name = 'medical/category_form.html'
     fields = ['name', 'parent', 'code', 'description']
     success_url = reverse_lazy('medical:category_list')
+    permission_required = 'inventory_base.add_category'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -987,12 +992,13 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class CategoryUpdateView(LoginRequiredMixin, UpdateView):
+class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Kategorie bearbeiten"""
     model = Category
     template_name = 'medical/category_form.html'
     fields = ['name', 'parent', 'code', 'description', 'is_active']
     success_url = reverse_lazy('medical:category_list')
+    permission_required = 'inventory_base.change_category'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -1000,11 +1006,12 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class CategoryDeleteView(LoginRequiredMixin, DeleteView):
+class CategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Kategorie löschen"""
     model = Category
     template_name = 'medical/category_confirm_delete.html'
     success_url = reverse_lazy('medical:category_list')
+    permission_required = 'inventory_base.delete_category'
 
     def delete(self, request, *args, **kwargs):
         category = self.get_object()
@@ -1139,13 +1146,14 @@ class BatchDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class UniversalBatchCreateView(LoginRequiredMixin, CreateView):
+class UniversalBatchCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Universelle Chargen-Erstellung ohne vorherige Artikel-Auswahl
     """
     model = MedicalBatch
     form_class = MedicalBatchForm
     template_name = 'medical/batch_form_universal.html'
+    permission_required = 'medical.add_medicalbatch'
 
     def form_valid(self, form):
         # Master-Artikel setzen
@@ -1468,7 +1476,7 @@ class MedicalItemMasterDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class MedicalItemMasterCreateView(LoginRequiredMixin, CreateView):
+class MedicalItemMasterCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Erstellen neuer Artikel-Stammdaten
     """
@@ -1476,6 +1484,7 @@ class MedicalItemMasterCreateView(LoginRequiredMixin, CreateView):
     form_class = MedicalItemMasterForm
     template_name = 'medical/master_form.html'
     success_url = reverse_lazy('medical:master_list')
+    permission_required = 'medical.add_medicalitemmaster'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1490,13 +1499,14 @@ class MedicalItemMasterCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class MedicalItemMasterUpdateView(LoginRequiredMixin, UpdateView):
+class MedicalItemMasterUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Bearbeiten von Artikel-Stammdaten
     """
     model = MedicalItemMaster
     form_class = MedicalItemMasterForm
     template_name = 'medical/master_form.html'
+    permission_required = 'medical.change_medicalitemmaster'
 
     def get_success_url(self):
         return reverse_lazy('medical:master_detail', kwargs={'pk': self.object.pk})
@@ -1513,13 +1523,14 @@ class MedicalItemMasterUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class MedicalItemMasterDeleteView(LoginRequiredMixin, DeleteView):
+class MedicalItemMasterDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Löschen von Artikel-Stammdaten (Soft-Delete via is_active)
     """
     model = MedicalItemMaster
     template_name = 'medical/master_confirm_delete.html'
     success_url = reverse_lazy('medical:master_list')
+    permission_required = 'medical.delete_medicalitemmaster'
 
     def delete(self, request, *args, **kwargs):
         master = self.get_object()
@@ -1675,7 +1686,7 @@ class MedicalDeviceInstanceDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class MedicalDeviceInstanceCreateView(LoginRequiredMixin, CreateView):
+class MedicalDeviceInstanceCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Neue Medizintechnik-Instanz erstellen
     """
@@ -1683,6 +1694,7 @@ class MedicalDeviceInstanceCreateView(LoginRequiredMixin, CreateView):
     form_class = MedicalDeviceInstanceForm
     template_name = 'medical/device_form.html'
     success_url = reverse_lazy('medical:device_list')
+    permission_required = 'medical.add_medicaldeviceinstance'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1723,13 +1735,14 @@ class MedicalDeviceInstanceCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class MedicalDeviceInstanceUpdateView(LoginRequiredMixin, UpdateView):
+class MedicalDeviceInstanceUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Medizintechnik-Instanz bearbeiten
     """
     model = MedicalDeviceInstance
     form_class = MedicalDeviceInstanceForm
     template_name = 'medical/device_form.html'
+    permission_required = 'medical.change_medicaldeviceinstance'
 
     def get_success_url(self):
         return reverse_lazy('medical:device_detail', kwargs={'pk': self.object.pk})
@@ -1749,13 +1762,14 @@ class MedicalDeviceInstanceUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class MedicalDeviceInstanceDeleteView(LoginRequiredMixin, DeleteView):
+class MedicalDeviceInstanceDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Medizintechnik-Instanz löschen (Soft-Delete via is_active)
     """
     model = MedicalDeviceInstance
     template_name = 'medical/device_confirm_delete.html'
     success_url = reverse_lazy('medical:device_list')
+    permission_required = 'medical.delete_medicaldeviceinstance'
 
     def delete(self, request, *args, **kwargs):
         device = self.get_object()

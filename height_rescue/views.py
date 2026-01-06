@@ -7,7 +7,7 @@ from django import forms
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
@@ -128,35 +128,38 @@ class EquipmentTypeListView(LoginRequiredMixin, ListView):
         return queryset
 
 
-class EquipmentTypeCreateView(LoginRequiredMixin, CreateView):
+class EquipmentTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Ausrüstungstyp erstellen"""
     model = EquipmentType
     form_class = EquipmentTypeForm
     template_name = 'height_rescue/equipment_type_form.html'
     success_url = reverse_lazy('height_rescue:equipment_type_list')
+    permission_required = 'height_rescue.add_equipmenttype'
 
     def form_valid(self, form):
         messages.success(self.request, f'Ausrüstungstyp "{form.instance.name}" wurde erfolgreich erstellt.')
         return super().form_valid(form)
 
 
-class EquipmentTypeUpdateView(LoginRequiredMixin, UpdateView):
+class EquipmentTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Ausrüstungstyp bearbeiten"""
     model = EquipmentType
     form_class = EquipmentTypeForm
     template_name = 'height_rescue/equipment_type_form.html'
     success_url = reverse_lazy('height_rescue:equipment_type_list')
+    permission_required = 'height_rescue.change_equipmenttype'
 
     def form_valid(self, form):
         messages.success(self.request, f'Ausrüstungstyp "{form.instance.name}" wurde erfolgreich aktualisiert.')
         return super().form_valid(form)
 
 
-class EquipmentTypeDeleteView(LoginRequiredMixin, DeleteView):
+class EquipmentTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Ausrüstungstyp löschen"""
     model = EquipmentType
     template_name = 'height_rescue/equipment_type_confirm_delete.html'
     success_url = reverse_lazy('height_rescue:equipment_type_list')
+    permission_required = 'height_rescue.delete_equipmenttype'
 
     def delete(self, request, *args, **kwargs):
         equipment_type = self.get_object()
@@ -235,11 +238,12 @@ class HeightRescueMasterDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class HeightRescueMasterCreateView(LoginRequiredMixin, CreateView):
+class HeightRescueMasterCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Höhenrettungs-Stammdaten anlegen"""
     model = HeightRescueItemMaster
     form_class = HeightRescueItemMasterForm
     template_name = 'height_rescue/master_form.html'
+    permission_required = 'height_rescue.add_heightrescueitemmaster'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -257,11 +261,12 @@ class HeightRescueMasterCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class HeightRescueMasterUpdateView(LoginRequiredMixin, UpdateView):
+class HeightRescueMasterUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Höhenrettungs-Stammdaten bearbeiten"""
     model = HeightRescueItemMaster
     form_class = HeightRescueItemMasterForm
     template_name = 'height_rescue/master_form.html'
+    permission_required = 'height_rescue.change_heightrescueitemmaster'
 
     def form_valid(self, form):
         messages.success(self.request, 'Höhenrettungs-Stammdaten erfolgreich aktualisiert.')
@@ -412,11 +417,12 @@ class HeightRescueDeviceDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class HeightRescueDeviceCreateView(LoginRequiredMixin, CreateView):
+class HeightRescueDeviceCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neues Höhenrettungsgerät-Instanz anlegen"""
     model = HeightRescueDeviceInstance
     form_class = HeightRescueDeviceInstanceForm
     template_name = 'height_rescue/device_form.html'
+    permission_required = 'height_rescue.add_heightrescuedeviceinstance'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -434,11 +440,12 @@ class HeightRescueDeviceCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class HeightRescueDeviceUpdateView(LoginRequiredMixin, UpdateView):
+class HeightRescueDeviceUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Höhenrettungsgerät-Instanz bearbeiten"""
     model = HeightRescueDeviceInstance
     form_class = HeightRescueDeviceInstanceForm
     template_name = 'height_rescue/device_form.html'
+    permission_required = 'height_rescue.change_heightrescuedeviceinstance'
 
     def form_valid(self, form):
         messages.success(self.request, 'Höhenrettungsgerät erfolgreich aktualisiert.')
@@ -770,11 +777,12 @@ class HeightRescueMovementDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'movement'
 
 
-class HeightRescueMovementCreateView(LoginRequiredMixin, CreateView):
+class HeightRescueMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Lagerbewegung erstellen"""
     model = HeightRescueStockMovement
     form_class = HeightRescueStockMovementForm
     template_name = 'height_rescue/movement_form.html'
+    permission_required = 'height_rescue.add_heightrescuestockmovement'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -806,12 +814,13 @@ class HeightRescueInspectionListView(LoginRequiredMixin, ListView):
         ).order_by('-inspection_date')
 
 
-class HeightRescueInspectionLogCreateView(LoginRequiredMixin, CreateView):
+class HeightRescueInspectionLogCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Prüfprotokoll erstellen"""
     model = HeightRescueInspectionLog
     form_class = HeightRescueInspectionLogForm
     template_name = 'height_rescue/inspection_log_form.html'
     success_url = reverse_lazy('height_rescue:inspection_list')
+    permission_required = 'height_rescue.add_heightrescueinspectionlog'
 
     def form_valid(self, form):
         # Item-Status aktualisieren wenn Prüfung bestanden
@@ -854,12 +863,13 @@ class InspectionTypeListView(LoginRequiredMixin, ListView):
         return HeightRescueInspectionType.objects.filter(is_active=True).order_by('name')
 
 
-class InspectionTypeCreateView(LoginRequiredMixin, CreateView):
+class InspectionTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Prüfungstyp erstellen"""
     model = HeightRescueInspectionType
     form_class = HeightRescueInspectionTypeForm
     template_name = 'height_rescue/inspection_type_form.html'
     success_url = reverse_lazy('height_rescue:inspection_type_list')
+    permission_required = 'height_rescue.add_inspectiontype'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -868,23 +878,25 @@ class InspectionTypeCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class InspectionTypeUpdateView(LoginRequiredMixin, UpdateView):
+class InspectionTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Prüfungstyp bearbeiten"""
     model = HeightRescueInspectionType
     form_class = HeightRescueInspectionTypeForm
     template_name = 'height_rescue/inspection_type_form.html'
     success_url = reverse_lazy('height_rescue:inspection_type_list')
+    permission_required = 'height_rescue.change_inspectiontype'
 
     def form_valid(self, form):
         messages.success(self.request, _('Prüfungstyp erfolgreich aktualisiert.'))
         return super().form_valid(form)
 
 
-class InspectionTypeDeleteView(LoginRequiredMixin, DeleteView):
+class InspectionTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Prüfungstyp löschen"""
     model = HeightRescueInspectionType
     template_name = 'height_rescue/inspection_type_confirm_delete.html'
     success_url = reverse_lazy('height_rescue:inspection_type_list')
+    permission_required = 'height_rescue.delete_inspectiontype'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, _('Prüfungstyp erfolgreich gelöscht.'))
@@ -929,11 +941,12 @@ class CategoryListView(LoginRequiredMixin, ListView):
         return Category.objects.filter(is_active=True).order_by('tree_id', 'lft')
 
 
-class CategoryCreateView(LoginRequiredMixin, CreateView):
+class CategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Kategorie erstellen"""
     template_name = 'height_rescue/category_form.html'
     fields = ['name', 'parent', 'code', 'description']
     success_url = reverse_lazy('height_rescue:category_list')
+    permission_required = 'inventory_base.add_category'
 
     def get_queryset(self):
         from inventory_base.models import Category
@@ -952,11 +965,12 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class CategoryUpdateView(LoginRequiredMixin, UpdateView):
+class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Kategorie bearbeiten"""
     template_name = 'height_rescue/category_form.html'
     fields = ['name', 'parent', 'code', 'description', 'is_active']
     success_url = reverse_lazy('height_rescue:category_list')
+    permission_required = 'inventory_base.change_category'
 
     def get_queryset(self):
         from inventory_base.models import Category
@@ -968,10 +982,11 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class CategoryDeleteView(LoginRequiredMixin, DeleteView):
+class CategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Kategorie löschen"""
     template_name = 'height_rescue/category_confirm_delete.html'
     success_url = reverse_lazy('height_rescue:category_list')
+    permission_required = 'inventory_base.delete_category'
 
     def get_queryset(self):
         from inventory_base.models import Category

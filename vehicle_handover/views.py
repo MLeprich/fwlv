@@ -3,7 +3,7 @@ Views für Fahrzeugübernahme App
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse, reverse_lazy
@@ -123,13 +123,14 @@ class ChecklistTemplateDetailView(LoginRequiredMixin, DetailView):
         )
 
 
-class ChecklistTemplateCreateView(LoginRequiredMixin, CreateView):
+class ChecklistTemplateCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Neue Checklisten-Vorlage erstellen (mit Formular-Editor)
     """
     model = ChecklistTemplate
     form_class = ChecklistTemplateForm
     template_name = 'vehicle_handover/template_form.html'
+    permission_required = 'vehicle_handover.add_checklisttemplate'
 
     def get_success_url(self):
         return reverse('vehicle_handover:template_detail', kwargs={'pk': self.object.pk})
@@ -152,13 +153,14 @@ class ChecklistTemplateCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ChecklistTemplateUpdateView(LoginRequiredMixin, UpdateView):
+class ChecklistTemplateUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Checklisten-Vorlage bearbeiten (mit Formular-Editor)
     """
     model = ChecklistTemplate
     form_class = ChecklistTemplateForm
     template_name = 'vehicle_handover/template_form.html'
+    permission_required = 'vehicle_handover.change_checklisttemplate'
 
     def get_success_url(self):
         return reverse('vehicle_handover:template_detail', kwargs={'pk': self.object.pk})
@@ -180,13 +182,14 @@ class ChecklistTemplateUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ChecklistTemplateDeleteView(LoginRequiredMixin, DeleteView):
+class ChecklistTemplateDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Checklisten-Vorlage löschen
     """
     model = ChecklistTemplate
     template_name = 'vehicle_handover/template_confirm_delete.html'
     success_url = reverse_lazy('vehicle_handover:template_list')
+    permission_required = 'vehicle_handover.delete_checklisttemplate'
 
     def delete(self, request, *args, **kwargs):
         template = self.get_object()
@@ -215,13 +218,14 @@ def template_duplicate(request, pk):
 
 # ===== Kategorien verwalten (HTMX-Endpoints) =====
 
-class CategoryCreateView(LoginRequiredMixin, CreateView):
+class CategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Neue Kategorie zu Template hinzufügen
     """
     model = ChecklistTemplateCategory
     template_name = 'vehicle_handover/partials/category_form.html'
     fields = ['name', 'order', 'description']
+    permission_required = 'vehicle_handover.add_checklistcategory'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -240,13 +244,14 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
         return redirect('vehicle_handover:template_detail', pk=self.kwargs['template_pk'])
 
 
-class CategoryUpdateView(LoginRequiredMixin, UpdateView):
+class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Kategorie bearbeiten
     """
     model = ChecklistTemplateCategory
     template_name = 'vehicle_handover/partials/category_form.html'
     fields = ['name', 'order', 'description']
+    permission_required = 'vehicle_handover.change_checklistcategory'
 
     def get_success_url(self):
         return reverse('vehicle_handover:template_detail', kwargs={'pk': self.object.template.pk})
@@ -259,11 +264,12 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class CategoryDeleteView(LoginRequiredMixin, DeleteView):
+class CategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Kategorie löschen
     """
     model = ChecklistTemplateCategory
+    permission_required = 'vehicle_handover.delete_checklistcategory'
 
     def get_success_url(self):
         return reverse('vehicle_handover:template_detail', kwargs={'pk': self.object.template.pk})
@@ -284,13 +290,14 @@ class CategoryDeleteView(LoginRequiredMixin, DeleteView):
 
 # ===== Items verwalten (HTMX-Endpoints) =====
 
-class ItemCreateView(LoginRequiredMixin, CreateView):
+class ItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Neues Item zu Kategorie hinzufügen
     """
     model = ChecklistTemplateItem
     template_name = 'vehicle_handover/partials/item_form.html'
     fields = ['name', 'order', 'expected_quantity', 'requires_serial', 'description']
+    permission_required = 'vehicle_handover.add_checklistitem'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -310,13 +317,14 @@ class ItemCreateView(LoginRequiredMixin, CreateView):
         return redirect('vehicle_handover:template_detail', pk=category.template.pk)
 
 
-class ItemUpdateView(LoginRequiredMixin, UpdateView):
+class ItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Item bearbeiten
     """
     model = ChecklistTemplateItem
     template_name = 'vehicle_handover/partials/item_form.html'
     fields = ['name', 'order', 'expected_quantity', 'requires_serial', 'description']
+    permission_required = 'vehicle_handover.change_checklistitem'
 
     def get_success_url(self):
         return reverse('vehicle_handover:template_detail', kwargs={'pk': self.object.category.template.pk})
@@ -329,11 +337,12 @@ class ItemUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ItemDeleteView(LoginRequiredMixin, DeleteView):
+class ItemDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Item löschen
     """
     model = ChecklistTemplateItem
+    permission_required = 'vehicle_handover.delete_checklistitem'
 
     def get_success_url(self):
         return reverse('vehicle_handover:template_detail', kwargs={'pk': self.object.category.template.pk})
@@ -1037,13 +1046,14 @@ class Vehicle360PhotoDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class Vehicle360PhotoCreateView(LoginRequiredMixin, CreateView):
+class Vehicle360PhotoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     360° Foto hochladen
     """
     model = Vehicle360Photo
     form_class = Vehicle360PhotoForm
     template_name = 'vehicle_handover/360_photo_form.html'
+    permission_required = 'vehicle_handover.add_vehicle360photo'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1055,13 +1065,14 @@ class Vehicle360PhotoCreateView(LoginRequiredMixin, CreateView):
         return reverse('vehicle_handover:photo_360_detail', kwargs={'pk': self.object.pk})
 
 
-class Vehicle360PhotoUpdateView(LoginRequiredMixin, UpdateView):
+class Vehicle360PhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     360° Foto bearbeiten
     """
     model = Vehicle360Photo
     form_class = Vehicle360PhotoForm
     template_name = 'vehicle_handover/360_photo_form.html'
+    permission_required = 'vehicle_handover.change_vehicle360photo'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -1072,13 +1083,14 @@ class Vehicle360PhotoUpdateView(LoginRequiredMixin, UpdateView):
         return reverse('vehicle_handover:photo_360_detail', kwargs={'pk': self.object.pk})
 
 
-class Vehicle360PhotoDeleteView(LoginRequiredMixin, DeleteView):
+class Vehicle360PhotoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     360° Foto löschen
     """
     model = Vehicle360Photo
     template_name = 'vehicle_handover/360_photo_confirm_delete.html'
     success_url = reverse_lazy('vehicle_handover:photo_360_list')
+    permission_required = 'vehicle_handover.delete_vehicle360photo'
 
     def delete(self, request, *args, **kwargs):
         messages.success(self.request, _('360° Foto wurde gelöscht.'))
@@ -1130,13 +1142,14 @@ class Vehicle360EditorView(LoginRequiredMixin, DetailView):
         return context
 
 
-class Vehicle360HotspotCreateView(LoginRequiredMixin, CreateView):
+class Vehicle360HotspotCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Hotspot erstellen (AJAX)
     """
     model = Vehicle360Hotspot
     form_class = Vehicle360HotspotForm
     template_name = 'vehicle_handover/hotspot_form.html'
+    permission_required = 'vehicle_handover.add_vehicle360hotspot'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1158,13 +1171,14 @@ class Vehicle360HotspotCreateView(LoginRequiredMixin, CreateView):
         return reverse('vehicle_handover:photo_360_editor', kwargs={'pk': self.object.photo_360_id})
 
 
-class Vehicle360HotspotUpdateView(LoginRequiredMixin, UpdateView):
+class Vehicle360HotspotUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Hotspot bearbeiten
     """
     model = Vehicle360Hotspot
     form_class = Vehicle360HotspotForm
     template_name = 'vehicle_handover/hotspot_form.html'
+    permission_required = 'vehicle_handover.change_vehicle360hotspot'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1207,11 +1221,12 @@ class Vehicle360HotspotUpdateView(LoginRequiredMixin, UpdateView):
         return reverse('vehicle_handover:photo_360_editor', kwargs={'pk': self.object.photo_360_id})
 
 
-class Vehicle360HotspotDeleteView(LoginRequiredMixin, DeleteView):
+class Vehicle360HotspotDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Hotspot löschen (AJAX)
     """
     model = Vehicle360Hotspot
+    permission_required = 'vehicle_handover.delete_vehicle360hotspot'
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()

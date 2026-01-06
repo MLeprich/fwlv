@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, TemplateView
 from django.urls import reverse_lazy
@@ -105,12 +105,13 @@ class ITHardwareMasterDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class ITHardwareMasterCreateView(LoginRequiredMixin, CreateView):
+class ITHardwareMasterCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """IT-Hardware Stammdaten erstellen"""
     model = ITHardwareItemMaster
     form_class = ITHardwareItemMasterForm
     template_name = 'it_hardware/master_form.html'
     success_url = reverse_lazy('it_hardware:master_list')
+    permission_required = 'it_hardware.add_ithardwareitemmaster'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -124,12 +125,13 @@ class ITHardwareMasterCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ITHardwareMasterUpdateView(LoginRequiredMixin, UpdateView):
+class ITHardwareMasterUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """IT-Hardware Stammdaten bearbeiten"""
     model = ITHardwareItemMaster
     form_class = ITHardwareItemMasterForm
     template_name = 'it_hardware/master_form.html'
     success_url = reverse_lazy('it_hardware:master_list')
+    permission_required = 'it_hardware.change_ithardwareitemmaster'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -234,12 +236,13 @@ class ITHardwareDeviceDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'device'
 
 
-class ITHardwareDeviceCreateView(LoginRequiredMixin, CreateView):
+class ITHardwareDeviceCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """IT-Hardware Gerät erstellen"""
     model = ITHardwareDeviceInstance
     form_class = ITHardwareDeviceInstanceForm
     template_name = 'it_hardware/device_form.html'
     success_url = reverse_lazy('it_hardware:device_list')
+    permission_required = 'it_hardware.add_ithardwaredeviceinstance'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -253,12 +256,13 @@ class ITHardwareDeviceCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ITHardwareDeviceUpdateView(LoginRequiredMixin, UpdateView):
+class ITHardwareDeviceUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """IT-Hardware Gerät bearbeiten"""
     model = ITHardwareDeviceInstance
     form_class = ITHardwareDeviceInstanceForm
     template_name = 'it_hardware/device_form.html'
     success_url = reverse_lazy('it_hardware:device_list')
+    permission_required = 'it_hardware.change_ithardwaredeviceinstance'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -365,12 +369,13 @@ class ITHardwareItemListView(LoginRequiredMixin, ListView):
         return queryset
 
 
-class ITHardwareItemCreateView(LoginRequiredMixin, CreateView):
+class ITHardwareItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue IT-Hardware erfassen"""
     model = ITHardwareItem
     form_class = ITHardwareItemForm
     template_name = 'it_hardware/item_form.html'
     success_url = reverse_lazy('it_hardware:item_list')
+    permission_required = 'it_hardware.add_ithardwareitem'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -378,12 +383,13 @@ class ITHardwareItemCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ITHardwareItemUpdateView(LoginRequiredMixin, UpdateView):
+class ITHardwareItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """IT-Hardware bearbeiten"""
     model = ITHardwareItem
     form_class = ITHardwareItemForm
     template_name = 'it_hardware/item_form.html'
     success_url = reverse_lazy('it_hardware:item_list')
+    permission_required = 'it_hardware.change_ithardwareitem'
 
 
 class ITHardwareItemDetailView(LoginRequiredMixin, DetailView):
@@ -403,11 +409,12 @@ class ITHardwareItemDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class ITHardwareItemDeleteView(LoginRequiredMixin, DeleteView):
+class ITHardwareItemDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """IT-Hardware löschen"""
     model = ITHardwareItem
     template_name = 'it_hardware/item_confirm_delete.html'
     success_url = reverse_lazy('it_hardware:item_list')
+    permission_required = 'it_hardware.delete_ithardwareitem'
 
     def form_valid(self, form):
         item = self.get_object()
@@ -462,12 +469,13 @@ class ITHardwareStockMovementListView(LoginRequiredMixin, ListView):
         return queryset
 
 
-class ITHardwareStockMovementCreateView(LoginRequiredMixin, CreateView):
+class ITHardwareStockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Bewegung erfassen"""
     model = ITHardwareStockMovement
     form_class = ITHardwareStockMovementForm
     template_name = 'it_hardware/movement_form.html'
     success_url = reverse_lazy('it_hardware:movement_list')
+    permission_required = 'it_hardware.add_ithardwarestockmovement'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user

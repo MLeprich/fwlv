@@ -1,8 +1,8 @@
 from django import forms
 from django.shortcuts import render
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -73,7 +73,8 @@ class DivingMasterListView(LoginRequiredMixin, ListView):
         return queryset.order_by('master_number')
 
 
-class DivingMasterCreateView(LoginRequiredMixin, CreateView):
+class DivingMasterCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_divingitemmaster'
     """Neue Stammdaten anlegen"""
     model = DivingItemMaster
     form_class = DivingItemMasterForm
@@ -95,7 +96,8 @@ class DivingMasterCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('diving:master_detail', kwargs={'pk': self.object.pk})
 
 
-class DivingMasterUpdateView(LoginRequiredMixin, UpdateView):
+class DivingMasterUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    permission_required = 'diving.change_divingitemmaster'
     """Stammdaten bearbeiten"""
     model = DivingItemMaster
     form_class = DivingItemMasterForm
@@ -141,7 +143,8 @@ class DivingDeviceListView(LoginRequiredMixin, ListView):
         return queryset.order_by('inventory_number')
 
 
-class DivingDeviceCreateView(LoginRequiredMixin, CreateView):
+class DivingDeviceCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_divingdeviceinstance'
     """Neue Geräte-Instanz anlegen"""
     model = DivingDeviceInstance
     form_class = DivingDeviceInstanceForm
@@ -162,7 +165,8 @@ class DivingDeviceCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('diving:device_detail', kwargs={'pk': self.object.pk})
 
 
-class DivingDeviceUpdateView(LoginRequiredMixin, UpdateView):
+class DivingDeviceUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    permission_required = 'diving.change_divingdeviceinstance'
     """Geräte-Instanz bearbeiten"""
     model = DivingDeviceInstance
     form_class = DivingDeviceInstanceForm
@@ -434,7 +438,8 @@ class DivingItemListView(LoginRequiredMixin, ListView):
         return context
 
 
-class DivingItemCreateView(LoginRequiredMixin, CreateView):
+class DivingItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_divingitem'
     """Neue Tauchausrüstung anlegen"""
     model = DivingItem
     template_name = 'diving/item_form.html'
@@ -513,7 +518,8 @@ class DivingItemCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('diving:item_detail', kwargs={'pk': self.object.pk})
 
 
-class DivingItemUpdateView(LoginRequiredMixin, UpdateView):
+class DivingItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    permission_required = 'diving.change_divingitem'
     """Tauchausrüstung bearbeiten"""
     model = DivingItem
     template_name = 'diving/item_form.html'
@@ -636,7 +642,8 @@ class DivingMovementDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'movement'
 
 
-class DivingMovementCreateView(LoginRequiredMixin, CreateView):
+class DivingMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_divingstockmovement'
     """Neue Lagerbewegung erstellen"""
     model = DivingStockMovement
     form_class = DivingStockMovementForm
@@ -676,7 +683,8 @@ class DivingServiceListView(LoginRequiredMixin, ListView):
         ).order_by('-service_date')
 
 
-class DivingServiceLogCreateView(LoginRequiredMixin, CreateView):
+class DivingServiceLogCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_divingservicelog'
     """Service-Protokoll erstellen"""
     model = DivingServiceLog
     form_class = DivingServiceLogForm
@@ -831,7 +839,8 @@ class InspectionDueListView(LoginRequiredMixin, ListView):
         return context
 
 
-class ServiceRecordCreateView(LoginRequiredMixin, CreateView):
+class ServiceRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_servicerecord'
     """
     Erstellt ein Wartungsprotokoll mit dynamischer Checkliste.
     Basiert auf einer ServiceAssignment (Verknüpfung Item <-> ServiceType).
@@ -892,7 +901,8 @@ class ServiceRecordCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('diving:service_management')
 
 
-class AssignServiceTypeView(LoginRequiredMixin, CreateView):
+class AssignServiceTypeView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_serviceassignment'
     """
     Weist einem Gerät einen ServiceType zu (erstellt eine ServiceAssignment).
     Ermöglicht das Verknüpfen von Geräten mit Wartungsarten.
@@ -983,7 +993,8 @@ class ServiceTypeListView(LoginRequiredMixin, ListView):
         return DivingServiceType.objects.filter(is_active=True).order_by('name')
 
 
-class ServiceTypeCreateView(LoginRequiredMixin, CreateView):
+class ServiceTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_servicetype'
     """Wartungstyp erstellen"""
     model = DivingServiceType
     form_class = DivingServiceTypeForm
@@ -1002,7 +1013,8 @@ class ServiceTypeCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ServiceTypeUpdateView(LoginRequiredMixin, UpdateView):
+class ServiceTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    permission_required = 'diving.change_servicetype'
     """Wartungstyp bearbeiten"""
     model = DivingServiceType
     form_class = DivingServiceTypeForm
@@ -1020,7 +1032,8 @@ class ServiceTypeUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ServiceTypeDeleteView(LoginRequiredMixin, DeleteView):
+class ServiceTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    permission_required = 'diving.delete_servicetype'
     """Wartungstyp löschen"""
     model = DivingServiceType
     template_name = 'diving/service_type_confirm_delete.html'
@@ -1059,7 +1072,8 @@ class EquipmentTypeListView(LoginRequiredMixin, ListView):
         return EquipmentType.objects.all().order_by('sort_order', 'name')
 
 
-class EquipmentTypeCreateView(LoginRequiredMixin, CreateView):
+class EquipmentTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_equipmenttype'
     """Ausrüstungstyp erstellen"""
     model = EquipmentType
     form_class = EquipmentTypeForm
@@ -1072,7 +1086,8 @@ class EquipmentTypeCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class EquipmentTypeUpdateView(LoginRequiredMixin, UpdateView):
+class EquipmentTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    permission_required = 'diving.change_equipmenttype'
     """Ausrüstungstyp bearbeiten"""
     model = EquipmentType
     form_class = EquipmentTypeForm
@@ -1084,7 +1099,8 @@ class EquipmentTypeUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class EquipmentTypeDeleteView(LoginRequiredMixin, DeleteView):
+class EquipmentTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    permission_required = 'diving.delete_equipmenttype'
     """Ausrüstungstyp löschen"""
     model = EquipmentType
     template_name = 'diving/equipment_type_confirm_delete.html'
@@ -1106,7 +1122,8 @@ class BottleTypeListView(LoginRequiredMixin, ListView):
         return BottleType.objects.all().order_by('sort_order', 'name')
 
 
-class BottleTypeCreateView(LoginRequiredMixin, CreateView):
+class BottleTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_bottletype'
     """Flaschentyp erstellen"""
     model = BottleType
     form_class = BottleTypeForm
@@ -1119,7 +1136,8 @@ class BottleTypeCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class BottleTypeUpdateView(LoginRequiredMixin, UpdateView):
+class BottleTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    permission_required = 'diving.change_bottletype'
     """Flaschentyp bearbeiten"""
     model = BottleType
     form_class = BottleTypeForm
@@ -1131,7 +1149,8 @@ class BottleTypeUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class BottleTypeDeleteView(LoginRequiredMixin, DeleteView):
+class BottleTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    permission_required = 'diving.delete_bottletype'
     """Flaschentyp löschen"""
     model = BottleType
     template_name = 'diving/bottle_type_confirm_delete.html'
@@ -1266,7 +1285,8 @@ class DivingBatchListView(LoginRequiredMixin, ListView):
         return context
 
 
-class DivingBatchCreateView(LoginRequiredMixin, CreateView):
+class DivingBatchCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    permission_required = 'diving.add_divingbatch'
     """Neue Charge anlegen"""
     model = DivingBatch
     form_class = DivingBatchForm
@@ -1297,7 +1317,8 @@ class DivingBatchCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('diving:master_detail', kwargs={'pk': self.object.master.pk})
 
 
-class DivingBatchUpdateView(LoginRequiredMixin, UpdateView):
+class DivingBatchUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    permission_required = 'diving.change_divingbatch'
     """Charge bearbeiten"""
     model = DivingBatch
     form_class = DivingBatchForm
@@ -1318,7 +1339,8 @@ class DivingBatchUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('diving:master_detail', kwargs={'pk': self.object.master.pk})
 
 
-class DivingBatchDeleteView(LoginRequiredMixin, DeleteView):
+class DivingBatchDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    permission_required = 'diving.delete_divingbatch'
     """Charge löschen"""
     model = DivingBatch
     template_name = 'diving/batch_confirm_delete.html'

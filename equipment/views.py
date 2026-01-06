@@ -6,8 +6,8 @@ Views für Ausrüstung & Geräte-Verwaltung
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
@@ -249,11 +249,12 @@ class EquipmentMasterDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class EquipmentMasterCreateView(LoginRequiredMixin, CreateView):
+class EquipmentMasterCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Ausrüstungs-Stammdaten anlegen"""
     model = EquipmentItemMaster
     form_class = EquipmentItemMasterForm
     template_name = 'equipment/master_form.html'
+    permission_required = 'equipment.add_equipmentitemmaster'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -265,11 +266,12 @@ class EquipmentMasterCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('equipment:master_detail', kwargs={'pk': self.object.pk})
 
 
-class EquipmentMasterUpdateView(LoginRequiredMixin, UpdateView):
+class EquipmentMasterUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Ausrüstungs-Stammdaten bearbeiten"""
     model = EquipmentItemMaster
     form_class = EquipmentItemMasterForm
     template_name = 'equipment/master_form.html'
+    permission_required = 'equipment.change_equipmentitemmaster'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -280,11 +282,12 @@ class EquipmentMasterUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('equipment:master_detail', kwargs={'pk': self.object.pk})
 
 
-class EquipmentMasterDeleteView(LoginRequiredMixin, DeleteView):
+class EquipmentMasterDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Ausrüstungs-Stammdaten löschen"""
     model = EquipmentItemMaster
     template_name = 'equipment/master_confirm_delete.html'
     success_url = reverse_lazy('equipment:master_list')
+    permission_required = 'equipment.delete_equipmentitemmaster'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, _('Stammdaten wurden erfolgreich gelöscht.'))
@@ -409,11 +412,12 @@ class EquipmentDeviceDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'device'
 
 
-class EquipmentDeviceCreateView(LoginRequiredMixin, CreateView):
+class EquipmentDeviceCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neues Ausrüstungs-Gerät anlegen"""
     model = EquipmentDeviceInstance
     form_class = EquipmentDeviceInstanceForm
     template_name = 'equipment/device_form.html'
+    permission_required = 'equipment.add_equipmentdeviceinstance'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -431,11 +435,12 @@ class EquipmentDeviceCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('equipment:device_detail', kwargs={'pk': self.object.pk})
 
 
-class EquipmentDeviceUpdateView(LoginRequiredMixin, UpdateView):
+class EquipmentDeviceUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Ausrüstungs-Gerät bearbeiten"""
     model = EquipmentDeviceInstance
     form_class = EquipmentDeviceInstanceForm
     template_name = 'equipment/device_form.html'
+    permission_required = 'equipment.change_equipmentdeviceinstance'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -616,11 +621,12 @@ class EquipmentItemDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class EquipmentItemCreateView(LoginRequiredMixin, CreateView):
+class EquipmentItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neues Gerät anlegen"""
     model = EquipmentItem
     form_class = EquipmentItemForm
     template_name = 'equipment/item_form.html'
+    permission_required = 'equipment.add_equipmentitem'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -660,11 +666,12 @@ class EquipmentItemCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('equipment:item_detail', kwargs={'pk': self.object.pk})
 
 
-class EquipmentItemUpdateView(LoginRequiredMixin, UpdateView):
+class EquipmentItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Gerät bearbeiten"""
     model = EquipmentItem
     form_class = EquipmentItemForm
     template_name = 'equipment/item_form.html'
+    permission_required = 'equipment.change_equipmentitem'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -695,11 +702,12 @@ class EquipmentItemUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('equipment:item_detail', kwargs={'pk': self.object.pk})
 
 
-class EquipmentItemDeleteView(LoginRequiredMixin, DeleteView):
+class EquipmentItemDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Gerät löschen"""
     model = EquipmentItem
     template_name = 'equipment/item_confirm_delete.html'
     success_url = reverse_lazy('equipment:item_list')
+    permission_required = 'equipment.delete_equipmentitem'
 
     def form_valid(self, form):
         item = self.get_object()
@@ -765,11 +773,12 @@ class EquipmentStockMovementDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'movement'
 
 
-class EquipmentStockMovementCreateView(LoginRequiredMixin, CreateView):
+class EquipmentStockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Lagerbewegung erstellen"""
     model = EquipmentStockMovement
     form_class = EquipmentStockMovementForm
     template_name = 'equipment/movement_form.html'
+    permission_required = 'equipment.add_equipmentstockmovement'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -940,12 +949,13 @@ class CategoryListView(LoginRequiredMixin, ListView):
         return Category.objects.filter(is_active=True, module='equipment').order_by('tree_id', 'lft')
 
 
-class CategoryCreateView(LoginRequiredMixin, CreateView):
+class CategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Kategorie erstellen"""
     model = Category
     template_name = 'equipment/category_form.html'
     fields = ['name', 'parent', 'code', 'description']
     success_url = reverse_lazy('equipment:category_list')
+    permission_required = 'inventory_base.add_category'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -955,12 +965,13 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class CategoryUpdateView(LoginRequiredMixin, UpdateView):
+class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Kategorie bearbeiten"""
     model = Category
     template_name = 'equipment/category_form.html'
     fields = ['name', 'parent', 'code', 'description', 'is_active']
     success_url = reverse_lazy('equipment:category_list')
+    permission_required = 'inventory_base.change_category'
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -968,11 +979,12 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class CategoryDeleteView(LoginRequiredMixin, DeleteView):
+class CategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Kategorie löschen"""
     model = Category
     template_name = 'equipment/category_confirm_delete.html'
     success_url = reverse_lazy('equipment:category_list')
+    permission_required = 'inventory_base.delete_category'
 
     def form_valid(self, form):
         category = self.get_object()
@@ -1028,12 +1040,13 @@ class InspectionTypeListView(LoginRequiredMixin, ListView):
         return queryset.order_by('name')
 
 
-class InspectionTypeCreateView(LoginRequiredMixin, CreateView):
+class InspectionTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Prüfungsart erstellen"""
     model = InspectionType
     form_class = InspectionTypeForm
     template_name = 'equipment/inspection_type_form.html'
     success_url = reverse_lazy('equipment:inspection_type_list')
+    permission_required = 'equipment.add_inspectiontype'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1042,23 +1055,25 @@ class InspectionTypeCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class InspectionTypeUpdateView(LoginRequiredMixin, UpdateView):
+class InspectionTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Prüfungsart bearbeiten"""
     model = InspectionType
     form_class = InspectionTypeForm
     template_name = 'equipment/inspection_type_form.html'
     success_url = reverse_lazy('equipment:inspection_type_list')
+    permission_required = 'equipment.change_inspectiontype'
 
     def form_valid(self, form):
         messages.success(self.request, f'Prüfungsart "{form.instance.name}" wurde aktualisiert.')
         return super().form_valid(form)
 
 
-class InspectionTypeDeleteView(LoginRequiredMixin, DeleteView):
+class InspectionTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Prüfungsart löschen"""
     model = InspectionType
     template_name = 'equipment/inspection_type_confirm_delete.html'
     success_url = reverse_lazy('equipment:inspection_type_list')
+    permission_required = 'equipment.delete_inspectiontype'
 
     def delete(self, request, *args, **kwargs):
         inspection_type = self.get_object()
@@ -1122,12 +1137,13 @@ class EquipmentInspectionAssignmentListView(LoginRequiredMixin, ListView):
         return context
 
 
-class EquipmentInspectionAssignmentCreateView(LoginRequiredMixin, CreateView):
+class EquipmentInspectionAssignmentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Prüfungszuweisung erstellen"""
     model = EquipmentInspectionAssignment
     form_class = EquipmentInspectionAssignmentForm
     template_name = 'equipment/inspection_assignment_form.html'
     success_url = reverse_lazy('equipment:inspection_assignment_list')
+    permission_required = 'equipment.add_equipmentinspectionassignment'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1139,23 +1155,25 @@ class EquipmentInspectionAssignmentCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class EquipmentInspectionAssignmentUpdateView(LoginRequiredMixin, UpdateView):
+class EquipmentInspectionAssignmentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Prüfungszuweisung bearbeiten"""
     model = EquipmentInspectionAssignment
     form_class = EquipmentInspectionAssignmentForm
     template_name = 'equipment/inspection_assignment_form.html'
     success_url = reverse_lazy('equipment:inspection_assignment_list')
+    permission_required = 'equipment.change_equipmentinspectionassignment'
 
     def form_valid(self, form):
         messages.success(self.request, 'Prüfungszuweisung wurde aktualisiert.')
         return super().form_valid(form)
 
 
-class EquipmentInspectionAssignmentDeleteView(LoginRequiredMixin, DeleteView):
+class EquipmentInspectionAssignmentDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Prüfungszuweisung löschen"""
     model = EquipmentInspectionAssignment
     template_name = 'equipment/inspection_assignment_confirm_delete.html'
     success_url = reverse_lazy('equipment:inspection_assignment_list')
+    permission_required = 'equipment.delete_equipmentinspectionassignment'
 
     def delete(self, request, *args, **kwargs):
         assignment = self.get_object()
@@ -1209,12 +1227,13 @@ class InspectionRecordListView(LoginRequiredMixin, ListView):
         return queryset.order_by('-inspection_date')
 
 
-class InspectionRecordCreateView(LoginRequiredMixin, CreateView):
+class InspectionRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neues Prüfprotokoll erstellen"""
     model = InspectionRecord
     form_class = InspectionRecordForm
     template_name = 'equipment/inspection_record_form.html'
     success_url = reverse_lazy('equipment:inspection_record_list')
+    permission_required = 'equipment.add_inspectionrecord'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1403,12 +1422,13 @@ class MaintenanceTypeListView(LoginRequiredMixin, ListView):
         return queryset.order_by('name')
 
 
-class MaintenanceTypeCreateView(LoginRequiredMixin, CreateView):
+class MaintenanceTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Wartungsart erstellen"""
     model = MaintenanceType
     form_class = MaintenanceTypeForm
     template_name = 'equipment/maintenance_type_form.html'
     success_url = reverse_lazy('equipment:maintenance_type_list')
+    permission_required = 'equipment.add_maintenancetype'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1420,12 +1440,13 @@ class MaintenanceTypeCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class MaintenanceTypeUpdateView(LoginRequiredMixin, UpdateView):
+class MaintenanceTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Wartungsart bearbeiten"""
     model = MaintenanceType
     form_class = MaintenanceTypeForm
     template_name = 'equipment/maintenance_type_form.html'
     success_url = reverse_lazy('equipment:maintenance_type_list')
+    permission_required = 'equipment.change_maintenancetype'
 
     def form_valid(self, form):
         messages.success(
@@ -1435,11 +1456,12 @@ class MaintenanceTypeUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class MaintenanceTypeDeleteView(LoginRequiredMixin, DeleteView):
+class MaintenanceTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Wartungsart löschen"""
     model = MaintenanceType
     template_name = 'equipment/maintenance_type_confirm_delete.html'
     success_url = reverse_lazy('equipment:maintenance_type_list')
+    permission_required = 'equipment.delete_maintenancetype'
 
     def delete(self, request, *args, **kwargs):
         maintenance_type = self.get_object()
@@ -1497,12 +1519,13 @@ class MaintenanceAssignmentListView(LoginRequiredMixin, ListView):
         return context
 
 
-class MaintenanceAssignmentCreateView(LoginRequiredMixin, CreateView):
+class MaintenanceAssignmentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Wartungszuweisung erstellen - für Artikelstammdaten"""
     model = MasterMaintenanceAssignment
     form_class = MasterMaintenanceAssignmentForm
     template_name = 'equipment/maintenance_assignment_form.html'
     success_url = reverse_lazy('equipment:maintenance_assignment_list')
+    permission_required = 'equipment.add_mastermaintenanceassignment'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1513,12 +1536,13 @@ class MaintenanceAssignmentCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class MaintenanceAssignmentUpdateView(LoginRequiredMixin, UpdateView):
+class MaintenanceAssignmentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Wartungszuweisung bearbeiten - für Artikelstammdaten"""
     model = MasterMaintenanceAssignment
     form_class = MasterMaintenanceAssignmentForm
     template_name = 'equipment/maintenance_assignment_form.html'
     success_url = reverse_lazy('equipment:maintenance_assignment_list')
+    permission_required = 'equipment.change_mastermaintenanceassignment'
 
     def form_valid(self, form):
         messages.success(
@@ -1528,11 +1552,12 @@ class MaintenanceAssignmentUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class MaintenanceAssignmentDeleteView(LoginRequiredMixin, DeleteView):
+class MaintenanceAssignmentDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Wartungszuweisung löschen - für Artikelstammdaten"""
     model = MasterMaintenanceAssignment
     template_name = 'equipment/maintenance_assignment_confirm_delete.html'
     success_url = reverse_lazy('equipment:maintenance_assignment_list')
+    permission_required = 'equipment.delete_mastermaintenanceassignment'
 
     def delete(self, request, *args, **kwargs):
         assignment = self.get_object()
@@ -1592,12 +1617,13 @@ class MasterMaintenanceAssignmentListView(LoginRequiredMixin, ListView):
         return context
 
 
-class MasterMaintenanceAssignmentCreateView(LoginRequiredMixin, CreateView):
+class MasterMaintenanceAssignmentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neue Stammdaten-Wartungszuweisung erstellen"""
     model = MasterMaintenanceAssignment
     form_class = MasterMaintenanceAssignmentForm
     template_name = 'equipment/master_maintenance_assignment_form.html'
     success_url = reverse_lazy('equipment:master_maintenance_assignment_list')
+    permission_required = 'equipment.add_mastermaintenanceassignment'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -1608,12 +1634,13 @@ class MasterMaintenanceAssignmentCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class MasterMaintenanceAssignmentUpdateView(LoginRequiredMixin, UpdateView):
+class MasterMaintenanceAssignmentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Stammdaten-Wartungszuweisung bearbeiten"""
     model = MasterMaintenanceAssignment
     form_class = MasterMaintenanceAssignmentForm
     template_name = 'equipment/master_maintenance_assignment_form.html'
     success_url = reverse_lazy('equipment:master_maintenance_assignment_list')
+    permission_required = 'equipment.change_mastermaintenanceassignment'
 
     def form_valid(self, form):
         messages.success(
@@ -1623,11 +1650,12 @@ class MasterMaintenanceAssignmentUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class MasterMaintenanceAssignmentDeleteView(LoginRequiredMixin, DeleteView):
+class MasterMaintenanceAssignmentDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Stammdaten-Wartungszuweisung löschen"""
     model = MasterMaintenanceAssignment
     template_name = 'equipment/master_maintenance_assignment_confirm_delete.html'
     success_url = reverse_lazy('equipment:master_maintenance_assignment_list')
+    permission_required = 'equipment.delete_mastermaintenanceassignment'
 
     def delete(self, request, *args, **kwargs):
         assignment = self.get_object()
@@ -1696,12 +1724,13 @@ class MaintenanceRecordListView(LoginRequiredMixin, ListView):
         return queryset.order_by('-maintenance_date')
 
 
-class MaintenanceRecordCreateView(LoginRequiredMixin, CreateView):
+class MaintenanceRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neues Wartungsprotokoll erstellen"""
     model = MaintenanceRecord
     form_class = MaintenanceRecordForm
     template_name = 'equipment/maintenance_record_form.html'
     success_url = reverse_lazy('equipment:maintenance_record_list')
+    permission_required = 'equipment.add_maintenancerecord'
 
     def form_valid(self, form):
         messages.success(

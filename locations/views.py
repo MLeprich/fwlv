@@ -3,7 +3,7 @@ Locations Views
 """
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -62,10 +62,11 @@ class LocationDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class LocationCreateView(LoginRequiredMixin, CreateView):
+class LocationCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Lagerort erstellen"""
     model = Location
     form_class = LocationForm
+    permission_required = 'locations.add_location'
     template_name = 'locations/location_form.html'
     success_url = reverse_lazy('locations:list')
 
@@ -82,10 +83,11 @@ class LocationCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class LocationUpdateView(LoginRequiredMixin, UpdateView):
+class LocationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Lagerort bearbeiten"""
     model = Location
     form_class = LocationForm
+    permission_required = 'locations.change_location'
     template_name = 'locations/location_form.html'
     success_url = reverse_lazy('locations:list')
 
@@ -101,9 +103,10 @@ class LocationUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class LocationDeleteView(LoginRequiredMixin, DeleteView):
+class LocationDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Lagerort löschen"""
     model = Location
+    permission_required = 'locations.delete_location'
     template_name = 'locations/location_confirm_delete.html'
     success_url = reverse_lazy('locations:list')
 

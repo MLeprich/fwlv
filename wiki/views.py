@@ -5,7 +5,7 @@ Views für das Wiki-Modul
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -137,13 +137,14 @@ class WikiPageDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class WikiPageEditView(LoginRequiredMixin, UpdateView):
+class WikiPageEditView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Wiki-Seite bearbeiten (Placeholder)
     """
     model = WikiPage
     template_name = 'wiki/page_edit.html'
     fields = ['title', 'category', 'description', 'status', 'visibility']
+    permission_required = 'wiki.change_wikipage'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -151,13 +152,14 @@ class WikiPageEditView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class WikiPageCreateView(LoginRequiredMixin, CreateView):
+class WikiPageCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Neue Wiki-Seite erstellen
     """
     model = WikiPage
     template_name = 'wiki/page_create.html'
     fields = ['title', 'category', 'description', 'visibility']
+    permission_required = 'wiki.add_wikipage'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -351,7 +353,7 @@ class WikiCategoryListView(LoginRequiredMixin, ListView):
         return context
 
 
-class WikiCategoryCreateView(LoginRequiredMixin, CreateView):
+class WikiCategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Neue Wiki-Kategorie erstellen
     """
@@ -359,6 +361,7 @@ class WikiCategoryCreateView(LoginRequiredMixin, CreateView):
     form_class = WikiCategoryForm
     template_name = 'wiki/category_form.html'
     success_url = reverse_lazy('wiki:category_list')
+    permission_required = 'wiki.add_wikicategory'
 
     def form_valid(self, form):
         messages.success(self.request, f'Kategorie "{form.instance.name}" wurde erfolgreich erstellt.')
@@ -371,7 +374,7 @@ class WikiCategoryCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class WikiCategoryUpdateView(LoginRequiredMixin, UpdateView):
+class WikiCategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Wiki-Kategorie bearbeiten
     """
@@ -379,6 +382,7 @@ class WikiCategoryUpdateView(LoginRequiredMixin, UpdateView):
     form_class = WikiCategoryForm
     template_name = 'wiki/category_form.html'
     success_url = reverse_lazy('wiki:category_list')
+    permission_required = 'wiki.change_wikicategory'
 
     def form_valid(self, form):
         messages.success(self.request, f'Kategorie "{form.instance.name}" wurde erfolgreich aktualisiert.')
@@ -391,13 +395,14 @@ class WikiCategoryUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class WikiCategoryDeleteView(LoginRequiredMixin, DeleteView):
+class WikiCategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Wiki-Kategorie löschen
     """
     model = WikiCategory
     template_name = 'wiki/category_confirm_delete.html'
     success_url = reverse_lazy('wiki:category_list')
+    permission_required = 'wiki.delete_wikicategory'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
