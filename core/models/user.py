@@ -117,6 +117,18 @@ class User(AbstractUser):
             ("system_configuration", "Kann Systemkonfiguration aendern"),
         ]
 
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        # Neue Benutzer automatisch zur Gruppe "Standard-Nutzer" hinzufügen
+        if is_new:
+            try:
+                standard_gruppe = Group.objects.get(name='Standard-Nutzer')
+                self.groups.add(standard_gruppe)
+            except Group.DoesNotExist:
+                pass  # Gruppe existiert nicht, ignorieren
+
     def __str__(self):
         if self.first_name and self.last_name:
             return f"{self.last_name}, {self.first_name}"
