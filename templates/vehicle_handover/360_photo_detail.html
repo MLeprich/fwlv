@@ -316,10 +316,34 @@
     // Get markers plugin
     const markersPlugin = viewer.getPlugin(PhotoSphereViewer.MarkersPlugin);
 
-    // Handle marker clicks
-    markersPlugin.addEventListener('select-marker', ({ marker }) => {
-        const hotspot = marker.data;
-        showHotspotDetails(hotspot);
+    // Handle marker clicks - try multiple event binding methods for compatibility
+    console.log('[360Viewer] Markers plugin:', markersPlugin);
+    console.log('[360Viewer] Hotspots loaded:', hotspots.length);
+
+    // Method 1: addEventListener (newer versions)
+    if (markersPlugin.addEventListener) {
+        markersPlugin.addEventListener('select-marker', (e) => {
+            console.log('[360Viewer] Marker selected (addEventListener):', e);
+            const hotspot = e.marker ? e.marker.data : (e.data || e);
+            if (hotspot && hotspot.id) {
+                showHotspotDetails(hotspot);
+            }
+        });
+    }
+
+    // Method 2: on() method (older versions)
+    if (markersPlugin.on) {
+        markersPlugin.on('select-marker', (e, marker) => {
+            console.log('[360Viewer] Marker selected (on):', marker);
+            if (marker && marker.data) {
+                showHotspotDetails(marker.data);
+            }
+        });
+    }
+
+    // Method 3: Direct click handler on viewer
+    viewer.addEventListener('click', (e) => {
+        console.log('[360Viewer] Viewer clicked at:', e);
     });
 
     // Create HTML for hotspot marker
@@ -368,18 +392,180 @@
         `;
     }
 
-    // Show hotspot details in modal or panel
+    // Icon mapping
+    const iconMap = {
+        'marker': '📍',
+        'drawer': '🗄️',
+        'cabinet': '🚪',
+        'box': '📦',
+        'bag': '🎒',
+        'toolbox': '🧰',
+        'medical': '🏥',
+        'fire': '🧯',
+        'equipment': '⚙️',
+    };
+
+    // Type labels
+    const typeLabels = {
+        'info': 'ℹ️ Information',
+        'checklist': '✓ Checkliste',
+        'images': '🖼️ Bilder',
+        'mixed': '📋 Gemischt',
+    };
+
+    // Show hotspot details in modal
     function showHotspotDetails(hotspot) {
-        // For now, just scroll to the hotspot card
-        const hotspotCard = document.querySelector(`[onclick="focusHotspot('${hotspot.id}')"]`);
-        if (hotspotCard) {
-            hotspotCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            hotspotCard.classList.add('ring-4', 'ring-blue-500');
-            setTimeout(() => {
-                hotspotCard.classList.remove('ring-4', 'ring-blue-500');
-            }, 2000);
+        const modal = document.getElementById('hotspot-modal');
+        const icon = iconMap[hotspot.icon] || iconMap['marker'];
+
+        // Set header info
+        document.getElementById('modal-icon').textContent = icon;
+        document.getElementById('modal-title').textContent = hotspot.title;
+        document.getElementById('modal-type-badge').textContent = typeLabels[hotspot.hotspot_type] || hotspot.hotspot_type;
+
+        // Set description
+        const descEl = document.getElementById('modal-description');
+        if (hotspot.description) {
+            descEl.textContent = hotspot.description;
+            descEl.classList.remove('hidden');
+        } else {
+            descEl.classList.add('hidden');
+        }
+
+        // Set edit link
+        document.getElementById('modal-edit-link').href = `/vehicle_handover/hotspots/${hotspot.id}/edit/`;
+
+        // Handle checklist
+        const checklistSection = document.getElementById('modal-checklist-section');
+        const checklistContainer = document.getElementById('modal-checklist');
+        checklistContainer.innerHTML = '';
+
+        console.log('[360Viewer] Hotspot data:', hotspot);
+        console.log('[360Viewer] Custom checklist:', hotspot.custom_checklist);
+
+        if (hotspot.custom_checklist && hotspot.custom_checklist.length > 0) {
+            checklistSection.classList.remove('hidden');
+
+            hotspot.custom_checklist.forEach((item, index) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200';
+                itemEl.innerHTML = `
+                    <input type="checkbox"
+                           id="check-${index}"
+                           class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
+                           onchange="updateChecklistProgress()">
+                    <label for="check-${index}" class="flex-1 cursor-pointer ${item.required ? 'font-medium' : ''}">
+                        ${item.name}
+                        ${item.required ? '<span class="text-red-500 ml-1">*</span>' : ''}
+                    </label>
+                `;
+                checklistContainer.appendChild(itemEl);
+            });
+
+            // Add progress indicator
+            const progressEl = document.createElement('div');
+            progressEl.id = 'checklist-progress';
+            progressEl.className = 'mt-4 p-3 bg-blue-50 rounded-lg';
+            progressEl.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium text-blue-800">Fortschritt</span>
+                    <span id="progress-text" class="text-sm text-blue-600">0 / ${hotspot.custom_checklist.length}</span>
+                </div>
+                <div class="w-full bg-blue-200 rounded-full h-2">
+                    <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            `;
+            checklistContainer.appendChild(progressEl);
+        } else {
+            checklistSection.classList.add('hidden');
+        }
+
+        // Handle images
+        const imagesSection = document.getElementById('modal-images-section');
+        const imagesContainer = document.getElementById('modal-images');
+        imagesContainer.innerHTML = '';
+
+        if (hotspot.images && hotspot.images.length > 0) {
+            imagesSection.classList.remove('hidden');
+
+            hotspot.images.forEach((img, index) => {
+                const imgEl = document.createElement('div');
+                imgEl.className = 'relative group cursor-pointer';
+                imgEl.onclick = () => openLightbox(img.url, img.caption);
+                imgEl.innerHTML = `
+                    <img src="${img.url}" alt="${img.caption}"
+                         class="w-full h-40 object-cover rounded-lg shadow-sm group-hover:shadow-md transition-shadow">
+                    <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg transition-all flex items-center justify-center">
+                        <svg class="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </div>
+                    ${img.caption ? `<p class="text-sm text-gray-600 mt-1 truncate">${img.caption}</p>` : ''}
+                `;
+                imagesContainer.appendChild(imgEl);
+            });
+        } else {
+            imagesSection.classList.add('hidden');
+        }
+
+        // Show modal
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    // Update checklist progress
+    function updateChecklistProgress() {
+        const checkboxes = document.querySelectorAll('#modal-checklist input[type="checkbox"]');
+        const checked = document.querySelectorAll('#modal-checklist input[type="checkbox"]:checked').length;
+        const total = checkboxes.length;
+        const percent = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+        document.getElementById('progress-text').textContent = `${checked} / ${total}`;
+        document.getElementById('progress-bar').style.width = `${percent}%`;
+
+        // Change color based on progress
+        const progressBar = document.getElementById('progress-bar');
+        if (percent === 100) {
+            progressBar.classList.remove('bg-blue-600');
+            progressBar.classList.add('bg-green-600');
+        } else {
+            progressBar.classList.remove('bg-green-600');
+            progressBar.classList.add('bg-blue-600');
         }
     }
+
+    // Close hotspot modal
+    function closeHotspotModal() {
+        document.getElementById('hotspot-modal').classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    // Open image lightbox
+    function openLightbox(url, caption) {
+        document.getElementById('lightbox-image').src = url;
+        document.getElementById('lightbox-caption').textContent = caption || '';
+        document.getElementById('image-lightbox').classList.remove('hidden');
+    }
+
+    // Close image lightbox
+    function closeLightbox() {
+        document.getElementById('image-lightbox').classList.add('hidden');
+        document.getElementById('lightbox-image').src = '';
+    }
+
+    // Close modals on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const lightbox = document.getElementById('image-lightbox');
+            const modal = document.getElementById('hotspot-modal');
+
+            if (!lightbox.classList.contains('hidden')) {
+                closeLightbox();
+            } else if (!modal.classList.contains('hidden')) {
+                closeHotspotModal();
+            }
+        }
+    });
 
     // Focus on specific hotspot from card
     function focusHotspot(hotspotId) {
@@ -390,7 +576,84 @@
                 zoom: 80,
                 speed: '2rpm',
             });
+            // Also show the modal
+            showHotspotDetails(marker.data);
         }
     }
 </script>
+{% endblock %}
+
+{% block modals %}
+<!-- Hotspot Detail Modal -->
+<div id="hotspot-modal" class="fixed inset-0 z-[9999] hidden">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black bg-opacity-60" onclick="closeHotspotModal()"></div>
+
+    <!-- Modal Content -->
+    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl max-h-[85vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col" style="margin: 0 1rem;">
+        <!-- Header -->
+        <div id="modal-header" class="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <span id="modal-icon" class="text-3xl">📍</span>
+                <div>
+                    <h2 id="modal-title" class="text-xl font-bold">Hotspot</h2>
+                    <span id="modal-type-badge" class="text-purple-200 text-sm"></span>
+                </div>
+            </div>
+            <button onclick="closeHotspotModal()" class="text-white hover:text-purple-200 transition-colors">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="flex-1 overflow-y-auto p-6">
+            <!-- Description -->
+            <div id="modal-description" class="mb-6 text-gray-700"></div>
+
+            <!-- Checklist Section -->
+            <div id="modal-checklist-section" class="hidden mb-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <span>✓</span>
+                    <span>Checkliste</span>
+                </h3>
+                <div id="modal-checklist" class="space-y-2"></div>
+            </div>
+
+            <!-- Images Section -->
+            <div id="modal-images-section" class="hidden">
+                <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <span>🖼️</span>
+                    <span>Bilder</span>
+                </h3>
+                <div id="modal-images" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="border-t border-gray-200 px-6 py-4 flex justify-between items-center bg-gray-50 flex-shrink-0">
+            <a id="modal-edit-link" href="#" class="text-purple-600 hover:text-purple-800 font-medium inline-flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                Hotspot bearbeiten
+            </a>
+            <button onclick="closeHotspotModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium transition-colors">
+                Schließen
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Image Lightbox -->
+<div id="image-lightbox" class="fixed inset-0 z-[10000] hidden bg-black bg-opacity-90 flex items-center justify-center">
+    <button onclick="closeLightbox()" class="absolute top-4 right-4 text-white hover:text-gray-300">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+    <img id="lightbox-image" src="" alt="" class="max-h-[90vh] max-w-[90vw] object-contain">
+    <p id="lightbox-caption" class="absolute bottom-4 left-0 right-0 text-center text-white text-lg"></p>
+</div>
 {% endblock %}

@@ -325,6 +325,9 @@
     <!-- Toast Container (for HTMX notifications) -->
     <div id="toast-container" class="fixed top-20 right-4 z-50 space-y-2"></div>
 
+    <!-- Modals Container (outside main content for proper z-index) -->
+    {% block modals %}{% endblock %}
+
     <!-- Alpine.js Store Setup -->
     <script>
         document.addEventListener('alpine:init', () => {

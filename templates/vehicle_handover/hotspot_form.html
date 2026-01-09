@@ -119,13 +119,13 @@
                 </div>
 
                 <!-- Custom Checklist Editor -->
-                <div class="mb-6" x-data="checklistEditor()">
+                <div class="mb-6" x-data="checklistEditor()" x-init="$watch('items', value => updateHiddenField(value))">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Benutzerdefinierte Checkliste
                     </label>
 
-                    <!-- Hidden Field für JSON-Daten -->
-                    <input type="hidden" name="custom_checklist" x-ref="checklistInput" :value="JSON.stringify(items)">
+                    <!-- Hidden Field für JSON-Daten (Django Form Field) -->
+                    {{ form.custom_checklist }}
 
                     <!-- Checklist Items -->
                     <div class="space-y-2 mb-4">
@@ -134,10 +134,11 @@
                                 <span class="text-gray-400 cursor-move" title="Verschieben">☰</span>
                                 <input type="text"
                                        x-model="item.name"
+                                       @input="updateHiddenField(items)"
                                        placeholder="Artikel-Name"
                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
                                 <label class="flex items-center gap-1 text-sm text-gray-600 whitespace-nowrap">
-                                    <input type="checkbox" x-model="item.required" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                                    <input type="checkbox" x-model="item.required" @change="updateHiddenField(items)" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
                                     Pflicht
                                 </label>
                                 <button type="button"
@@ -482,20 +483,38 @@ function checklistEditor() {
     return {
         items: initialData,
 
+        init() {
+            // Initial update des Hidden-Feldes
+            this.updateHiddenField(this.items);
+        },
+
+        updateHiddenField(items) {
+            const hiddenField = document.querySelector('input[name="custom_checklist"]');
+            if (hiddenField) {
+                // Nur Einträge mit Namen speichern
+                const validItems = items.filter(item => item.name && item.name.trim());
+                hiddenField.value = JSON.stringify(validItems);
+                console.log('[Checklist] Updated hidden field:', hiddenField.value);
+            }
+        },
+
         addItem() {
             this.items.push({
                 name: '',
                 required: false
             });
+            this.updateHiddenField(this.items);
         },
 
         removeItem(index) {
             this.items.splice(index, 1);
+            this.updateHiddenField(this.items);
         },
 
         clearAll() {
             if (confirm('Möchten Sie wirklich alle Einträge löschen?')) {
                 this.items = [];
+                this.updateHiddenField(this.items);
             }
         },
 
@@ -569,6 +588,7 @@ function checklistEditor() {
                         this.items = validItems;
                     }
 
+                    this.updateHiddenField(this.items);
                     alert(`${validItems.length} Einträge erfolgreich importiert.`);
                 } catch (error) {
                     alert('Fehler beim Importieren: ' + error.message);

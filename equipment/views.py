@@ -29,6 +29,7 @@ from .models import (
     EquipmentMaintenanceAssignment,
     MaintenanceRecord,
     EquipmentBatch,
+    DeviceTypeCategory,
 )
 from personnel.models import Person, Qualification, DutyHoursEntry, DutyHoursRequirement
 from .forms import (
@@ -44,6 +45,7 @@ from .forms import (
     MaintenanceAssignmentForm,
     MaintenanceRecordForm,
     EquipmentBatchForm,
+    DeviceTypeCategoryForm,
 )
 from .utils import process_equipment_manual
 from inventory_base.models import Category
@@ -457,8 +459,24 @@ class EquipmentDeviceCreateView(LoginRequiredMixin, PermissionRequiredMixin, Cre
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
+        # Standardwerte setzen falls nicht angegeben
+        if not form.instance.equipment_status:
+            form.instance.equipment_status = 'operational'
+        if not form.instance.certification_status:
+            form.instance.certification_status = 'not_required'
+        if form.instance.current_operating_hours is None:
+            form.instance.current_operating_hours = 0
         messages.success(self.request, _('Gerät wurde erfolgreich erstellt.'))
         return super().form_valid(form)
+
+    def form_invalid(self, form):
+        # Log form errors for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Form errors: {form.errors}')
+        logger.error(f'Form data: {form.data}')
+        messages.error(self.request, _('Bitte korrigieren Sie die Fehler im Formular.'))
+        return super().form_invalid(form)
 
     def get_success_url(self):
         return reverse_lazy('equipment:device_detail', kwargs={'pk': self.object.pk})
@@ -2705,3 +2723,95 @@ from .inventory_views import (
     EquipmentInventoryProgressView,
     EquipmentInventoryExportView,
 )
+
+
+# ============================================================================
+# DEVICE TYPE CATEGORY VIEWS (GERÄTETYPEN-VERWALTUNG)
+# ============================================================================
+
+class DeviceTypeCategoryListView(LoginRequiredMixin, ListView):
+    """Liste aller Gerätetypen"""
+    model = DeviceTypeCategory
+    template_name = 'equipment/device_type_list.html'
+    context_object_name = 'device_types'
+
+    def get_queryset(self):
+        queryset = DeviceTypeCategory.objects.all()
+
+        # Filter nach aktiv/inaktiv
+        show_inactive = self.request.GET.get('show_inactive')
+        if not show_inactive:
+            queryset = queryset.filter(is_active=True)
+
+        # Suche
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(description__icontains=search) |
+                Q(applicable_standards__icontains=search)
+            )
+
+        return queryset.order_by('name')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Gerätetypen'
+        context['total_count'] = DeviceTypeCategory.objects.count()
+        context['active_count'] = DeviceTypeCategory.objects.filter(is_active=True).count()
+        return context
+
+
+class DeviceTypeCategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    """Neuen Gerätetyp anlegen"""
+    model = DeviceTypeCategory
+    form_class = DeviceTypeCategoryForm
+    template_name = 'equipment/device_type_form.html'
+    success_url = reverse_lazy('equipment:device_type_list')
+    permission_required = 'equipment.add_devicetypecategory'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Neuen Gerätetyp anlegen'
+        context['submit_text'] = 'Gerätetyp erstellen'
+        return context
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, _(f'Gerätetyp "{form.instance.name}" wurde erfolgreich erstellt.'))
+        return super().form_valid(form)
+
+
+class DeviceTypeCategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    """Gerätetyp bearbeiten"""
+    model = DeviceTypeCategory
+    form_class = DeviceTypeCategoryForm
+    template_name = 'equipment/device_type_form.html'
+    success_url = reverse_lazy('equipment:device_type_list')
+    permission_required = 'equipment.change_devicetypecategory'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f'Gerätetyp "{self.object.name}" bearbeiten'
+        context['submit_text'] = 'Änderungen speichern'
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, _(f'Gerätetyp "{form.instance.name}" wurde erfolgreich aktualisiert.'))
+        return super().form_valid(form)
+
+
+class DeviceTypeCategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    """Gerätetyp löschen"""
+    model = DeviceTypeCategory
+    template_name = 'equipment/device_type_confirm_delete.html'
+    success_url = reverse_lazy('equipment:device_type_list')
+    permission_required = 'equipment.delete_devicetypecategory'
+
+    def delete(self, request, *args, **kwargs):
+        device_type = self.get_object()
+        messages.success(
+            self.request,
+            _(f'Gerätetyp "{device_type.name}" wurde gelöscht.')
+        )
+        return super().delete(request, *args, **kwargs)

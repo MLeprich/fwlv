@@ -46,7 +46,13 @@
                     </span>
                     {% endif %}
                 </div>
-                <p class="text-sm text-gray-600">Inventar-Nr.: <span class="font-mono font-semibold">{{ device.inventory_number }}</span></p>
+                <p class="text-sm text-gray-600">Inventar-Nr.: <span class="font-mono font-semibold">{{ device.inventory_number }}</span>
+                    {% if device.additional_inventory_numbers %}
+                        {% for inv_nr in device.additional_inventory_numbers %}
+                            <span class="inline-block bg-gray-200 px-1.5 py-0.5 rounded text-xs font-mono ml-1" {% if inv_nr.description %}title="{{ inv_nr.description }}"{% endif %}>{{ inv_nr.number }}</span>
+                        {% endfor %}
+                    {% endif %}
+                </p>
                 {% if device.serial_number %}
                 <p class="text-sm text-gray-600">Serien-Nr.: <span class="font-mono font-semibold">{{ device.serial_number }}</span></p>
                 {% endif %}
@@ -126,6 +132,16 @@
                             <dt class="text-sm font-medium text-gray-500">Inventarnummer</dt>
                             <dd class="mt-1 text-sm text-gray-900 font-mono font-semibold">{{ device.inventory_number }}</dd>
                         </div>
+                        {% if device.additional_inventory_numbers %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Zusätzliche Inv.-Nr.</dt>
+                            <dd class="mt-1 text-sm text-gray-900 font-mono">
+                                {% for inv_nr in device.additional_inventory_numbers %}
+                                    <span class="inline-block bg-gray-100 px-2 py-0.5 rounded text-xs mr-1 mb-1" {% if inv_nr.description %}title="{{ inv_nr.description }}"{% endif %}>{{ inv_nr.number }}{% if inv_nr.description %} <span class="text-gray-500 font-sans">({{ inv_nr.description }})</span>{% endif %}</span>
+                                {% endfor %}
+                            </dd>
+                        </div>
+                        {% endif %}
                         {% if device.serial_number %}
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Seriennummer</dt>

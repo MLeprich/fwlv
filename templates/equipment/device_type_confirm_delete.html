@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gerätetyp löschen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'equipment:dashboard' %}" class="text-gray-500 hover:text-gray-700">Ausrüstung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'equipment:device_type_list' %}" class="text-gray-500 hover:text-gray-700">Gerätetypen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Löschen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Gerätetyp löschen?</h1>
+            <p class="text-gray-600">Sind Sie sicher, dass Sie diesen Gerätetyp löschen möchten?</p>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl" style="background-color: {{ object.color }}20;">
+                    {{ object.icon }}
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900">{{ object.name }}</h3>
+                    {% if object.description %}
+                    <p class="text-sm text-gray-600">{{ object.description|truncatewords:15 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div class="flex gap-3">
+                <span class="text-yellow-600">!!!</span>
+                <div class="text-sm text-yellow-800">
+                    <strong>Hinweis:</strong> Diese Aktion kann nicht rückgängig gemacht werden.
+                    Wartungs- und Prüfungsarten, die diesen Gerätetyp verwenden, behalten ihre Zuweisungen.
+                </div>
+            </div>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex items-center justify-end gap-3">
+                <a href="{% url 'equipment:device_type_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+                    Ja, löschen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

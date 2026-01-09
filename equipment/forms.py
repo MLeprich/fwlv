@@ -21,6 +21,7 @@ from .models import (
     EquipmentMaintenanceAssignment,
     MaintenanceRecord,
     EquipmentBatch,
+    DeviceTypeCategory,
 )
 from inventory_base.models import StockMovementType, ItemUnit
 import json
@@ -351,6 +352,13 @@ class EquipmentDeviceInstanceForm(forms.ModelForm):
                 'placeholder': 'Zusätzliche Informationen zu diesem Gerät...'
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Diese Felder haben Standardwerte im Model, daher nicht required
+        self.fields['equipment_status'].required = False
+        self.fields['certification_status'].required = False
+        self.fields['current_operating_hours'].required = False
 
 
 # ============================================================================
@@ -766,8 +774,12 @@ class InspectionTypeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Populate checkbox choices from EquipmentType
-        self.fields['applicable_equipment_types_choices'].choices = EquipmentType.choices
+        # Populate checkbox choices from DeviceTypeCategory (dynamisch aus DB)
+        device_type_choices = [
+            (dt.name, f"{dt.icon} {dt.name}")
+            for dt in DeviceTypeCategory.objects.filter(is_active=True).order_by('name')
+        ]
+        self.fields['applicable_equipment_types_choices'].choices = device_type_choices
 
         # Wenn Instanz existiert, JSON-Felder in Text umwandeln
         if self.instance.pk:
@@ -1197,8 +1209,12 @@ class MaintenanceTypeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Populate checkbox choices from EquipmentType
-        self.fields['applicable_equipment_types_choices'].choices = EquipmentType.choices
+        # Populate checkbox choices from DeviceTypeCategory (dynamisch aus DB)
+        device_type_choices = [
+            (dt.name, f"{dt.icon} {dt.name}")
+            for dt in DeviceTypeCategory.objects.filter(is_active=True).order_by('name')
+        ]
+        self.fields['applicable_equipment_types_choices'].choices = device_type_choices
 
         # JSON-Felder mit existierenden Daten vorbelegen
         if self.instance.pk:
@@ -1667,3 +1683,61 @@ class EquipmentBatchForm(forms.ModelForm):
                 self.add_error('recall_reason', _('Rückruf-Grund ist erforderlich, wenn Rückruf markiert ist.'))
 
         return cleaned_data
+
+
+# ============================================================================
+# DEVICE TYPE CATEGORY FORMS (GERÄTETYPEN)
+# ============================================================================
+
+class DeviceTypeCategoryForm(forms.ModelForm):
+    """Form für Gerätetypen (dynamisch verwaltbar)"""
+
+    class Meta:
+        model = DeviceTypeCategory
+        fields = [
+            'name',
+            'description',
+            'icon',
+            'color',
+            'default_maintenance_interval_months',
+            'default_inspection_interval_months',
+            'applicable_standards',
+            'is_active',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500',
+                'placeholder': 'z.B. Pumpen, Generatoren, Atemschutzgeräte'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500',
+                'rows': 3,
+                'placeholder': 'Optionale Beschreibung des Gerätetyps'
+            }),
+            'icon': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-2xl',
+                'placeholder': '🔧'
+            }),
+            'color': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500',
+                'type': 'color'
+            }),
+            'default_maintenance_interval_months': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500',
+                'min': '1',
+                'placeholder': 'z.B. 12'
+            }),
+            'default_inspection_interval_months': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500',
+                'min': '1',
+                'placeholder': 'z.B. 12'
+            }),
+            'applicable_standards': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500',
+                'rows': 2,
+                'placeholder': 'z.B. DIN 14811, DGUV Vorschrift 3, UVV'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'rounded border-gray-300 text-green-600 focus:ring-green-500'
+            }),
+        }

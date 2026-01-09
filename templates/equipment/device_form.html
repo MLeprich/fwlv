@@ -98,8 +98,8 @@
         <form method="post" class="space-y-6" {% if not object %}x-show="activeTab === 'device'"{% endif %}>
             {% csrf_token %}
 
-            {% if form.non_field_errors %}
-            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+            {% if form.errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg mb-4">
                 <div class="flex">
                     <div class="flex-shrink-0">
                         <span class="text-red-600">❌</span>
@@ -107,7 +107,16 @@
                     <div class="ml-3">
                         <h3 class="text-sm font-medium text-red-800">Fehler beim Speichern</h3>
                         <div class="mt-2 text-sm text-red-700">
-                            {{ form.non_field_errors }}
+                            {% if form.non_field_errors %}
+                                {{ form.non_field_errors }}
+                            {% endif %}
+                            <ul class="list-disc list-inside">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                            </ul>
                         </div>
                     </div>
                 </div>

@@ -1028,19 +1028,30 @@ class Vehicle360PhotoDetailView(LoginRequiredMixin, DetailView):
         # Hotspots als JSON für JavaScript
         hotspots_data = []
         for hotspot in self.object.hotspots.filter(is_active=True):
+            # Bilder sammeln
+            images = []
+            for img in hotspot.images.all():
+                images.append({
+                    'url': img.image.url,
+                    'caption': img.caption or '',
+                })
+
             hotspots_data.append({
                 'id': hotspot.id,
                 'title': hotspot.title,
-                'description': hotspot.description,
+                'description': hotspot.description or '',
                 'pitch': float(hotspot.pitch),
                 'yaw': float(hotspot.yaw),
                 'icon': hotspot.icon,
                 'color': hotspot.color,
                 'hotspot_type': hotspot.hotspot_type,
                 'checklist_id': hotspot.checklist_template_id if hotspot.checklist_template else None,
-                'image_count': hotspot.images.count(),
+                'checklist_name': hotspot.checklist_template.name if hotspot.checklist_template else None,
+                'custom_checklist': hotspot.custom_checklist or [],
+                'images': images,
+                'image_count': len(images),
             })
-        
+
         import json
         context['hotspots_json'] = json.dumps(hotspots_data)
         return context

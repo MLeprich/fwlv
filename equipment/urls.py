@@ -98,6 +98,12 @@ urlpatterns = [
     path('maintenance-types/<int:pk>/edit/', views.MaintenanceTypeUpdateView.as_view(), name='maintenance_type_edit'),
     path('maintenance-types/<int:pk>/delete/', views.MaintenanceTypeDeleteView.as_view(), name='maintenance_type_delete'),
 
+    # Gerätetypen-Verwaltung
+    path('device-types/', views.DeviceTypeCategoryListView.as_view(), name='device_type_list'),
+    path('device-types/create/', views.DeviceTypeCategoryCreateView.as_view(), name='device_type_create'),
+    path('device-types/<int:pk>/edit/', views.DeviceTypeCategoryUpdateView.as_view(), name='device_type_edit'),
+    path('device-types/<int:pk>/delete/', views.DeviceTypeCategoryDeleteView.as_view(), name='device_type_delete'),
+
     # Wartungszuweisungen (für einzelne Geräte - Legacy)
     path('maintenance-assignments/', views.MaintenanceAssignmentListView.as_view(), name='maintenance_assignment_list'),
     path('maintenance-assignments/create/', views.MaintenanceAssignmentCreateView.as_view(), name='maintenance_assignment_create'),

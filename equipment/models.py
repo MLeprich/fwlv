@@ -1300,6 +1300,90 @@ class InspectionRecord(models.Model):
 
 
 # ============================================================================
+# GERÄTETYPEN (DYNAMISCH VERWALTBAR)
+# ============================================================================
+
+class DeviceTypeCategory(models.Model):
+    """
+    Dynamisch verwaltbare Gerätetypen/Kategorien.
+    Diese können von Benutzern erstellt und für Wartungs- und Prüfungszuweisungen verwendet werden.
+
+    Beispiele: Pumpen, Generatoren, Atemschutzgeräte, Leitern, etc.
+    """
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name=_('Bezeichnung'),
+        help_text=_('z.B. Pumpen, Generatoren, Atemschutzgeräte')
+    )
+
+    description = models.TextField(
+        blank=True,
+        verbose_name=_('Beschreibung'),
+        help_text=_('Optionale Beschreibung des Gerätetyps')
+    )
+
+    icon = models.CharField(
+        max_length=10,
+        default='🔧',
+        verbose_name=_('Icon'),
+        help_text=_('Emoji oder Symbol zur Darstellung')
+    )
+
+    color = models.CharField(
+        max_length=7,
+        default='#6B7280',
+        verbose_name=_('Farbe'),
+        help_text=_('Hex-Farbcode (z.B. #FF5733)')
+    )
+
+    # Standardintervalle für diesen Gerätetyp
+    default_maintenance_interval_months = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_('Standard-Wartungsintervall (Monate)'),
+        help_text=_('Empfohlenes Wartungsintervall für diesen Gerätetyp')
+    )
+
+    default_inspection_interval_months = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_('Standard-Prüfintervall (Monate)'),
+        help_text=_('Empfohlenes Prüfintervall für diesen Gerätetyp')
+    )
+
+    # Relevante Normen/Vorschriften
+    applicable_standards = models.TextField(
+        blank=True,
+        verbose_name=_('Anwendbare Normen'),
+        help_text=_('z.B. DIN 14811, DGUV Vorschrift 3, UVV')
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv')
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Erstellt am'))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Aktualisiert am'))
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='created_device_type_categories',
+        verbose_name=_('Erstellt von')
+    )
+
+    class Meta:
+        verbose_name = _('Gerätetyp')
+        verbose_name_plural = _('Gerätetypen')
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+# ============================================================================
 # WARTUNGEN (MAINTENANCE TYPES & RECORDS)
 # ============================================================================
 
@@ -1345,11 +1429,20 @@ class MaintenanceType(models.Model):
         help_text=_('Liste der durchzuführenden Wartungsarbeiten')
     )
 
-    # Zuweisbare Gerätetypen
+    # Zuweisbare Gerätetypen (dynamisch)
+    applicable_device_types = models.ManyToManyField(
+        'DeviceTypeCategory',
+        blank=True,
+        related_name='maintenance_types',
+        verbose_name=_('Anwendbar auf Gerätetypen'),
+        help_text=_('Für welche Gerätetypen ist diese Wartung relevant?')
+    )
+
+    # Legacy-Feld (für Abwärtskompatibilität)
     applicable_equipment_types = models.JSONField(
         default=list,
         blank=True,
-        verbose_name=_('Anwendbar auf Gerätetypen'),
+        verbose_name=_('Anwendbar auf Gerätetypen (Legacy)'),
         help_text=_('Für welche Gerätetypen ist diese Wartung relevant?')
     )
 

@@ -39,6 +39,40 @@
         </div>
     </div>
 
+    <!-- Device Type Management Section -->
+    <div class="bg-gradient-to-br from-green-50 to-teal-50 rounded-lg border-2 border-green-200 p-6 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
+                    <span class="text-2xl">🏷️</span>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Gerätetypen verwalten</h2>
+                    <p class="text-sm text-gray-600">Kategorisieren Sie Ihre Ausrüstung für Wartungen und Prüfungen</p>
+                </div>
+            </div>
+            <a href="{% url 'equipment:device_type_create' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Neuer Gerätetyp
+            </a>
+        </div>
+
+        <a href="{% url 'equipment:device_type_list' %}" class="block bg-white rounded-lg p-4 border-2 border-green-200 hover:border-green-400 transition-all group">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">📋</span>
+                    <div>
+                        <h3 class="font-bold text-gray-900 group-hover:text-green-600 transition-colors">Alle Gerätetypen</h3>
+                        <p class="text-sm text-gray-600">Pumpen, Generatoren, Atemschutzgeräte, Leitern, etc.</p>
+                    </div>
+                </div>
+                <span class="text-sm font-medium text-green-600 group-hover:underline">Verwalten →</span>
+            </div>
+        </a>
+    </div>
+
     <!-- Maintenance Type Management Section -->
     <div class="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg border-2 border-orange-200 p-6 mb-8">
         <div class="flex items-center justify-between mb-4">
