@@ -528,6 +528,14 @@ class MedicalDeviceInstance(models.Model):
         help_text=_('Hersteller-Seriennummer')
     )
 
+    # Zusätzliche Inventarnummern für Module/Komponenten
+    additional_inventory_numbers = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_('Zusätzliche Inventarnummern'),
+        help_text=_('Inventarnummern für Module/Komponenten dieses Geräts')
+    )
+
     location = models.ForeignKey(
         'locations.Location',
         on_delete=models.PROTECT,

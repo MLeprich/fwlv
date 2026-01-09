@@ -30,10 +30,72 @@
 {% block content %}
 <div class="max-w-4xl mx-auto px-6 py-6">
 
-    <div class="bg-white rounded-lg shadow p-6">
-        <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ title }}</h1>
+    <div class="bg-white rounded-lg shadow p-6" {% if not object %}x-data="{ activeTab: 'device' }"{% endif %}>
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">{{ title }}</h1>
 
-        <form method="post" class="space-y-6">
+        <!-- Artikeltyp-Auswahl (nur bei Neuanlage) -->
+        {% if not object %}
+        <div class="mb-6 border-b border-gray-200">
+            <div class="flex gap-1">
+                <button
+                    type="button"
+                    @click="activeTab = 'device'"
+                    :class="activeTab === 'device' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
+                    class="px-4 py-3 rounded-t-lg border-t border-l border-r font-medium text-sm transition-colors flex items-center gap-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                    </svg>
+                    Geräteinstanz
+                </button>
+                <button
+                    type="button"
+                    @click="activeTab = 'consumable'"
+                    :class="activeTab === 'consumable' ? 'bg-amber-600 text-white border-amber-600' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
+                    class="px-4 py-3 rounded-t-lg border-t border-l border-r font-medium text-sm transition-colors flex items-center gap-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    Verbrauchsmaterial
+                </button>
+            </div>
+
+            <!-- Geräteinstanz Info -->
+            <div x-show="activeTab === 'device'" class="py-4 px-1">
+                <p class="text-sm text-gray-600">
+                    <strong>Geräteinstanz:</strong> Einzelnes Gerät mit eigener Inventarnummer (z.B. Defibrillator, EKG-Monitor).
+                    Jedes Gerät wird individuell erfasst und kann Wartungen, Prüfungen und Module haben.
+                </p>
+            </div>
+
+            <!-- Verbrauchsmaterial Info -->
+            <div x-show="activeTab === 'consumable'" x-cloak class="py-4 px-1">
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <p class="text-sm text-gray-700 mb-3">
+                        <strong>Verbrauchsmaterial:</strong> Artikel ohne individuelle Inventarnummer (z.B. Verbandsmaterial, Elektroden, Spritzen).
+                        Diese werden als Bestand geführt und über Lagerbewegungen verwaltet.
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="{% url 'medical:movement_create' %}" class="inline-flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Wareneingang erfassen
+                        </a>
+                        <a href="{% url 'medical:master_list' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                            Stammdaten verwalten
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-6" {% if not object %}x-show="activeTab === 'device'"{% endif %}>
             {% csrf_token %}
 
             {% if form.non_field_errors %}
@@ -56,9 +118,75 @@
             <div class="border-b border-gray-200 pb-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Basis-Informationen</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="md:col-span-2">
+                    <!-- Stammdaten mit Suchfeld -->
+                    <div class="md:col-span-2" x-data="{
+                        open: false,
+                        search: '',
+                        selected: null,
+                        masters: []
+                    }" x-init="
+                        masters = Array.from(document.querySelectorAll('#id_master option')).map(opt => ({
+                            value: opt.value,
+                            text: opt.text
+                        })).filter(m => m.value);
+                        const currentValue = document.getElementById('id_master').value;
+                        if (currentValue) {
+                            selected = masters.find(m => m.value === currentValue);
+                        }
+                        document.getElementById('id_master').removeAttribute('required');
+                    ">
                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.master.label }}</label>
-                        {{ form.master }}
+
+                        <!-- Hidden Original Select -->
+                        <div class="hidden">
+                            {{ form.master }}
+                        </div>
+
+                        <!-- Custom Searchable Dropdown -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                            >
+                                <span x-text="selected ? selected.text : 'Stammdaten auswählen...'" class="truncate"></span>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
+                            >
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        x-model="search"
+                                        @click.stop
+                                        placeholder="Stammdaten suchen..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+
+                                <!-- Options List -->
+                                <div class="overflow-y-auto max-h-64">
+                                    <template x-for="master in masters.filter(m => m.text.toLowerCase().includes(search.toLowerCase()))" :key="master.value">
+                                        <button
+                                            type="button"
+                                            @click="selected = master; document.getElementById('id_master').value = master.value; open = false"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                            :class="selected && selected.value === master.value ? 'bg-blue-100 font-medium' : ''"
+                                            x-text="master.text"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
                         {% if form.master.errors %}
                         <p class="mt-1 text-sm text-red-600">{{ form.master.errors.0 }}</p>
                         {% endif %}
@@ -67,15 +195,86 @@
                         {% endif %}
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Inventarnummer</label>
+                    <!-- Inventarnummern mit Plus-Button -->
+                    <div x-data="{
+                        additionalNumbers: [],
+                        init() {
+                            const hiddenField = document.getElementById('id_additional_inventory_numbers');
+                            if (hiddenField && hiddenField.value) {
+                                try {
+                                    this.additionalNumbers = JSON.parse(hiddenField.value) || [];
+                                } catch(e) {
+                                    this.additionalNumbers = [];
+                                }
+                            }
+                        },
+                        addNumber() {
+                            this.additionalNumbers.push({ number: '', description: '' });
+                            this.updateHiddenField();
+                        },
+                        removeNumber(index) {
+                            this.additionalNumbers.splice(index, 1);
+                            this.updateHiddenField();
+                        },
+                        updateHiddenField() {
+                            document.getElementById('id_additional_inventory_numbers').value = JSON.stringify(this.additionalNumbers);
+                        }
+                    }">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-sm font-medium text-gray-700">Inventarnummer</label>
+                            <button
+                                type="button"
+                                @click="addNumber()"
+                                class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                                title="Weitere Inventarnummer hinzufügen"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Inv.Nr.
+                            </button>
+                        </div>
                         {{ form.inventory_number }}
+                        {{ form.additional_inventory_numbers }}
                         {% if form.inventory_number.errors %}
                         <p class="mt-1 text-sm text-red-600">{{ form.inventory_number.errors.0 }}</p>
                         {% endif %}
-                        {% if form.inventory_number.help_text %}
-                        <p class="mt-1 text-sm text-gray-500">{{ form.inventory_number.help_text }}</p>
-                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">Haupt-Inventarnummer des Geräts</p>
+
+                        <!-- Zusätzliche Inventarnummern -->
+                        <template x-for="(item, index) in additionalNumbers" :key="index">
+                            <div class="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-medium text-gray-500">Zusätzliche Inv.Nr. <span x-text="index + 1"></span></span>
+                                    <button
+                                        type="button"
+                                        @click="removeNumber(index)"
+                                        class="text-red-500 hover:text-red-700"
+                                        title="Entfernen"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input
+                                        type="text"
+                                        x-model="item.number"
+                                        @input="updateHiddenField()"
+                                        placeholder="Inventarnummer"
+                                        class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                    <input
+                                        type="text"
+                                        x-model="item.description"
+                                        @input="updateHiddenField()"
+                                        placeholder="Bezeichnung (z.B. Akku, Modul)"
+                                        class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    >
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
                     <div>

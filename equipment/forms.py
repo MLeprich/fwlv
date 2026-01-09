@@ -237,6 +237,7 @@ class EquipmentDeviceInstanceForm(forms.ModelForm):
         fields = [
             'master',
             'inventory_number',
+            'additional_inventory_numbers',
             'serial_number',
             'location',
             'assigned_vehicle',
@@ -267,6 +268,7 @@ class EquipmentDeviceInstanceForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500',
                 'placeholder': 'z.B. P-2025-042 oder G-2025-015'
             }),
+            'additional_inventory_numbers': forms.HiddenInput(),
             'serial_number': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500',
                 'placeholder': 'Seriennummer des Herstellers'

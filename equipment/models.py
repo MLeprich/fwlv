@@ -387,6 +387,14 @@ class EquipmentDeviceInstance(models.Model):
         help_text=_('Eindeutige Herstellernummer')
     )
 
+    # Zusätzliche Inventarnummern für Module/Komponenten
+    additional_inventory_numbers = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_('Zusätzliche Inventarnummern'),
+        help_text=_('Inventarnummern für Module/Komponenten dieses Geräts')
+    )
+
     # Lagerort
     location = models.ForeignKey(
         'locations.Location',
