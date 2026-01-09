@@ -415,6 +415,39 @@ def global_search_view(request):
     except Exception as e:
         logger.error(f"Error searching medical items: {e}")
 
+    # 2b. MEDICAL DEVICES - Medizintechnik Geräte-Instanzen durchsuchen (inkl. zusätzliche Inv.Nr.)
+    try:
+        from medical.models import MedicalDeviceInstance
+        medical_devices = MedicalDeviceInstance.objects.filter(
+            Q(inventory_number__icontains=query) |
+            Q(serial_number__icontains=query) |
+            Q(master__name__icontains=query) |
+            Q(additional_inventory_numbers__icontains=query)  # Durchsucht auch zusätzliche Inventarnummern
+        ).filter(is_active=True).select_related('master', 'location')[:max_results_per_type]
+
+        for device in medical_devices:
+            description_parts = [f'Inv: {device.inventory_number}']
+            if device.serial_number:
+                description_parts.append(f'SN: {device.serial_number}')
+            if device.location:
+                description_parts.append(device.location.name)
+            # Prüfe ob Match in zusätzlichen Inventarnummern
+            if device.additional_inventory_numbers:
+                for add_inv in device.additional_inventory_numbers:
+                    if query.lower() in add_inv.get('number', '').lower():
+                        description_parts.append(f"+ {add_inv.get('number')}")
+                        break
+
+            results.append({
+                'type': 'medical_device',
+                'title': f'{device.master.name}',
+                'description': 'Medizintechnik Gerät - ' + ' • '.join(description_parts),
+                'url': f'/medical/devices/{device.id}/',
+                'icon': '🏥'
+            })
+    except Exception as e:
+        logger.error(f"Error searching medical devices: {e}")
+
     # 3. VEHICLES - Fahrzeuge durchsuchen
     try:
         from vehicles.models import Vehicle
@@ -640,13 +673,14 @@ def global_search_view(request):
     except Exception as e:
         logger.error(f"Error searching equipment items: {e}")
 
-    # 8b. EQUIPMENT DEVICES - Ausrüstung Geräte-Instanzen durchsuchen (für Barcode-Scan)
+    # 8b. EQUIPMENT DEVICES - Ausrüstung Geräte-Instanzen durchsuchen (inkl. zusätzliche Inv.Nr.)
     try:
         from equipment.models import EquipmentDeviceInstance
         equipment_devices = EquipmentDeviceInstance.objects.filter(
             Q(inventory_number__icontains=query) |
             Q(serial_number__icontains=query) |
-            Q(master__name__icontains=query)
+            Q(master__name__icontains=query) |
+            Q(additional_inventory_numbers__icontains=query)  # Durchsucht auch zusätzliche Inventarnummern
         ).filter(is_active=True).select_related('master', 'location')[:max_results_per_type]
 
         for device in equipment_devices:
@@ -655,6 +689,12 @@ def global_search_view(request):
                 description_parts.append(f'SN: {device.serial_number}')
             if device.location:
                 description_parts.append(device.location.name)
+            # Prüfe ob Match in zusätzlichen Inventarnummern
+            if device.additional_inventory_numbers:
+                for add_inv in device.additional_inventory_numbers:
+                    if query.lower() in add_inv.get('number', '').lower():
+                        description_parts.append(f"+ {add_inv.get('number')}")
+                        break
 
             results.append({
                 'type': 'equipment_device',
@@ -942,13 +982,19 @@ def barcode_scan_view(request):
     except Exception as e:
         logger.debug(f"Medical Master search error: {e}")
 
-    # Medical Devices
+    # Medical Devices (inkl. zusätzliche Inventarnummern)
     try:
         from medical.models import MedicalDeviceInstance
+        # Erst nach Haupt-Inventarnummer und Seriennummer suchen
         items = MedicalDeviceInstance.objects.filter(
             Q(inventory_number__iexact=scanned_value) |
             Q(serial_number__iexact=scanned_value)
         )[:1]
+        # Falls nicht gefunden, in zusätzlichen Inventarnummern suchen
+        if not items.exists():
+            items = MedicalDeviceInstance.objects.filter(
+                additional_inventory_numbers__icontains=scanned_value
+            )[:1]
         for item in items:
             found_items.append({
                 'url': f'/medical/devices/{item.pk}/',
@@ -1005,13 +1051,19 @@ def barcode_scan_view(request):
     except Exception as e:
         logger.debug(f"Equipment Master search error: {e}")
 
-    # Equipment Devices
+    # Equipment Devices (inkl. zusätzliche Inventarnummern)
     try:
         from equipment.models import EquipmentDeviceInstance
+        # Erst nach Haupt-Inventarnummer und Seriennummer suchen
         items = EquipmentDeviceInstance.objects.filter(
             Q(inventory_number__iexact=scanned_value) |
             Q(serial_number__iexact=scanned_value)
         )[:1]
+        # Falls nicht gefunden, in zusätzlichen Inventarnummern suchen
+        if not items.exists():
+            items = EquipmentDeviceInstance.objects.filter(
+                additional_inventory_numbers__icontains=scanned_value
+            )[:1]
         for item in items:
             found_items.append({
                 'url': f'/equipment/device/{item.pk}/',
