@@ -54,6 +54,10 @@ class EquipmentItemMasterForm(forms.ModelForm):
         # Hersteller-Textfeld ausblenden (wird durch Select ersetzt)
         self.fields['manufacturer'].widget = forms.HiddenInput()
 
+        # Felder mit Model-Defaults als nicht-erforderlich markieren
+        self.fields['power_source'].required = False
+        self.fields['unit'].required = False
+
         # Wenn bereits ein Hersteller gesetzt ist, versuche ihn im Dropdown vorzuselektieren
         if self.instance.pk and self.instance.manufacturer:
             try:

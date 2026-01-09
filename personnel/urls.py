@@ -20,6 +20,12 @@ urlpatterns = [
     path('persons/<int:pk>/edit/', views.PersonUpdateView.as_view(), name='update'),
     path('persons/<int:pk>/delete/', views.PersonDeleteView.as_view(), name='delete'),
 
+    # Aliase für personnel_* URLs (Abwärtskompatibilität)
+    path('personnel/', views.PersonListView.as_view(), name='personnel_list'),
+    path('personnel/<int:pk>/', views.PersonDetailView.as_view(), name='personnel_detail'),
+    path('personnel/create/', views.PersonCreateView.as_view(), name='personnel_create'),
+    path('personnel/<int:pk>/edit/', views.PersonUpdateView.as_view(), name='personnel_update'),
+
     # Qualification URLs
     path('persons/<int:person_pk>/qualifications/add/', views.QualificationCreateView.as_view(), name='qualification_create'),
     path('qualifications/', views.qualifications_overview, name='qualifications_overview'),

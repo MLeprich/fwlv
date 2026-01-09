@@ -297,6 +297,11 @@ class WorkshopItemMasterForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Felder mit Model-Defaults als nicht-erforderlich markieren
+        self.fields['item_type'].required = False
+
 
 class WorkshopToolInstanceForm(forms.ModelForm):
     """Form für Werkzeug-Instanzen"""

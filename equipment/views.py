@@ -256,6 +256,12 @@ class EquipmentMasterCreateView(LoginRequiredMixin, PermissionRequiredMixin, Cre
     template_name = 'equipment/master_form.html'
     permission_required = 'equipment.add_equipmentitemmaster'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Neue Artikel-Stammdaten anlegen')
+        context['submit_text'] = _('Speichern')
+        return context
+
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
@@ -272,6 +278,12 @@ class EquipmentMasterUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Upd
     form_class = EquipmentItemMasterForm
     template_name = 'equipment/master_form.html'
     permission_required = 'equipment.change_equipmentitemmaster'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Artikel-Stammdaten bearbeiten')
+        context['submit_text'] = _('Änderungen speichern')
+        return context
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user

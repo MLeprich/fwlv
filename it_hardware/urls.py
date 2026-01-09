@@ -37,6 +37,11 @@ urlpatterns = [
     path('items/<int:pk>/edit/', views.ITHardwareItemUpdateView.as_view(), name='item_update'),
     path('items/<int:pk>/delete/', views.ITHardwareItemDeleteView.as_view(), name='item_delete'),
 
+    # Batch-Aliase (für Abwärtskompatibilität - zeigen auf Item-Views)
+    path('batch/create/', views.ITHardwareItemCreateView.as_view(), name='batch_create'),
+    path('batch/<int:pk>/', views.ITHardwareItemDetailView.as_view(), name='batch_detail'),
+    path('batch/<int:pk>/edit/', views.ITHardwareItemUpdateView.as_view(), name='batch_edit'),
+
     # Stock Movements
     path('movements/', views.ITHardwareStockMovementListView.as_view(), name='movement_list'),
     path('movements/create/', views.ITHardwareStockMovementCreateView.as_view(), name='movement_create'),

@@ -20,7 +20,7 @@
             </li>
         </ol>
         <div class="flex items-center gap-2">
-            <a href="{% url 'locations:update' location.pk %}" class="px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded text-sm font-medium">
+            <a href="{% url 'locations:edit' location.pk %}" class="px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded text-sm font-medium">
                 ✏️ Bearbeiten
             </a>
             <a href="{% url 'locations:delete' location.pk %}" class="px-3 py-1.5 text-red-700 hover:bg-red-50 rounded text-sm font-medium">
@@ -99,7 +99,7 @@
                         :class="activeTab === 'children' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                         class="flex-shrink-0 px-6 py-3 text-sm font-medium border-b-2 transition-colors"
                     >
-                        🗂️ Unter-Lagerorte ({{ children.count }})
+                        🗂️ Unter-Lagerorte ({{ descendants.count }})
                     </button>
                     <button
                         @click="activeTab = 'items'"
@@ -171,40 +171,123 @@
                     </div>
 
                     <!-- Children Tab -->
-                    <div x-show="activeTab === 'children'">
-                        {% if children %}
-                        <div class="space-y-3">
-                            {% for child in children %}
-                            <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-2xl">
-                                        {% if child.location_type == 'site' %}🏛️
-                                        {% elif child.location_type == 'building' %}🏢
-                                        {% elif child.location_type == 'area' %}🌳
-                                        {% elif child.location_type == 'room' %}🚪
-                                        {% elif child.location_type == 'parking_spot' %}🅿️
-                                        {% elif child.location_type == 'rack' %}📚
-                                        {% elif child.location_type == 'cabinet' %}🗄️
-                                        {% elif child.location_type == 'shelf' %}📋
-                                        {% elif child.location_type == 'drawer' %}📥
-                                        {% elif child.location_type == 'box' %}📦
-                                        {% elif child.location_type == 'vehicle' %}🚗
-                                        {% elif child.location_type == 'container' %}📦
-                                        {% else %}📍
-                                        {% endif %}
-                                    </span>
-                                    <div>
-                                        <a href="{% url 'locations:detail' child.pk %}" class="font-medium text-gray-900 hover:text-blue-600">
-                                            {{ child.name }}
-                                        </a>
-                                        <p class="text-xs text-gray-500">{{ child.code }} • {{ child.get_location_type_display }}</p>
-                                    </div>
-                                </div>
-                                <a href="{% url 'locations:detail' child.pk %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                                    Details →
-                                </a>
-                            </div>
+                    <div x-show="activeTab === 'children'" x-data="{
+                        searchQuery: '',
+                        selectedType: '',
+                        items: [
+                            {% for item in descendants %}
+                            {
+                                id: {{ item.pk }},
+                                name: '{{ item.name|escapejs }}',
+                                code: '{{ item.code|escapejs }}',
+                                type: '{{ item.location_type }}',
+                                typeDisplay: '{{ item.get_location_type_display|escapejs }}',
+                                level: {{ item.level }},
+                                url: '{% url "locations:detail" item.pk %}'
+                            }{% if not forloop.last %},{% endif %}
                             {% endfor %}
+                        ],
+                        get filteredItems() {
+                            return this.items.filter(item => {
+                                const matchesSearch = this.searchQuery === '' ||
+                                    item.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                                    item.code.toLowerCase().includes(this.searchQuery.toLowerCase());
+                                const matchesType = this.selectedType === '' || item.type === this.selectedType;
+                                return matchesSearch && matchesType;
+                            });
+                        },
+                        getIcon(type) {
+                            const icons = {
+                                'site': '🏛️', 'building': '🏢', 'area': '🌳', 'room': '🚪',
+                                'parking_spot': '🅿️', 'rack': '📚', 'cabinet': '🗄️', 'shelf': '📋',
+                                'drawer': '📥', 'box': '📦', 'vehicle': '🚗', 'container': '📦'
+                            };
+                            return icons[type] || '📍';
+                        },
+                        getIndent(level) {
+                            const baseLevel = {{ location.level }};
+                            return (level - baseLevel - 1) * 1.5;
+                        }
+                    }">
+                        {% if descendants %}
+                        <!-- Filter-Leiste -->
+                        <div class="mb-4 flex flex-col sm:flex-row gap-3">
+                            <!-- Suchfeld -->
+                            <div class="flex-1">
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                        </svg>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        x-model="searchQuery"
+                                        placeholder="Suche nach Name oder Code..."
+                                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                </div>
+                            </div>
+                            <!-- Kategorie-Filter -->
+                            <div class="sm:w-56">
+                                <select
+                                    x-model="selectedType"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="">Alle Kategorien</option>
+                                    {% for value, label in location_types %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <!-- Reset-Button -->
+                            <button
+                                @click="searchQuery = ''; selectedType = ''"
+                                x-show="searchQuery || selectedType"
+                                class="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
+                            >
+                                Filter zurücksetzen
+                            </button>
+                        </div>
+
+                        <!-- Ergebnis-Info -->
+                        <div class="mb-3 text-sm text-gray-500" x-show="searchQuery || selectedType">
+                            <span x-text="filteredItems.length"></span> von <span x-text="items.length"></span> Unter-Lagerorten
+                        </div>
+
+                        <!-- Hierarchische Liste -->
+                        <div class="space-y-2">
+                            <template x-for="item in filteredItems" :key="item.id">
+                                <div
+                                    class="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border-l-4 border-transparent hover:border-blue-400"
+                                    :style="{ marginLeft: getIndent(item.level) + 'rem' }"
+                                >
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xl" x-text="getIcon(item.type)"></span>
+                                        <div>
+                                            <a :href="item.url" class="font-medium text-gray-900 hover:text-blue-600" x-text="item.name"></a>
+                                            <p class="text-xs text-gray-500">
+                                                <span x-text="item.code"></span> • <span x-text="item.typeDisplay"></span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <a :href="item.url" class="text-blue-600 hover:text-blue-800 text-sm font-medium whitespace-nowrap">
+                                        Details →
+                                    </a>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Keine Ergebnisse -->
+                        <div x-show="filteredItems.length === 0 && (searchQuery || selectedType)" class="text-center py-8">
+                            <div class="text-4xl mb-4">🔍</div>
+                            <p class="text-gray-600">Keine Unter-Lagerorte gefunden</p>
+                            <button
+                                @click="searchQuery = ''; selectedType = ''"
+                                class="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                                Filter zurücksetzen
+                            </button>
                         </div>
                         {% else %}
                         <div class="text-center py-12">
@@ -254,7 +337,7 @@
                     <a href="{% url 'locations:create' %}?parent={{ location.pk }}" class="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium text-center">
                         ➕ Unter-Lagerort anlegen
                     </a>
-                    <a href="{% url 'locations:update' location.pk %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium text-center">
+                    <a href="{% url 'locations:edit' location.pk %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium text-center">
                         ✏️ Bearbeiten
                     </a>
                     <button class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">

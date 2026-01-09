@@ -90,6 +90,12 @@ class ITHardwareItemMasterForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Felder mit Model-Defaults als nicht-erforderlich markieren
+        self.fields['hardware_type'].required = False
+        self.fields['depreciation_years'].required = False
+
 
 class ITHardwareDeviceInstanceForm(forms.ModelForm):
     """Form für IT-Hardware Gerät (Einzelgerät mit Asset-Tag)"""

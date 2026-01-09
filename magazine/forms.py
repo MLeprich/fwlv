@@ -178,6 +178,13 @@ class MagazineItemMasterForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Felder mit Model-Defaults als nicht-erforderlich markieren
+        self.fields['item_type'].required = False
+        self.fields['unit'].required = False
+        self.fields['hazard_class'].required = False
+
     def clean(self):
         cleaned_data = super().clean()
 

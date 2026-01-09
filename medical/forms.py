@@ -312,6 +312,13 @@ class MedicalItemMasterForm(forms.ModelForm):
             'notes': 'Notizen',
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Felder mit Model-Defaults als nicht-erforderlich markieren
+        self.fields['item_type'].required = False
+        self.fields['unit'].required = False
+        self.fields['storage_condition'].required = False
+
     def clean(self):
         cleaned_data = super().clean()
         requires_cold_chain = cleaned_data.get('requires_cold_chain')

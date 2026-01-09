@@ -404,3 +404,9 @@ class ClothingItemMasterForm(forms.ModelForm):
             'norm_standard': 'Relevante Normen und Standards',
             'inspection_interval_months': 'Intervall in Monaten für wiederkehrende Prüfungen',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Felder mit Model-Defaults als nicht-erforderlich markieren
+        self.fields['category'].required = False
+        self.fields['protection_level'].required = False

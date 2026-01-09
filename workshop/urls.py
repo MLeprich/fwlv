@@ -41,6 +41,11 @@ urlpatterns = [
     path('tool/<int:pk>/', views.WorkshopToolDetailView.as_view(), name='tool_detail'),
     path('tool/<int:pk>/edit/', views.WorkshopToolUpdateView.as_view(), name='tool_update'),
 
+    # Device-Aliase (für Abwärtskompatibilität - zeigen auf Tool-Views)
+    path('device/create/', views.WorkshopToolCreateView.as_view(), name='device_create'),
+    path('device/<int:pk>/', views.WorkshopToolDetailView.as_view(), name='device_detail'),
+    path('device/<int:pk>/edit/', views.WorkshopToolUpdateView.as_view(), name='device_edit'),
+
     # Workshop Item Verwaltung (Legacy)
     path('items/', views.WorkshopItemListView.as_view(), name='item_list'),
     path('item/<int:pk>/', views.WorkshopItemDetailView.as_view(), name='item_detail'),
@@ -49,6 +54,11 @@ urlpatterns = [
     path('item/<int:pk>/delete/', views.WorkshopItemDeleteView.as_view(), name='item_delete'),
     path('item/<int:pk>/qrcode/', views.item_qrcode_view, name='item_qrcode'),
     path('item/<int:pk>/barcode/', views.item_barcode_view, name='item_barcode'),
+
+    # Batch-Aliase (für Abwärtskompatibilität - zeigen auf Item-Views)
+    path('batch/create/', views.WorkshopItemCreateView.as_view(), name='batch_create'),
+    path('batch/<int:pk>/', views.WorkshopItemDetailView.as_view(), name='batch_detail'),
+    path('batch/<int:pk>/edit/', views.WorkshopItemUpdateView.as_view(), name='batch_edit'),
 
     # Lagerbewegungen
     path('movement/', views.WorkshopStockMovementListView.as_view(), name='movement_list'),

@@ -169,6 +169,8 @@ class DivingItemMasterForm(forms.ModelForm):
         # Aktualisiere die QuerySets um sicherzustellen, dass sie die neuesten Daten haben
         self.fields['equipment_type'].queryset = EquipmentType.objects.filter(is_active=True).order_by('sort_order', 'name')
         self.fields['bottle_type'].queryset = BottleType.objects.filter(is_active=True).order_by('sort_order', 'name')
+        # Felder mit Model-Defaults als nicht-erforderlich markieren
+        self.fields['service_interval_months'].required = False
 
 
 class DivingDeviceInstanceForm(forms.ModelForm):

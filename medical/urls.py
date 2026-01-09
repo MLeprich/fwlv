@@ -39,8 +39,12 @@ urlpatterns = [
     path('devices/print-labels/', views.device_print_labels, name='device_print_labels'),
 
     # ========================================================================
-    # LEGACY URLs ENTFERNT - Verwenden Sie das neue Master-System
+    # MEDICATION URLs (Aliase für Master-System - Abwärtskompatibilität)
     # ========================================================================
+    path('medications/', views.MedicalItemMasterListView.as_view(), name='medication_list'),
+    path('medications/create/', views.MedicalItemMasterCreateView.as_view(), name='medication_create'),
+    path('medications/<int:pk>/', views.MedicalItemMasterDetailView.as_view(), name='medication_detail'),
+    path('medications/<int:pk>/edit/', views.MedicalItemMasterUpdateView.as_view(), name='medication_update'),
 
     # BTM-Bereich
     path('btm/', views.BTMItemListView.as_view(), name='btm_list'),
@@ -80,10 +84,12 @@ urlpatterns = [
 
     # Stock Movements (Lagerbewegungen)
     path('movements/', views.StockMovementListView.as_view(), name='stock_movements'),
+    path('movements/list/', views.StockMovementListView.as_view(), name='stock_movement_list'),  # Alias
     path('movements/create/', views.StockMovementCreateView.as_view(), name='stock_movement_create'),
     path('movements/incoming/', views.QuickIncomingView.as_view(), name='quick_incoming'),
     path('movements/outgoing/', views.QuickOutgoingView.as_view(), name='quick_outgoing'),
     path('movements/disposal/', views.DisposalView.as_view(), name='disposal'),
+    path('movements/disposal-form/', views.DisposalView.as_view(), name='disposal_form'),  # Alias
     path('movements/<int:pk>/', views.StockMovementDetailView.as_view(), name='stock_movement_detail'),
 
     # Batches

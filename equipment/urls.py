@@ -45,7 +45,15 @@ urlpatterns = [
     path('item/<int:pk>/', views.EquipmentItemDetailView.as_view(), name='item_detail'),
     path('item/create/', views.EquipmentItemCreateView.as_view(), name='item_create'),
     path('item/<int:pk>/update/', views.EquipmentItemUpdateView.as_view(), name='item_update'),
+    path('item/<int:pk>/edit/', views.EquipmentItemUpdateView.as_view(), name='item_edit'),  # Alias für item_update
     path('item/<int:pk>/delete/', views.EquipmentItemDeleteView.as_view(), name='item_delete'),
+
+    # Equipment-Verwaltung (Aliase für Abwärtskompatibilität mit equipment_*.html Templates)
+    path('equipment/', views.EquipmentItemListView.as_view(), name='equipment_list'),
+    path('equipment/<int:pk>/', views.EquipmentItemDetailView.as_view(), name='equipment_detail'),
+    path('equipment/create/', views.EquipmentItemCreateView.as_view(), name='equipment_create'),
+    path('equipment/<int:pk>/update/', views.EquipmentItemUpdateView.as_view(), name='equipment_update'),
+    path('equipment/<int:pk>/delete/', views.EquipmentItemDeleteView.as_view(), name='equipment_delete'),
 
     # Lagerbewegungen
     path('movement/', views.EquipmentStockMovementListView.as_view(), name='movement_list'),
@@ -80,6 +88,12 @@ urlpatterns = [
     # Prüfprotokolle API
     path('api/inspection-types-by-device/', views.get_inspection_types_by_device, name='api_inspection_types_by_device'),
     path('api/inspection-checklist/', views.get_inspection_type_checklist, name='api_inspection_checklist'),
+
+    # Prüfungszuweisungen (für Geräte)
+    path('inspection-assignments/', views.EquipmentInspectionAssignmentListView.as_view(), name='inspection_assignment_list'),
+    path('inspection-assignments/create/', views.EquipmentInspectionAssignmentCreateView.as_view(), name='inspection_assignment_create'),
+    path('inspection-assignments/<int:pk>/edit/', views.EquipmentInspectionAssignmentUpdateView.as_view(), name='inspection_assignment_edit'),
+    path('inspection-assignments/<int:pk>/delete/', views.EquipmentInspectionAssignmentDeleteView.as_view(), name='inspection_assignment_delete'),
 
     # Prüfprotokolle
     path('inspection-records/', views.InspectionRecordListView.as_view(), name='inspection_record_list'),

@@ -67,6 +67,12 @@ class WorkshopMasterCreateView(LoginRequiredMixin, PermissionRequiredMixin, Crea
     template_name = 'workshop/master_form.html'
     permission_required = 'workshop.add_workshopitemmaster'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Neue Werkstatt-Stammdaten')
+        context['submit_text'] = _('Speichern')
+        return context
+
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
@@ -80,6 +86,12 @@ class WorkshopMasterUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Upda
     form_class = WorkshopItemMasterForm
     template_name = 'workshop/master_form.html'
     permission_required = 'workshop.change_workshopitemmaster'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Werkstatt-Stammdaten bearbeiten')
+        context['submit_text'] = _('Änderungen speichern')
+        return context
 
     def form_valid(self, form):
         messages.success(self.request, _('Stammdaten wurden erfolgreich aktualisiert.'))

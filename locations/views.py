@@ -13,7 +13,7 @@ from tablib import Dataset
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
-from .models import Location
+from .models import Location, LocationType
 from .forms import LocationForm
 from .resources import LocationResource
 
@@ -58,7 +58,12 @@ class LocationDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'locations'
+        # Alle Nachkommen hierarchisch (mit Level für Einrückung)
+        context['descendants'] = self.object.get_descendants()
+        # Direkte Kinder (für Abwärtskompatibilität)
         context['children'] = self.object.get_children()
+        # Location-Typen für Filter
+        context['location_types'] = LocationType.choices
         return context
 
 

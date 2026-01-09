@@ -34,7 +34,9 @@ urlpatterns = [
     path('device/<int:pk>/qrcode/', views.HeightRescueDeviceQRCodeView.as_view(), name='device_qrcode'),
     path('device/<int:pk>/barcode/', views.HeightRescueDeviceBarcodeView.as_view(), name='device_barcode'),
 
-    # LEGACY Item URLs ENTFERNT - Verwenden Sie Master/Device-System
+    # LEGACY Item URLs (Aliase für Abwärtskompatibilität - zeigen auf Device-Views)
+    path('items/', views.HeightRescueDeviceListView.as_view(), name='item_list'),
+    path('item/<int:pk>/', views.HeightRescueDeviceDetailView.as_view(), name='item_detail'),
 
     # Inspection Views
     path('inspections/due/', views.HeightRescueInspectionDueView.as_view(), name='inspection_due'),

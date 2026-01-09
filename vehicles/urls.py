@@ -47,7 +47,14 @@ urlpatterns = [
     # path('<int:pk>/handover/create/', views.HandoverCreateView.as_view(), name='handover_create'),
     # path('handover/<int:pk>/', views.HandoverDetailView.as_view(), name='handover_detail'),
 
-    # Manufacturers entfernt - verwende /organization/suppliers/ stattdessen
+    # Manufacturers (Aliase für Abwärtskompatibilität - zeigen auf Models)
+    path('manufacturers/', views.VehicleModelListView.as_view(), name='manufacturer_list'),
+    path('manufacturers/create/', views.VehicleModelCreateView.as_view(), name='manufacturer_create'),
+    path('manufacturers/<int:pk>/edit/', views.VehicleModelUpdateView.as_view(), name='manufacturer_update'),
+    path('manufacturers/<int:pk>/delete/', views.VehicleModelDeleteView.as_view(), name='manufacturer_delete'),
+
+    # Vehicle Detail Alias
+    path('vehicle/<int:pk>/', views.VehicleDetailView.as_view(), name='vehicle_detail'),
 
     # Models
     path('models/', views.VehicleModelListView.as_view(), name='model_list'),

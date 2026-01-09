@@ -187,6 +187,11 @@ class HeightRescueItemMasterForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Felder mit Model-Defaults als nicht-erforderlich markieren
+        self.fields['inspection_interval_months'].required = False
+
 
 class HeightRescueDeviceInstanceForm(forms.ModelForm):
     """Form für Höhenrettungsgerät-Instanz erstellen/bearbeiten"""
