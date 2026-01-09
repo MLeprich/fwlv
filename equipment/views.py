@@ -1317,6 +1317,13 @@ class InspectionRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, Cr
         )
         return super().form_valid(form)
 
+    def form_invalid(self, form):
+        # Debug: Zeige Formularfehler
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(self.request, f'{field}: {error}')
+        return super().form_invalid(form)
+
 
 class InspectionRecordDetailView(LoginRequiredMixin, DetailView):
     """Prüfprotokoll-Detailansicht"""

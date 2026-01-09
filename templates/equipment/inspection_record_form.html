@@ -31,6 +31,22 @@
         <form method="post" enctype="multipart/form-data" id="inspection_form">
             {% csrf_token %}
 
+            {% if form.errors %}
+            <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <h3 class="text-sm font-medium text-red-800 mb-2">Bitte korrigieren Sie folgende Fehler:</h3>
+                <ul class="list-disc list-inside text-sm text-red-700">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                        <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
             <div class="space-y-6">
                 <!-- Gerät auswählen (Searchable Dropdown) -->
                 <div class="p-4 bg-amber-50 border border-amber-200 rounded-lg"
