@@ -118,17 +118,94 @@
                     <p class="text-sm text-gray-600 mt-1">Welche Art von Inhalt soll der Hotspot haben?</p>
                 </div>
 
-                <!-- Checklist Template -->
-                <div class="mb-6">
+                <!-- Custom Checklist Editor -->
+                <div class="mb-6" x-data="checklistEditor()">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Checkliste
-                        {% if form.checklist_template.errors %}
-                            <span class="text-red-600 text-xs">{{ form.checklist_template.errors.0 }}</span>
-                        {% endif %}
+                        Benutzerdefinierte Checkliste
                     </label>
-                    {{ form.checklist_template }}
-                    <p class="text-sm text-gray-600 mt-1">Optional: Verknüpfen Sie eine Checkliste mit diesem Hotspot.</p>
+
+                    <!-- Hidden Field für JSON-Daten -->
+                    <input type="hidden" name="custom_checklist" x-ref="checklistInput" :value="JSON.stringify(items)">
+
+                    <!-- Checklist Items -->
+                    <div class="space-y-2 mb-4">
+                        <template x-for="(item, index) in items" :key="index">
+                            <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                                <span class="text-gray-400 cursor-move" title="Verschieben">☰</span>
+                                <input type="text"
+                                       x-model="item.name"
+                                       placeholder="Artikel-Name"
+                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                                <label class="flex items-center gap-1 text-sm text-gray-600 whitespace-nowrap">
+                                    <input type="checkbox" x-model="item.required" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                                    Pflicht
+                                </label>
+                                <button type="button"
+                                        @click="removeItem(index)"
+                                        class="text-red-500 hover:text-red-700 p-1"
+                                        title="Entfernen">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </template>
+
+                        <!-- Leere Liste Hinweis -->
+                        <div x-show="items.length === 0" class="text-center py-4 text-gray-500 text-sm bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                            Noch keine Einträge. Klicken Sie auf "+ Eintrag hinzufügen" um zu beginnen.
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button"
+                                @click="addItem()"
+                                class="inline-flex items-center gap-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Eintrag hinzufügen
+                        </button>
+
+                        <button type="button"
+                                @click="exportChecklist()"
+                                class="inline-flex items-center gap-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Export (JSON)
+                        </button>
+
+                        <label class="inline-flex items-center gap-1 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            Import (JSON)
+                            <input type="file"
+                                   accept=".json,application/json"
+                                   @change="importChecklist($event)"
+                                   class="hidden">
+                        </label>
+
+                        <button type="button"
+                                @click="clearAll()"
+                                x-show="items.length > 0"
+                                class="inline-flex items-center gap-1 px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            Alle löschen
+                        </button>
+                    </div>
+
+                    <p class="text-sm text-gray-600 mt-2">
+                        Erstellen Sie Ihre eigene Checkliste für diesen Hotspot. Sie können die Liste als JSON exportieren und später importieren.
+                    </p>
                 </div>
+
+                <!-- Optional: Verknüpfung mit Template (versteckt) -->
+                {{ form.checklist_template.as_hidden }}
 
                 <h2 class="text-xl font-bold text-gray-900 mb-4 mt-8">Position & Darstellung</h2>
 
@@ -371,11 +448,138 @@
                 <ul class="text-xs text-gray-700 space-y-1">
                     <li>• Verwenden Sie aussagekräftige Titel</li>
                     <li>• Fügen Sie Detailbilder für bessere Übersicht hinzu</li>
-                    <li>• Verknüpfen Sie Checklisten für Inventurprüfungen</li>
+                    <li>• Erstellen Sie individuelle Checklisten pro Hotspot</li>
                     <li>• Nutzen Sie Farben zur Kategorisierung</li>
                 </ul>
+            </div>
+
+            <!-- Checklist Help -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <h3 class="font-bold text-gray-900 mb-3 text-sm">Checklisten-Format</h3>
+                <p class="text-xs text-gray-600 mb-2">Das JSON-Format für Export/Import:</p>
+                <pre class="text-xs bg-gray-100 p-2 rounded overflow-x-auto">[
+  {"name": "Artikel 1", "required": true},
+  {"name": "Artikel 2", "required": false}
+]</pre>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function checklistEditor() {
+    // Bestehende Daten aus dem Formular laden
+    let initialData = [];
+    {% if object and object.custom_checklist %}
+    try {
+        initialData = {{ object.custom_checklist|safe }};
+    } catch(e) {
+        console.error('Error parsing custom_checklist:', e);
+        initialData = [];
+    }
+    {% endif %}
+
+    return {
+        items: initialData,
+
+        addItem() {
+            this.items.push({
+                name: '',
+                required: false
+            });
+        },
+
+        removeItem(index) {
+            this.items.splice(index, 1);
+        },
+
+        clearAll() {
+            if (confirm('Möchten Sie wirklich alle Einträge löschen?')) {
+                this.items = [];
+            }
+        },
+
+        exportChecklist() {
+            if (this.items.length === 0) {
+                alert('Die Checkliste ist leer. Fügen Sie erst Einträge hinzu.');
+                return;
+            }
+
+            // Nur Einträge mit Namen exportieren
+            const validItems = this.items.filter(item => item.name && item.name.trim());
+            if (validItems.length === 0) {
+                alert('Keine gültigen Einträge zum Exportieren gefunden.');
+                return;
+            }
+
+            const dataStr = JSON.stringify(validItems, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            // Dateiname mit Hotspot-Titel wenn verfügbar
+            const titleInput = document.querySelector('input[name="title"]');
+            const title = titleInput && titleInput.value ? titleInput.value.replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, '_') : 'checkliste';
+            a.download = `${title}_checkliste.json`;
+
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        },
+
+        importChecklist(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+
+                    // Validierung
+                    if (!Array.isArray(data)) {
+                        throw new Error('Die Datei muss ein JSON-Array enthalten.');
+                    }
+
+                    // Items validieren und bereinigen
+                    const validItems = data.map(item => ({
+                        name: String(item.name || '').trim(),
+                        required: Boolean(item.required)
+                    })).filter(item => item.name);
+
+                    if (validItems.length === 0) {
+                        throw new Error('Keine gültigen Einträge in der Datei gefunden.');
+                    }
+
+                    // Fragen ob ersetzen oder hinzufügen
+                    if (this.items.length > 0) {
+                        const action = confirm(
+                            `Es wurden ${validItems.length} Einträge gefunden.\n\n` +
+                            'OK = Bestehende Liste ersetzen\n' +
+                            'Abbrechen = Zur bestehenden Liste hinzufügen'
+                        );
+                        if (action) {
+                            this.items = validItems;
+                        } else {
+                            this.items = [...this.items, ...validItems];
+                        }
+                    } else {
+                        this.items = validItems;
+                    }
+
+                    alert(`${validItems.length} Einträge erfolgreich importiert.`);
+                } catch (error) {
+                    alert('Fehler beim Importieren: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+
+            // Input zurücksetzen für erneuten Import derselben Datei
+            event.target.value = '';
+        }
+    };
+}
+</script>
 {% endblock %}

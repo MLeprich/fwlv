@@ -1152,20 +1152,32 @@ class Vehicle360HotspotCreateView(LoginRequiredMixin, PermissionRequiredMixin, C
     permission_required = 'vehicle_handover.add_vehicle360hotspot'
 
     def form_valid(self, form):
+        # photo_360 aus URL setzen
+        form.instance.photo_360_id = self.kwargs['photo_360_pk']
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
-        
+
         response = super().form_valid(form)
-        
+
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
                 'hotspot_id': self.object.id,
                 'message': 'Hotspot wurde erstellt.'
             })
-        
+
         messages.success(self.request, _('Hotspot wurde erstellt.'))
         return response
+
+    def form_invalid(self, form):
+        # AJAX-Fehlerbehandlung
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors.as_json(),
+                'message': 'Bitte überprüfen Sie Ihre Eingaben.'
+            }, status=400)
+        return super().form_invalid(form)
 
     def get_success_url(self):
         return reverse('vehicle_handover:photo_360_editor', kwargs={'pk': self.object.photo_360_id})

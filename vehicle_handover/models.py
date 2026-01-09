@@ -948,6 +948,14 @@ class Vehicle360Hotspot(AuditedModel):
         verbose_name=_('Farbe')
     )
 
+    # Benutzerdefinierte Checkliste (JSON-Format)
+    custom_checklist = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_('Benutzerdefinierte Checkliste'),
+        help_text=_('Liste von Checklistenpunkten: [{"name": "Artikel", "required": true}, ...]')
+    )
+
     # Sortierung & Aktivität
     order = models.PositiveIntegerField(
         default=0,

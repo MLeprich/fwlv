@@ -478,23 +478,19 @@ class Vehicle360HotspotForm(forms.ModelForm):
     class Meta:
         model = Vehicle360Hotspot
         fields = [
-            'photo_360',
             'title',
             'description',
             'pitch',
             'yaw',
             'hotspot_type',
             'checklist_template',
+            'custom_checklist',
             'icon',
             'color',
-            'order',
             'is_active',
         ]
 
         widgets = {
-            'photo_360': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
-            }),
             'title': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
                 'placeholder': _('z.B. Schublade 1 - Sanitätsmaterial'),
@@ -524,6 +520,7 @@ class Vehicle360HotspotForm(forms.ModelForm):
             'checklist_template': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
             }),
+            'custom_checklist': forms.HiddenInput(),
             'icon': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
             }),
@@ -546,6 +543,7 @@ class Vehicle360HotspotForm(forms.ModelForm):
             'yaw': _('Yaw (Drehung)'),
             'hotspot_type': _('Typ'),
             'checklist_template': _('Checklisten-Vorlage'),
+            'custom_checklist': _('Benutzerdefinierte Checkliste'),
             'icon': _('Icon'),
             'color': _('Farbe'),
             'order': _('Reihenfolge'),

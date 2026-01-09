@@ -119,13 +119,14 @@
                         <div class="flex items-start justify-between mb-2">
                             <div class="flex items-center gap-2 flex-1">
                                 <span class="text-2xl">
-                                    {% if hotspot.icon == 'drawer' %}📦
-                                    {% elif hotspot.icon == 'cabinet' %}🗄️
-                                    {% elif hotspot.icon == 'box' %}📋
-                                    {% elif hotspot.icon == 'tool' %}🔧
-                                    {% elif hotspot.icon == 'medical' %}⚕️
-                                    {% elif hotspot.icon == 'fire' %}🔥
-                                    {% elif hotspot.icon == 'radio' %}📻
+                                    {% if hotspot.icon == 'marker' %}📍
+                                    {% elif hotspot.icon == 'drawer' %}🗄️
+                                    {% elif hotspot.icon == 'cabinet' %}🚪
+                                    {% elif hotspot.icon == 'box' %}📦
+                                    {% elif hotspot.icon == 'bag' %}🎒
+                                    {% elif hotspot.icon == 'toolbox' %}🧰
+                                    {% elif hotspot.icon == 'medical' %}🏥
+                                    {% elif hotspot.icon == 'fire' %}🧯
                                     {% elif hotspot.icon == 'equipment' %}⚙️
                                     {% else %}📍
                                     {% endif %}
@@ -215,14 +216,14 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Icon</label>
                     <select id="hotspot-icon" name="icon"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                        <option value="default">📍 Standard</option>
-                        <option value="drawer">📦 Schublade</option>
-                        <option value="cabinet">🗄️ Schrank</option>
-                        <option value="box">📋 Kiste</option>
-                        <option value="tool">🔧 Werkzeug</option>
-                        <option value="medical">⚕️ Medizin</option>
-                        <option value="fire">🔥 Brandschutz</option>
-                        <option value="radio">📻 Funk</option>
+                        <option value="marker">📍 Markierung</option>
+                        <option value="drawer">🗄️ Schublade</option>
+                        <option value="cabinet">🚪 Schrank</option>
+                        <option value="box">📦 Box/Kiste</option>
+                        <option value="bag">🎒 Tasche</option>
+                        <option value="toolbox">🧰 Werkzeugkasten</option>
+                        <option value="medical">🏥 Sanitätsmaterial</option>
+                        <option value="fire">🧯 Brandschutz</option>
                         <option value="equipment">⚙️ Ausrüstung</option>
                     </select>
                 </div>
@@ -231,12 +232,12 @@
                     <select id="hotspot-color" name="color"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                         <option value="blue">🔵 Blau</option>
-                        <option value="red">🔴 Rot</option>
                         <option value="green">🟢 Grün</option>
+                        <option value="red">🔴 Rot</option>
                         <option value="yellow">🟡 Gelb</option>
-                        <option value="purple">🟣 Lila</option>
                         <option value="orange">🟠 Orange</option>
-                        <option value="gray">⚫ Grau</option>
+                        <option value="purple">🟣 Lila</option>
+                        <option value="white">⚪ Weiß</option>
                     </select>
                 </div>
             </div>
@@ -496,28 +497,28 @@
     // Create HTML for hotspot marker
     function createHotspotHTML(hotspot) {
         const iconMap = {
-            'drawer': '📦',
-            'cabinet': '🗄️',
-            'box': '📋',
-            'tool': '🔧',
-            'medical': '⚕️',
-            'fire': '🔥',
-            'radio': '📻',
+            'marker': '📍',
+            'drawer': '🗄️',
+            'cabinet': '🚪',
+            'box': '📦',
+            'bag': '🎒',
+            'toolbox': '🧰',
+            'medical': '🏥',
+            'fire': '🧯',
             'equipment': '⚙️',
-            'default': '📍'
         };
 
         const colorMap = {
-            'red': '#EF4444',
             'blue': '#3B82F6',
             'green': '#10B981',
+            'red': '#EF4444',
             'yellow': '#F59E0B',
-            'purple': '#8B5CF6',
             'orange': '#F97316',
-            'gray': '#6B7280'
+            'purple': '#8B5CF6',
+            'white': '#FFFFFF'
         };
 
-        const icon = iconMap[hotspot.icon] || iconMap['default'];
+        const icon = iconMap[hotspot.icon] || iconMap['marker'];
         const bgColor = colorMap[hotspot.color] || colorMap['blue'];
 
         return `
