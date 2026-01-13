@@ -520,12 +520,28 @@ class PersonAssignmentListView(LoginRequiredMixin, ListView):
         # Personen mit Anzahl zugeordneter Items
         from django.db.models import Count
         from personnel.models import Person
+        from inventory_base.models import StockMovementType
 
         context['persons_with_items'] = Person.objects.filter(
             assigned_clothing__isnull=False
         ).annotate(
             item_count=Count('assigned_clothing')
         ).order_by('last_name', 'first_name')
+
+        # Mapping: item_id -> letzte Zuweisungsbewegung (OUTGOING)
+        items = self.get_queryset()
+        assignment_movements = {}
+        for item in items:
+            # Finde die letzte OUTGOING-Bewegung zu dieser Person für diesen Artikel
+            last_movement = ClothingStockMovement.objects.filter(
+                item=item,
+                person=item.assigned_to,
+                movement_type=StockMovementType.OUTGOING
+            ).order_by('-movement_date').first()
+            if last_movement:
+                assignment_movements[item.id] = last_movement.id
+
+        context['assignment_movements'] = assignment_movements
 
         return context
 
@@ -1401,3 +1417,42 @@ from .inventory_views import (
     ClothingInventoryProgressView,
     ClothingInventoryExportView,
 )
+
+
+# ============================================================================
+# AJAX ENDPOINTS
+# ============================================================================
+
+from django.http import JsonResponse
+
+@login_required
+def get_item_locations(request, pk):
+    """
+    AJAX-Endpoint: Gibt Lagerorte zurück, an denen der Artikel vorhanden ist
+    Wird verwendet um from_location im Bewegungsformular zu filtern
+    """
+    try:
+        item = get_object_or_404(ClothingItem, pk=pk)
+
+        # Der Artikel hat einen spezifischen Lagerort
+        locations = []
+        if item.location and item.quantity > 0:
+            locations.append({
+                'id': item.location.id,
+                'name': item.location.name,
+                'full_path': str(item.location),
+                'stock': float(item.quantity)
+            })
+
+        return JsonResponse({
+            'success': True,
+            'locations': locations,
+            'item_name': item.name,
+            'item_stock': float(item.quantity)
+        })
+    except Exception as e:
+        logger.error(f"Error getting item locations: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)

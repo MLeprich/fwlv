@@ -40,6 +40,93 @@ User = get_user_model()
 
 
 # ============================================================================
+# MIXINS
+# ============================================================================
+
+class NotOwnPersonMixin:
+    """
+    Mixin das verhindert, dass Benutzer ihre eigenen Personaldaten bearbeiten.
+
+    Benutzer mit der Gruppe "Personalverwalter" oder "Administrator" können
+    weiterhin alle Personaldaten bearbeiten.
+    """
+
+    # Gruppen, die auch eigene Daten bearbeiten dürfen
+    EXEMPT_GROUPS = {'Personalverwalter', 'Administrator'}
+
+    def get_target_person(self):
+        """
+        Ermittelt die Person, die bearbeitet werden soll.
+        Überschreiben für verschiedene View-Typen.
+        """
+        # Für CreateViews: person_pk aus URL
+        person_pk = self.kwargs.get('person_pk')
+        if person_pk:
+            return get_object_or_404(Person, pk=person_pk)
+
+        # Für Update/DeleteViews: person aus dem Objekt
+        if hasattr(self, 'get_object'):
+            obj = self.get_object()
+            if hasattr(obj, 'person'):
+                return obj.person
+
+        return None
+
+    def is_editing_own_person(self):
+        """
+        Prüft, ob der Benutzer seine eigenen Personaldaten bearbeitet.
+        """
+        target_person = self.get_target_person()
+        if not target_person:
+            return False
+
+        user = self.request.user
+
+        # Prüfen ob Benutzer eine verknüpfte Person hat
+        if not hasattr(user, 'person') or not user.person:
+            return False
+
+        return user.person.pk == target_person.pk
+
+    def is_exempt_user(self):
+        """
+        Prüft, ob der Benutzer berechtigt ist, eigene Daten zu bearbeiten.
+        """
+        user = self.request.user
+
+        # Superuser dürfen alles
+        if user.is_superuser:
+            return True
+
+        # Benutzer in den berechtigten Gruppen
+        user_groups = set(user.groups.values_list('name', flat=True))
+        return bool(user_groups & self.EXEMPT_GROUPS)
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Prüft vor der View-Verarbeitung die Berechtigung.
+        """
+        # Erst die Standard-Berechtigungen prüfen lassen
+        response = super().dispatch(request, *args, **kwargs)
+
+        # Falls wir hier sind, hat der User die Basis-Berechtigung
+        # Jetzt prüfen wir, ob er seine eigenen Daten bearbeiten will
+        if self.is_editing_own_person() and not self.is_exempt_user():
+            messages.error(
+                request,
+                _('Sie können Ihre eigenen Personaldaten nicht bearbeiten. '
+                  'Bitte wenden Sie sich an den Personalverwalter.')
+            )
+            # Zurück zur Personen-Detail-Seite
+            target_person = self.get_target_person()
+            if target_person:
+                return redirect('personnel:detail', pk=target_person.pk)
+            return redirect('personnel:list')
+
+        return response
+
+
+# ============================================================================
 # DASHBOARD
 # ============================================================================
 
@@ -1145,7 +1232,7 @@ class PersonDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
 # QUALIFICATION VIEWS
 # ============================================================================
 
-class QualificationCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class QualificationCreateView(LoginRequiredMixin, PermissionRequiredMixin, NotOwnPersonMixin, CreateView):
     """
     Qualifikation zu Person hinzufügen
     """
@@ -1206,7 +1293,7 @@ class QualificationCreateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
         return context
 
 
-class QualificationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class QualificationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, NotOwnPersonMixin, UpdateView):
     """
     Qualifikation bearbeiten
     """
@@ -1253,7 +1340,7 @@ class QualificationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Updat
         return context
 
 
-class QualificationDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class QualificationDeleteView(LoginRequiredMixin, PermissionRequiredMixin, NotOwnPersonMixin, DeleteView):
     """
     Qualifikation löschen
     """
@@ -2407,7 +2494,7 @@ def template_data_json(request, pk):
 # INSPECTION VIEWS
 # ============================================================================
 
-class InspectionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class InspectionCreateView(LoginRequiredMixin, PermissionRequiredMixin, NotOwnPersonMixin, CreateView):
     """
     Prüfung zu Person hinzufügen
     """
@@ -2468,7 +2555,7 @@ class InspectionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVi
         return context
 
 
-class InspectionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class InspectionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, NotOwnPersonMixin, UpdateView):
     """
     Prüfung bearbeiten
     """
@@ -2514,7 +2601,7 @@ class InspectionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVi
         return context
 
 
-class InspectionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class InspectionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, NotOwnPersonMixin, DeleteView):
     """
     Prüfung löschen
     """
@@ -2575,7 +2662,7 @@ def inspection_complete(request, pk):
 # DUTY HOURS VIEWS
 # ============================================================================
 
-class DutyHoursEntryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class DutyHoursEntryCreateView(LoginRequiredMixin, PermissionRequiredMixin, NotOwnPersonMixin, CreateView):
     """
     Pflichtstunden-Eintrag zu Person hinzufügen
     """
@@ -2635,7 +2722,7 @@ class DutyHoursEntryCreateView(LoginRequiredMixin, PermissionRequiredMixin, Crea
         return context
 
 
-class DutyHoursEntryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class DutyHoursEntryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, NotOwnPersonMixin, UpdateView):
     """
     Pflichtstunden-Eintrag bearbeiten
     """
@@ -2681,7 +2768,7 @@ class DutyHoursEntryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Upda
         return context
 
 
-class DutyHoursEntryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class DutyHoursEntryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, NotOwnPersonMixin, DeleteView):
     """
     Pflichtstunden-Eintrag löschen
     """

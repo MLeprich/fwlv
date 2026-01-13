@@ -1270,6 +1270,20 @@ class MedicalBatch(models.Model):
         verbose_name=_('Lieferanten-Chargen-Nr.')
     )
 
+    internal_order_number = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Interne Bestellnummer'),
+        help_text=_('Interne Bestellnummer aus dem eigenen System')
+    )
+
+    external_order_number = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Externe Bestellnummer'),
+        help_text=_('Bestellnummer des Lieferanten/Herstellers')
+    )
+
     # Temperatur-Logging (wichtig für Kühlkette)
     temperature_log = models.JSONField(
         default=dict,

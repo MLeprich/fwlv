@@ -11,6 +11,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
+from django.db.models import Q
 
 from permissions.constants import Roles, Modules, Actions, CustomPermissions
 
@@ -248,8 +249,9 @@ class Command(BaseCommand):
 
         for module in inventory_modules:
             module_perms = Permission.objects.filter(
-                content_type__app_label=module,
-                codename__startswith=('view_', 'add_')
+                content_type__app_label=module
+            ).filter(
+                Q(codename__startswith='view_') | Q(codename__startswith='add_')
             )
             for perm in module_perms:
                 group.permissions.add(perm)

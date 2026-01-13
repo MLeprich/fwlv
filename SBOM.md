@@ -87,7 +87,7 @@
 | python-magic | 0.4.27 | MIT | MIME Detection |
 | openpyxl | 3.1.5 | MIT | Excel-Dateien |
 | python-docx | 1.2.0 | MIT | Word-Dokumente |
-| PyPDF2 | 3.0.1 | BSD-3-Clause | PDF-Verarbeitung |
+| pypdf | 6.6.0 | BSD-3-Clause | PDF-Verarbeitung |
 | pdf2image | 1.17.0 | MIT | PDF zu Bild |
 | weasyprint | 66.0 | BSD-3-Clause | HTML zu PDF |
 | lxml | 6.0.2 | BSD-3-Clause | XML/HTML Parser |

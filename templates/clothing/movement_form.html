@@ -20,7 +20,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-6 py-6" x-data="movementForm()">
+<div class="max-w-4xl mx-auto px-6 py-6" x-data="movementForm()" x-init="init()" @item-selected.window="onItemSelected($event.detail.itemId)">
     <div class="bg-white rounded-lg shadow p-6">
         <h1 class="text-2xl font-bold text-gray-900 mb-6">📦 Neue Lagerbewegung erfassen</h1>
 
@@ -133,7 +133,7 @@
                                     <template x-for="item in items.filter(i => i.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
                                         <button
                                             type="button"
-                                            @click="selected = item; document.getElementById('id_item').value = item.value; open = false"
+                                            @click="selected = item; document.getElementById('id_item').value = item.value; open = false; $dispatch('item-selected', { itemId: item.value })"
                                             class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
                                             :class="selected && selected.value === item.value ? 'bg-blue-100 font-medium' : ''"
                                             x-text="item.text"
@@ -255,17 +255,8 @@
             <div class="border-b border-gray-200 pb-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">📍 Lagerorte</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Von Lagerort -->
-                    <div x-data="{ open: false, search: '', selected: null, locations: [] }" x-init="
-                        locations = Array.from(document.querySelectorAll('#id_from_location option')).map(opt => ({
-                            value: opt.value,
-                            text: opt.text
-                        })).filter(loc => loc.value);
-                        const currentValue = document.getElementById('id_from_location').value;
-                        if (currentValue) {
-                            selected = locations.find(loc => loc.value === currentValue);
-                        }
-                    
+                    <!-- Von Lagerort (gefiltert nach ausgewähltem Artikel) -->
+                    <div x-data="{ open: false, search: '', selected: null }" x-init="
                         // Remove required attribute from hidden select
                         document.getElementById('id_from_location').removeAttribute('required');
                     ">
@@ -282,8 +273,9 @@
                                 type="button"
                                 @click="open = !open"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
+                                :class="{ 'border-yellow-400 bg-yellow-50': selectedItemId && itemLocations.length === 0 }"
                             >
-                                <span x-text="selected ? selected.text : 'Von Lagerort auswählen...'" class="truncate"></span>
+                                <span x-text="selected ? selected.text : (selectedItemId && itemLocations.length === 0 ? 'Kein Bestand am Lagerort' : 'Von Lagerort auswählen...')" class="truncate"></span>
                                 <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
@@ -306,22 +298,46 @@
                                     >
                                 </div>
 
-                                <!-- Options List -->
+                                <!-- Options List - gefiltert nach Artikel -->
                                 <div class="overflow-y-auto max-h-64">
-                                    <template x-for="location in locations.filter(loc => loc.text.toLowerCase().includes(search.toLowerCase()))" :key="location.value">
-                                        <button
-                                            type="button"
-                                            @click="selected = location; document.getElementById('id_from_location').value = location.value; open = false"
-                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
-                                            :class="selected && selected.value === location.value ? 'bg-blue-100 font-medium' : ''"
-                                            x-text="location.text"
-                                        ></button>
+                                    <!-- Zeige gefilterte Lagerorte wenn Artikel ausgewählt -->
+                                    <template x-if="selectedItemId && itemLocations.length > 0">
+                                        <template x-for="location in itemLocations.filter(loc => loc.text.toLowerCase().includes(search.toLowerCase()))" :key="location.value">
+                                            <button
+                                                type="button"
+                                                @click="selected = location; document.getElementById('id_from_location').value = location.value; open = false"
+                                                class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                                :class="selected && selected.value === location.value ? 'bg-blue-100 font-medium' : ''"
+                                                x-text="location.text"
+                                            ></button>
+                                        </template>
+                                    </template>
+                                    <!-- Zeige alle Lagerorte wenn kein Artikel ausgewählt -->
+                                    <template x-if="!selectedItemId">
+                                        <template x-for="location in allLocations.filter(loc => loc.text.toLowerCase().includes(search.toLowerCase()))" :key="location.value">
+                                            <button
+                                                type="button"
+                                                @click="selected = location; document.getElementById('id_from_location').value = location.value; open = false"
+                                                class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
+                                                :class="selected && selected.value === location.value ? 'bg-blue-100 font-medium' : ''"
+                                                x-text="location.text"
+                                            ></button>
+                                        </template>
+                                    </template>
+                                    <!-- Hinweis wenn keine Lagerorte verfügbar -->
+                                    <template x-if="selectedItemId && itemLocations.length === 0">
+                                        <div class="px-4 py-3 text-sm text-yellow-700 bg-yellow-50">
+                                            Der ausgewählte Artikel hat keinen Bestand an einem Lagerort.
+                                        </div>
                                     </template>
                                 </div>
                             </div>
                         </div>
 
-                        <p class="mt-1 text-sm text-gray-500">Bei Warenausgang/Umlagerung</p>
+                        <p class="mt-1 text-sm text-gray-500">
+                            <span x-show="!selectedItemId">Wählen Sie zuerst einen Artikel aus</span>
+                            <span x-show="selectedItemId">Bei Warenausgang/Umlagerung</span>
+                        </p>
                         {% if form.from_location.errors %}
                         <p class="mt-1 text-sm text-red-600">{{ form.from_location.errors.0 }}</p>
                         {% endif %}
@@ -440,7 +456,60 @@
 <script>
 function movementForm() {
     return {
-        movementType: ''
+        movementType: '',
+        selectedItemId: null,
+        itemLocations: [],
+        allLocations: [],
+
+        init() {
+            // Speichere alle ursprünglichen Lagerorte
+            this.allLocations = Array.from(document.querySelectorAll('#id_from_location option')).map(opt => ({
+                value: opt.value,
+                text: opt.text
+            })).filter(loc => loc.value);
+        },
+
+        async onItemSelected(itemId) {
+            this.selectedItemId = itemId;
+
+            if (!itemId) {
+                // Kein Artikel ausgewählt - zeige alle Lagerorte
+                this.itemLocations = this.allLocations;
+                return;
+            }
+
+            try {
+                const response = await fetch(`/clothing/api/item/${itemId}/locations/`);
+                const data = await response.json();
+
+                if (data.success && data.locations.length > 0) {
+                    // Filtere auf Lagerorte wo der Artikel vorhanden ist
+                    this.itemLocations = data.locations.map(loc => ({
+                        value: String(loc.id),
+                        text: `${loc.full_path} (Bestand: ${loc.stock})`
+                    }));
+
+                    // Aktualisiere das versteckte Select-Element
+                    const selectEl = document.getElementById('id_from_location');
+                    selectEl.innerHTML = '<option value="">Von Lagerort auswählen...</option>';
+                    this.itemLocations.forEach(loc => {
+                        const option = document.createElement('option');
+                        option.value = loc.value;
+                        option.text = loc.text;
+                        selectEl.appendChild(option);
+                    });
+                } else {
+                    // Keine Lagerorte mit Bestand - leere Liste
+                    this.itemLocations = [];
+                    const selectEl = document.getElementById('id_from_location');
+                    selectEl.innerHTML = '<option value="">Kein Bestand vorhanden</option>';
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Lagerorte:', error);
+                // Bei Fehler: zeige alle Lagerorte
+                this.itemLocations = this.allLocations;
+            }
+        }
     };
 }
 </script>

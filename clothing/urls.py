@@ -35,6 +35,9 @@ urlpatterns = [
     path('movement/<int:pk>/', views.ClothingStockMovementDetailView.as_view(), name='movement_detail'),
     path('movement/create/', views.ClothingStockMovementCreateView.as_view(), name='movement_create'),
 
+    # AJAX Endpoints
+    path('api/item/<int:pk>/locations/', views.get_item_locations, name='api_item_locations'),
+
     # PSA-Übersicht
     path('psa/', views.PSAOverviewView.as_view(), name='psa_overview'),
     path('psa/expiring/', views.PSAExpiringView.as_view(), name='psa_expiring'),

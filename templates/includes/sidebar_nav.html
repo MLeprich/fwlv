@@ -62,7 +62,7 @@
             class="space-y-1 mt-1"
         >
             <!-- Rettungsdienst -->
-            {% if perms.medical.view_medication or perms.medical.view_medicalequipment %}
+            {% if perms.medical.view_medicalitem or perms.medical.view_medicalitemmaster %}
             <a
                 href="{% url 'medical:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
@@ -124,7 +124,7 @@
             {% endif %}
 
             <!-- Ausrüstung -->
-            {% if perms.equipment.view_equipmentitem %}
+            {% if perms.equipment.view_equipmentitem or perms.equipment.view_equipmentitemmaster %}
             <a
                 href="{% url 'equipment:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
@@ -142,7 +142,7 @@
             {% endif %}
 
             <!-- IT-Hardware -->
-            {% if modules.it_hardware_enabled and perms.it_hardware.view_hardware %}
+            {% if modules.it_hardware_enabled and perms.it_hardware.view_ithardwareitem or perms.it_hardware.view_ithardwareitemmaster %}
             <a
                 href="{% url 'it_hardware:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
@@ -160,7 +160,7 @@
             {% endif %}
 
             <!-- Höhenrettung -->
-            {% if perms.height_rescue.view_heightrescueitem %}
+            {% if perms.height_rescue.view_heightrescueitemmaster or perms.height_rescue.view_heightrescuedeviceinstance %}
             <a
                 href="{% url 'height_rescue:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
@@ -178,7 +178,7 @@
             {% endif %}
 
             <!-- Taucher -->
-            {% if perms.diving.view_divingitem %}
+            {% if perms.diving.view_divingitemmaster or perms.diving.view_divingdeviceinstance %}
             <a
                 href="{% url 'diving:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors

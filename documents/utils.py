@@ -14,16 +14,16 @@ def extract_text_from_pdf(file_path: str) -> Optional[str]:
     Extrahiert Text aus PDF-Dateien
 
     Verwendet:
-    1. PyPDF2 für Text-Layer (wenn vorhanden)
+    1. pypdf für Text-Layer (wenn vorhanden)
     2. pytesseract + pdf2image für OCR bei gescannten PDFs
     """
     text = ""
 
     try:
         # Versuch 1: Text-Layer extrahieren (schnell)
-        import PyPDF2
+        import pypdf
         with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
+            pdf_reader = pypdf.PdfReader(file)
             for page in pdf_reader.pages:
                 page_text = page.extract_text()
                 if page_text:

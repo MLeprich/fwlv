@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load clothing_filters %}
 
 {% block title %}Personenzuordnungen - Kleiderkammer - FLVS{% endblock %}
 
@@ -140,10 +141,21 @@
                                     <div class="text-sm font-medium text-gray-900">{{ item.location.name }}</div>
                                 </div>
                                 {% endif %}
-                                <a href="{% url 'clothing:item_detail' item.pk %}"
-                                   class="text-blue-600 hover:text-blue-900 text-sm font-medium">
-                                    Details →
+                                {% with movement_id=assignment_movements|get_item:item.pk %}
+                                {% if movement_id %}
+                                <a href="{% url 'clothing:movement_detail' movement_id %}"
+                                   class="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                                   title="Zuordnungs-Details anzeigen">
+                                    Ausgabe-Details →
                                 </a>
+                                {% else %}
+                                <a href="{% url 'clothing:item_detail' item.pk %}"
+                                   class="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                                   title="Artikel-Details anzeigen">
+                                    Artikel-Details →
+                                </a>
+                                {% endif %}
+                                {% endwith %}
                             </div>
                         </div>
                     </div>
@@ -242,9 +254,17 @@
                                 <div class="text-sm text-gray-900">{{ item.location.name|default:"–" }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="{% url 'clothing:item_detail' item.pk %}" class="text-blue-600 hover:text-blue-900">
-                                    Details
+                                {% with movement_id=assignment_movements|get_item:item.pk %}
+                                {% if movement_id %}
+                                <a href="{% url 'clothing:movement_detail' movement_id %}" class="text-blue-600 hover:text-blue-900" title="Zuordnungs-Details">
+                                    Ausgabe-Details
                                 </a>
+                                {% else %}
+                                <a href="{% url 'clothing:item_detail' item.pk %}" class="text-gray-500 hover:text-gray-700" title="Artikel-Details">
+                                    Artikel-Details
+                                </a>
+                                {% endif %}
+                                {% endwith %}
                             </td>
                         </tr>
                         {% empty %}

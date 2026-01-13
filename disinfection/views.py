@@ -4,7 +4,7 @@ Views für Desinfektions-Management
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
@@ -239,6 +239,7 @@ def item_list(request):
 
 
 @login_required
+@permission_required('disinfection.add_disinfectionitem', raise_exception=True)
 def item_create(request):
     """Neues Desinfektionsmittel erstellen"""
     from .forms import DisinfectionItemForm
@@ -266,6 +267,7 @@ def item_create(request):
 
 
 @login_required
+@permission_required('disinfection.change_disinfectionitem', raise_exception=True)
 def item_update(request, pk):
     """Desinfektionsmittel bearbeiten"""
     from .forms import DisinfectionItemForm
@@ -295,6 +297,7 @@ def item_update(request, pk):
 
 
 @login_required
+@permission_required('disinfection.delete_disinfectionitem', raise_exception=True)
 def item_delete(request, pk):
     """Desinfektionsmittel löschen (soft delete)"""
     item = get_object_or_404(DisinfectionItem, pk=pk)
@@ -350,6 +353,7 @@ def plan_list(request):
 
 
 @login_required
+@permission_required('disinfection.add_disinfectionplan', raise_exception=True)
 def plan_create(request):
     """Neuen Desinfektionsplan erstellen"""
     from .forms import DisinfectionPlanForm
@@ -381,6 +385,7 @@ def plan_create(request):
 
 
 @login_required
+@permission_required('disinfection.change_disinfectionplan', raise_exception=True)
 def plan_update(request, pk):
     """Desinfektionsplan bearbeiten"""
     from .forms import DisinfectionPlanForm
@@ -410,6 +415,7 @@ def plan_update(request, pk):
 
 
 @login_required
+@permission_required('disinfection.delete_disinfectionplan', raise_exception=True)
 def plan_delete(request, pk):
     """Desinfektionsplan löschen (soft delete)"""
     plan = get_object_or_404(DisinfectionPlan, pk=pk)
@@ -480,6 +486,7 @@ def log_list(request):
 
 
 @login_required
+@permission_required('disinfection.add_disinfectionlog', raise_exception=True)
 def log_create(request):
     """Neues Desinfektionsprotokoll erstellen"""
     from .forms import DisinfectionLogForm

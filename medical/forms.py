@@ -353,7 +353,7 @@ class MedicalBatchForm(forms.ModelForm):
 
     class Meta:
         model = MedicalBatch
-        fields = ['batch_number', 'received_date', 'expiry_date', 'quantity_received', 'location', 'supplier_batch_number', 'notes']
+        fields = ['batch_number', 'received_date', 'expiry_date', 'quantity_received', 'location', 'supplier_batch_number', 'internal_order_number', 'external_order_number', 'notes']
         widgets = {
             'batch_number': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
@@ -379,6 +379,14 @@ class MedicalBatchForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
                 'placeholder': 'Chargen-Nr. des Lieferanten'
             }),
+            'internal_order_number': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'z.B. BEST-2025-001'
+            }),
+            'external_order_number': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'z.B. Lieferanten-Bestellnr.'
+            }),
             'notes': forms.Textarea(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
                 'rows': 3,
@@ -392,6 +400,8 @@ class MedicalBatchForm(forms.ModelForm):
             'quantity_received': 'Eingangsmenge *',
             'location': 'Lagerort *',
             'supplier_batch_number': 'Lieferanten-Chargen-Nr.',
+            'internal_order_number': 'Interne Bestellnummer',
+            'external_order_number': 'Externe Bestellnummer',
             'notes': 'Notizen',
         }
 

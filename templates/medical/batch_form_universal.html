@@ -131,6 +131,28 @@
                     {% endif %}
                 </div>
 
+                <!-- Bestellnummern -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_internal_order_number" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.internal_order_number.label }}
+                        </label>
+                        {{ form.internal_order_number }}
+                        {% if form.internal_order_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.internal_order_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="id_external_order_number" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.external_order_number.label }}
+                        </label>
+                        {{ form.external_order_number }}
+                        {% if form.external_order_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.external_order_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Notizen -->
                 <div>
                     <label for="id_notes" class="block text-sm font-medium text-gray-700 mb-2">

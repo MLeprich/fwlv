@@ -54,3 +54,22 @@ def abs_value(value):
     if value is None:
         return None
     return abs(value)
+
+
+@register.filter
+def get_item(dictionary, key):
+    """
+    Zugriff auf Dictionary-Werte per Key im Template
+
+    Usage: {{ my_dict|get_item:key_variable }}
+
+    Args:
+        dictionary: Das Dictionary
+        key: Der Schlüssel
+
+    Returns:
+        Wert oder None
+    """
+    if dictionary is None:
+        return None
+    return dictionary.get(key)
