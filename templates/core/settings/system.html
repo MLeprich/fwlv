@@ -140,6 +140,62 @@
         </div>
     </div>
 
+    <!-- Sicherheitseinstellungen -->
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+            Sicherheit
+        </h3>
+
+        <form method="post" action="{% url 'core:settings' %}">
+            {% csrf_token %}
+            <input type="hidden" name="section" value="security_system">
+
+            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-900">Zwei-Faktor-Authentifizierung (2FA)</p>
+                            <p class="text-sm text-gray-500 mt-1">
+                                Aktiviert 2FA systemweit für Administratoren und BTM-Beauftragte.
+                                Bei Aktivierung müssen betroffene Benutzer einen Authenticator einrichten.
+                            </p>
+                            {% if modules.two_factor_auth_enabled %}
+                            <div class="mt-2 inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                Aktiviert
+                            </div>
+                            {% else %}
+                            <div class="mt-2 inline-flex items-center px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">
+                                Deaktiviert
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        {% if modules.two_factor_auth_enabled %}
+                        <input type="hidden" name="two_factor_auth_enabled" value="false">
+                        <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                            Deaktivieren
+                        </button>
+                        {% else %}
+                        <input type="hidden" name="two_factor_auth_enabled" value="true">
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                            Aktivieren
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
     <!-- Wartungsmodus -->
     <div class="mb-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">

@@ -235,6 +235,7 @@ class SettingsView(LoginRequiredMixin, View):
         context = {
             'current_module': 'settings',
             'requires_2fa': user.requires_2fa(),
+            'twofa_system_enabled': modules.two_factor_auth_enabled,
             'form': account_form,  # Default form für account.html
             'account_form': account_form,
             'notification_form': notification_form,
@@ -315,6 +316,28 @@ class SettingsView(LoginRequiredMixin, View):
                 messages.error(request, 'Keine Berechtigung für diese Aktion.')
                 return redirect('core:settings')
 
+        elif section == 'security_system':
+            # Nur Superuser dürfen Sicherheitseinstellungen ändern
+            if user.is_superuser:
+                from core.models import SystemSettings
+
+                sys_settings = SystemSettings.load()
+
+                # 2FA Status aktualisieren
+                sys_settings.two_factor_auth_enabled = request.POST.get('two_factor_auth_enabled') == 'true'
+                sys_settings.updated_by = user
+                sys_settings.save()
+
+                # Cache leeren damit Änderungen sofort sichtbar sind
+                SystemSettings.clear_cache()
+
+                status = 'aktiviert' if sys_settings.two_factor_auth_enabled else 'deaktiviert'
+                messages.success(request, f'Zwei-Faktor-Authentifizierung wurde {status}.')
+                return redirect('core:settings')
+            else:
+                messages.error(request, 'Keine Berechtigung für diese Aktion.')
+                return redirect('core:settings')
+
         # Bei Fehler: Forms erneut anzeigen
         account_form = AccountSettingsForm(instance=user, initial={
             'language': user_settings.language,
@@ -341,6 +364,7 @@ class SettingsView(LoginRequiredMixin, View):
         context = {
             'current_module': 'settings',
             'requires_2fa': user.requires_2fa(),
+            'twofa_system_enabled': modules.two_factor_auth_enabled,
             'form': account_form,
             'account_form': account_form,
             'notification_form': notification_form,

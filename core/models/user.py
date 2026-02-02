@@ -178,9 +178,20 @@ class User(AbstractUser):
 
     def requires_2fa(self):
         """
-        Prüft ob 2FA erforderlich ist
+        Prüft ob 2FA erforderlich ist.
+
+        2FA ist nur aktiv wenn:
+        1. SystemSettings.two_factor_auth_enabled = True UND
+        2. (force_2fa gesetzt ODER Benutzer ist BTM-Beauftragter ODER Administrator)
         """
-        # 2FA ist erforderlich wenn:
+        # Prüfe zuerst ob 2FA systemweit aktiviert ist
+        from core.models import SystemSettings
+        sys_settings = SystemSettings.load()
+
+        if not sys_settings.two_factor_auth_enabled:
+            return False
+
+        # 2FA ist erforderlich wenn systemweit aktiv UND:
         # - force_2fa gesetzt ist ODER
         # - Benutzer ist BTM-Beauftragter ODER
         # - Benutzer ist Administrator

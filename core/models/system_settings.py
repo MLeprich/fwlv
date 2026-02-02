@@ -70,6 +70,16 @@ class SystemSettings(models.Model):
     )
 
     # ============================================================================
+    # SECURITY
+    # ============================================================================
+
+    two_factor_auth_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Zwei-Faktor-Authentifizierung",
+        help_text="2FA systemweit aktivieren (erfordert zusätzliche Konfiguration)"
+    )
+
+    # ============================================================================
     # FEATURE FLAGS
     # ============================================================================
 

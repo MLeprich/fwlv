@@ -36,7 +36,29 @@
             Zwei-Faktor-Authentifizierung (2FA)
         </h3>
 
-        {% if requires_2fa %}
+        {% if not twofa_system_enabled %}
+        <!-- 2FA ist systemweit deaktiviert -->
+        <div class="bg-gray-50 border-l-4 border-gray-400 p-4 rounded-r mb-4">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-gray-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <div class="ml-3">
+                    <p class="text-sm text-gray-700 font-medium">
+                        2FA ist systemweit deaktiviert
+                    </p>
+                    <p class="text-sm text-gray-600 mt-1">
+                        Die Zwei-Faktor-Authentifizierung ist für dieses System nicht aktiviert.
+                        {% if user.is_superuser %}
+                        Sie können 2FA im Tab <strong>System</strong> aktivieren.
+                        {% else %}
+                        Wenden Sie sich an einen Administrator, um 2FA zu aktivieren.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% elif requires_2fa %}
         <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r mb-4">
             <div class="flex items-start">
                 <svg class="w-5 h-5 text-green-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -192,7 +214,17 @@
             </div>
 
             <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                {% if requires_2fa %}
+                {% if not twofa_system_enabled %}
+                <div class="w-6 h-6 text-gray-400 flex-shrink-0">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-900">2FA systemweit deaktiviert</p>
+                    <p class="text-xs text-gray-500">2FA kann bei Bedarf aktiviert werden</p>
+                </div>
+                {% elif requires_2fa %}
                 <div class="w-6 h-6 text-green-600 flex-shrink-0">
                     <svg fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
