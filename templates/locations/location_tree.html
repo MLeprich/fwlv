@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Standort-Organigramm - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <a href="{% url 'locations:list' %}" class="text-gray-500 hover:text-gray-700">Standorte & Lagerorte</a>
+            </li>
+            <li><span class="text-gray-400">/</span></li>
+            <li>
+                <span class="text-gray-900 font-medium">Organigramm</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-full mx-auto px-6" x-data="treeChart()">
+    <!-- Header -->
+    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'locations:list' %}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Zurück zur Liste
+                </a>
+                <h1 class="text-xl font-bold text-gray-900">Standort-Organigramm</h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- Orientation Toggle -->
+                <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                    <button
+                        @click="orientation = 'TB'; renderChart()"
+                        :class="orientation === 'TB' ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'"
+                        class="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+                        title="Vertikal (von oben nach unten)"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                        </svg>
+                    </button>
+                    <button
+                        @click="orientation = 'LR'; renderChart()"
+                        :class="orientation === 'LR' ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'"
+                        class="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+                        title="Horizontal (von links nach rechts)"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Zoom Controls -->
+                <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                    <button
+                        @click="zoomOut()"
+                        class="px-2 py-1.5 text-gray-600 hover:text-gray-900 rounded-md text-sm font-medium"
+                        title="Verkleinern"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                        </svg>
+                    </button>
+                    <span class="px-2 text-sm text-gray-600" x-text="Math.round(zoom * 100) + '%'"></span>
+                    <button
+                        @click="zoomIn()"
+                        class="px-2 py-1.5 text-gray-600 hover:text-gray-900 rounded-md text-sm font-medium"
+                        title="Vergrößern"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </button>
+                    <button
+                        @click="resetZoom()"
+                        class="px-2 py-1.5 text-gray-600 hover:text-gray-900 rounded-md text-sm font-medium"
+                        title="Zurücksetzen"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Download Buttons -->
+                <div class="flex items-center gap-2">
+                    <button
+                        @click="downloadSVG()"
+                        class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+                    >
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        SVG
+                    </button>
+                    <button
+                        @click="downloadPNG()"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                    >
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        PNG
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Banner -->
+    <div class="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                    <strong>{{ total_locations }}</strong> Standorte/Lagerorte in <strong>{{ root_count }}</strong> Hauptstandorten.
+                    Nutzen Sie die Zoom-Steuerung und das Mausrad zum Navigieren. Klicken und ziehen Sie, um den Ausschnitt zu verschieben.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="mt-4 bg-white rounded-lg shadow p-4">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Legende</h3>
+        <div class="flex flex-wrap gap-4 text-sm">
+            <span class="inline-flex items-center gap-1"><span class="text-lg">🏛️</span> Standort/Wache</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">🏢</span> Gebäude</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">🌳</span> Außenbereich</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">🚪</span> Raum</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">🅿️</span> Stellplatz</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">📚</span> Regal</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">🗄️</span> Schrank</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">📋</span> Regalboden</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">📥</span> Schublade</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">📦</span> Box/Container</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">🚗</span> Fahrzeug</span>
+        </div>
+    </div>
+
+    <!-- Chart Container -->
+    <div class="mt-6 bg-white rounded-lg shadow overflow-hidden">
+        <div
+            id="chart-container"
+            class="overflow-auto cursor-grab active:cursor-grabbing"
+            style="min-height: 600px; max-height: calc(100vh - 350px);"
+            @wheel.prevent="handleWheel($event)"
+        >
+            <div
+                id="mermaid-chart"
+                class="p-8 transition-transform duration-100"
+                :style="'transform: scale(' + zoom + '); transform-origin: top left;'"
+            >
+                <!-- Mermaid chart will be rendered here -->
+                <div class="flex items-center justify-center h-96 text-gray-500">
+                    <svg class="animate-spin h-8 w-8 mr-3" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Diagramm wird geladen...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not root_locations %}
+    <div class="mt-6 text-center py-12 bg-white rounded-lg shadow">
+        <div class="text-4xl mb-4">🏢</div>
+        <p class="text-lg font-medium text-gray-900 mb-2">Keine Standorte vorhanden</p>
+        <p class="text-sm text-gray-600 mb-4">Legen Sie zuerst Standorte an, um ein Organigramm zu erstellen.</p>
+        <a href="{% url 'locations:create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+            Standort anlegen
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Mermaid.js -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+<script>
+function treeChart() {
+    return {
+        orientation: 'TB',
+        zoom: 1,
+        chartDefinition: '',
+
+        init() {
+            // Initialize Mermaid
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'base',
+                themeVariables: {
+                    primaryColor: '#3b82f6',
+                    primaryTextColor: '#1f2937',
+                    primaryBorderColor: '#93c5fd',
+                    lineColor: '#6b7280',
+                    secondaryColor: '#f3f4f6',
+                    tertiaryColor: '#ffffff',
+                    fontSize: '14px',
+                    fontFamily: 'ui-sans-serif, system-ui, sans-serif'
+                },
+                flowchart: {
+                    htmlLabels: true,
+                    curve: 'basis',
+                    padding: 15,
+                    nodeSpacing: 50,
+                    rankSpacing: 80
+                }
+            });
+
+            this.renderChart();
+        },
+
+        async renderChart() {
+            const container = document.getElementById('mermaid-chart');
+            if (!container) return;
+
+            // Build Mermaid chart definition
+            const chartDef = this.buildChartDefinition();
+            this.chartDefinition = chartDef;
+
+            if (!chartDef) {
+                container.innerHTML = '<div class="text-center py-12 text-gray-500">Keine Daten vorhanden</div>';
+                return;
+            }
+
+            try {
+                // Clear previous chart
+                container.innerHTML = '';
+
+                // Render new chart
+                const { svg } = await mermaid.render('tree-diagram', chartDef);
+                container.innerHTML = svg;
+
+                // Make SVG responsive
+                const svgEl = container.querySelector('svg');
+                if (svgEl) {
+                    svgEl.style.maxWidth = '100%';
+                    svgEl.style.height = 'auto';
+                }
+            } catch (error) {
+                console.error('Mermaid render error:', error);
+                container.innerHTML = '<div class="text-center py-12 text-red-500">Fehler beim Rendern des Diagramms</div>';
+            }
+        },
+
+        buildChartDefinition() {
+            const locations = {{ locations_json|safe }};
+            if (!locations || locations.length === 0) return null;
+
+            let def = `flowchart ${this.orientation}\n`;
+
+            // Add styles
+            def += `    classDef site fill:#dbeafe,stroke:#3b82f6,stroke-width:2px\n`;
+            def += `    classDef building fill:#dcfce7,stroke:#22c55e,stroke-width:2px\n`;
+            def += `    classDef room fill:#fef3c7,stroke:#f59e0b,stroke-width:2px\n`;
+            def += `    classDef storage fill:#f3e8ff,stroke:#a855f7,stroke-width:2px\n`;
+            def += `    classDef vehicle fill:#fee2e2,stroke:#ef4444,stroke-width:2px\n`;
+
+            // Build nodes and connections
+            locations.forEach(loc => {
+                const icon = this.getIcon(loc.type);
+                const label = `${icon} ${this.escapeLabel(loc.name)}`;
+                const nodeId = `node${loc.id}`;
+
+                // Add node
+                def += `    ${nodeId}["${label}"]\n`;
+
+                // Add connection to parent
+                if (loc.parent_id) {
+                    def += `    node${loc.parent_id} --> ${nodeId}\n`;
+                }
+
+                // Apply class based on type
+                const typeClass = this.getTypeClass(loc.type);
+                def += `    class ${nodeId} ${typeClass}\n`;
+            });
+
+            return def;
+        },
+
+        getIcon(type) {
+            const icons = {
+                'site': '🏛️',
+                'building': '🏢',
+                'area': '🌳',
+                'room': '🚪',
+                'parking_spot': '🅿️',
+                'rack': '📚',
+                'cabinet': '🗄️',
+                'shelf': '📋',
+                'drawer': '📥',
+                'box': '📦',
+                'vehicle': '🚗',
+                'container': '📦',
+                'other': '📍'
+            };
+            return icons[type] || '📍';
+        },
+
+        getTypeClass(type) {
+            if (type === 'site') return 'site';
+            if (['building', 'area'].includes(type)) return 'building';
+            if (['room', 'parking_spot'].includes(type)) return 'room';
+            if (['vehicle'].includes(type)) return 'vehicle';
+            return 'storage';
+        },
+
+        escapeLabel(text) {
+            return text
+                .replace(/"/g, "'")
+                .replace(/\[/g, "(")
+                .replace(/\]/g, ")")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+        },
+
+        zoomIn() {
+            this.zoom = Math.min(this.zoom + 0.1, 2);
+        },
+
+        zoomOut() {
+            this.zoom = Math.max(this.zoom - 0.1, 0.3);
+        },
+
+        resetZoom() {
+            this.zoom = 1;
+        },
+
+        handleWheel(event) {
+            if (event.deltaY < 0) {
+                this.zoomIn();
+            } else {
+                this.zoomOut();
+            }
+        },
+
+        downloadSVG() {
+            const svg = document.querySelector('#mermaid-chart svg');
+            if (!svg) return;
+
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'standort-organigramm.svg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        },
+
+        async downloadPNG() {
+            const svg = document.querySelector('#mermaid-chart svg');
+            if (!svg) return;
+
+            // Get SVG dimensions
+            const bbox = svg.getBBox();
+            const width = Math.max(bbox.width + 40, 800);
+            const height = Math.max(bbox.height + 40, 600);
+
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = width * 2; // Higher resolution
+            canvas.height = height * 2;
+            const ctx = canvas.getContext('2d');
+
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.scale(2, 2);
+
+            // Convert SVG to image
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 20, 20);
+                URL.revokeObjectURL(url);
+
+                // Download
+                canvas.toBlob(blob => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'standort-organigramm.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            };
+            img.src = url;
+        }
+    };
+}
+</script>
+{% endblock %}

@@ -75,6 +75,41 @@ class LocationDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
+class LocationTreeView(LoginRequiredMixin, View):
+    """Grafische Baumansicht aller Lagerorte"""
+
+    def get(self, request):
+        import json
+
+        # Alle aktiven Locations mit Hierarchie laden
+        locations = Location.objects.filter(is_active=True).order_by('tree_id', 'lft')
+
+        # Locations als JSON für JavaScript aufbereiten
+        locations_data = []
+        for loc in locations:
+            locations_data.append({
+                'id': loc.pk,
+                'name': loc.name,
+                'code': loc.code,
+                'type': loc.location_type,
+                'parent_id': loc.parent_id,
+                'level': loc.level,
+            })
+
+        # Root-Locations für Statistik
+        root_locations = Location.get_root_locations()
+
+        context = {
+            'current_module': 'locations',
+            'locations_json': json.dumps(locations_data, ensure_ascii=False),
+            'root_locations': root_locations,
+            'root_count': root_locations.count(),
+            'total_locations': locations.count(),
+        }
+
+        return render(request, 'locations/location_tree.html', context)
+
+
 class LocationCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Lagerort erstellen"""
     model = Location

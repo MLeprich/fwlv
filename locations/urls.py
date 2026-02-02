@@ -9,6 +9,7 @@ app_name = 'locations'
 
 urlpatterns = [
     path('', views.LocationListView.as_view(), name='list'),
+    path('tree/', views.LocationTreeView.as_view(), name='tree'),
     path('<int:pk>/', views.LocationDetailView.as_view(), name='detail'),
     path('create/', views.LocationCreateView.as_view(), name='create'),
     path('<int:pk>/edit/', views.LocationUpdateView.as_view(), name='edit'),
