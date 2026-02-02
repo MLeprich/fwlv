@@ -18,14 +18,14 @@
 
 ---
 
-## Frontend-Bibliotheken (CDN)
+## Frontend-Bibliotheken (lokal/CDN)
 
 | Bibliothek | Version | Lizenz | Beschreibung |
 |------------|---------|--------|--------------|
-| HTMX | 1.9+ | BSD-2-Clause | HTML Extensions |
-| Alpine.js | 3.x | MIT | Reactive JavaScript |
+| HTMX | 2.0.8 | BSD-2-Clause | HTML Extensions |
+| Alpine.js | 3.14.8 | MIT | Reactive JavaScript |
 | Tailwind CSS | 3.x | MIT | CSS Framework |
-| Mermaid.js | 10.x | MIT | Diagramme & Flowcharts |
+| Mermaid.js | 11.x (CDN) | MIT | Diagramme & Flowcharts |
 
 ---
 
