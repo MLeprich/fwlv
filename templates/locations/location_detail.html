@@ -5,7 +5,7 @@
 
 {% block breadcrumb %}
 <div class="bg-white border-b border-gray-200 px-6 py-3">
-    <nav class="flex items-center justify-between">
+    <nav class="flex items-center">
         <ol class="flex items-center space-x-2 text-sm">
             <li>
                 <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
@@ -19,14 +19,6 @@
                 <span class="text-gray-900 font-medium">{{ location.name }}</span>
             </li>
         </ol>
-        <div class="flex items-center gap-2">
-            <a href="{% url 'locations:edit' location.pk %}" class="px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded text-sm font-medium">
-                ✏️ Bearbeiten
-            </a>
-            <a href="{% url 'locations:delete' location.pk %}" class="px-3 py-1.5 text-red-700 hover:bg-red-50 rounded text-sm font-medium">
-                🗑️ Löschen
-            </a>
-        </div>
     </nav>
 </div>
 {% endblock %}
@@ -85,7 +77,7 @@
             {% endif %}
 
             <!-- Tabs -->
-            <div class="bg-white rounded-lg shadow" x-data="{ activeTab: 'info' }">
+            <div class="bg-white rounded-lg shadow" x-data="{ activeTab: window.location.hash === '#qrcode' ? 'qrcode' : 'info' }" x-init="window.addEventListener('hashchange', () => { if(window.location.hash === '#qrcode') activeTab = 'qrcode' })">
                 <nav class="flex -mb-px overflow-x-auto border-b border-gray-200">
                     <button
                         @click="activeTab = 'info'"
@@ -106,7 +98,7 @@
                         :class="activeTab === 'items' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                         class="flex-shrink-0 px-6 py-3 text-sm font-medium border-b-2 transition-colors"
                     >
-                        📦 Artikel (0)
+                        📦 Artikel ({{ location.get_item_count }})
                     </button>
                     <button
                         @click="activeTab = 'access'"
@@ -114,6 +106,13 @@
                         class="flex-shrink-0 px-6 py-3 text-sm font-medium border-b-2 transition-colors"
                     >
                         🔐 Zugang
+                    </button>
+                    <button
+                        @click="activeTab = 'qrcode'"
+                        :class="activeTab === 'qrcode' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="flex-shrink-0 px-6 py-3 text-sm font-medium border-b-2 transition-colors"
+                    >
+                        📱 QR/Barcode
                     </button>
                 </nav>
 
@@ -299,10 +298,297 @@
 
                     <!-- Items Tab -->
                     <div x-show="activeTab === 'items'">
+                        {% if location.get_item_count > 0 %}
+                        <div class="space-y-4">
+                            <!-- Medical Device Instances -->
+                            {% if location.medical_device_instances.exists %}
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    🏥 Medizinprodukte
+                                    <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">{{ location.medical_device_instances.count }}</span>
+                                </h4>
+                                <div class="space-y-2">
+                                    {% for item in location.medical_device_instances.all|slice:":10" %}
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border hover:border-blue-300 transition-colors group">
+                                        <a href="{% url 'medical:device_detail' item.pk %}" class="flex-grow">
+                                            <span class="font-mono text-sm text-gray-600">{{ item.serial_number|default:"-" }}</span>
+                                            <span class="text-gray-800">{{ item.master.name }}</span>
+                                        </a>
+                                        {% if perms.locations.change_location %}
+                                        <button type="button"
+                                                hx-get="{% url 'locations:quick_move' 'medical_device' item.pk %}"
+                                                hx-target="#modal-container"
+                                                hx-swap="innerHTML"
+                                                class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                                title="Lagerort wechseln">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if location.medical_device_instances.count > 10 %}
+                                    <p class="text-xs text-gray-500 mt-2">... und {{ location.medical_device_instances.count|add:"-10" }} weitere</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Medical Items -->
+                            {% if location.medical_medicalitem_items.exists %}
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    💊 Medizinische Verbrauchsmaterialien
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">{{ location.medical_medicalitem_items.count }}</span>
+                                </h4>
+                                <div class="space-y-2">
+                                    {% for item in location.medical_medicalitem_items.all|slice:":10" %}
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border group">
+                                        <div class="flex-grow">
+                                            <span class="font-mono text-sm text-gray-600">{{ item.item_number }}</span>
+                                            <span class="text-gray-800">{{ item.name }}</span>
+                                            <span class="text-sm text-gray-500">({{ item.quantity }} {{ item.unit }})</span>
+                                        </div>
+                                        {% if perms.locations.change_location %}
+                                        <button type="button"
+                                                hx-get="{% url 'locations:quick_move' 'medical_item' item.pk %}"
+                                                hx-target="#modal-container"
+                                                hx-swap="innerHTML"
+                                                class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                                title="Lagerort wechseln">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if location.medical_medicalitem_items.count > 10 %}
+                                    <p class="text-xs text-gray-500 mt-2">... und {{ location.medical_medicalitem_items.count|add:"-10" }} weitere</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Clothing Items -->
+                            {% if location.clothing_clothingitem_items.exists %}
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    👔 Bekleidung
+                                    <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">{{ location.clothing_clothingitem_items.count }}</span>
+                                </h4>
+                                <div class="space-y-2">
+                                    {% for item in location.clothing_clothingitem_items.all|slice:":10" %}
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border hover:border-purple-300 transition-colors group">
+                                        <a href="{% url 'clothing:item_detail' item.pk %}" class="flex-grow">
+                                            <span class="font-mono text-sm text-gray-600">{{ item.item_number }}</span>
+                                            <span class="text-gray-800">{{ item.master.name }}</span>
+                                            <span class="text-sm text-gray-500">({{ item.current_stock }} Stk.)</span>
+                                        </a>
+                                        {% if perms.locations.change_location %}
+                                        <button type="button"
+                                                hx-get="{% url 'locations:quick_move' 'clothing_item' item.pk %}"
+                                                hx-target="#modal-container"
+                                                hx-swap="innerHTML"
+                                                class="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                                title="Lagerort wechseln">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if location.clothing_clothingitem_items.count > 10 %}
+                                    <p class="text-xs text-gray-500 mt-2">... und {{ location.clothing_clothingitem_items.count|add:"-10" }} weitere</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Equipment Items -->
+                            {% if location.equipment_equipmentitem_items.exists %}
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    🔧 Ausrüstung
+                                    <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">{{ location.equipment_equipmentitem_items.count }}</span>
+                                </h4>
+                                <div class="space-y-2">
+                                    {% for item in location.equipment_equipmentitem_items.all|slice:":10" %}
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border hover:border-orange-300 transition-colors group">
+                                        <a href="{% url 'equipment:item_detail' item.pk %}" class="flex-grow">
+                                            <span class="font-mono text-sm text-gray-600">{{ item.item_number }}</span>
+                                            <span class="text-gray-800">{{ item.master.name }}</span>
+                                        </a>
+                                        {% if perms.locations.change_location %}
+                                        <button type="button"
+                                                hx-get="{% url 'locations:quick_move' 'equipment_item' item.pk %}"
+                                                hx-target="#modal-container"
+                                                hx-swap="innerHTML"
+                                                class="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                                title="Lagerort wechseln">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if location.equipment_equipmentitem_items.count > 10 %}
+                                    <p class="text-xs text-gray-500 mt-2">... und {{ location.equipment_equipmentitem_items.count|add:"-10" }} weitere</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Magazine Items -->
+                            {% if location.magazine_magazineitem_items.exists %}
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    📦 Verbrauchsmaterial (Magazin)
+                                    <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full">{{ location.magazine_magazineitem_items.count }}</span>
+                                </h4>
+                                <div class="space-y-2">
+                                    {% for item in location.magazine_magazineitem_items.all|slice:":10" %}
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border hover:border-yellow-300 transition-colors group">
+                                        <a href="{% url 'magazine:item_detail' item.pk %}" class="flex-grow">
+                                            <span class="font-mono text-sm text-gray-600">{{ item.item_number }}</span>
+                                            <span class="text-gray-800">{{ item.master.name }}</span>
+                                            <span class="text-sm text-gray-500">({{ item.current_stock }} {{ item.master.unit }})</span>
+                                        </a>
+                                        {% if perms.locations.change_location %}
+                                        <button type="button"
+                                                hx-get="{% url 'locations:quick_move' 'magazine_item' item.pk %}"
+                                                hx-target="#modal-container"
+                                                hx-swap="innerHTML"
+                                                class="p-1.5 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                                title="Lagerort wechseln">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if location.magazine_magazineitem_items.count > 10 %}
+                                    <p class="text-xs text-gray-500 mt-2">... und {{ location.magazine_magazineitem_items.count|add:"-10" }} weitere</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Height Rescue Devices -->
+                            {% if location.height_rescue_devices.exists %}
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    🧗 Höhenrettung (PSA)
+                                    <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">{{ location.height_rescue_devices.count }}</span>
+                                </h4>
+                                <div class="space-y-2">
+                                    {% for item in location.height_rescue_devices.all|slice:":10" %}
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border hover:border-red-300 transition-colors group">
+                                        <a href="{% url 'height_rescue:device_detail' item.pk %}" class="flex-grow">
+                                            <span class="font-mono text-sm text-gray-600">{{ item.serial_number|default:"-" }}</span>
+                                            <span class="text-gray-800">{{ item.master.name }}</span>
+                                        </a>
+                                        {% if perms.locations.change_location %}
+                                        <button type="button"
+                                                hx-get="{% url 'locations:quick_move' 'height_rescue_device' item.pk %}"
+                                                hx-target="#modal-container"
+                                                hx-swap="innerHTML"
+                                                class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                                title="Lagerort wechseln">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if location.height_rescue_devices.count > 10 %}
+                                    <p class="text-xs text-gray-500 mt-2">... und {{ location.height_rescue_devices.count|add:"-10" }} weitere</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Workshop Items -->
+                            {% if location.workshop_workshopitem_items.exists %}
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    🛠️ Werkstatt
+                                    <span class="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">{{ location.workshop_workshopitem_items.count }}</span>
+                                </h4>
+                                <div class="space-y-2">
+                                    {% for item in location.workshop_workshopitem_items.all|slice:":10" %}
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border hover:border-gray-400 transition-colors group">
+                                        <a href="{% url 'workshop:item_detail' item.pk %}" class="flex-grow">
+                                            <span class="font-mono text-sm text-gray-600">{{ item.item_number }}</span>
+                                            <span class="text-gray-800">{{ item.master.name }}</span>
+                                        </a>
+                                        {% if perms.locations.change_location %}
+                                        <button type="button"
+                                                hx-get="{% url 'locations:quick_move' 'workshop_item' item.pk %}"
+                                                hx-target="#modal-container"
+                                                hx-swap="innerHTML"
+                                                class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                                title="Lagerort wechseln">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if location.workshop_workshopitem_items.count > 10 %}
+                                    <p class="text-xs text-gray-500 mt-2">... und {{ location.workshop_workshopitem_items.count|add:"-10" }} weitere</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Diving Items -->
+                            {% if location.diving_divingitem_items.exists %}
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    🤿 Tauchen
+                                    <span class="px-2 py-0.5 bg-cyan-100 text-cyan-700 text-xs rounded-full">{{ location.diving_divingitem_items.count }}</span>
+                                </h4>
+                                <div class="space-y-2">
+                                    {% for item in location.diving_divingitem_items.all|slice:":10" %}
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border hover:border-cyan-300 transition-colors group">
+                                        <a href="{% url 'diving:item_detail' item.pk %}" class="flex-grow">
+                                            <span class="font-mono text-sm text-gray-600">{{ item.item_number }}</span>
+                                            <span class="text-gray-800">{{ item.master.name }}</span>
+                                        </a>
+                                        {% if perms.locations.change_location %}
+                                        <button type="button"
+                                                hx-get="{% url 'locations:quick_move' 'diving_item' item.pk %}"
+                                                hx-target="#modal-container"
+                                                hx-swap="innerHTML"
+                                                class="p-1.5 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                                title="Lagerort wechseln">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if location.diving_divingitem_items.count > 10 %}
+                                    <p class="text-xs text-gray-500 mt-2">... und {{ location.diving_divingitem_items.count|add:"-10" }} weitere</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% else %}
                         <div class="text-center py-12">
                             <div class="text-4xl mb-4">📦</div>
                             <p class="text-gray-600">Keine Artikel an diesem Lagerort</p>
                         </div>
+                        {% endif %}
                     </div>
 
                     <!-- Access Tab -->
@@ -320,6 +606,174 @@
                                 <p class="text-green-900 font-semibold">✅ Freier Zugang</p>
                             </div>
                             {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- QR/Barcode Tab -->
+                    <div x-show="activeTab === 'qrcode'" id="qrcode-tab-content">
+                        <div class="space-y-6">
+                            <!-- Standort-Hierarchie und Raumnummer -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Übergeordneter Standort -->
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h4 class="font-medium text-gray-900 mb-2">Standort-Hierarchie</h4>
+                                    <p class="text-sm text-gray-700 mb-2">{{ location.get_full_path }}</p>
+                                    {% with root=location.get_root_location %}
+                                    {% if root.pk != location.pk %}
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <span class="text-xs text-gray-500">Wache/Standort:</span>
+                                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-mono rounded">{{ root.code }}</span>
+                                        <span class="text-xs text-gray-600">{{ root.name }}</span>
+                                    </div>
+                                    {% else %}
+                                    <p class="text-xs text-gray-500 mt-1">Dies ist der oberste Standort</p>
+                                    {% endif %}
+                                    {% endwith %}
+                                </div>
+
+                                <!-- Raumnummer -->
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h4 class="font-medium text-gray-900 mb-2">Raumnummer</h4>
+                                    {% with inherited_room=location.get_inherited_room_number %}
+                                    {% if inherited_room %}
+                                    <p class="text-lg font-mono text-gray-800">{{ inherited_room }}</p>
+                                    {% if location.room_number %}
+                                    <p class="text-xs text-gray-500 mt-1">Eigene Raumnummer</p>
+                                    {% else %}
+                                    <p class="text-xs text-blue-600 mt-1">Vererbt vom übergeordneten Standort</p>
+                                    {% endif %}
+                                    {% else %}
+                                    <p class="text-gray-500 text-sm">Keine Raumnummer vergeben</p>
+                                    {% endif %}
+                                    {% endwith %}
+                                </div>
+                            </div>
+
+                            <!-- Benutzerdefinierter Barcode -->
+                            {% if perms.locations.change_location %}
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4" x-data="{ editing: false, customBarcode: '{{ location.barcode|escapejs }}' }">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-medium text-amber-900">Individuelle Bezeichnung (optional)</h4>
+                                    <button
+                                        x-show="!editing"
+                                        @click="editing = true"
+                                        class="text-sm text-amber-700 hover:text-amber-900 font-medium"
+                                    >
+                                        Bearbeiten
+                                    </button>
+                                </div>
+
+                                <!-- Anzeige-Modus -->
+                                <div x-show="!editing">
+                                    {% if location.barcode %}
+                                    <p class="text-sm text-amber-800">
+                                        Aktuell: <code class="bg-amber-100 px-2 py-1 rounded font-mono">{{ location.barcode }}</code>
+                                    </p>
+                                    <p class="text-xs text-amber-600 mt-1">Dieser Wert überschreibt den automatisch generierten Barcode.</p>
+                                    {% else %}
+                                    <p class="text-sm text-amber-700">Kein individueller Barcode gesetzt. Es wird der automatisch generierte verwendet.</p>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Bearbeitungs-Modus -->
+                                <form
+                                    x-show="editing"
+                                    hx-post="{% url 'locations:update_barcode' location.pk %}"
+                                    hx-target="#qrcode-tab-content"
+                                    hx-swap="innerHTML"
+                                    class="space-y-3"
+                                >
+                                    {% csrf_token %}
+                                    <div>
+                                        <label class="block text-sm font-medium text-amber-800 mb-1">Individueller Barcode-Wert</label>
+                                        <input
+                                            type="text"
+                                            name="barcode"
+                                            x-model="customBarcode"
+                                            placeholder="z.B. LAGER-SCHLAUCH-001"
+                                            class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                        >
+                                        <p class="text-xs text-amber-600 mt-1">Leer lassen für automatische Generierung aus Standort + Code + Raumnummer</p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button
+                                            type="submit"
+                                            class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-medium"
+                                        >
+                                            Speichern
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="editing = false; customBarcode = '{{ location.barcode|escapejs }}'"
+                                            class="px-4 py-2 bg-white border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 text-sm font-medium"
+                                        >
+                                            Abbrechen
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            {% endif %}
+
+                            <!-- QR-Code und Barcode nebeneinander -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- QR-Code -->
+                                <div class="bg-white border border-gray-200 rounded-lg p-6">
+                                    <h4 class="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                                        <span class="text-xl">📱</span> QR-Code
+                                    </h4>
+                                    <div class="bg-white p-4 rounded-lg border border-gray-100 flex justify-center mb-4">
+                                        {{ location.generate_qr_code|safe }}
+                                    </div>
+                                    <div class="text-center text-xs text-gray-500 mb-4">
+                                        Scannt zu: <code class="bg-gray-100 px-2 py-1 rounded">/locations/{{ location.pk }}/</code>
+                                    </div>
+                                    <div class="flex justify-center gap-2">
+                                        <a href="{% url 'locations:qrcode_download' location.pk %}?format=svg"
+                                           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                                            SVG Download
+                                        </a>
+                                        <a href="{% url 'locations:qrcode_download' location.pk %}?format=png"
+                                           class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                                            PNG Download
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Barcode -->
+                                <div class="bg-white border border-gray-200 rounded-lg p-6">
+                                    <h4 class="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                                        <span class="text-xl">📊</span> Barcode (Code128)
+                                    </h4>
+                                    <div class="bg-white p-4 rounded-lg border border-gray-100 flex justify-center mb-4 overflow-x-auto">
+                                        {{ location.generate_barcode|safe }}
+                                    </div>
+                                    <div class="text-center mb-4">
+                                        <code class="bg-gray-100 px-3 py-1.5 rounded text-sm font-mono">{{ location.get_barcode_value }}</code>
+                                        {% if location.barcode %}
+                                        <p class="text-xs text-gray-500 mt-2">Benutzerdefinierter Barcode</p>
+                                        {% else %}
+                                        <p class="text-xs text-blue-600 mt-2">Automatisch generiert aus Code + Raumnummer</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex justify-center">
+                                        <a href="{% url 'locations:barcode_download' location.pk %}"
+                                           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                                            SVG Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Info-Box -->
+                            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                                <p class="text-blue-900 font-semibold mb-2">ℹ️ Hinweise zur Nutzung</p>
+                                <ul class="text-blue-800 text-sm space-y-1">
+                                    <li>• <strong>QR-Code:</strong> Ideal für mobile Geräte - scannt direkt zur Detailseite</li>
+                                    <li>• <strong>Barcode:</strong> Für klassische Handscanner - enthält den Lagerort-Code</li>
+                                    <li>• Die Raumnummer wird automatisch an alle Unter-Lagerorte vererbt</li>
+                                    <li>• Barcodes können in der Bearbeitung individuell überschrieben werden</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -340,9 +794,37 @@
                     <a href="{% url 'locations:edit' location.pk %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium text-center">
                         ✏️ Bearbeiten
                     </a>
-                    <button class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
-                        🏷️ QR-Code generieren
-                    </button>
+                    {% if location.get_children.count > 0 %}
+                    <div class="relative" x-data="{ showWarning: false }">
+                        <button
+                            @click="showWarning = !showWarning"
+                            class="block w-full px-4 py-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm font-medium text-center"
+                        >
+                            🗑️ Löschen
+                        </button>
+                        <div
+                            x-show="showWarning"
+                            x-transition
+                            @click.away="showWarning = false"
+                            class="absolute right-0 mt-2 w-72 bg-red-50 border border-red-200 rounded-lg shadow-lg p-4 z-10"
+                        >
+                            <div class="flex items-start gap-2">
+                                <span class="text-red-500 text-lg">⚠️</span>
+                                <div>
+                                    <p class="text-sm font-medium text-red-800">Löschen nicht möglich</p>
+                                    <p class="text-xs text-red-700 mt-1">
+                                        Dieser Lagerort enthält noch <strong>{{ location.get_children.count }}</strong> Unter-Lagerorte.
+                                        Bitte löschen oder verschieben Sie diese zuerst.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <a href="{% url 'locations:delete' location.pk %}" class="block w-full px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium text-center">
+                        🗑️ Löschen
+                    </a>
+                    {% endif %}
                 </div>
             </div>
 
@@ -377,4 +859,8 @@
     </div>
 
 </div>
+
+<!-- Modal Container für Quick-Move -->
+<div id="modal-container"></div>
+
 {% endblock %}

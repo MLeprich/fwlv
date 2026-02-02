@@ -189,7 +189,23 @@ class Location(MPTTModel, AuditedModel):
         verbose_name=_('Max. Temperatur (°C)'),
     )
 
-    # QR-Code für einfachen Zugriff
+    # Raumnummer (wird an Unter-Lagerorte vererbt)
+    room_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_('Raumnummer'),
+        help_text=_('Raumnummer (z.B. R.102) - wird an Unter-Lagerorte vererbt')
+    )
+
+    # Benutzerdefinierter Barcode
+    barcode = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_('Barcode'),
+        help_text=_('Benutzerdefinierter Barcode. Falls leer, wird aus Code + Raumnummer generiert.')
+    )
+
+    # QR-Code für einfachen Zugriff (Legacy-Feld)
     qr_code = models.ImageField(
         upload_to='locations/qr_codes/',
         null=True,
@@ -275,19 +291,68 @@ class Location(MPTTModel, AuditedModel):
 
     def get_item_count(self):
         """
-        Anzahl der Artikel an diesem Lagerort
-        TODO: Später implementieren wenn inventory_base vorhanden
+        Anzahl der Artikel an diesem Lagerort (aus allen Modulen)
         """
-        # from inventory_base.models import InventoryItem
-        # return InventoryItem.objects.filter(location=self).count()
-        return 0
+        count = 0
+
+        # Medical Device Instances
+        if hasattr(self, 'medical_device_instances'):
+            count += self.medical_device_instances.count()
+
+        # Medical Items
+        if hasattr(self, 'medical_medicalitem_items'):
+            count += self.medical_medicalitem_items.count()
+
+        # Clothing Items
+        if hasattr(self, 'clothing_clothingitem_items'):
+            count += self.clothing_clothingitem_items.count()
+
+        # Equipment Items
+        if hasattr(self, 'equipment_equipmentitem_items'):
+            count += self.equipment_equipmentitem_items.count()
+
+        # Magazine Items
+        if hasattr(self, 'magazine_magazineitem_items'):
+            count += self.magazine_magazineitem_items.count()
+
+        # Height Rescue Devices
+        if hasattr(self, 'height_rescue_devices'):
+            count += self.height_rescue_devices.count()
+
+        # Workshop Items
+        if hasattr(self, 'workshop_workshopitem_items'):
+            count += self.workshop_workshopitem_items.count()
+
+        # Diving Items
+        if hasattr(self, 'diving_divingitem_items'):
+            count += self.diving_divingitem_items.count()
+
+        return count
 
     def get_total_item_count(self):
         """
         Gesamtanzahl der Artikel (inkl. Unter-Lagerorte)
         """
-        # TODO: Später implementieren
-        return 0
+        count = self.get_item_count()
+        for child in self.get_descendants():
+            count += child.get_item_count()
+        return count
+
+    def has_related_objects(self):
+        """
+        Prüft ob dieser Lagerort verknüpfte Objekte hat
+        (Artikel, Lagerbewegungen, Inventuren etc.)
+        """
+        # Prüfe alle related objects
+        for rel in self._meta.get_fields():
+            if rel.is_relation and rel.auto_created and not rel.concrete:
+                try:
+                    related_name = rel.get_accessor_name()
+                    if getattr(self, related_name).exists():
+                        return True
+                except:
+                    pass
+        return False
 
     def is_available(self):
         """
@@ -304,17 +369,137 @@ class Location(MPTTModel, AuditedModel):
     def can_be_deleted(self):
         """
         Prüft ob der Lagerort gelöscht werden kann
-        (Keine Artikel, keine Unter-Lagerorte)
+        (Keine Artikel, keine Unter-Lagerorte, keine verknüpften Objekte)
         """
-        # TODO: Später auch Artikel-Check
-        return not self.has_children_items()
+        if self.has_children_items():
+            return False
+        if self.has_related_objects():
+            return False
+        return True
+
+    def get_inherited_room_number(self):
+        """
+        Gibt die Raumnummer zurück - eigene oder vom nächsten Parent mit gesetzter Raumnummer
+        """
+        if self.room_number:
+            return self.room_number
+
+        # Suche in Parents nach Raumnummer
+        if self.parent:
+            return self.parent.get_inherited_room_number()
+
+        return ''
+
+    def get_root_location(self):
+        """
+        Gibt den obersten Standort (Root) in der Hierarchie zurück
+        (z.B. die Wache/Site)
+        """
+        if not self.parent:
+            return self
+        return self.parent.get_root_location()
+
+    def get_site_code(self):
+        """
+        Gibt den Code des obersten Standorts (Site/Wache) zurück
+        Falls dieser Lagerort selbst der Root ist, wird None zurückgegeben
+        """
+        root = self.get_root_location()
+        if root.pk == self.pk:
+            return None  # Wir sind selbst der Root
+        return root.code
+
+    def get_barcode_value(self):
+        """
+        Gibt den Barcode-Wert zurück:
+        - Falls benutzerdefinierter Barcode gesetzt: verwende diesen
+        - Sonst: generiere aus Site-Code + eigener Code + Raumnummer
+        Beispiel: FW1-Schlauchkammer-R102
+
+        Vermeidet Duplikate wenn der eigene Code bereits mit dem Site-Code beginnt.
+        """
+        if self.barcode:
+            return self.barcode
+
+        # Automatische Generierung
+        parts = []
+
+        # Site/Wache-Code hinzufügen (wenn wir nicht selbst der Root sind)
+        site_code = self.get_site_code()
+
+        # Prüfe ob der eigene Code bereits mit dem Site-Code beginnt
+        code_starts_with_site = site_code and self.code.startswith(site_code + '-')
+
+        if site_code and not code_starts_with_site:
+            parts.append(site_code)
+
+        # Eigener Code
+        parts.append(self.code)
+
+        # Raumnummer hinzufügen
+        room = self.get_inherited_room_number()
+        if room:
+            # Ersetze Punkte und Leerzeichen durch Bindestriche für Barcode-Kompatibilität
+            room_clean = room.replace('.', '').replace(' ', '-')
+            parts.append(room_clean)
+
+        return '-'.join(parts)
 
     def generate_qr_code(self):
         """
-        Generiert QR-Code für diesen Lagerort
-        TODO: Später implementieren mit qrcode library
+        Generiert QR-Code als SVG für diesen Lagerort
+        Enthält nur die URL für direkten Zugriff
         """
-        pass
+        import qrcode
+        import qrcode.image.svg
+        from io import BytesIO
+
+        # Nur URL kodieren für maximale Scanner-Kompatibilität
+        qr_string = f'/locations/{self.pk}/'
+
+        # QR-Code generieren
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(qr_string)
+        qr.make(fit=True)
+
+        # Als SVG
+        factory = qrcode.image.svg.SvgPathImage
+        img = qr.make_image(fill_color="black", back_color="white", image_factory=factory)
+
+        # SVG zu String konvertieren
+        stream = BytesIO()
+        img.save(stream)
+        svg_string = stream.getvalue().decode('utf-8')
+
+        return svg_string
+
+    def generate_barcode(self):
+        """
+        Generiert Barcode als SVG (Code128 Format)
+        """
+        import barcode
+        from barcode.writer import SVGWriter
+        from io import BytesIO
+
+        barcode_value = self.get_barcode_value()
+        if not barcode_value:
+            return None
+
+        # Code128 für den Barcode
+        code128 = barcode.get_barcode_class('code128')
+
+        # Barcode generieren
+        rv = BytesIO()
+        code = code128(barcode_value, writer=SVGWriter())
+        code.write(rv)
+
+        svg_string = rv.getvalue().decode('utf-8')
+        return svg_string
 
     @classmethod
     def get_root_locations(cls):

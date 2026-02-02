@@ -1,0 +1,174 @@
+<!-- Quick-Move Modal für Artikel -->
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+     x-data="{ open: true }"
+     x-show="open"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     @keydown.escape.window="open = false; $el.remove()">
+
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+         x-show="open"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         @click.outside="open = false; $el.parentElement.remove()">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">
+                Artikel verschieben
+            </h3>
+            <button type="button"
+                    class="text-gray-400 hover:text-gray-600 transition-colors"
+                    @click="open = false; $el.closest('[x-data]').remove()">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <form hx-post="{% url 'locations:quick_move' model_type instance.pk %}"
+              hx-swap="none"
+              class="p-6">
+            {% csrf_token %}
+
+            <!-- Artikel-Info -->
+            <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">Artikel:</p>
+                <p class="font-medium text-gray-900">{{ item_name }}</p>
+            </div>
+
+            <!-- Aktueller Lagerort -->
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 mb-1">Aktueller Lagerort:</p>
+                <p class="font-medium text-gray-900">
+                    {% if current_location %}
+                        {{ current_location.get_full_path }}
+                    {% else %}
+                        <span class="text-gray-400">Kein Lagerort zugewiesen</span>
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- Neuer Lagerort -->
+            <div class="mb-6" x-data="{
+                search: '',
+                selectedId: '{% if current_location %}{{ current_location.pk }}{% endif %}',
+                selectedName: '{% if current_location %}{{ current_location.get_full_path|escapejs }}{% endif %}',
+                isOpen: false,
+                locations: [
+                    {% for loc in locations %}
+                    { id: '{{ loc.pk }}', name: '{{ loc.get_full_path|escapejs }}', code: '{{ loc.code|escapejs }}' }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                get filteredLocations() {
+                    if (!this.search) return this.locations;
+                    const s = this.search.toLowerCase();
+                    return this.locations.filter(l =>
+                        l.name.toLowerCase().includes(s) ||
+                        l.code.toLowerCase().includes(s)
+                    );
+                },
+                selectLocation(loc) {
+                    this.selectedId = loc.id;
+                    this.selectedName = loc.name;
+                    this.isOpen = false;
+                    this.search = '';
+                },
+                clear() {
+                    this.selectedId = '';
+                    this.selectedName = '';
+                    this.search = '';
+                }
+            }" @click.outside="isOpen = false">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Neuer Lagerort:
+                </label>
+
+                <!-- Hidden input for form submission -->
+                <input type="hidden" name="new_location" :value="selectedId" required>
+
+                <!-- Custom Searchable Select -->
+                <div class="relative">
+                    <!-- Selected Value Display -->
+                    <button type="button"
+                            x-show="!isOpen && selectedName"
+                            @click="isOpen = true"
+                            class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-left bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <span x-text="selectedName" class="block truncate"></span>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
+                            <span @click.stop="clear()" class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </span>
+                        </div>
+                    </button>
+
+                    <!-- Search Input (shown when open or no selection) -->
+                    <div x-show="isOpen || !selectedName" class="relative">
+                        <input type="text"
+                               x-ref="searchInput"
+                               x-model="search"
+                               @focus="isOpen = true"
+                               x-init="if(!selectedName) { $nextTick(() => $refs.searchInput.focus()) }"
+                               placeholder="Lagerort suchen..."
+                               class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Dropdown List -->
+                    <div x-show="isOpen"
+                         x-transition
+                         class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+
+                        <template x-if="filteredLocations.length === 0">
+                            <div class="px-3 py-2 text-sm text-gray-500">
+                                Keine Lagerorte gefunden
+                            </div>
+                        </template>
+
+                        <template x-for="loc in filteredLocations" :key="loc.id">
+                            <button type="button"
+                                    @click="selectLocation(loc)"
+                                    :class="selectedId === loc.id ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'"
+                                    class="w-full px-3 py-2 text-left text-sm transition-colors border-b border-gray-100 last:border-0">
+                                <span x-text="loc.name"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-500 mt-1">Suche nach Name oder Code</p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end gap-3">
+                <button type="button"
+                        class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        @click="open = false; $el.closest('[x-data]').remove()">
+                    Abbrechen
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                    Verschieben
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -30,6 +30,7 @@ class Roles:
     MODUL_IT_HARDWARE = 'Modulverantwortlicher IT Hardware'
     MODUL_WIKI = 'Modulverantwortlicher Wiki'
     MODUL_INFO_MONITORS = 'Modulverantwortlicher Info Monitors'
+    MODUL_KFZ = 'Modulverantwortlicher KFZ'
 
     # Operative Rollen
     BEREICHSLEITUNG = 'Bereichsleitung'
@@ -56,6 +57,7 @@ class Roles:
             cls.MODUL_IT_HARDWARE,
             cls.MODUL_WIKI,
             cls.MODUL_INFO_MONITORS,
+            cls.MODUL_KFZ,
             cls.BEREICHSLEITUNG,
             cls.LAGERVERWALTER,
             cls.WACHLEITER,
@@ -78,6 +80,7 @@ class Roles:
             cls.MODUL_IT_HARDWARE,
             cls.MODUL_WIKI,
             cls.MODUL_INFO_MONITORS,
+            cls.MODUL_KFZ,
         ]
 
     @classmethod
@@ -607,6 +610,7 @@ def get_module_from_role(role_name):
             'IT Hardware': Modules.IT_HARDWARE,
             'Wiki': Modules.WIKI,
             'Info Monitors': Modules.INFO_MONITORS,
+            'KFZ': Modules.VEHICLES,
         }
         return mapping.get(module_display)
     return None

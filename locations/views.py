@@ -17,6 +17,14 @@ from .models import Location, LocationType
 from .forms import LocationForm
 from .resources import LocationResource
 
+# QR-Code und Barcode Generation
+import qrcode
+from qrcode.image.svg import SvgPathImage
+from qrcode.image.pil import PilImage
+import barcode
+from barcode.writer import SVGWriter
+from io import BytesIO
+
 
 class LocationListView(LoginRequiredMixin, ListView):
     """Liste aller Lagerorte"""
@@ -85,6 +93,7 @@ class LocationCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'locations'
         context['action'] = 'create'
+        context['location_types'] = LocationType.choices
         return context
 
 
@@ -105,6 +114,7 @@ class LocationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'locations'
         context['action'] = 'update'
+        context['location_types'] = LocationType.choices
         return context
 
 
@@ -115,14 +125,27 @@ class LocationDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView
     template_name = 'locations/location_confirm_delete.html'
     success_url = reverse_lazy('locations:list')
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         self.object = self.get_object()
         if not self.object.can_be_deleted():
-            messages.error(request, 'Lagerort kann nicht gelöscht werden (enthält Unter-Lagerorte oder Artikel).')
+            messages.error(self.request, 'Lagerort kann nicht gelöscht werden (enthält Unter-Lagerorte).')
             return redirect('locations:detail', pk=self.object.pk)
 
-        messages.success(request, f'Lagerort "{self.object.name}" erfolgreich gelöscht.')
-        return super().delete(request, *args, **kwargs)
+        try:
+            success_url = self.get_success_url()
+            name = self.object.name
+            self.object.delete()
+            messages.success(self.request, f'Lagerort "{name}" erfolgreich gelöscht.')
+            return redirect(success_url)
+        except Exception as e:
+            # Fange ProtectedError ab wenn noch Artikel/Inventuren verknüpft sind
+            messages.error(
+                self.request,
+                f'Lagerort kann nicht gelöscht werden, da noch Artikel, Inventuren oder '
+                f'Lagerbewegungen mit diesem Standort verknüpft sind. '
+                f'Bitte entfernen Sie zuerst alle Verknüpfungen.'
+            )
+            return redirect('locations:detail', pk=self.object.pk)
 
 
 class LocationImportExportView(LoginRequiredMixin, View):
@@ -292,3 +315,229 @@ class LocationImportView(LoginRequiredMixin, View):
         except Exception as e:
             messages.error(request, f'Fehler beim Import: {str(e)}')
             return redirect('locations:import')
+
+
+class LocationQRCodeDownloadView(LoginRequiredMixin, View):
+    """Download QR-Code für einen Lagerort"""
+
+    def get(self, request, pk):
+        location = get_object_or_404(Location, pk=pk)
+        format_type = request.GET.get('format', 'svg')
+
+        # QR-Code Inhalt
+        qr_string = f'/locations/{location.pk}/'
+
+        # QR-Code generieren
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(qr_string)
+        qr.make(fit=True)
+
+        if format_type == 'png':
+            # PNG Format
+            img = qr.make_image(fill_color="black", back_color="white")
+            buffer = BytesIO()
+            img.save(buffer, format='PNG')
+            buffer.seek(0)
+
+            response = HttpResponse(buffer.getvalue(), content_type='image/png')
+            response['Content-Disposition'] = f'attachment; filename="qrcode_{location.code}.png"'
+        else:
+            # SVG Format (Standard)
+            factory = SvgPathImage
+            img = qr.make_image(fill_color="black", back_color="white", image_factory=factory)
+
+            buffer = BytesIO()
+            img.save(buffer)
+            buffer.seek(0)
+
+            response = HttpResponse(buffer.getvalue(), content_type='image/svg+xml')
+            response['Content-Disposition'] = f'attachment; filename="qrcode_{location.code}.svg"'
+
+        return response
+
+
+class LocationBarcodeDownloadView(LoginRequiredMixin, View):
+    """Download Barcode für einen Lagerort"""
+
+    def get(self, request, pk):
+        location = get_object_or_404(Location, pk=pk)
+
+        barcode_value = location.get_barcode_value()
+
+        # Code128 Barcode generieren
+        code128 = barcode.get_barcode_class('code128')
+
+        buffer = BytesIO()
+        code = code128(barcode_value, writer=SVGWriter())
+        code.write(buffer)
+        buffer.seek(0)
+
+        response = HttpResponse(buffer.getvalue(), content_type='image/svg+xml')
+        response['Content-Disposition'] = f'attachment; filename="barcode_{location.code}.svg"'
+
+        return response
+
+
+class LocationUpdateBarcodeView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """HTMX-View zum Aktualisieren des benutzerdefinierten Barcodes"""
+    permission_required = 'locations.change_location'
+
+    def post(self, request, pk):
+        location = get_object_or_404(Location, pk=pk)
+
+        # Barcode aktualisieren
+        new_barcode = request.POST.get('barcode', '').strip()
+        location.barcode = new_barcode
+        location.updated_by = request.user
+        location.save(update_fields=['barcode', 'updated_by', 'updated_at'])
+
+        if new_barcode:
+            messages.success(request, f'Individueller Barcode "{new_barcode}" wurde gespeichert.')
+        else:
+            messages.success(request, 'Individueller Barcode wurde entfernt. Es wird nun der automatisch generierte verwendet.')
+
+        # HTMX: Seite neu laden mit Sprung zum QR-Tab
+        response = HttpResponse()
+        response['HX-Redirect'] = f'{location.get_absolute_url()}#qrcode'
+        return response
+
+
+class LocationQuickMoveView(LoginRequiredMixin, View):
+    """
+    HTMX-View für Quick-Move Modal - Artikel schnell zu anderem Lagerort verschieben
+    Unterstützt verschiedene Artikel-Typen aus allen Modulen
+
+    Berechtigung: change_location ODER die entsprechende change-Berechtigung des Moduls
+    """
+
+    # Mapping von model_type zu (Model, location_field, name_field, permission)
+    MODEL_MAPPING = {
+        'medical_device': ('medical.MedicalDeviceInstance', 'location', 'master.name', 'medical.change_medicaldeviceinstance'),
+        'medical_item': ('medical.MedicalItem', 'location', 'name', 'medical.change_medicalitem'),
+        'clothing_item': ('clothing.ClothingItem', 'location', 'master.name', 'clothing.change_clothingitem'),
+        'equipment_item': ('equipment.EquipmentItem', 'location', 'master.name', 'equipment.change_equipmentitem'),
+        'magazine_item': ('magazine.MagazineItem', 'location', 'master.name', 'magazine.change_magazineitem'),
+        'height_rescue_device': ('height_rescue.HeightRescueDeviceInstance', 'location', 'master.name', 'height_rescue.change_heightrescuedeviceinstance'),
+        'workshop_item': ('workshop.WorkshopItem', 'location', 'master.name', 'workshop.change_workshopitem'),
+        'diving_item': ('diving.DivingItem', 'location', 'master.name', 'diving.change_divingitem'),
+    }
+
+    def has_permission(self, request, model_type):
+        """Prüft ob Benutzer change_location ODER die modulspezifische Berechtigung hat"""
+        if request.user.has_perm('locations.change_location'):
+            return True
+
+        if model_type in self.MODEL_MAPPING:
+            module_perm = self.MODEL_MAPPING[model_type][3]
+            return request.user.has_perm(module_perm)
+
+        return False
+
+    def get_model_and_instance(self, model_type, pk):
+        """Holt das Model und die Instanz basierend auf model_type"""
+        from django.apps import apps
+
+        if model_type not in self.MODEL_MAPPING:
+            return None, None, None
+
+        mapping = self.MODEL_MAPPING[model_type]
+        model_path = mapping[0]
+        location_field = mapping[1]
+        app_label, model_name = model_path.split('.')
+
+        try:
+            Model = apps.get_model(app_label, model_name)
+            instance = Model.objects.get(pk=pk)
+            return Model, instance, location_field
+        except (LookupError, Model.DoesNotExist):
+            return None, None, None
+
+    def get_item_display_name(self, instance, model_type):
+        """Gibt den Anzeigenamen des Artikels zurück"""
+        mapping = self.MODEL_MAPPING.get(model_type)
+        if not mapping:
+            return str(instance)
+
+        name_field = mapping[2]  # Index 2 ist name_field
+
+        # Nested attribute access (z.B. "device.name" oder "master.name")
+        obj = instance
+        for attr in name_field.split('.'):
+            obj = getattr(obj, attr, None)
+            if obj is None:
+                return str(instance)
+        return str(obj)
+
+    def get(self, request, model_type, pk):
+        """Zeigt das Quick-Move Modal"""
+        # Berechtigungsprüfung
+        if not self.has_permission(request, model_type):
+            return HttpResponse('<div class="p-4 text-red-600">Keine Berechtigung</div>', status=403)
+
+        Model, instance, location_field = self.get_model_and_instance(model_type, pk)
+
+        if not instance:
+            return HttpResponse('<div class="p-4 text-red-600">Artikel nicht gefunden</div>', status=404)
+
+        current_location = getattr(instance, location_field, None)
+        item_name = self.get_item_display_name(instance, model_type)
+
+        # Alle aktiven Lagerorte für Dropdown
+        locations = Location.objects.filter(is_active=True).order_by('tree_id', 'lft')
+
+        return render(request, 'locations/partials/quick_move_modal.html', {
+            'instance': instance,
+            'model_type': model_type,
+            'item_name': item_name,
+            'current_location': current_location,
+            'locations': locations,
+        })
+
+    def post(self, request, model_type, pk):
+        """Führt den Lagerort-Wechsel durch"""
+        # Berechtigungsprüfung
+        if not self.has_permission(request, model_type):
+            messages.error(request, 'Keine Berechtigung')
+            return HttpResponse(status=403)
+
+        Model, instance, location_field = self.get_model_and_instance(model_type, pk)
+
+        if not instance:
+            messages.error(request, 'Artikel nicht gefunden')
+            return HttpResponse(status=404)
+
+        new_location_id = request.POST.get('new_location')
+        if not new_location_id:
+            messages.error(request, 'Kein Lagerort ausgewählt')
+            return HttpResponse(status=400)
+
+        try:
+            new_location = Location.objects.get(pk=new_location_id, is_active=True)
+        except Location.DoesNotExist:
+            messages.error(request, 'Ungültiger Lagerort')
+            return HttpResponse(status=400)
+
+        old_location = getattr(instance, location_field, None)
+        item_name = self.get_item_display_name(instance, model_type)
+
+        # Lagerort aktualisieren
+        setattr(instance, location_field, new_location)
+        if hasattr(instance, 'updated_by'):
+            instance.updated_by = request.user
+        instance.save()
+
+        old_name = old_location.name if old_location else 'Kein Lagerort'
+        messages.success(
+            request,
+            f'"{item_name}" wurde von "{old_name}" nach "{new_location.name}" verschoben.'
+        )
+
+        # HTMX: Seite neu laden
+        response = HttpResponse()
+        response['HX-Redirect'] = request.META.get('HTTP_REFERER', '/locations/')
+        return response

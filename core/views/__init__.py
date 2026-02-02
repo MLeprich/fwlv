@@ -228,6 +228,10 @@ class SettingsView(LoginRequiredMixin, View):
             api_token_key = None
             api_token_created = None
 
+        # System-Einstellungen für Module-Tab laden
+        from core.models import SystemSettings
+        modules = SystemSettings.load()
+
         context = {
             'current_module': 'settings',
             'requires_2fa': user.requires_2fa(),
@@ -239,6 +243,7 @@ class SettingsView(LoginRequiredMixin, View):
             'has_api_token': has_api_token,
             'api_token_key': api_token_key,
             'api_token_created': api_token_created,
+            'modules': modules,  # SystemSettings für Module-Tab
         }
 
         return render(request, self.template_name, context)
@@ -283,8 +288,8 @@ class SettingsView(LoginRequiredMixin, View):
                 return redirect('core:settings')
 
         elif section == 'modules':
-            # Nur Admins dürfen Module aktivieren/deaktivieren
-            if user.is_staff or user.is_superuser:
+            # Nur Superuser dürfen Module aktivieren/deaktivieren
+            if user.is_superuser:
                 from core.models import SystemSettings
 
                 sys_settings = SystemSettings.load()
@@ -297,6 +302,7 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.it_hardware_enabled = request.POST.get('it_hardware_enabled') == 'true'
                 sys_settings.tickets_enabled = request.POST.get('tickets_enabled') == 'true'
                 sys_settings.ff_dashboard_enabled = request.POST.get('ff_dashboard_enabled') == 'true'
+                sys_settings.vehicle_handover_enabled = request.POST.get('vehicle_handover_enabled') == 'true'
                 sys_settings.updated_by = user
                 sys_settings.save()
 
@@ -328,6 +334,10 @@ class SettingsView(LoginRequiredMixin, View):
         elif section == 'privacy':
             privacy_form = form
 
+        # System-Einstellungen für Module-Tab laden
+        from core.models import SystemSettings
+        modules = SystemSettings.load()
+
         context = {
             'current_module': 'settings',
             'requires_2fa': user.requires_2fa(),
@@ -336,6 +346,7 @@ class SettingsView(LoginRequiredMixin, View):
             'notification_form': notification_form,
             'appearance_form': appearance_form,
             'privacy_form': privacy_form,
+            'modules': modules,  # SystemSettings für Module-Tab
         }
 
         return render(request, self.template_name, context)
@@ -1346,7 +1357,12 @@ def force_password_change_view(request):
 def generate_api_token(request):
     """
     Generiert oder regeneriert einen API-Token für den User
+    Nur für Superuser zugänglich
     """
+    if not request.user.is_superuser:
+        messages.error(request, 'Keine Berechtigung für diese Aktion.')
+        return redirect('core:settings')
+
     if request.method == 'POST':
         # Lösche alten Token falls vorhanden
         Token.objects.filter(user=request.user).delete()
@@ -1356,7 +1372,7 @@ def generate_api_token(request):
 
         messages.success(
             request,
-            f'✅ API-Token wurde erfolgreich generiert. Bewahren Sie ihn sicher auf!'
+            f'API-Token wurde erfolgreich generiert. Bewahren Sie ihn sicher auf!'
         )
 
         return redirect('core:settings')
@@ -1368,19 +1384,24 @@ def generate_api_token(request):
 def revoke_api_token(request):
     """
     Widerruft den API-Token des Users
+    Nur für Superuser zugänglich
     """
+    if not request.user.is_superuser:
+        messages.error(request, 'Keine Berechtigung für diese Aktion.')
+        return redirect('core:settings')
+
     if request.method == 'POST':
         deleted_count, _ = Token.objects.filter(user=request.user).delete()
 
         if deleted_count > 0:
             messages.success(
                 request,
-                '✅ API-Token wurde erfolgreich widerrufen.'
+                'API-Token wurde erfolgreich widerrufen.'
             )
         else:
             messages.info(
                 request,
-                'ℹ️ Sie hatten keinen aktiven API-Token.'
+                'Sie hatten keinen aktiven API-Token.'
             )
 
         return redirect('core:settings')

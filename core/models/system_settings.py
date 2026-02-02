@@ -63,6 +63,12 @@ class SystemSettings(models.Model):
         help_text="Feuerwehr-Verwaltung (Dienstgrade, Jubiläen, Beförderungen)"
     )
 
+    vehicle_handover_enabled = models.BooleanField(
+        default=True,
+        verbose_name="Fahrzeugübernahme",
+        help_text="Fahrzeugübernahme-Protokolle bei Schichtwechsel"
+    )
+
     # ============================================================================
     # FEATURE FLAGS
     # ============================================================================
@@ -176,4 +182,6 @@ class SystemSettings(models.Model):
             modules.append('tickets')
         if self.ff_dashboard_enabled:
             modules.append('ff_dashboard')
+        if self.vehicle_handover_enabled:
+            modules.append('vehicle_handover')
         return modules

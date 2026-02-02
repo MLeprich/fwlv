@@ -10,9 +10,6 @@
     <!-- Tailwind CSS (local) -->
     <script src="{% static 'js/tailwind.min.js' %}"></script>
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
-
     <!-- Alpine.js Collapse Plugin (local) -->
     <script defer src="{% static 'js/alpine-collapse.min.js' %}"></script>
 
@@ -103,6 +100,9 @@
         }
         {% endif %}
     </style>
+
+    <!-- Custom CSS - loaded after Tailwind to override resets -->
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
 
     {% block extra_css %}{% endblock %}
 </head>

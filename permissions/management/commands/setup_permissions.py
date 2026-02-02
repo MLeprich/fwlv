@@ -190,6 +190,7 @@ class Command(BaseCommand):
             Modules.IT_HARDWARE: 'IT Hardware',
             Modules.WIKI: 'Wiki',
             Modules.INFO_MONITORS: 'Info Monitors',
+            Modules.VEHICLES: 'KFZ',
         }
 
         for module_name, display_name in modules.items():

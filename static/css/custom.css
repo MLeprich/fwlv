@@ -356,3 +356,38 @@
     background-color: #1F2937 !important;
     border-color: #374151 !important;
 }
+
+/* ============================================
+   BUTTON STYLES (Light & Dark Mode)
+   Fix for Tailwind reset overriding bg-red-600
+   ============================================ */
+
+/* Primary action buttons - Feuerwehr-Rot */
+html body button.bg-red-600,
+html body button[type="submit"].bg-red-600,
+html body a.bg-red-600,
+.settings-layout button.bg-red-600,
+.content-area button.bg-red-600 {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+html body button.bg-red-600:hover,
+html body button[type="submit"].bg-red-600:hover,
+html body a.bg-red-600:hover,
+.settings-layout button.bg-red-600:hover,
+.content-area button.bg-red-600:hover {
+    background-color: #b91c1c !important;
+}
+
+/* Blue buttons (for modules.html) */
+html body button.bg-blue-600,
+html body button[type="submit"].bg-blue-600 {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+html body button.bg-blue-600:hover,
+html body button[type="submit"].bg-blue-600:hover {
+    background-color: #1d4ed8 !important;
+}

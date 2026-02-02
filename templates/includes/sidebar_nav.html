@@ -295,7 +295,7 @@
             {% endif %}
 
             <!-- Fahrzeugübernahme -->
-            {% if perms.vehicle_handover.add_vehiclehandover %}
+            {% if modules.vehicle_handover_enabled and perms.vehicle_handover.add_vehiclehandover %}
             <a
                 href="{% url 'vehicle_handover:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors

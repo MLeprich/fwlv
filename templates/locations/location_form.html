@@ -31,7 +31,7 @@
             {% if action == 'create' %}Neuer Lagerort{% else %}Lagerort bearbeiten{% endif %}
         </h1>
 
-        <form method="post" class="space-y-6">
+        <form method="post" class="space-y-6" x-data="{ locationType: '{{ form.location_type.value|default:"room" }}' }">
             {% csrf_token %}
 
             {% if form.non_field_errors %}
@@ -88,7 +88,11 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.location_type.label }} *</label>
-                        {{ form.location_type }}
+                        <select name="location_type" x-model="locationType" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            {% for value, label in location_types %}
+                            <option value="{{ value }}" {% if form.location_type.value == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
                         {% if form.location_type.errors %}
                         <p class="mt-1 text-sm text-red-600">{{ form.location_type.errors.0 }}</p>
                         {% endif %}
@@ -101,6 +105,68 @@
                         <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
                         {% endif %}
                     </div>
+                </div>
+            </div>
+
+            <!-- Raumnummer & Barcode (nur bei passenden Typen) -->
+            <div class="border-b border-gray-200 pb-6" x-show="locationType === 'room' || locationType === 'parking_spot'" x-cloak>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                    <span x-show="locationType === 'room'">Raumnummer</span>
+                    <span x-show="locationType === 'parking_spot'">Stellplatznummer</span>
+                    & Barcode
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <span x-show="locationType === 'room'">Raumnummer</span>
+                            <span x-show="locationType === 'parking_spot'">Stellplatznummer</span>
+                        </label>
+                        {{ form.room_number }}
+                        {% if object and object.parent and object.parent.get_inherited_room_number and not object.room_number %}
+                        <p class="mt-1 text-sm text-blue-600">
+                            Vererbt von übergeordnetem Standort: <strong>{{ object.parent.get_inherited_room_number }}</strong>
+                        </p>
+                        {% else %}
+                        <p class="mt-1 text-sm text-gray-500">Wird an alle Unter-Lagerorte vererbt</p>
+                        {% endif %}
+                        {% if form.room_number.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.room_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.barcode.label }}</label>
+                        {{ form.barcode }}
+                        {% if object and object.pk %}
+                        <p class="mt-1 text-sm text-gray-500">
+                            Vorschau: <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ object.get_barcode_value }}</code>
+                        </p>
+                        {% else %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.barcode.help_text }}</p>
+                        {% endif %}
+                        {% if form.barcode.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.barcode.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barcode (für alle anderen Typen) -->
+            <div class="border-b border-gray-200 pb-6" x-show="locationType && locationType !== 'room' && locationType !== 'parking_spot'" x-cloak>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Barcode</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.barcode.label }}</label>
+                    {{ form.barcode }}
+                    {% if object and object.pk %}
+                    <p class="mt-1 text-sm text-gray-500">
+                        Vorschau: <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ object.get_barcode_value }}</code>
+                    </p>
+                    {% else %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.barcode.help_text }}</p>
+                    {% endif %}
+                    {% if form.barcode.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.barcode.errors.0 }}</p>
+                    {% endif %}
                 </div>
             </div>
 
