@@ -371,6 +371,7 @@ docker system prune -a
 | `DOMAIN` | Nein | `localhost` | Domain für Nginx |
 | `HTTP_PORT` | Nein | `80` | HTTP-Port |
 | `HTTPS_PORT` | Nein | `443` | HTTPS-Port |
+| `USE_SSL` | Nein | `true` | SSL/HTTPS erzwingen (false für Erstinstallation ohne Zertifikat) |
 | `CREATE_SUPERUSER` | Nein | `false` | Auto-Superuser erstellen |
 | `SUPERUSER_USERNAME` | Nein | `admin` | Superuser-Name |
 | `SUPERUSER_PASSWORD` | Nein | `changeme123` | Superuser-Passwort |

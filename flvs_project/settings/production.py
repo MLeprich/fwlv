@@ -23,24 +23,30 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['lager.resqware.de'])
 # HTTPS / SSL ENFORCEMENT
 # ============================================================================
 
+# SSL kann deaktiviert werden für:
+# - Initiale Installation ohne SSL-Zertifikat
+# - Deployment hinter einem SSL-terminierenden Load Balancer
+# - Test-Umgebungen
+USE_SSL = env.bool('USE_SSL', default=True)
+
 # Alle HTTP-Requests zu HTTPS umleiten
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = USE_SSL
 
 # Proxy SSL-Header (wenn hinter Nginx/Apache)
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if USE_SSL else None
 
 # ============================================================================
 # COOKIE SECURITY
 # ============================================================================
 
 # Session Cookies
-SESSION_COOKIE_SECURE = True  # Nur HTTPS
+SESSION_COOKIE_SECURE = USE_SSL  # Nur HTTPS wenn SSL aktiv
 SESSION_COOKIE_HTTPONLY = True  # Kein JavaScript-Zugriff
 SESSION_COOKIE_SAMESITE = 'Strict'  # CSRF-Schutz
 SESSION_COOKIE_AGE = 1209600  # 2 Wochen
 
 # CSRF Cookies
-CSRF_COOKIE_SECURE = True  # Nur HTTPS
+CSRF_COOKIE_SECURE = USE_SSL  # Nur HTTPS wenn SSL aktiv
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Strict'
 CSRF_COOKIE_AGE = 31449600  # 1 Jahr
@@ -53,10 +59,10 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 # HTTP STRICT TRANSPORT SECURITY (HSTS)
 # ============================================================================
 
-# Browser erzwingen HTTPS für 1 Jahr
-SECURE_HSTS_SECONDS = 31536000  # 1 Jahr
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+# Browser erzwingen HTTPS für 1 Jahr (nur wenn SSL aktiv)
+SECURE_HSTS_SECONDS = 31536000 if USE_SSL else 0  # 1 Jahr
+SECURE_HSTS_INCLUDE_SUBDOMAINS = USE_SSL
+SECURE_HSTS_PRELOAD = USE_SSL
 
 # ============================================================================
 # CONTENT SECURITY
