@@ -217,7 +217,14 @@ cat backup.sql | docker compose exec -T db psql -U flvs flvs
 
 ## Updates
 
-### Anwendungs-Update
+### Schnelles Update mit Script
+
+```bash
+# Automatisches Update mit Backup
+./docker/scripts/update.sh
+```
+
+### Manuelles Anwendungs-Update
 
 ```bash
 cd /opt/flvs
@@ -243,6 +250,51 @@ docker compose pull
 
 # Container neu starten
 docker compose up -d
+```
+
+---
+
+## Verfügbare Skripte
+
+Im Verzeichnis `docker/scripts/` befinden sich folgende Hilfsskripte:
+
+| Skript | Beschreibung | Verwendung |
+|--------|--------------|------------|
+| `entrypoint.sh` | Container-Startskript (automatisch) | Wird vom Container ausgeführt |
+| `init-database.sh` | Datenbank vollständig initialisieren | `docker compose exec web ./docker/scripts/init-database.sh` |
+| `init-ssl.sh` | SSL-Zertifikat mit Let's Encrypt | `./docker/scripts/init-ssl.sh domain.de email@domain.de` |
+| `backup.sh` | Manuelles Datenbank-Backup | `docker compose exec backup /backup.sh` |
+| `restore-backup.sh` | Backup wiederherstellen | `docker compose exec web ./docker/scripts/restore-backup.sh backup_file.sql.gz` |
+| `update.sh` | System aktualisieren | `./docker/scripts/update.sh` |
+
+### Datenbank-Initialisierung
+
+Das `init-database.sh` Skript führt folgende Schritte aus:
+
+1. Datenbank-Migrationen
+2. Static Files sammeln
+3. Basis-Permissions und Rollen einrichten
+4. Modul-spezifische Permissions konfigurieren
+5. Optional: Superuser erstellen
+
+```bash
+# Mit Superuser-Erstellung
+CREATE_SUPERUSER=true docker compose exec web ./docker/scripts/init-database.sh
+
+# Oder mit Flag
+docker compose exec web ./docker/scripts/init-database.sh --create-superuser
+```
+
+### One-Click Installation
+
+Für neue Installationen auf einer frischen VM:
+
+```bash
+# Herunterladen und ausführen
+curl -fsSL https://raw.githubusercontent.com/MLeprich/fwlv/main/install.sh | bash
+
+# Oder mit Optionen
+./install.sh --domain flvs.meine-feuerwehr.de --email admin@meine-feuerwehr.de
 ```
 
 ---
@@ -390,4 +442,4 @@ Bei Problemen:
 
 ---
 
-*Letzte Aktualisierung: Dezember 2025*
+*Letzte Aktualisierung: Februar 2026*

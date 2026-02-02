@@ -81,6 +81,17 @@ else:
 EOF
     fi
 
+    # Setup permissions and roles
+    echo "Setting up permissions and roles..."
+    python manage.py setup_permissions 2>/dev/null || echo "  (Permissions already configured or command not available)"
+
+    # Setup module-specific permissions
+    for cmd in setup_medical_permissions setup_clothing_permissions setup_equipment_permissions \
+               setup_magazine_permissions setup_height_rescue_permissions setup_diving_permissions \
+               setup_workshop_permissions setup_it_hardware_permissions; do
+        python manage.py $cmd 2>/dev/null || true
+    done
+
     echo ""
     echo "Startup tasks completed!"
 else
