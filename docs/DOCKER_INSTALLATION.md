@@ -4,6 +4,52 @@ Anleitung zur Installation des Feuerwehr Lagerverwaltungssystems (FLVS) mit Dock
 
 ---
 
+## Schnellste Installation (One-Click)
+
+Für eine neue Installation auf einer frischen VM (Ubuntu/Debian):
+
+```bash
+# Alles in einem Befehl - installiert Docker, klont Repository, konfiguriert und startet
+curl -fsSL https://raw.githubusercontent.com/MLeprich/fwlv/main/install.sh | bash
+```
+
+**Mit eigener Domain und E-Mail:**
+
+```bash
+# Herunterladen
+curl -fsSL https://raw.githubusercontent.com/MLeprich/fwlv/main/install.sh -o install.sh
+chmod +x install.sh
+
+# Installation mit Parametern
+./install.sh --domain flvs.meine-feuerwehr.de --email admin@meine-feuerwehr.de
+```
+
+Nach ca. 5-10 Minuten ist die Anwendung unter `http://ihre-domain/` erreichbar. Die Login-Daten werden am Ende angezeigt und in `/opt/flvs/.credentials` gespeichert.
+
+### install.sh Optionen
+
+| Option | Beschreibung | Beispiel |
+|--------|--------------|----------|
+| `--domain` | Domain für die Installation | `--domain flvs.feuerwehr.de` |
+| `--email` | Admin E-Mail-Adresse | `--email admin@feuerwehr.de` |
+| `--password` | Admin-Passwort (sonst generiert) | `--password MeinPasswort123` |
+| `--install-dir` | Installationsverzeichnis | `--install-dir /opt/flvs` |
+| `--skip-docker-install` | Docker-Installation überspringen | `--skip-docker-install` |
+
+### Was das Skript automatisch macht
+
+1. Systemvoraussetzungen prüfen (RAM, Speicher, OS)
+2. Docker installieren (falls nicht vorhanden)
+3. Repository nach `/opt/flvs` klonen
+4. Sichere Passwörter generieren (SECRET_KEY, DB-Passwort, Admin-Passwort)
+5. `.env` Konfiguration erstellen
+6. Docker-Container bauen und starten
+7. Datenbank migrieren und Permissions einrichten
+8. Superuser erstellen
+9. Zugangsdaten in `.credentials` speichern
+
+---
+
 ## Voraussetzungen
 
 ### Systemanforderungen
@@ -115,7 +161,23 @@ Nach erfolgreichem Start ist die Anwendung erreichbar unter:
 
 ---
 
-## SSL/HTTPS aktivieren (Produktion)
+## SSL/HTTPS Konfiguration
+
+### Erstinstallation ohne SSL-Zertifikat
+
+Standardmäßig erwartet die Production-Konfiguration HTTPS. Für die **Erstinstallation ohne SSL-Zertifikat** muss `USE_SSL=false` gesetzt werden:
+
+```bash
+# In .env hinzufügen/ändern:
+USE_SSL=false
+```
+
+Dies deaktiviert:
+- HTTPS-Redirect
+- Secure Cookies
+- HSTS Headers
+
+> **Wichtig:** Nach Einrichtung des SSL-Zertifikats `USE_SSL=true` setzen (oder Zeile entfernen) und Container neu starten!
 
 ### Option A: Let's Encrypt (empfohlen)
 
@@ -419,6 +481,53 @@ docker system prune -a
               │   (DB)   │      │ (Cache)  │      │ (Worker) │
               └──────────┘      └──────────┘      └──────────┘
 ```
+
+---
+
+## Vollständiges Beispiel: Von Null zur laufenden Anwendung
+
+Hier ein komplettes Beispiel für die Installation auf einer frischen Ubuntu 24.04 VM:
+
+```bash
+# 1. Als root oder mit sudo einloggen
+ssh user@neue-vm.example.de
+
+# 2. System aktualisieren
+sudo apt update && sudo apt upgrade -y
+
+# 3. One-Click Installation starten
+curl -fsSL https://raw.githubusercontent.com/MLeprich/fwlv/main/install.sh -o install.sh
+chmod +x install.sh
+./install.sh --domain flvs.meine-feuerwehr.de --email admin@meine-feuerwehr.de
+
+# 4. Warten bis Installation abgeschlossen (ca. 5-10 Minuten)
+# Am Ende werden die Login-Daten angezeigt:
+#
+#   URL:      http://flvs.meine-feuerwehr.de/
+#   Admin:    http://flvs.meine-feuerwehr.de/admin/
+#
+#   Login-Daten:
+#   Benutzer: admin
+#   Passwort: [generiertes Passwort]
+
+# 5. Optional: SSL aktivieren
+cd /opt/flvs
+./docker/scripts/init-ssl.sh flvs.meine-feuerwehr.de admin@meine-feuerwehr.de
+
+# 6. USE_SSL aktivieren nach SSL-Einrichtung
+sed -i 's/USE_SSL=false/USE_SSL=true/' .env
+docker compose up -d
+
+# 7. Fertig! Anwendung ist unter https://flvs.meine-feuerwehr.de/ erreichbar
+```
+
+### Nach der Installation
+
+1. **Erstes Login:** Mit den angezeigten Zugangsdaten einloggen
+2. **Passwort ändern:** Unbedingt das Admin-Passwort ändern!
+3. **Module aktivieren:** Unter Einstellungen → Module die gewünschten Module aktivieren
+4. **Benutzer anlegen:** Weitere Benutzer mit entsprechenden Rollen anlegen
+5. **Backup aktivieren:** `docker compose --profile backup up -d`
 
 ---
 
