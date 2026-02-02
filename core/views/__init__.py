@@ -1407,3 +1407,144 @@ def revoke_api_token(request):
         return redirect('core:settings')
 
     return redirect('core:settings')
+
+
+# ============================================================================
+# BACKUP / RESTORE
+# ============================================================================
+
+@login_required
+def backup_export(request):
+    """
+    Exportiert die komplette Datenbank als JSON-Datei.
+    Nur für Superuser zugänglich.
+    """
+    import json
+    import subprocess
+    import tempfile
+    import os
+    from django.http import HttpResponse
+    from django.utils import timezone as django_timezone
+
+    if not request.user.is_superuser:
+        messages.error(request, 'Keine Berechtigung für diese Aktion.')
+        return redirect('core:settings')
+
+    if request.method != 'POST':
+        return redirect('core:settings')
+
+    try:
+        # Django dumpdata über subprocess aufrufen
+        # Wir nutzen das Management Command für maximale Kompatibilität
+        from django.core.management import call_command
+        from io import StringIO
+
+        output = StringIO()
+
+        # Alle Apps exportieren, außer contenttypes und auth.permission (werden beim Import neu erstellt)
+        call_command(
+            'dumpdata',
+            '--natural-foreign',
+            '--natural-primary',
+            '--exclude=contenttypes',
+            '--exclude=auth.permission',
+            '--exclude=admin.logentry',
+            '--exclude=sessions.session',
+            '--indent=2',
+            stdout=output
+        )
+
+        json_data = output.getvalue()
+
+        # Dateiname mit Zeitstempel
+        timestamp = django_timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
+        filename = f'flvs_backup_{timestamp}.json'
+
+        # Response als Download
+        response = HttpResponse(json_data, content_type='application/json')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        messages.success(request, f'Backup erfolgreich erstellt: {filename}')
+
+        return response
+
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Backup export failed: {e}")
+        messages.error(request, f'Fehler beim Erstellen des Backups: {str(e)}')
+        return redirect('core:settings')
+
+
+@login_required
+def backup_import(request):
+    """
+    Importiert eine Backup-Datei in die Datenbank.
+    Nur für Superuser zugänglich.
+    """
+    import json
+    import tempfile
+    import os
+
+    if not request.user.is_superuser:
+        messages.error(request, 'Keine Berechtigung für diese Aktion.')
+        return redirect('core:settings')
+
+    if request.method != 'POST':
+        return redirect('core:settings')
+
+    # Prüfe Bestätigung
+    if not request.POST.get('confirm_import'):
+        messages.error(request, 'Bitte bestätigen Sie, dass Sie den Import durchführen möchten.')
+        return redirect('core:settings')
+
+    # Prüfe Datei
+    backup_file = request.FILES.get('backup_file')
+    if not backup_file:
+        messages.error(request, 'Keine Backup-Datei ausgewählt.')
+        return redirect('core:settings')
+
+    if not backup_file.name.endswith('.json'):
+        messages.error(request, 'Nur JSON-Dateien werden akzeptiert.')
+        return redirect('core:settings')
+
+    try:
+        # Datei in temporäre Datei schreiben
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.json', delete=False) as tmp_file:
+            for chunk in backup_file.chunks():
+                tmp_file.write(chunk)
+            tmp_path = tmp_file.name
+
+        try:
+            # Validieren dass es gültiges JSON ist
+            with open(tmp_path, 'r', encoding='utf-8') as f:
+                json.load(f)
+
+            # Django loaddata aufrufen
+            from django.core.management import call_command
+            from io import StringIO
+
+            output = StringIO()
+            call_command('loaddata', tmp_path, stdout=output, verbosity=1)
+
+            result = output.getvalue()
+
+            messages.success(
+                request,
+                f'Backup erfolgreich importiert! Die Daten wurden wiederhergestellt.'
+            )
+
+        finally:
+            # Temporäre Datei löschen
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+    except json.JSONDecodeError as e:
+        messages.error(request, f'Ungültige JSON-Datei: {str(e)}')
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Backup import failed: {e}")
+        messages.error(request, f'Fehler beim Importieren des Backups: {str(e)}')
+
+    return redirect('core:settings')

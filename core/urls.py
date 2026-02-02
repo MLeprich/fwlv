@@ -19,6 +19,8 @@ urlpatterns = [
     path('settings/', views.SettingsView.as_view(), name='settings'),
     path('settings/api-token/generate/', views.generate_api_token, name='generate_api_token'),
     path('settings/api-token/revoke/', views.revoke_api_token, name='revoke_api_token'),
+    path('settings/backup/export/', views.backup_export, name='backup_export'),
+    path('settings/backup/import/', views.backup_import, name='backup_import'),
 
     # Search (HTMX)
     path('search/', views.global_search_view, name='global_search'),

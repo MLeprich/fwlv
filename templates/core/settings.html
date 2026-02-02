@@ -106,6 +106,15 @@
                         <span class="text-xl">⚙️</span>
                         <span class="font-medium text-sm">System</span>
                     </button>
+
+                    <button
+                        @click="activeSection = 'backup'"
+                        :class="activeSection === 'backup' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left border-l-4"
+                    >
+                        <span class="text-xl">💾</span>
+                        <span class="font-medium text-sm">Datensicherung</span>
+                    </button>
                     {% endif %}
                 </nav>
             </div>
@@ -125,6 +134,7 @@
                 {% include 'core/settings/api.html' %}
                 {% include 'core/settings/modules.html' %}
                 {% include 'core/settings/system.html' %}
+                {% include 'core/settings/backup.html' %}
                 {% endif %}
 
             </div>
