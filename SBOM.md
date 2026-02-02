@@ -1,8 +1,8 @@
 # FLVS - Software Bill of Materials (SBOM)
 
 **Projekt:** Feuerwehr Lagerverwaltungssystem (FLVS)
-**Version:** 1.0.0
-**Erstellt:** Dezember 2024
+**Version:** 1.1.0
+**Aktualisiert:** Februar 2025
 **Format:** CycloneDX-kompatibel
 
 ---
@@ -15,6 +15,17 @@
 | PostgreSQL | 16 | Datenbank |
 | Redis | 7 | Cache & Message Broker |
 | Nginx | 1.24+ | Reverse Proxy |
+
+---
+
+## Frontend-Bibliotheken (CDN)
+
+| Bibliothek | Version | Lizenz | Beschreibung |
+|------------|---------|--------|--------------|
+| HTMX | 1.9+ | BSD-2-Clause | HTML Extensions |
+| Alpine.js | 3.x | MIT | Reactive JavaScript |
+| Tailwind CSS | 3.x | MIT | CSS Framework |
+| Mermaid.js | 10.x | MIT | Diagramme & Flowcharts |
 
 ---
 
@@ -144,9 +155,9 @@
 
 | Lizenz | Anzahl Pakete |
 |--------|---------------|
-| MIT | 28 |
+| MIT | 31 |
 | BSD-3-Clause | 24 |
-| BSD-2-Clause | 3 |
+| BSD-2-Clause | 4 |
 | Apache-2.0 | 4 |
 | LGPL | 1 |
 | HPND | 1 |
@@ -163,4 +174,4 @@
 
 ---
 
-*Automatisch generiert - Stand: Dezember 2024*
+*Aktualisiert: Februar 2025*
