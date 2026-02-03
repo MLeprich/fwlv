@@ -28,6 +28,9 @@
         });
     </script>
 
+    <!-- Block for Alpine.js components that need to register before alpine:init -->
+    {% block alpine_components %}{% endblock %}
+
     <style>
         /* Custom Scrollbar */
         ::-webkit-scrollbar {

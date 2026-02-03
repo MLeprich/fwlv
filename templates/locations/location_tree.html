@@ -3,6 +3,324 @@
 
 {% block title %}Standort-Organigramm - FLVS{% endblock %}
 
+{% block alpine_components %}
+<script>
+// Global fallbacks for Alpine.js scope resolution
+window.selectedRoot = '';
+window.filterableLocations = [];
+
+window.treeChart = function() {
+    return {
+        orientation: 'TB',
+        zoom: 1,
+        chartDefinition: '',
+        selectedRoot: '',
+        allLocations: [],
+        filterableLocations: [],
+        renderCounter: 0,
+        isPanning: false,
+        startX: 0,
+        startY: 0,
+        scrollLeft: 0,
+        scrollTop: 0,
+
+        init() {
+            // Load locations from json_script element
+            const locationsScript = document.getElementById('locations-data');
+            if (locationsScript) {
+                try {
+                    this.allLocations = JSON.parse(locationsScript.textContent);
+                } catch (e) {
+                    console.error('Failed to parse locations:', e);
+                    this.allLocations = [];
+                }
+            }
+            this.buildFilterableLocations();
+            this.setupPanListeners();
+            this.waitForMermaid().then(() => this.renderChart());
+        },
+
+        waitForMermaid() {
+            return new Promise((resolve) => {
+                if (typeof mermaid !== 'undefined') {
+                    this.initMermaid();
+                    resolve();
+                } else {
+                    const check = setInterval(() => {
+                        if (typeof mermaid !== 'undefined') {
+                            clearInterval(check);
+                            this.initMermaid();
+                            resolve();
+                        }
+                    }, 50);
+                }
+            });
+        },
+
+        initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'base',
+                themeVariables: {
+                    primaryColor: '#3b82f6',
+                    primaryTextColor: '#1f2937',
+                    primaryBorderColor: '#93c5fd',
+                    lineColor: '#6b7280',
+                    secondaryColor: '#f3f4f6',
+                    tertiaryColor: '#ffffff',
+                    fontSize: '14px',
+                    fontFamily: 'ui-sans-serif, system-ui, sans-serif'
+                },
+                flowchart: {
+                    htmlLabels: true,
+                    curve: 'basis',
+                    padding: 15,
+                    nodeSpacing: 50,
+                    rankSpacing: 80
+                }
+            });
+        },
+
+        setupPanListeners() {
+            const container = document.getElementById('chart-container');
+            if (!container) return;
+
+            const self = this;
+
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    self.zoom = Math.min(self.zoom + 0.1, 2);
+                } else {
+                    self.zoom = Math.max(self.zoom - 0.1, 0.3);
+                }
+                self.applyZoom();
+            }, { passive: false });
+
+            container.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                self.isPanning = true;
+                self.startX = e.pageX - container.offsetLeft;
+                self.startY = e.pageY - container.offsetTop;
+                self.scrollLeft = container.scrollLeft;
+                self.scrollTop = container.scrollTop;
+                container.style.cursor = 'grabbing';
+            });
+
+            container.addEventListener('mousemove', (e) => {
+                if (!self.isPanning) return;
+                e.preventDefault();
+                const x = e.pageX - container.offsetLeft;
+                const y = e.pageY - container.offsetTop;
+                const walkX = (x - self.startX) * 1.5;
+                const walkY = (y - self.startY) * 1.5;
+                container.scrollLeft = self.scrollLeft - walkX;
+                container.scrollTop = self.scrollTop - walkY;
+            });
+
+            container.addEventListener('mouseup', () => {
+                self.isPanning = false;
+                container.style.cursor = 'grab';
+            });
+
+            container.addEventListener('mouseleave', () => {
+                self.isPanning = false;
+                container.style.cursor = 'grab';
+            });
+        },
+
+        async renderChart() {
+            const container = document.getElementById('mermaid-chart');
+            if (!container) return;
+
+            const chartDef = this.buildChartDefinition();
+            this.chartDefinition = chartDef;
+
+            if (!chartDef) {
+                container.innerHTML = '<div class="text-center py-12 text-gray-500">Keine Daten vorhanden</div>';
+                return;
+            }
+
+            try {
+                container.innerHTML = '';
+                this.renderCounter++;
+                const { svg } = await mermaid.render(`tree-diagram-${this.renderCounter}`, chartDef);
+                container.innerHTML = svg;
+
+                const svgEl = container.querySelector('svg');
+                if (svgEl) {
+                    svgEl.style.maxWidth = '100%';
+                    svgEl.style.height = 'auto';
+                }
+            } catch (error) {
+                console.error('Mermaid render error:', error);
+                container.innerHTML = '<div class="text-center py-12 text-red-500">Fehler beim Rendern des Diagramms</div>';
+            }
+        },
+
+        buildFilterableLocations() {
+            const parentIds = new Set(this.allLocations.map(l => l.parent_id).filter(Boolean));
+            this.filterableLocations = this.allLocations.filter(loc =>
+                loc.parent_id === null || parentIds.has(loc.id)
+            ).sort((a, b) => {
+                if (a.level !== b.level) return a.level - b.level;
+                return a.name.localeCompare(b.name, 'de');
+            });
+        },
+
+        getFilteredCount() {
+            if (!this.selectedRoot) return this.allLocations.length;
+            const rootId = parseInt(this.selectedRoot);
+            return this.getDescendantIds(rootId).size;
+        },
+
+        getFilterLabel(loc) {
+            const indent = '  '.repeat(loc.level);
+            const typeLabels = {
+                'site': '\u{1F3DB}\u{FE0F}', 'building': '\u{1F3E2}', 'area': '\u{1F333}', 'room': '\u{1F6AA}',
+                'parking_spot': '\u{1F17F}\u{FE0F}', 'rack': '\u{1F4DA}', 'cabinet': '\u{1F5C4}\u{FE0F}', 'shelf': '\u{1F4CB}',
+                'drawer': '\u{1F4E5}', 'box': '\u{1F4E6}', 'vehicle': '\u{1F697}', 'container': '\u{1F4E6}'
+            };
+            const icon = typeLabels[loc.type] || '\u{1F4CD}';
+            return `${indent}${icon} ${loc.name}`;
+        },
+
+        getDescendantIds(rootId) {
+            const descendants = new Set([rootId]);
+            let changed = true;
+            while (changed) {
+                changed = false;
+                this.allLocations.forEach(loc => {
+                    if (loc.parent_id && descendants.has(loc.parent_id) && !descendants.has(loc.id)) {
+                        descendants.add(loc.id);
+                        changed = true;
+                    }
+                });
+            }
+            return descendants;
+        },
+
+        buildChartDefinition() {
+            if (!this.allLocations || this.allLocations.length === 0) return null;
+
+            let locationsToShow = this.allLocations;
+            if (this.selectedRoot) {
+                const rootId = parseInt(this.selectedRoot);
+                const descendantIds = this.getDescendantIds(rootId);
+                locationsToShow = this.allLocations.filter(loc => descendantIds.has(loc.id));
+            }
+            if (locationsToShow.length === 0) return null;
+
+            let def = `flowchart ${this.orientation}\n`;
+            def += `    classDef site fill:#dbeafe,stroke:#3b82f6,stroke-width:2px\n`;
+            def += `    classDef building fill:#dcfce7,stroke:#22c55e,stroke-width:2px\n`;
+            def += `    classDef room fill:#fef3c7,stroke:#f59e0b,stroke-width:2px\n`;
+            def += `    classDef storage fill:#f3e8ff,stroke:#a855f7,stroke-width:2px\n`;
+            def += `    classDef vehicle fill:#fee2e2,stroke:#ef4444,stroke-width:2px\n`;
+
+            const filteredIds = new Set(locationsToShow.map(l => l.id));
+
+            locationsToShow.forEach(loc => {
+                const icon = this.getIcon(loc.type);
+                const label = `${icon} ${this.escapeLabel(loc.name)}`;
+                const nodeId = `node${loc.id}`;
+
+                def += `    ${nodeId}["${label}"]\n`;
+                if (loc.parent_id && filteredIds.has(loc.parent_id)) {
+                    def += `    node${loc.parent_id} --> ${nodeId}\n`;
+                }
+                const typeClass = this.getTypeClass(loc.type);
+                def += `    class ${nodeId} ${typeClass}\n`;
+            });
+
+            return def;
+        },
+
+        getIcon(type) {
+            const icons = {
+                'site': '\u{1F3DB}\u{FE0F}', 'building': '\u{1F3E2}', 'area': '\u{1F333}', 'room': '\u{1F6AA}',
+                'parking_spot': '\u{1F17F}\u{FE0F}', 'rack': '\u{1F4DA}', 'cabinet': '\u{1F5C4}\u{FE0F}', 'shelf': '\u{1F4CB}',
+                'drawer': '\u{1F4E5}', 'box': '\u{1F4E6}', 'vehicle': '\u{1F697}', 'container': '\u{1F4E6}', 'other': '\u{1F4CD}'
+            };
+            return icons[type] || '\u{1F4CD}';
+        },
+
+        getTypeClass(type) {
+            if (type === 'site') return 'site';
+            if (['building', 'area'].includes(type)) return 'building';
+            if (['room', 'parking_spot'].includes(type)) return 'room';
+            if (['vehicle'].includes(type)) return 'vehicle';
+            return 'storage';
+        },
+
+        escapeLabel(text) {
+            return text.replace(/"/g, "'").replace(/\[/g, "(").replace(/\]/g, ")").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        },
+
+        zoomIn() { this.zoom = Math.min(this.zoom + 0.1, 2); this.applyZoom(); },
+        zoomOut() { this.zoom = Math.max(this.zoom - 0.1, 0.3); this.applyZoom(); },
+        resetZoom() { this.zoom = 1; this.applyZoom(); },
+
+        applyZoom() {
+            const svg = document.querySelector('#mermaid-chart svg');
+            if (svg) {
+                svg.style.transform = `scale(${this.zoom})`;
+                svg.style.transformOrigin = 'top left';
+                svg.style.transition = 'transform 0.1s ease';
+            }
+        },
+
+        downloadSVG() {
+            const svg = document.querySelector('#mermaid-chart svg');
+            if (!svg) return;
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'standort-organigramm.svg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        },
+
+        async downloadPNG() {
+            const svg = document.querySelector('#mermaid-chart svg');
+            if (!svg) return;
+            const bbox = svg.getBBox();
+            const width = Math.max(bbox.width + 40, 800);
+            const height = Math.max(bbox.height + 40, 600);
+            const canvas = document.createElement('canvas');
+            canvas.width = width * 2;
+            canvas.height = height * 2;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.scale(2, 2);
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 20, 20);
+                URL.revokeObjectURL(url);
+                canvas.toBlob(blob => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'standort-organigramm.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            };
+            img.src = url;
+        }
+    };
+};
+</script>
+{% endblock %}
+
 {% block breadcrumb %}
 <div class="bg-white border-b border-gray-200 px-6 py-3">
     <nav class="flex" aria-label="Breadcrumb">
@@ -24,6 +342,7 @@
 {% endblock %}
 
 {% block content %}
+<script id="locations-data" type="application/json">{{ locations_json|safe }}</script>
 <div class="max-w-full mx-auto px-6" x-data="treeChart()">
     <!-- Header -->
     <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm">
@@ -115,6 +434,7 @@
                         PNG
                     </button>
                 </div>
+                </div>
             </div>
         </div>
     </div>
@@ -127,16 +447,38 @@
             </svg>
             <div class="ml-3">
                 <p class="text-sm text-blue-700">
-                    <strong>{{ total_locations }}</strong> Standorte/Lagerorte in <strong>{{ root_count }}</strong> Hauptstandorten.
+                    <template x-if="!selectedRoot">
+                        <span><strong>{{ total_locations }}</strong> Standorte/Lagerorte in <strong>{{ root_count }}</strong> Hauptstandorten.</span>
+                    </template>
+                    <template x-if="selectedRoot">
+                        <span><strong x-text="getFilteredCount()"></strong> Standorte/Lagerorte im ausgewählten Bereich.</span>
+                    </template>
                     Nutzen Sie die Zoom-Steuerung und das Mausrad zum Navigieren. Klicken und ziehen Sie, um den Ausschnitt zu verschieben.
                 </p>
             </div>
         </div>
     </div>
 
-    <!-- Legend -->
+    <!-- Legend & Filter -->
     <div class="mt-4 bg-white rounded-lg shadow p-4">
-        <h3 class="text-sm font-semibold text-gray-700 mb-3">Legende</h3>
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
+            <h3 class="text-sm font-semibold text-gray-700">Legende</h3>
+            <!-- Location Filter -->
+            <div class="flex items-center gap-2">
+                <label for="root-filter" class="text-sm text-gray-600 whitespace-nowrap">Anzeigen:</label>
+                <select
+                    id="root-filter"
+                    x-model="selectedRoot"
+                    @change="renderChart()"
+                    class="rounded-lg border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500 py-1.5 pr-8 min-w-[200px]"
+                >
+                    <option value="">Alle Standorte</option>
+                    <template x-for="loc in filterableLocations" :key="loc.id">
+                        <option :value="loc.id" x-text="getFilterLabel(loc)"></option>
+                    </template>
+                </select>
+            </div>
+        </div>
         <div class="flex flex-wrap gap-4 text-sm">
             <span class="inline-flex items-center gap-1"><span class="text-lg">🏛️</span> Standort/Wache</span>
             <span class="inline-flex items-center gap-1"><span class="text-lg">🏢</span> Gebäude</span>
@@ -156,14 +498,12 @@
     <div class="mt-6 bg-white rounded-lg shadow overflow-hidden">
         <div
             id="chart-container"
-            class="overflow-auto cursor-grab active:cursor-grabbing"
+            class="overflow-auto cursor-grab select-none"
             style="min-height: 600px; max-height: calc(100vh - 350px);"
-            @wheel.prevent="handleWheel($event)"
         >
             <div
                 id="mermaid-chart"
-                class="p-8 transition-transform duration-100"
-                :style="'transform: scale(' + zoom + '); transform-origin: top left;'"
+                class="p-8"
             >
                 <!-- Mermaid chart will be rendered here -->
                 <div class="flex items-center justify-center h-96 text-gray-500">
@@ -191,225 +531,4 @@
 
 <!-- Mermaid.js -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-
-<script>
-function treeChart() {
-    return {
-        orientation: 'TB',
-        zoom: 1,
-        chartDefinition: '',
-
-        init() {
-            // Initialize Mermaid
-            mermaid.initialize({
-                startOnLoad: false,
-                theme: 'base',
-                themeVariables: {
-                    primaryColor: '#3b82f6',
-                    primaryTextColor: '#1f2937',
-                    primaryBorderColor: '#93c5fd',
-                    lineColor: '#6b7280',
-                    secondaryColor: '#f3f4f6',
-                    tertiaryColor: '#ffffff',
-                    fontSize: '14px',
-                    fontFamily: 'ui-sans-serif, system-ui, sans-serif'
-                },
-                flowchart: {
-                    htmlLabels: true,
-                    curve: 'basis',
-                    padding: 15,
-                    nodeSpacing: 50,
-                    rankSpacing: 80
-                }
-            });
-
-            this.renderChart();
-        },
-
-        async renderChart() {
-            const container = document.getElementById('mermaid-chart');
-            if (!container) return;
-
-            // Build Mermaid chart definition
-            const chartDef = this.buildChartDefinition();
-            this.chartDefinition = chartDef;
-
-            if (!chartDef) {
-                container.innerHTML = '<div class="text-center py-12 text-gray-500">Keine Daten vorhanden</div>';
-                return;
-            }
-
-            try {
-                // Clear previous chart
-                container.innerHTML = '';
-
-                // Render new chart
-                const { svg } = await mermaid.render('tree-diagram', chartDef);
-                container.innerHTML = svg;
-
-                // Make SVG responsive
-                const svgEl = container.querySelector('svg');
-                if (svgEl) {
-                    svgEl.style.maxWidth = '100%';
-                    svgEl.style.height = 'auto';
-                }
-            } catch (error) {
-                console.error('Mermaid render error:', error);
-                container.innerHTML = '<div class="text-center py-12 text-red-500">Fehler beim Rendern des Diagramms</div>';
-            }
-        },
-
-        buildChartDefinition() {
-            const locations = {{ locations_json|safe }};
-            if (!locations || locations.length === 0) return null;
-
-            let def = `flowchart ${this.orientation}\n`;
-
-            // Add styles
-            def += `    classDef site fill:#dbeafe,stroke:#3b82f6,stroke-width:2px\n`;
-            def += `    classDef building fill:#dcfce7,stroke:#22c55e,stroke-width:2px\n`;
-            def += `    classDef room fill:#fef3c7,stroke:#f59e0b,stroke-width:2px\n`;
-            def += `    classDef storage fill:#f3e8ff,stroke:#a855f7,stroke-width:2px\n`;
-            def += `    classDef vehicle fill:#fee2e2,stroke:#ef4444,stroke-width:2px\n`;
-
-            // Build nodes and connections
-            locations.forEach(loc => {
-                const icon = this.getIcon(loc.type);
-                const label = `${icon} ${this.escapeLabel(loc.name)}`;
-                const nodeId = `node${loc.id}`;
-
-                // Add node
-                def += `    ${nodeId}["${label}"]\n`;
-
-                // Add connection to parent
-                if (loc.parent_id) {
-                    def += `    node${loc.parent_id} --> ${nodeId}\n`;
-                }
-
-                // Apply class based on type
-                const typeClass = this.getTypeClass(loc.type);
-                def += `    class ${nodeId} ${typeClass}\n`;
-            });
-
-            return def;
-        },
-
-        getIcon(type) {
-            const icons = {
-                'site': '🏛️',
-                'building': '🏢',
-                'area': '🌳',
-                'room': '🚪',
-                'parking_spot': '🅿️',
-                'rack': '📚',
-                'cabinet': '🗄️',
-                'shelf': '📋',
-                'drawer': '📥',
-                'box': '📦',
-                'vehicle': '🚗',
-                'container': '📦',
-                'other': '📍'
-            };
-            return icons[type] || '📍';
-        },
-
-        getTypeClass(type) {
-            if (type === 'site') return 'site';
-            if (['building', 'area'].includes(type)) return 'building';
-            if (['room', 'parking_spot'].includes(type)) return 'room';
-            if (['vehicle'].includes(type)) return 'vehicle';
-            return 'storage';
-        },
-
-        escapeLabel(text) {
-            return text
-                .replace(/"/g, "'")
-                .replace(/\[/g, "(")
-                .replace(/\]/g, ")")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
-        },
-
-        zoomIn() {
-            this.zoom = Math.min(this.zoom + 0.1, 2);
-        },
-
-        zoomOut() {
-            this.zoom = Math.max(this.zoom - 0.1, 0.3);
-        },
-
-        resetZoom() {
-            this.zoom = 1;
-        },
-
-        handleWheel(event) {
-            if (event.deltaY < 0) {
-                this.zoomIn();
-            } else {
-                this.zoomOut();
-            }
-        },
-
-        downloadSVG() {
-            const svg = document.querySelector('#mermaid-chart svg');
-            if (!svg) return;
-
-            const svgData = new XMLSerializer().serializeToString(svg);
-            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'standort-organigramm.svg';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        },
-
-        async downloadPNG() {
-            const svg = document.querySelector('#mermaid-chart svg');
-            if (!svg) return;
-
-            // Get SVG dimensions
-            const bbox = svg.getBBox();
-            const width = Math.max(bbox.width + 40, 800);
-            const height = Math.max(bbox.height + 40, 600);
-
-            // Create canvas
-            const canvas = document.createElement('canvas');
-            canvas.width = width * 2; // Higher resolution
-            canvas.height = height * 2;
-            const ctx = canvas.getContext('2d');
-
-            // White background
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.scale(2, 2);
-
-            // Convert SVG to image
-            const svgData = new XMLSerializer().serializeToString(svg);
-            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-            const url = URL.createObjectURL(svgBlob);
-
-            const img = new Image();
-            img.onload = () => {
-                ctx.drawImage(img, 20, 20);
-                URL.revokeObjectURL(url);
-
-                // Download
-                canvas.toBlob(blob => {
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = 'standort-organigramm.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                });
-            };
-            img.src = url;
-        }
-    };
-}
-</script>
 {% endblock %}
