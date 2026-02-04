@@ -54,6 +54,10 @@ class LocationListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'locations'
         context['root_locations'] = Location.get_root_locations()
+        # Flag ob Suche/Filter aktiv ist
+        context['search_active'] = bool(self.request.GET.get('q') or self.request.GET.get('type'))
+        context['search_query'] = self.request.GET.get('q', '')
+        context['search_type'] = self.request.GET.get('type', '')
         return context
 
 
@@ -99,12 +103,26 @@ class LocationTreeView(LoginRequiredMixin, View):
         # Root-Locations für Statistik
         root_locations = Location.get_root_locations()
 
+        # Filterbare Locations für Dropdown (nur Standorte, Gebäude, Stellflächen, Räume)
+        allowed_filter_types = ['site', 'building', 'area', 'room']
+        filterable_locations = locations.filter(location_type__in=allowed_filter_types)
+
+        # Icons für die Typen
+        type_icons = {
+            'site': '🏛️',
+            'building': '🏢',
+            'area': '🌳',
+            'room': '🚪',
+        }
+
         context = {
             'current_module': 'locations',
             'locations_json': json.dumps(locations_data, ensure_ascii=False),
             'root_locations': root_locations,
             'root_count': root_locations.count(),
             'total_locations': locations.count(),
+            'filterable_locations': filterable_locations,
+            'type_icons': type_icons,
         }
 
         return render(request, 'locations/location_tree.html', context)

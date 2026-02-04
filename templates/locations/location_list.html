@@ -99,14 +99,117 @@
             </div>
         </div>
 
-        <!-- Hierarchical Tree View -->
+        <!-- Hierarchical Tree View / Search Results -->
         <div class="bg-white rounded-lg shadow">
             <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
-                <h2 class="text-lg font-bold text-gray-900">Standorte & Lagerorte (Hierarchische Ansicht)</h2>
+                {% if search_active %}
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-gray-900">
+                        Suchergebnisse
+                        <span class="text-sm font-normal text-gray-500">
+                            ({{ locations|length }} Treffer{% if search_query %} für "{{ search_query }}"{% endif %}{% if search_type %}, Typ: {{ search_type }}{% endif %})
+                        </span>
+                    </h2>
+                    <a href="{% url 'locations:list' %}" class="text-sm text-blue-600 hover:text-blue-800">
+                        ✕ Filter zurücksetzen
+                    </a>
+                </div>
+                {% else %}
+                <div class="flex items-center gap-2">
+                    <h2 class="text-lg font-bold text-gray-900">Standorte & Lagerorte (Hierarchische Ansicht)</h2>
+                    <button
+                        type="button"
+                        onclick="document.getElementById('hierarchyInfoModal').classList.remove('hidden')"
+                        class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                        title="Hierarchie-Informationen"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </button>
+                </div>
+                {% endif %}
             </div>
 
             <div class="p-6">
-                {% if root_locations %}
+                {% if search_active %}
+                    <!-- Flache Suchergebnisse -->
+                    {% if locations %}
+                        <div class="space-y-2">
+                        {% for node in locations %}
+                            <div class="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                                <div class="flex items-center gap-3 flex-1">
+                                    <!-- Icon based on type -->
+                                    <span class="text-xl">
+                                        {% if node.location_type == 'site' %}🏛️
+                                        {% elif node.location_type == 'building' %}🏢
+                                        {% elif node.location_type == 'area' %}🌳
+                                        {% elif node.location_type == 'room' %}🚪
+                                        {% elif node.location_type == 'parking_spot' %}🅿️
+                                        {% elif node.location_type == 'rack' %}📚
+                                        {% elif node.location_type == 'cabinet' %}🗄️
+                                        {% elif node.location_type == 'shelf' %}📋
+                                        {% elif node.location_type == 'drawer' %}📥
+                                        {% elif node.location_type == 'box' %}📦
+                                        {% elif node.location_type == 'vehicle' %}🚗
+                                        {% elif node.location_type == 'container' %}📦
+                                        {% else %}📍
+                                        {% endif %}
+                                    </span>
+
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <a href="{% url 'locations:detail' node.pk %}" class="font-medium text-gray-900 hover:text-blue-600">
+                                                {{ node.name }}
+                                            </a>
+                                            <span class="text-xs text-gray-500 font-mono bg-gray-200 px-2 py-0.5 rounded">
+                                                {{ node.code }}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            {{ node.get_location_type_display }}
+                                            {% if node.parent %} · in {{ node.parent.name }}{% endif %}
+                                        </p>
+                                    </div>
+
+                                    <!-- Climate controlled badge -->
+                                    {% if node.climate_controlled %}
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                                        ❄️ Klimatisiert
+                                    </span>
+                                    {% endif %}
+
+                                    <!-- Access restricted badge -->
+                                    {% if node.access_restricted %}
+                                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                        🔒 Zugriff beschränkt
+                                    </span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <a href="{% url 'locations:detail' node.pk %}" class="text-blue-600 hover:text-blue-800 text-sm">
+                                        👁️
+                                    </a>
+                                    <a href="{% url 'locations:edit' node.pk %}" class="text-gray-600 hover:text-gray-800 text-sm">
+                                        ✏️
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-12">
+                            <div class="text-4xl mb-4">🔍</div>
+                            <p class="text-lg font-medium text-gray-900 mb-2">Keine Ergebnisse gefunden</p>
+                            <p class="text-sm text-gray-600 mb-4">Versuchen Sie einen anderen Suchbegriff oder Filter.</p>
+                            <a href="{% url 'locations:list' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                                Filter zurücksetzen
+                            </a>
+                        </div>
+                    {% endif %}
+                {% elif root_locations %}
+                    <!-- Hierarchische Ansicht -->
                     {% recursetree root_locations %}
                     <div class="{% if not node.is_root_node %}ml-8{% endif %} mb-2">
                         <div class="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
@@ -182,18 +285,197 @@
                     </div>
                     {% endrecursetree %}
                 {% else %}
-                <div class="text-center py-12">
-                    <div class="text-4xl mb-4">🏢</div>
-                    <p class="text-lg font-medium text-gray-900 mb-2">Keine Standorte vorhanden</p>
-                    <p class="text-sm text-gray-600 mb-4">Legen Sie Ihren ersten Standort, Gebäude oder Lagerort an.</p>
-                    <a href="{% url 'locations:create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
-                        ➕ Standort/Lagerort anlegen
-                    </a>
-                </div>
+                    <div class="text-center py-12">
+                        <div class="text-4xl mb-4">🏢</div>
+                        <p class="text-lg font-medium text-gray-900 mb-2">Keine Standorte vorhanden</p>
+                        <p class="text-sm text-gray-600 mb-4">Legen Sie Ihren ersten Standort, Gebäude oder Lagerort an.</p>
+                        <a href="{% url 'locations:create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                            ➕ Standort/Lagerort anlegen
+                        </a>
+                    </div>
                 {% endif %}
             </div>
         </div>
 
+    </div>
+</div>
+
+<!-- Hierarchie-Info Modal -->
+<div id="hierarchyInfoModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="document.getElementById('hierarchyInfoModal').classList.add('hidden')"></div>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                        </div>
+                        <h3 class="ml-3 text-lg leading-6 font-bold text-gray-900" id="modal-title">
+                            Lagerort-Hierarchie
+                        </h3>
+                    </div>
+                    <button
+                        type="button"
+                        onclick="document.getElementById('hierarchyInfoModal').classList.add('hidden')"
+                        class="text-gray-400 hover:text-gray-600"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <p class="text-sm text-gray-600 mb-4">
+                    Die Lagerorte sind hierarchisch organisiert. Jeder Typ kann nur unter bestimmten übergeordneten Elementen erstellt werden.
+                </p>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-900">Typ</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-900">Kann erstellt werden unter</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr class="bg-blue-50">
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">🏛️</span> Standort/Wache
+                                </td>
+                                <td class="px-4 py-3 text-gray-600 italic">
+                                    Nur als Hauptelement (kein übergeordnetes Element)
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">🏢</span> Gebäude
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🏛️ Standort/Wache</span>
+                                </td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">🌳</span> Stellfläche/Außenbereich
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🏛️ Standort/Wache</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">🚪</span> Raum
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🏢 Gebäude</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🌳 Stellfläche</span>
+                                </td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">🅿️</span> Stellplatz
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🌳 Stellfläche</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🏢 Gebäude</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">📚</span> Regal
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🚪 Raum</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🌳 Stellfläche</span>
+                                </td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">🗄️</span> Schrank
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🚪 Raum</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">📋</span> Regalboden/Fach
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">📚 Regal</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🗄️ Schrank</span>
+                                </td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">📥</span> Schublade
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🗄️ Schrank</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">📚 Regal</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">📦</span> Kiste/Box
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">📋 Regalboden/Fach</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">📥 Schublade</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">📚 Regal</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🗄️ Schrank</span>
+                                </td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">🚗</span> Fahrzeug
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🅿️ Stellplatz</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🌳 Stellfläche</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🏢 Gebäude</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🚪 Raum</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">📦</span> Container
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🏛️ Standort/Wache</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🏢 Gebäude</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🌳 Stellfläche</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs mr-1">🅿️ Stellplatz</span>
+                                </td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-4 py-3 font-medium">
+                                    <span class="mr-2">📍</span> Sonstiges
+                                </td>
+                                <td class="px-4 py-3 text-gray-600 italic">
+                                    Flexibel - kann überall erstellt werden
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                    type="button"
+                    onclick="document.getElementById('hierarchyInfoModal').classList.add('hidden')"
+                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                    Verstanden
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

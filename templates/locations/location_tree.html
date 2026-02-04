@@ -38,6 +38,12 @@ window.treeChart = function() {
             this.buildFilterableLocations();
             this.setupPanListeners();
             this.waitForMermaid().then(() => this.renderChart());
+
+            // Listen for filter change event
+            document.addEventListener('filter-changed', (e) => {
+                this.selectedRoot = e.detail;
+                this.renderChart();
+            });
         },
 
         waitForMermaid() {
@@ -159,9 +165,10 @@ window.treeChart = function() {
         },
 
         buildFilterableLocations() {
-            const parentIds = new Set(this.allLocations.map(l => l.parent_id).filter(Boolean));
+            // Nur Standorte (site), Gebäude (building) und Räume (room) als Filter anzeigen
+            const allowedTypes = ['site', 'building', 'area', 'room'];
             this.filterableLocations = this.allLocations.filter(loc =>
-                loc.parent_id === null || parentIds.has(loc.id)
+                allowedTypes.includes(loc.type)
             ).sort((a, b) => {
                 if (a.level !== b.level) return a.level - b.level;
                 return a.name.localeCompare(b.name, 'de');
@@ -468,14 +475,13 @@ window.treeChart = function() {
                 <label for="root-filter" class="text-sm text-gray-600 whitespace-nowrap">Anzeigen:</label>
                 <select
                     id="root-filter"
-                    x-model="selectedRoot"
-                    @change="renderChart()"
-                    class="rounded-lg border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500 py-1.5 pr-8 min-w-[200px]"
+                    onchange="document.dispatchEvent(new CustomEvent('filter-changed', {detail: this.value}))"
+                    class="rounded-lg border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500 py-1.5 pr-8 min-w-[250px]"
                 >
                     <option value="">Alle Standorte</option>
-                    <template x-for="loc in filterableLocations" :key="loc.id">
-                        <option :value="loc.id" x-text="getFilterLabel(loc)"></option>
-                    </template>
+                    {% for loc in filterable_locations %}
+                    <option value="{{ loc.pk }}">{% if loc.level == 1 %}&nbsp;&nbsp;{% elif loc.level == 2 %}&nbsp;&nbsp;&nbsp;&nbsp;{% elif loc.level > 2 %}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{% endif %}{% if loc.location_type == 'site' %}🏛️{% elif loc.location_type == 'building' %}🏢{% elif loc.location_type == 'area' %}🌳{% elif loc.location_type == 'room' %}🚪{% else %}📍{% endif %} {{ loc.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
         </div>

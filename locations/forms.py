@@ -122,13 +122,13 @@ class LocationForm(forms.ModelForm):
             else:
                 # Muss einen Parent eines bestimmten Typs haben
                 if not parent:
-                    allowed_names = [dict(LocationType.choices).get(t, t) for t in allowed_parents]
+                    allowed_names = [str(dict(LocationType.choices).get(t, t)) for t in allowed_parents]
                     raise ValidationError({
                         'parent': f'{dict(LocationType.choices).get(location_type)} muss einem übergeordneten Standort zugeordnet sein. '
                                   f'Erlaubte übergeordnete Typen: {", ".join(allowed_names)}'
                     })
                 elif parent.location_type not in allowed_parents:
-                    allowed_names = [dict(LocationType.choices).get(t, t) for t in allowed_parents]
+                    allowed_names = [str(dict(LocationType.choices).get(t, t)) for t in allowed_parents]
                     raise ValidationError({
                         'parent': f'{dict(LocationType.choices).get(location_type)} kann nicht direkt unter '
                                   f'{parent.get_location_type_display()} "{parent.name}" angelegt werden. '
