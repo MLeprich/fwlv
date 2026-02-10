@@ -8,6 +8,13 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+class WatchDivisionChoices(models.TextChoices):
+    """Wachabteilungen"""
+    WA1 = 'WA1', _('WA1')
+    WA2 = 'WA2', _('WA2')
+    WA3 = 'WA3', _('WA3')
+
+
 class User(AbstractUser):
     """
     Custom User Model mit erweiterten Feldern für Feuerwehr-Personal
@@ -94,6 +101,31 @@ class User(AbstractUser):
         blank=True,
         verbose_name="Notizen",
         help_text="Interne Notizen zum Benutzer"
+    )
+
+    # Wachbereitschaftsführer (WBF) Einstellungen
+    is_wbf = models.BooleanField(
+        default=False,
+        verbose_name="Wachbereitschaftsführer (WBF)",
+        help_text="Ist dieser Benutzer ein Wachbereitschaftsführer?"
+    )
+
+    wbf_location = models.ForeignKey(
+        'locations.Location',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='wbf_users',
+        verbose_name="WBF Feuerwache",
+        help_text="Für welche Feuerwache ist dieser WBF zuständig?"
+    )
+
+    wbf_watch_division = models.CharField(
+        max_length=10,
+        blank=True,
+        choices=WatchDivisionChoices.choices,
+        verbose_name="WBF Wachabteilung",
+        help_text="Für welche Wachabteilung ist dieser WBF zuständig?"
     )
 
     created_at = models.DateTimeField(

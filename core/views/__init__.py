@@ -304,6 +304,7 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.tickets_enabled = request.POST.get('tickets_enabled') == 'true'
                 sys_settings.ff_dashboard_enabled = request.POST.get('ff_dashboard_enabled') == 'true'
                 sys_settings.vehicle_handover_enabled = request.POST.get('vehicle_handover_enabled') == 'true'
+                sys_settings.driving_license_enabled = request.POST.get('driving_license_enabled') == 'true'
                 sys_settings.updated_by = user
                 sys_settings.save()
 

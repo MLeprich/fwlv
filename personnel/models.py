@@ -254,6 +254,20 @@ class Person(AuditedModel):
         help_text=_('z.B. Raum 203, Büro Wachleitung')
     )
 
+    WATCH_DIVISION_CHOICES = [
+        ('', _('---------')),
+        ('WA1', _('WA1')),
+        ('WA2', _('WA2')),
+        ('WA3', _('WA3')),
+    ]
+
+    watch_division = models.CharField(
+        max_length=10, blank=True,
+        choices=WATCH_DIVISION_CHOICES,
+        verbose_name=_('Wachabteilung'),
+        help_text=_('Wachabteilung der Person (WA1, WA2 oder WA3)')
+    )
+
     # Privatsphäre-Einstellungen
     show_private_contact_data = models.BooleanField(
         default=False,

@@ -14,8 +14,15 @@ def notification_count(request):
     if not request.user.is_authenticated:
         return {'notification_count': 0}
 
-    # TODO: Später mit echten Benachrichtigungen aus notifications app
-    count = 0
+    try:
+        from notifications.models import Notification
+        count = Notification.objects.filter(
+            recipient=request.user,
+            is_read=False,
+            is_archived=False
+        ).count()
+    except Exception:
+        count = 0
 
     return {
         'notification_count': count
@@ -122,6 +129,7 @@ def module_settings(request):
                 'tickets_enabled': sys_settings.tickets_enabled,
                 'ff_dashboard_enabled': sys_settings.ff_dashboard_enabled,
                 'vehicle_handover_enabled': sys_settings.vehicle_handover_enabled,
+                'driving_license_enabled': sys_settings.driving_license_enabled,
                 'barcode_scanning_enabled': sys_settings.barcode_scanning_enabled,
                 'mobile_app_enabled': sys_settings.mobile_app_enabled,
                 'api_enabled': sys_settings.api_enabled,
@@ -140,6 +148,7 @@ def module_settings(request):
                 'tickets_enabled': True,
                 'ff_dashboard_enabled': True,
                 'vehicle_handover_enabled': True,
+                'driving_license_enabled': True,
                 'barcode_scanning_enabled': True,
                 'mobile_app_enabled': False,
                 'api_enabled': False,

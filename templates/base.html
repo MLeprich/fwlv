@@ -5,6 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}FLVS - Feuerwehr Lagerverwaltung{% endblock %}</title>
 
     <!-- Tailwind CSS (local) -->
@@ -18,6 +19,17 @@
 
     <!-- HTMX (local) -->
     <script src="{% static 'js/htmx.min.js' %}"></script>
+
+    <!-- HTMX CSRF Configuration -->
+    <script>
+        // Configure HTMX to include CSRF token in all requests
+        document.addEventListener('htmx:configRequest', function(evt) {
+            var csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (csrfToken) {
+                evt.detail.headers['X-CSRFToken'] = csrfToken.getAttribute('content');
+            }
+        });
+    </script>
 
     <!-- Alpine Store - Initialize BEFORE Alpine loads -->
     <script>
@@ -175,9 +187,20 @@
             <div class="flex items-center gap-2">
 
                 <!-- Notifications -->
-                <div class="relative" x-data="{ count: {{ notification_count|default:0 }} }">
+                <div class="relative" x-data="{
+                    count: {{ notification_count|default:0 }},
+                    init() {
+                        // Poll unread count every 30 seconds
+                        setInterval(() => {
+                            fetch('{% url "notifications:unread_count" %}')
+                                .then(r => r.json())
+                                .then(data => { this.count = data.count; })
+                                .catch(() => {});
+                        }, 30000);
+                    }
+                }">
                     <button
-                        @click="showNotifications = !showNotifications"
+                        @click="showNotifications = !showNotifications; if (showNotifications) { htmx.trigger(document.getElementById('notification-dropdown'), 'load-notifications'); }"
                         class="relative p-2 rounded-lg hover:bg-gray-100"
                         aria-label="Benachrichtigungen"
                     >
@@ -196,16 +219,18 @@
                         x-show="showNotifications"
                         @click.away="showNotifications = false"
                         x-transition
-                        class="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg"
+                        class="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
+                        id="notification-dropdown"
                         hx-get="{% url 'notifications:dropdown' %}"
-                        hx-trigger="revealed"
+                        hx-trigger="load-notifications"
+                        hx-swap="innerHTML"
                     >
-                        <div class="p-4">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-900">Benachrichtigungen</h3>
-                                <a href="{% url 'notifications:list' %}" class="text-sm text-primary-600 hover:text-primary-700">Alle ansehen</a>
-                            </div>
-                            <!-- Content loaded via HTMX -->
+                        <div class="px-4 py-8 text-center text-gray-400">
+                            <svg class="animate-spin h-6 w-6 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            <p class="text-sm">Laden...</p>
                         </div>
                     </div>
                 </div>

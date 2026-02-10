@@ -15,6 +15,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
 from core.models import User
+from locations.models import Location
 from permissions.mixins import RoleRequiredMixin
 from permissions.constants import Roles
 from permissions.utils import PermissionHelper
@@ -153,6 +154,15 @@ class UserDetailView(RoleRequiredMixin, DetailView):
         # Ticket-Berechtigungen
         context['has_create_ticket'] = user_obj.has_perm('tickets.create_ticket')
         context['has_process_ticket'] = user_obj.has_perm('tickets.process_ticket')
+
+        # Feuerwachen für WBF-Dropdown (Typ 'site' = Standort/Wache)
+        context['wbf_locations'] = Location.objects.filter(
+            location_type='site'
+        ).order_by('name')
+
+        # Wachabteilungen für WBF-Dropdown
+        from core.models.user import WatchDivisionChoices
+        context['watch_divisions'] = WatchDivisionChoices.choices
 
         return context
 
@@ -340,3 +350,36 @@ class UserSetPasswordView(RoleRequiredMixin, View):
             'user_obj': user_obj,
             'current_module': 'administration',
         })
+
+
+class UserWBFSettingsView(RoleRequiredMixin, View):
+    """WBF-Einstellungen für einen Benutzer verwalten"""
+    required_roles = [Roles.ADMINISTRATOR]
+
+    def post(self, request, pk):
+        user_obj = get_object_or_404(User, pk=pk)
+
+        # WBF-Status aus Checkbox
+        is_wbf = request.POST.get('is_wbf') == '1'
+
+        if is_wbf:
+            # WBF aktiviert - Feuerwache und Wachabteilung speichern
+            wbf_location_id = request.POST.get('wbf_location')
+            wbf_watch_division = request.POST.get('wbf_watch_division', '')
+
+            user_obj.is_wbf = True
+            user_obj.wbf_location_id = wbf_location_id if wbf_location_id else None
+            user_obj.wbf_watch_division = wbf_watch_division
+        else:
+            # WBF deaktiviert - Felder zurücksetzen
+            user_obj.is_wbf = False
+            user_obj.wbf_location = None
+            user_obj.wbf_watch_division = ''
+
+        user_obj.save()
+
+        messages.success(
+            request,
+            f'WBF-Einstellungen für {user_obj.get_full_name()} wurden aktualisiert.'
+        )
+        return redirect('core:user_detail', pk=user_obj.pk)

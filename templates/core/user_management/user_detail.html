@@ -310,6 +310,61 @@
                 </form>
             </div>
 
+            <!-- WBF-Einstellungen Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Wachbereitschaftsführer (WBF)</h2>
+                <form method="post" action="{% url 'core:user_wbf_settings' user_obj.pk %}" x-data="{ isWbf: {{ user_obj.is_wbf|yesno:'true,false' }} }">
+                    {% csrf_token %}
+                    <div class="space-y-4">
+                        <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" name="is_wbf" value="1"
+                                   {% if user_obj.is_wbf %}checked{% endif %}
+                                   x-model="isWbf"
+                                   class="rounded border-gray-300 text-orange-600 focus:ring-orange-500">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">WBF</span>
+                                <p class="text-xs text-gray-500">Benutzer ist Wachbereitschaftsführer und kann Führerscheine seiner Wachabteilung prüfen</p>
+                            </div>
+                        </label>
+
+                        <div x-show="isWbf" x-collapse class="space-y-4 pl-4 border-l-4 border-orange-200">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Feuerwache</label>
+                                <select name="wbf_location"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                    <option value="">-- Bitte wählen --</option>
+                                    {% for location in wbf_locations %}
+                                        <option value="{{ location.pk }}" {% if user_obj.wbf_location_id == location.pk %}selected{% endif %}>
+                                            {{ location.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <p class="mt-1 text-xs text-gray-500">Für welche Feuerwache ist dieser WBF zuständig?</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Wachabteilung</label>
+                                <select name="wbf_watch_division"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                    <option value="">-- Bitte wählen --</option>
+                                    {% for value, label in watch_divisions %}
+                                        <option value="{{ value }}" {% if user_obj.wbf_watch_division == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <p class="mt-1 text-xs text-gray-500">Für welche Wachabteilung ist dieser WBF zuständig?</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm">
+                            WBF-Einstellungen speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             <!-- Delegationen Card -->
             {% if active_delegations or delegations_as_delegate %}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

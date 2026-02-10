@@ -55,7 +55,7 @@ class PersonForm(forms.ModelForm):
         required=False,
         label=_('Dienstgrad seit'),
         help_text=_('Seit wann hat die Person diesen JF-Dienstgrad?'),
-        widget=forms.DateInput(attrs={
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={
             'type': 'date',
             'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500',
         })
@@ -76,7 +76,7 @@ class PersonForm(forms.ModelForm):
         required=False,
         label=_('Dienstgrad seit'),
         help_text=_('Seit wann hat die Person diesen FF-Dienstgrad?'),
-        widget=forms.DateInput(attrs={
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={
             'type': 'date',
             'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
         })
@@ -94,6 +94,7 @@ class PersonForm(forms.ModelForm):
             'work_mobile',
             'work_location',
             'work_room',
+            'watch_division',
             # Private Kontaktdaten
             'email',
             'phone',
@@ -149,7 +150,7 @@ class PersonForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
                 'placeholder': _('z.B. FF-001'),
             }),
-            'date_of_birth': forms.DateInput(attrs={
+            'date_of_birth': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
@@ -168,6 +169,9 @@ class PersonForm(forms.ModelForm):
             'work_room': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                 'placeholder': _('z.B. Raum 203'),
+            }),
+            'watch_division': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             }),
             # Private Kontaktdaten
             'show_private_contact_data': forms.CheckboxInput(attrs={
@@ -213,11 +217,11 @@ class PersonForm(forms.ModelForm):
             }),
             'functions': forms.CheckboxSelectMultiple(),
             'qualification_templates': forms.CheckboxSelectMultiple(),
-            'entry_date': forms.DateInput(attrs={
+            'entry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
-            'exit_date': forms.DateInput(attrs={
+            'exit_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
@@ -228,18 +232,18 @@ class PersonForm(forms.ModelForm):
             'is_youth_fire_brigade': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500',
             }),
-            'youth_entry_date': forms.DateInput(attrs={
+            'youth_entry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
-            'youth_exit_date': forms.DateInput(attrs={
+            'youth_exit_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
             'is_volunteer_fire_brigade': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500',
             }),
-            'volunteer_entry_date': forms.DateInput(attrs={
+            'volunteer_entry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
@@ -249,7 +253,7 @@ class PersonForm(forms.ModelForm):
             'is_professional_fire_brigade': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500',
             }),
-            'professional_entry_date': forms.DateInput(attrs={
+            'professional_entry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
@@ -260,11 +264,11 @@ class PersonForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
                 'placeholder': _('z.B. BF München'),
             }),
-            'previous_fire_department_entry_date': forms.DateInput(attrs={
+            'previous_fire_department_entry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
-            'previous_fire_department_exit_date': forms.DateInput(attrs={
+            'previous_fire_department_exit_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
@@ -416,11 +420,11 @@ class QualificationForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
                 'placeholder': _('Zertifikatsnummer'),
             }),
-            'issue_date': forms.DateInput(attrs={
+            'issue_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
-            'expiry_date': forms.DateInput(attrs={
+            'expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
@@ -567,15 +571,15 @@ class InspectionForm(forms.ModelForm):
                 'rows': 3,
                 'placeholder': _('Beschreibung...'),
             }),
-            'scheduled_date': forms.DateInput(attrs={
+            'scheduled_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             }),
-            'completed_date': forms.DateInput(attrs={
+            'completed_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             }),
-            'next_inspection_date': forms.DateInput(attrs={
+            'next_inspection_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             }),
@@ -661,7 +665,7 @@ class DutyHoursEntryForm(forms.ModelForm):
                 'rows': 3,
                 'placeholder': _('Beschreibung der Tätigkeit...'),
             }),
-            'date': forms.DateInput(attrs={
+            'date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500',
             }),
@@ -678,7 +682,7 @@ class DutyHoursEntryForm(forms.ModelForm):
             'confirmed': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500',
             }),
-            'confirmed_date': forms.DateInput(attrs={
+            'confirmed_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500',
             }),
@@ -771,11 +775,11 @@ class ServiceInterruptionForm(forms.ModelForm):
             'interruption_type': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500',
             }),
-            'start_date': forms.DateInput(attrs={
+            'start_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500',
             }),
-            'end_date': forms.DateInput(attrs={
+            'end_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500',
             }),
@@ -848,7 +852,7 @@ class PersonRankForm(forms.ModelForm):
             'rank': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
-            'since_date': forms.DateInput(attrs={
+            'since_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),

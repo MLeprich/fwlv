@@ -94,4 +94,5 @@ urlpatterns = [
     path('verwaltung/users/<int:pk>/set-password/', user_management.UserSetPasswordView.as_view(), name='user_set_password'),
     path('verwaltung/users/<int:pk>/roles/', user_management.UserRoleAssignView.as_view(), name='assign_roles'),
     path('verwaltung/users/<int:pk>/ticket-permissions/', user_management.UserTicketPermissionsView.as_view(), name='user_ticket_permissions'),
+    path('verwaltung/users/<int:pk>/wbf-settings/', user_management.UserWBFSettingsView.as_view(), name='user_wbf_settings'),
 ]

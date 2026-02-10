@@ -38,8 +38,14 @@ class TicketListView(LoginRequiredMixin, TicketPermissionMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        # Alle Benutzer sehen alle Tickets
         queryset = Ticket.objects.select_related('created_by', 'assigned_to', 'category')
+
+        user = self.request.user
+        is_processor = user.has_perm('tickets.process_ticket')
+
+        # Ersteller ohne Bearbeiter-Rolle sehen nur eigene Tickets
+        if not is_processor:
+            queryset = queryset.filter(created_by=user)
 
         # Standard: Nur aktive Tickets (nicht geschlossen)
         # Außer wenn explizit 'show_closed' oder ein spezifischer Status gewählt wird
@@ -63,11 +69,11 @@ class TicketListView(LoginRequiredMixin, TicketPermissionMixin, ListView):
 
         assigned = self.request.GET.get('assigned')
         if assigned == 'me':
-            queryset = queryset.filter(assigned_to=self.request.user)
+            queryset = queryset.filter(assigned_to=user)
         elif assigned == 'unassigned':
             queryset = queryset.filter(assigned_to__isnull=True)
         elif assigned == 'my_created':
-            queryset = queryset.filter(created_by=self.request.user)
+            queryset = queryset.filter(created_by=user)
 
         search = self.request.GET.get('search')
         if search:
@@ -95,8 +101,10 @@ class TicketListView(LoginRequiredMixin, TicketPermissionMixin, ListView):
         else:
             context['active_role'] = 'creator'
 
-        # Stats - für alle Tickets
+        # Stats - gefiltert nach Sichtbarkeit
         base_qs = Ticket.objects.all()
+        if not context['is_processor']:
+            base_qs = base_qs.filter(created_by=user)
         context['stats'] = {
             'total': base_qs.exclude(status=TicketStatus.CLOSED).count(),
             'open': base_qs.filter(status=TicketStatus.OPEN).count(),
@@ -118,8 +126,11 @@ class TicketDetailView(LoginRequiredMixin, TicketPermissionMixin, DetailView):
     context_object_name = 'ticket'
 
     def get_queryset(self):
-        # Alle Benutzer können alle Tickets sehen
-        return Ticket.objects.select_related('created_by', 'assigned_to', 'category')
+        queryset = Ticket.objects.select_related('created_by', 'assigned_to', 'category')
+        # Ersteller ohne Bearbeiter-Rolle sehen nur eigene Tickets
+        if not self.request.user.has_perm('tickets.process_ticket'):
+            queryset = queryset.filter(created_by=self.request.user)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -207,11 +218,11 @@ class TicketCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
             for user in processors:
                 if user != ticket.created_by:
                     Notification.objects.create(
-                        user=user,
+                        recipient=user,
                         title=f'Neues Ticket: {ticket.ticket_number}',
                         message=f'{ticket.created_by.get_full_name() or ticket.created_by.username} hat ein neues Ticket erstellt: {ticket.title}',
                         notification_type='info',
-                        link=ticket.get_absolute_url()
+                        action_url=ticket.get_absolute_url()
                     )
         except Exception:
             pass  # Notifications module might not be available
@@ -222,14 +233,18 @@ class TicketCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
 
 def add_comment(request, pk):
     """Kommentar zu einem Ticket hinzufügen"""
-    ticket = get_object_or_404(Ticket, pk=pk)
-
-    # Check permission - alle können jetzt alle Tickets sehen
     is_processor = request.user.has_perm('tickets.process_ticket')
     is_creator = request.user.has_perm('tickets.create_ticket')
 
     if not (is_processor or is_creator):
         messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:list')
+
+    ticket = get_object_or_404(Ticket, pk=pk)
+
+    # Ersteller ohne Bearbeiter-Rolle dürfen nur eigene Tickets kommentieren
+    if not is_processor and ticket.created_by != request.user:
+        messages.error(request, 'Keine Berechtigung für dieses Ticket.')
         return redirect('tickets:list')
 
     if request.method == 'POST':
@@ -279,21 +294,21 @@ def send_comment_notification(ticket, comment, author):
         # Notify creator if comment is from processor (and not internal)
         if author != ticket.created_by and not comment.is_internal:
             Notification.objects.create(
-                user=ticket.created_by,
+                recipient=ticket.created_by,
                 title=f'Neuer Kommentar zu {ticket.ticket_number}',
                 message=f'{author.get_full_name() or author.username} hat einen Kommentar hinzugefügt.',
                 notification_type='info',
-                link=ticket.get_absolute_url()
+                action_url=ticket.get_absolute_url()
             )
 
         # Notify assigned processor if comment is from creator
         if ticket.assigned_to and author != ticket.assigned_to:
             Notification.objects.create(
-                user=ticket.assigned_to,
+                recipient=ticket.assigned_to,
                 title=f'Neuer Kommentar zu {ticket.ticket_number}',
                 message=f'{author.get_full_name() or author.username} hat einen Kommentar hinzugefügt.',
                 notification_type='info',
-                link=ticket.get_absolute_url()
+                action_url=ticket.get_absolute_url()
             )
     except Exception:
         pass
@@ -375,11 +390,11 @@ def update_ticket(request, pk):
                         try:
                             from notifications.models import Notification
                             Notification.objects.create(
-                                user=new_assigned,
+                                recipient=new_assigned,
                                 title=f'Ticket {ticket.ticket_number} zugewiesen',
                                 message=f'Das Ticket "{ticket.title}" wurde Ihnen zugewiesen.',
                                 notification_type='info',
-                                link=ticket.get_absolute_url()
+                                action_url=ticket.get_absolute_url()
                             )
                         except Exception:
                             pass
@@ -397,11 +412,11 @@ def update_ticket(request, pk):
                 from notifications.models import Notification
                 if ticket.created_by != request.user:
                     Notification.objects.create(
-                        user=ticket.created_by,
+                        recipient=ticket.created_by,
                         title=f'Ticket {ticket.ticket_number} aktualisiert',
                         message=f'Änderungen: {", ".join(changes)}',
                         notification_type='info',
-                        link=ticket.get_absolute_url()
+                        action_url=ticket.get_absolute_url()
                     )
             except Exception:
                 pass
@@ -455,11 +470,11 @@ def close_ticket(request, pk):
             from notifications.models import Notification
             if ticket.created_by != request.user:
                 Notification.objects.create(
-                    user=ticket.created_by,
+                    recipient=ticket.created_by,
                     title=f'Ticket {ticket.ticket_number} wurde abgeschlossen',
                     message=f'Ihr Ticket "{ticket.title}" wurde abgeschlossen.',
                     notification_type='success',
-                    link=ticket.get_absolute_url()
+                    action_url=ticket.get_absolute_url()
                 )
         except Exception:
             pass

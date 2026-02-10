@@ -69,6 +69,12 @@ class SystemSettings(models.Model):
         help_text="Fahrzeugübernahme-Protokolle bei Schichtwechsel"
     )
 
+    driving_license_enabled = models.BooleanField(
+        default=True,
+        verbose_name="Führerscheinüberprüfung",
+        help_text="Führerscheinüberprüfung und -verwaltung"
+    )
+
     # ============================================================================
     # SECURITY
     # ============================================================================
@@ -194,4 +200,6 @@ class SystemSettings(models.Model):
             modules.append('ff_dashboard')
         if self.vehicle_handover_enabled:
             modules.append('vehicle_handover')
+        if self.driving_license_enabled:
+            modules.append('driving_license')
         return modules

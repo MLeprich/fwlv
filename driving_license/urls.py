@@ -9,4 +9,5 @@ urlpatterns = [
     path('<int:pk>/', views.DrivingLicenseCheckDetailView.as_view(), name='check_detail'),
     path('<int:pk>/edit/', views.DrivingLicenseCheckUpdateView.as_view(), name='check_update'),
     path('<int:pk>/delete/', views.DrivingLicenseCheckDeleteView.as_view(), name='check_delete'),
+    path('<int:pk>/toggle-presented/', views.DrivingLicenseTogglePresentedView.as_view(), name='check_toggle_presented'),
 ]

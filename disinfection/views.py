@@ -508,8 +508,22 @@ def log_create(request):
             return redirect('disinfection:log_list')
     else:
         # Initialisiere mit aktuellem Datum/Uhrzeit
+        initial_date = timezone.now()
+
+        # Wenn Datum in URL übergeben wurde (z.B. aus Kalender)
+        date_str = request.GET.get('date')
+        if date_str:
+            try:
+                from datetime import datetime as dt
+                parsed = dt.strptime(date_str, '%Y-%m-%d')
+                initial_date = timezone.make_aware(
+                    dt.combine(parsed.date(), timezone.now().time())
+                )
+            except (ValueError, TypeError):
+                pass
+
         initial_data = {
-            'disinfection_date': timezone.now(),
+            'disinfection_date': initial_date,
         }
 
         # Wenn Fahrzeug-ID in URL übergeben wurde, vorausfüllen

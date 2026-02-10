@@ -5,14 +5,16 @@ from .models import DrivingLicenseCheck
 
 class DrivingLicenseSimpleForm(forms.ModelForm):
     """
-    Vereinfachtes Formular nur für Führerscheinklassen (für Personalformular)
-    Alle detaillierten Daten werden in der Führerscheinüberprüfung erfasst
+    Vereinfachtes Formular für Führerscheinklassen und Ablaufdaten (für Personalformular)
+    Alle detaillierten Daten (ärztliche Untersuchungen) werden in der Führerscheinüberprüfung erfasst
     """
     class Meta:
         model = DrivingLicenseCheck
         fields = [
             'has_class_B', 'has_class_BE', 'has_class_C', 'has_class_CE',
             'has_class_C1', 'has_class_C1E', 'has_class_D', 'has_class_A',
+            'license_expiry_date',
+            'class_c_expiry_date', 'class_ce_expiry_date', 'class_d_expiry_date',
         ]
         widgets = {
             'has_class_B': forms.CheckboxInput(attrs={
@@ -39,6 +41,22 @@ class DrivingLicenseSimpleForm(forms.ModelForm):
             'has_class_A': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500'
             }),
+            'license_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
+                'type': 'date',
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            }),
+            'class_c_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
+                'type': 'date',
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            }),
+            'class_ce_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
+                'type': 'date',
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            }),
+            'class_d_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
+                'type': 'date',
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            }),
         }
 
 
@@ -59,7 +77,7 @@ class DrivingLicenseInlineForm(forms.ModelForm):
             'notes'
         ]
         widgets = {
-            'check_date': forms.DateInput(attrs={
+            'check_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
@@ -90,43 +108,43 @@ class DrivingLicenseInlineForm(forms.ModelForm):
             'has_class_A': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500'
             }),
-            'license_expiry_date': forms.DateInput(attrs={
+            'license_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
-            'class_c_expiry_date': forms.DateInput(attrs={
+            'class_c_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
-            'class_c_medical_check_date': forms.DateInput(attrs={
+            'class_c_medical_check_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
-            'class_c_medical_expiry_date': forms.DateInput(attrs={
+            'class_c_medical_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
-            'class_ce_expiry_date': forms.DateInput(attrs={
+            'class_ce_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
-            'class_ce_medical_check_date': forms.DateInput(attrs={
+            'class_ce_medical_check_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
-            'class_ce_medical_expiry_date': forms.DateInput(attrs={
+            'class_ce_medical_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
-            'class_d_expiry_date': forms.DateInput(attrs={
+            'class_d_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
-            'class_d_medical_check_date': forms.DateInput(attrs={
+            'class_d_medical_check_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
-            'class_d_medical_expiry_date': forms.DateInput(attrs={
+            'class_d_medical_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={
                 'type': 'date',
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
@@ -153,7 +171,7 @@ class DrivingLicenseCheckForm(forms.ModelForm):
         ]
         widgets = {
             'person': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
-            'check_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'check_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
             'license_presented': forms.CheckboxInput(attrs={'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'}),
             'has_class_B': forms.CheckboxInput(attrs={'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'}),
             'has_class_BE': forms.CheckboxInput(attrs={'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'}),
@@ -163,15 +181,15 @@ class DrivingLicenseCheckForm(forms.ModelForm):
             'has_class_C1E': forms.CheckboxInput(attrs={'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'}),
             'has_class_D': forms.CheckboxInput(attrs={'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'}),
             'has_class_A': forms.CheckboxInput(attrs={'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'}),
-            'license_expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
-            'class_c_expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
-            'class_c_medical_check_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
-            'class_c_medical_expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
-            'class_ce_expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
-            'class_ce_medical_check_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
-            'class_ce_medical_expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
-            'class_d_expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
-            'class_d_medical_check_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
-            'class_d_medical_expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'license_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'class_c_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'class_c_medical_check_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'class_c_medical_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'class_ce_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'class_ce_medical_check_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'class_ce_medical_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'class_d_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'class_d_medical_check_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
+            'class_d_medical_expiry_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'}),
             'notes': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'rows': 4}),
         }

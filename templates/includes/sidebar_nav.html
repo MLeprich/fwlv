@@ -402,7 +402,7 @@
             </a>
 
             <!-- Führerscheinüberprüfung -->
-            {% if perms.driving_license.view_drivinglicensecheck %}
+            {% if modules.driving_license_enabled and perms.driving_license.view_drivinglicensecheck %}
             <a
                 href="{% url 'driving_license:check_list' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
