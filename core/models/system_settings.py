@@ -75,6 +75,24 @@ class SystemSettings(models.Model):
         help_text="Führerscheinüberprüfung und -verwaltung"
     )
 
+    height_rescue_enabled = models.BooleanField(
+        default=True,
+        verbose_name="Höhenrettung",
+        help_text="Höhenrettungsausrüstung (PSA) Verwaltung"
+    )
+
+    diving_enabled = models.BooleanField(
+        default=True,
+        verbose_name="Taucher",
+        help_text="Tauchausrüstung Verwaltung"
+    )
+
+    workshop_enabled = models.BooleanField(
+        default=True,
+        verbose_name="KFZ-Werkstatt",
+        help_text="KFZ-Werkstatt und Werkzeugverwaltung"
+    )
+
     # ============================================================================
     # SECURITY
     # ============================================================================
@@ -202,4 +220,10 @@ class SystemSettings(models.Model):
             modules.append('vehicle_handover')
         if self.driving_license_enabled:
             modules.append('driving_license')
+        if self.height_rescue_enabled:
+            modules.append('height_rescue')
+        if self.diving_enabled:
+            modules.append('diving')
+        if self.workshop_enabled:
+            modules.append('workshop')
         return modules

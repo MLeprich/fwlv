@@ -305,6 +305,9 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.ff_dashboard_enabled = request.POST.get('ff_dashboard_enabled') == 'true'
                 sys_settings.vehicle_handover_enabled = request.POST.get('vehicle_handover_enabled') == 'true'
                 sys_settings.driving_license_enabled = request.POST.get('driving_license_enabled') == 'true'
+                sys_settings.height_rescue_enabled = request.POST.get('height_rescue_enabled') == 'true'
+                sys_settings.diving_enabled = request.POST.get('diving_enabled') == 'true'
+                sys_settings.workshop_enabled = request.POST.get('workshop_enabled') == 'true'
                 sys_settings.updated_by = user
                 sys_settings.save()
 

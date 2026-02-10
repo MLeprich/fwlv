@@ -142,7 +142,8 @@
             {% endif %}
 
             <!-- IT-Hardware -->
-            {% if modules.it_hardware_enabled and perms.it_hardware.view_ithardwareitem or perms.it_hardware.view_ithardwareitemmaster %}
+            {% if modules.it_hardware_enabled %}
+            {% if perms.it_hardware.view_ithardwareitem or perms.it_hardware.view_ithardwareitemmaster %}
             <a
                 href="{% url 'it_hardware:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
@@ -158,8 +159,10 @@
                 </span>
             </a>
             {% endif %}
+            {% endif %}
 
             <!-- Höhenrettung -->
+            {% if modules.height_rescue_enabled %}
             {% if perms.height_rescue.view_heightrescueitemmaster or perms.height_rescue.view_heightrescuedeviceinstance %}
             <a
                 href="{% url 'height_rescue:dashboard' %}"
@@ -176,8 +179,10 @@
                 </span>
             </a>
             {% endif %}
+            {% endif %}
 
             <!-- Taucher -->
+            {% if modules.diving_enabled %}
             {% if perms.diving.view_divingitemmaster or perms.diving.view_divingdeviceinstance %}
             <a
                 href="{% url 'diving:dashboard' %}"
@@ -194,9 +199,10 @@
                 </span>
             </a>
             {% endif %}
+            {% endif %}
 
             <!-- KFZ-Werkstatt -->
-            {% if perms.workshop.view_workshopitem %}
+            {% if modules.workshop_enabled and perms.workshop.view_workshopitem %}
             <a
                 href="{% url 'workshop:dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
