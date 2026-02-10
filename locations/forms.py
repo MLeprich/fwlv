@@ -55,7 +55,8 @@ class LocationForm(forms.ModelForm):
     class Meta:
         model = Location
         fields = [
-            'parent', 'name', 'code', 'location_type', 'description',
+            'parent', 'name', 'code', 'location_type', 'linked_vehicle',
+            'description',
             'room_number', 'barcode',
             'street', 'house_number', 'postal_code', 'city',
             'capacity', 'capacity_unit',
@@ -82,7 +83,21 @@ class LocationForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg', 'rows': 2}),
             'room_number': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg', 'placeholder': 'z.B. R.102'}),
             'barcode': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg', 'placeholder': 'Optional - wird sonst automatisch generiert'}),
+            'linked_vehicle': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from vehicles.models import Vehicle
+        # Nur aktive Fahrzeuge, die noch keinem anderen Lagerort zugeordnet sind
+        qs = Vehicle.objects.filter(is_active=True)
+        assigned_ids = Location.objects.filter(
+            linked_vehicle__isnull=False
+        ).values_list('linked_vehicle_id', flat=True)
+        if self.instance and self.instance.pk and self.instance.linked_vehicle_id:
+            assigned_ids = assigned_ids.exclude(linked_vehicle_id=self.instance.linked_vehicle_id)
+        qs = qs.exclude(pk__in=assigned_ids)
+        self.fields['linked_vehicle'].queryset = qs
 
     def clean_room_number(self):
         """Raumnummer nur bei passenden Typen erlauben"""

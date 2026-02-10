@@ -241,7 +241,6 @@ class EquipmentDeviceInstanceForm(forms.ModelForm):
             'additional_inventory_numbers',
             'serial_number',
             'location',
-            'assigned_vehicle',
             'is_operational',
             'equipment_status',
             'certification_number',
@@ -275,9 +274,6 @@ class EquipmentDeviceInstanceForm(forms.ModelForm):
                 'placeholder': 'Seriennummer des Herstellers'
             }),
             'location': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
-            }),
-            'assigned_vehicle': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
             }),
             'is_operational': forms.CheckboxInput(attrs={
@@ -360,10 +356,6 @@ class EquipmentDeviceInstanceForm(forms.ModelForm):
         self.fields['certification_status'].required = False
         self.fields['current_operating_hours'].required = False
 
-        # Nur Fahrzeuge mit Mobile-Lager-Funktion anzeigen
-        from vehicles.models import Vehicle
-        self.fields['assigned_vehicle'].queryset = Vehicle.objects.filter(is_mobile_storage=True).order_by('call_sign')
-        self.fields['assigned_vehicle'].required = False
 
 
 # ============================================================================

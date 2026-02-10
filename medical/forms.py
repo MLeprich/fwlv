@@ -91,6 +91,13 @@ class MedicalStockMovementForm(forms.ModelForm):
             'notes': 'Notizen',
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['item'].queryset = MedicalItemMaster.objects.filter(
+            is_active=True
+        ).order_by('name')
+        self.fields['item'].required = True
+
     def clean(self):
         cleaned_data = super().clean()
         movement_type = cleaned_data.get('movement_type')
@@ -104,6 +111,15 @@ class MedicalStockMovementForm(forms.ModelForm):
         # Bei Warenausgang muss from_location gesetzt sein
         if movement_type == StockMovementType.OUTGOING and not from_location:
             self.add_error('from_location', 'Bei Warenausgang muss ein Quelllagerort angegeben werden.')
+
+        # Bei Umlagerung müssen beide gesetzt sein
+        if movement_type == StockMovementType.TRANSFER:
+            if not from_location:
+                self.add_error('from_location', 'Bei Umlagerung muss ein Quelllagerort angegeben werden.')
+            if not to_location:
+                self.add_error('to_location', 'Bei Umlagerung muss ein Ziellagerort angegeben werden.')
+            if from_location and to_location and from_location == to_location:
+                self.add_error('to_location', 'Quell- und Ziellagerort dürfen nicht identisch sein.')
 
         return cleaned_data
 # Neue Forms für MedicalItemMaster und MedicalDeviceInstance

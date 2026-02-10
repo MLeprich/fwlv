@@ -1019,8 +1019,9 @@ class MedicalStockMovement(AbstractStockMovement):
     """
 
     item = models.ForeignKey(
-        MedicalItem,
+        MedicalItemMaster,
         on_delete=models.PROTECT,
+        null=True, blank=True,
         related_name='stock_movements',
         verbose_name=_('Artikel')
     )
@@ -1165,16 +1166,30 @@ class MedicalStockMovement(AbstractStockMovement):
 
     def update_item_stock(self):
         """
-        Aktualisiert den Bestand des Items basierend auf der Bewegung
+        Aktualisiert den Chargen-Bestand basierend auf der Bewegung.
+        Bestand wird über MedicalBatch.quantity_remaining verwaltet.
         """
-        if self.movement_type == StockMovementType.INCOMING:
-            self.item.quantity += self.quantity
-        elif self.movement_type in [StockMovementType.OUTGOING, StockMovementType.DAMAGE, StockMovementType.DISPOSAL]:
-            self.item.quantity -= self.quantity
-        elif self.movement_type == StockMovementType.INVENTORY:
-            self.item.quantity = self.quantity
+        if not self.batch_number or not self.item:
+            return
 
-        self.item.save(update_fields=['quantity'])
+        try:
+            batch = MedicalBatch.objects.get(
+                master=self.item,
+                batch_number=self.batch_number,
+            )
+        except MedicalBatch.DoesNotExist:
+            return
+
+        if self.movement_type in [StockMovementType.OUTGOING, StockMovementType.DAMAGE, StockMovementType.DISPOSAL]:
+            batch.quantity_remaining -= self.quantity
+        elif self.movement_type == StockMovementType.INVENTORY:
+            batch.quantity_remaining = self.quantity
+        elif self.movement_type == StockMovementType.RETURN:
+            batch.quantity_remaining += self.quantity
+        else:
+            return
+
+        batch.save(update_fields=['quantity_remaining'])
 
     def approve(self, approved_by_user):
         """

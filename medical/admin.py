@@ -270,7 +270,7 @@ class MedicalItemMasterAdmin(admin.ModelAdmin):
         }),
     )
 
-    inlines = [MedicalBatchInline, MedicalDeviceInstanceInline]
+    inlines = [MedicalBatchInline, MedicalDeviceInstanceInline, MedicalStockMovementInline]
 
     actions = ['mark_as_active', 'mark_as_inactive']
 
@@ -737,7 +737,7 @@ class MedicalItemAdmin(admin.ModelAdmin):
         }),
     )
 
-    inlines = [MedicalStockMovementInline]  # MedicalBatchInline entfernt - nutzt jetzt master field
+    inlines = []
 
     actions = [
         'mark_as_active',

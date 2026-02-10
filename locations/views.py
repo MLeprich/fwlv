@@ -139,6 +139,16 @@ class LocationCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
     template_name = 'locations/location_form.html'
     success_url = reverse_lazy('locations:list')
 
+    def get_initial(self):
+        initial = super().get_initial()
+        parent_pk = self.request.GET.get('parent')
+        if parent_pk:
+            try:
+                initial['parent'] = Location.objects.get(pk=parent_pk, is_active=True)
+            except Location.DoesNotExist:
+                pass
+        return initial
+
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user

@@ -300,6 +300,8 @@
                         if (currentValue) {
                             selected = locations.find(loc => loc.value === currentValue);
                         }
+                    " @batch-from-location.window="
+                        selected = locations.find(loc => loc.value === $event.detail.id) || { value: $event.detail.id, text: $event.detail.name };
                     ">
                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.from_location.label }}</label>
 
@@ -413,9 +415,10 @@ function stockMovementForm() {
             }
 
             this.selectedItem = itemId;
+            this.selectedBatch = null;
 
             try {
-                const response = await fetch(`/medical/items/${itemId}/batches-json/`);
+                const response = await fetch(`/medical/masters/${itemId}/batches-json/`);
                 if (response.ok) {
                     this.batches = await response.json();
                 } else {
@@ -449,10 +452,18 @@ function stockMovementForm() {
                     expiryDateInput.value = batch.expiry_date;
                 }
 
-                // Setze from_location für Umlagerung/Ausgang
-                const fromLocationSelect = document.getElementById('id_from_location');
-                if (fromLocationSelect && batch.location_id) {
-                    fromLocationSelect.value = batch.location_id;
+                // Setze Quelllagerort (from_location) aus der Charge
+                if (batch.location_id) {
+                    const fromSelect = document.getElementById('id_from_location');
+                    if (fromSelect) {
+                        fromSelect.value = batch.location_id;
+                        fromSelect.dispatchEvent(new Event('change'));
+                    }
+                    // Sichtbares Suchfeld für Quelllagerort aktualisieren
+                    this.$dispatch('batch-from-location', {
+                        id: String(batch.location_id),
+                        name: batch.location_name
+                    });
                 }
             }
         }

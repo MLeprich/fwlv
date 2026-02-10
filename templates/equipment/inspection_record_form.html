@@ -59,7 +59,16 @@
                              { id: {{ device.id }}, text: '{{ device.inventory_number }} - {{ device.master.name }}', inv: '{{ device.inventory_number }}', name: '{{ device.master.name }}', serial: '{{ device.serial_number|default:"" }}' }{% if not forloop.last %},{% endif %}
                              {% endfor %}
                          ]
-                     }">
+                     }"
+                     x-init="
+                         {% if preselected_device_id %}
+                         const preDevice = devices.find(d => d.id === {{ preselected_device_id }});
+                         if (preDevice) {
+                             selected = preDevice;
+                             $nextTick(() => selectDevice(preDevice.id, preDevice.text));
+                         }
+                         {% endif %}
+                     ">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         <span class="text-amber-700">🔧 Gerät auswählen</span> *
                     </label>

@@ -93,6 +93,7 @@ urlpatterns = [
     path('movements/<int:pk>/', views.StockMovementDetailView.as_view(), name='stock_movement_detail'),
 
     # Batches
+    path('masters/<int:pk>/batches-json/', views.master_batches_json, name='master_batches_json'),
     path('batches/', views.BatchListView.as_view(), name='batch_list'),
     path('batches/create/', views.UniversalBatchCreateView.as_view(), name='batch_create_universal'),
     path('batches/<int:pk>/', views.BatchDetailView.as_view(), name='batch_detail'),

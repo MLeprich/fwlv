@@ -69,7 +69,16 @@ class MedicalDashboardView(LoginRequiredMixin, TemplateView):
         )
 
         context['total_items'] = master_stats['total']
+        context['total_masters'] = master_stats['total']
         context['btm_items'] = master_stats['btm_count']
+
+        # Medizintechnik-Instanzen
+        device_stats = MedicalDeviceInstance.objects.filter(is_active=True).aggregate(
+            total=Count('id'),
+            operational=Count('id', filter=Q(is_operational=True)),
+        )
+        context['total_devices'] = device_stats['total']
+        context['operational_devices'] = device_stats['operational']
 
         # Wartungsbedürftige Geräte über DeviceInstance
         context['maintenance_due_count'] = MedicalDeviceInstance.objects.filter(
@@ -1085,13 +1094,13 @@ class QuickStockMovementView(LoginRequiredMixin, TemplateView):
             if movement.movement_type == StockMovementType.INCOMING and movement.batch_number and movement.expiry_date:
                 from datetime import date
                 batch = MedicalBatch.objects.create(
-                    item=movement.item,
+                    master=movement.item,
                     batch_number=movement.batch_number,
                     received_date=date.today(),
                     expiry_date=movement.expiry_date,
                     quantity_received=movement.quantity,
                     quantity_remaining=movement.quantity,
-                    location=movement.to_location if movement.to_location else movement.item.location,
+                    location=movement.to_location,
                     notes=f'Erstellt aus Lagerbewegung #{movement.id}'
                 )
                 messages.success(
@@ -1171,8 +1180,31 @@ class UniversalBatchCreateView(LoginRequiredMixin, PermissionRequiredMixin, Crea
 
 
 
-# Legacy BatchCreateView und item_batches_json wurden entfernt
-# Verwenden Sie stattdessen UniversalBatchCreateView
+# Legacy BatchCreateView wurde entfernt - verwenden Sie UniversalBatchCreateView
+
+
+@login_required
+def master_batches_json(request, pk):
+    """JSON-API: Gibt alle Chargen eines MedicalItemMaster zurück"""
+    master = get_object_or_404(MedicalItemMaster, pk=pk)
+    batches = MedicalBatch.objects.filter(
+        master=master,
+        quantity_remaining__gt=0,
+    ).select_related('location').order_by('expiry_date')
+
+    data = []
+    for batch in batches:
+        data.append({
+            'id': batch.pk,
+            'batch_number': batch.batch_number,
+            'expiry_date': batch.expiry_date.isoformat() if batch.expiry_date else '',
+            'quantity': str(batch.quantity_remaining),
+            'unit': master.unit,
+            'location_id': batch.location_id,
+            'location_name': str(batch.location) if batch.location else '',
+        })
+
+    return JsonResponse(data, safe=False)
 
 
 

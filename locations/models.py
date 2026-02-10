@@ -229,6 +229,16 @@ class Location(MPTTModel, AuditedModel):
         help_text=_('Vorhandene Technik (z.B. Beamer, Prowise-Board, Soundsystem)')
     )
 
+    # Verknüpftes Fahrzeug (nur für Typ "Fahrzeug (mobil)")
+    linked_vehicle = models.OneToOneField(
+        'vehicles.Vehicle',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='location_entry',
+        verbose_name=_('Verknüpftes Fahrzeug'),
+    )
+
     # Notizen
     notes = models.TextField(
         blank=True,
