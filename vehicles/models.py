@@ -33,12 +33,15 @@ class VehicleModel(models.Model):
         verbose_name=_('Modellname')
     )
 
-    vehicle_type = models.CharField(
-        max_length=20,
-        choices=[],  # Will be set after VehicleType is defined
+    vehicle_type = models.ForeignKey(
+        'VehicleType',
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
+        related_name='vehicle_models',
         verbose_name=_('Standardtyp'),
-        help_text=_('Standard-Fahrzeugtyp für dieses Modell')
+        help_text=_('Standard-Fahrzeugtyp für dieses Modell'),
+        limit_choices_to={'is_active': True}
     )
 
     year_from = models.PositiveIntegerField(
@@ -75,8 +78,8 @@ class VehicleModel(models.Model):
         return f"{self.manufacturer.name} {self.name}"
 
 
-class VehicleType(models.TextChoices):
-    """Fahrzeugtypen"""
+class LegacyVehicleType(models.TextChoices):
+    """Fahrzeugtypen (Legacy - nur für Migration)"""
     FIRE_TRUCK = 'fire_truck', _('Löschfahrzeug')
     COMMAND_VEHICLE = 'command', _('Kommandowagen')
     AMBULANCE = 'ambulance', _('Rettungswagen')
@@ -86,6 +89,27 @@ class VehicleType(models.TextChoices):
     BOAT = 'boat', _('Boot')
     UTILITY_VEHICLE = 'utility', _('Mannschaftstransporter')
     OTHER = 'other', _('Sonstiges')
+
+
+class VehicleType(models.Model):
+    """Fahrzeugtyp - vom Benutzer verwaltbar"""
+    name = models.CharField(max_length=100, unique=True, verbose_name=_('Bezeichnung'))
+    code = models.SlugField(max_length=30, unique=True, verbose_name=_('Code'),
+                            help_text=_('Interner Code (z.B. hlf20, dlk)'))
+    description = models.TextField(blank=True, verbose_name=_('Beschreibung'))
+    icon = models.CharField(max_length=10, blank=True, default='🚒', verbose_name=_('Icon'))
+    order = models.PositiveIntegerField(default=0, verbose_name=_('Reihenfolge'))
+    is_active = models.BooleanField(default=True, verbose_name=_('Aktiv'))
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name = _('Fahrzeugtyp')
+        verbose_name_plural = _('Fahrzeugtypen')
+
+    def __str__(self):
+        return self.name
 
 
 class VehicleStatus(models.TextChoices):
@@ -112,11 +136,14 @@ class Vehicle(AuditedModel):
         help_text=_('z.B. LF 10/6, RTW 1')
     )
 
-    vehicle_type = models.CharField(
-        max_length=20,
-        choices=VehicleType.choices,
-        default=VehicleType.FIRE_TRUCK,
-        verbose_name=_('Fahrzeugtyp')
+    vehicle_type = models.ForeignKey(
+        VehicleType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vehicles',
+        verbose_name=_('Fahrzeugtyp'),
+        limit_choices_to={'is_active': True}
     )
 
     call_sign = models.CharField(
@@ -519,5 +546,3 @@ class VehicleInspection(AuditedModel):
         return self.status in [InspectionStatus.PASSED, InspectionStatus.PASSED_WITH_DEFECTS]
 
 
-# Set vehicle_type choices for VehicleModel after VehicleType is defined
-VehicleModel._meta.get_field('vehicle_type').choices = VehicleType.choices

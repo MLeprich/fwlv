@@ -139,7 +139,7 @@
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Fahrzeugtyp</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.get_vehicle_type_display }}</dd>
+                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.vehicle_type.name|default:"-" }}</dd>
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Hersteller</dt>

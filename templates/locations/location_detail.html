@@ -38,6 +38,7 @@
                             {% if location.location_type == 'site' %}🏛️
                             {% elif location.location_type == 'building' %}🏢
                             {% elif location.location_type == 'area' %}🌳
+                            {% elif location.location_type == 'vehicle_hall' %}🏗️
                             {% elif location.location_type == 'room' %}🚪
                             {% elif location.location_type == 'parking_spot' %}🅿️
                             {% elif location.location_type == 'rack' %}📚
@@ -197,7 +198,7 @@
                         },
                         getIcon(type) {
                             const icons = {
-                                'site': '🏛️', 'building': '🏢', 'area': '🌳', 'room': '🚪',
+                                'site': '🏛️', 'building': '🏢', 'area': '🌳', 'vehicle_hall': '🏗️', 'room': '🚪',
                                 'parking_spot': '🅿️', 'rack': '📚', 'cabinet': '🗄️', 'shelf': '📋',
                                 'drawer': '📥', 'box': '📦', 'vehicle': '🚗', 'container': '📦'
                             };
@@ -298,7 +299,7 @@
 
                     <!-- Items Tab -->
                     <div x-show="activeTab === 'items'">
-                        {% if location.get_item_count > 0 %}
+                        {% if location.get_item_count > 0 or stationed_vehicles %}
                         <div class="space-y-4">
                             <!-- Medical Device Instances -->
                             {% if location.medical_device_instances.exists %}
@@ -579,6 +580,32 @@
                                     {% if location.diving_divingitem_items.count > 10 %}
                                     <p class="text-xs text-gray-500 mt-2">... und {{ location.diving_divingitem_items.count|add:"-10" }} weitere</p>
                                     {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Stationierte Fahrzeuge -->
+                            {% if stationed_vehicles %}
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    🚒 Stationierte Fahrzeuge
+                                    <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">{{ stationed_vehicles.count }}</span>
+                                </h4>
+                                <div class="space-y-2">
+                                    {% for vehicle in stationed_vehicles %}
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border hover:border-red-300 transition-colors">
+                                        <a href="{% url 'vehicles:vehicle_detail' vehicle.pk %}" class="flex-grow flex items-center gap-3">
+                                            <span class="font-mono text-sm text-gray-600 font-semibold">{{ vehicle.call_sign }}</span>
+                                            <span class="text-gray-800">{{ vehicle.name }}</span>
+                                            {% if vehicle.vehicle_type %}
+                                            <span class="text-xs text-gray-500">({{ vehicle.vehicle_type }})</span>
+                                            {% endif %}
+                                        </a>
+                                        <a href="{% url 'vehicles:vehicle_detail' vehicle.pk %}" class="text-red-600 hover:text-red-800 text-sm font-medium whitespace-nowrap">
+                                            Details →
+                                        </a>
+                                    </div>
+                                    {% endfor %}
                                 </div>
                             </div>
                             {% endif %}

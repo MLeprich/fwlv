@@ -360,6 +360,11 @@ class EquipmentDeviceInstanceForm(forms.ModelForm):
         self.fields['certification_status'].required = False
         self.fields['current_operating_hours'].required = False
 
+        # Nur Fahrzeuge mit Mobile-Lager-Funktion anzeigen
+        from vehicles.models import Vehicle
+        self.fields['assigned_vehicle'].queryset = Vehicle.objects.filter(is_mobile_storage=True).order_by('call_sign')
+        self.fields['assigned_vehicle'].required = False
+
 
 # ============================================================================
 # EQUIPMENT ITEM FORMS (LEGACY)

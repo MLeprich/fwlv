@@ -1290,6 +1290,22 @@ def hotspot_update_position(request, pk):
 
 
 @login_required
+def get_templates_for_vehicle(request, vehicle_pk):
+    """Returns matching ChecklistTemplates as JSON for a vehicle"""
+    from vehicles.models import Vehicle
+    vehicle = get_object_or_404(Vehicle, pk=vehicle_pk)
+    if vehicle.vehicle_type:
+        templates = ChecklistTemplate.objects.filter(
+            is_active=True,
+            vehicle_types=vehicle.vehicle_type
+        ).distinct()
+    else:
+        templates = ChecklistTemplate.objects.none()
+    data = [{'id': t.pk, 'name': t.name, 'is_default': t.is_default} for t in templates]
+    return JsonResponse({'templates': data})
+
+
+@login_required
 def handover_resume(request, pk):
     """
     Fahrzeugübergabe fortsetzen

@@ -34,6 +34,7 @@ class LocationType(models.TextChoices):
 
     # Ebene 3: Bereiche
     AREA = 'area', _('Stellfläche/Außenbereich')
+    VEHICLE_HALL = 'vehicle_hall', _('Fahrzeughalle')
 
     # Ebene 4: Räume & Stellplätze
     ROOM = 'room', _('Raum')

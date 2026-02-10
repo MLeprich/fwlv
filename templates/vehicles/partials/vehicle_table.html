@@ -59,7 +59,7 @@ Wird dynamisch bei Suche/Filter-Änderungen geladen
 
                 <!-- Typ / Kennzeichen -->
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">{{ vehicle.get_vehicle_type_display }}</div>
+                    <div class="text-sm text-gray-900">{{ vehicle.vehicle_type.name|default:"-" }}</div>
                     <div class="text-sm font-medium text-gray-600 mt-1">
                         {{ vehicle.license_plate }}
                     </div>

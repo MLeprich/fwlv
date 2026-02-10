@@ -15,6 +15,9 @@ urlpatterns = [
     path('<int:pk>/edit/', views.LocationUpdateView.as_view(), name='edit'),
     path('<int:pk>/delete/', views.LocationDeleteView.as_view(), name='delete'),
 
+    # API
+    path('<int:pk>/parent-data/', views.LocationParentDataView.as_view(), name='parent_data'),
+
     # QR-Code und Barcode Downloads
     path('<int:pk>/qrcode/', views.LocationQRCodeDownloadView.as_view(), name='qrcode_download'),
     path('<int:pk>/barcode/', views.LocationBarcodeDownloadView.as_view(), name='barcode_download'),

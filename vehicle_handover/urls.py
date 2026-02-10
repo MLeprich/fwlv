@@ -29,6 +29,9 @@ urlpatterns = [
     path('items/<int:pk>/edit/', views.ItemUpdateView.as_view(), name='item_update'),
     path('items/<int:pk>/delete/', views.ItemDeleteView.as_view(), name='item_delete'),
 
+    # API-Endpoints
+    path('api/vehicle/<int:vehicle_pk>/templates/', views.get_templates_for_vehicle, name='api_vehicle_templates'),
+
     # Fahrzeugübergaben
     path('handovers/', views.HandoverListView.as_view(), name='handover_list'),
     path('handovers/create/', views.HandoverCreateWizardView.as_view(), name='handover_create'),

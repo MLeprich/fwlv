@@ -64,11 +64,13 @@ class ChecklistTemplate(AuditedModel):
         help_text=_('Zusätzliche Informationen zu diesem Template')
     )
 
-    # Zuordnung zu Fahrzeugtypen
-    vehicle_types = models.JSONField(
-        default=list,
+    # Zuordnung zu Fahrzeugtypen (M2M)
+    vehicle_types = models.ManyToManyField(
+        'vehicles.VehicleType',
+        blank=True,
+        related_name='checklist_templates',
         verbose_name=_('Fahrzeugtypen'),
-        help_text=_('Liste von vehicle_type codes, z.B. ["lf", "dlk", "hlf"]')
+        help_text=_('Fahrzeugtypen, für die dieses Template gilt')
     )
 
     # Status
@@ -126,12 +128,13 @@ class ChecklistTemplate(AuditedModel):
         new_template = ChecklistTemplate.objects.create(
             name=new_name or f"{self.name} (Kopie)",
             description=self.description,
-            vehicle_types=self.vehicle_types.copy(),
             is_active=True,
             is_default=False,
             created_by=self.created_by,
             updated_by=self.updated_by
         )
+        # M2M Fahrzeugtypen kopieren
+        new_template.vehicle_types.set(self.vehicle_types.all())
 
         # Kategorien und Items kopieren
         for category in self.categories.all():

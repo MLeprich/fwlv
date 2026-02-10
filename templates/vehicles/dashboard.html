@@ -186,6 +186,20 @@
                     </p>
                 </a>
 
+                <!-- Fahrzeugtypen -->
+                <a href="{% url 'vehicles:type_list' %}" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 hover:border-orange-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">🏷️</span>
+                        <h3 class="font-bold text-gray-900">Fahrzeugtypen</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Fahrzeugtypen verwalten
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Verwalten →
+                    </p>
+                </a>
+
                 <!-- Modelle -->
                 <a href="{% url 'vehicles:model_list' %}" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 hover:border-indigo-500">
                     <div class="flex items-center gap-3 mb-3">
@@ -307,6 +321,9 @@
                     🚒 Alle Fahrzeuge
                 </a>
                 <hr class="border-gray-200">
+                <a href="{% url 'vehicles:type_list' %}" class="block w-full bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    🏷️ Fahrzeugtypen verwalten
+                </a>
                 <a href="{% url 'vehicles:model_list' %}" class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
                     🚗 Modelle verwalten
                 </a>

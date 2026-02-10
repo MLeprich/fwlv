@@ -8,7 +8,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from tablib import Dataset
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -76,6 +76,8 @@ class LocationDetailView(LoginRequiredMixin, DetailView):
         context['children'] = self.object.get_children()
         # Location-Typen für Filter
         context['location_types'] = LocationType.choices
+        # Stationierte Fahrzeuge
+        context['stationed_vehicles'] = self.object.stationed_vehicles.all()
         return context
 
 
@@ -103,8 +105,8 @@ class LocationTreeView(LoginRequiredMixin, View):
         # Root-Locations für Statistik
         root_locations = Location.get_root_locations()
 
-        # Filterbare Locations für Dropdown (nur Standorte, Gebäude, Stellflächen, Räume)
-        allowed_filter_types = ['site', 'building', 'area', 'room']
+        # Filterbare Locations für Dropdown (nur Standorte, Gebäude, Stellflächen, Fahrzeughallen, Räume)
+        allowed_filter_types = ['site', 'building', 'area', 'vehicle_hall', 'room']
         filterable_locations = locations.filter(location_type__in=allowed_filter_types)
 
         # Icons für die Typen
@@ -112,6 +114,7 @@ class LocationTreeView(LoginRequiredMixin, View):
             'site': '🏛️',
             'building': '🏢',
             'area': '🌳',
+            'vehicle_hall': '🏗️',
             'room': '🚪',
         }
 
@@ -199,6 +202,37 @@ class LocationDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView
                 f'Bitte entfernen Sie zuerst alle Verknüpfungen.'
             )
             return redirect('locations:detail', pk=self.object.pk)
+
+
+class LocationParentDataView(LoginRequiredMixin, View):
+    """JSON-API: Gibt Adressdaten eines Standorts zurück (mit Hierarchie-Vererbung)"""
+
+    def _get_inherited_address(self, location):
+        """Sucht die Adresse in der Hierarchie aufwärts"""
+        current = location
+        while current:
+            if current.street and current.city:
+                return {
+                    'street': current.street,
+                    'house_number': current.house_number,
+                    'postal_code': current.postal_code,
+                    'city': current.city,
+                }
+            current = current.parent
+        return None
+
+    def get(self, request, pk):
+        location = get_object_or_404(Location, pk=pk, is_active=True)
+
+        address = self._get_inherited_address(location)
+
+        return JsonResponse({
+            'name': location.name,
+            'code': location.code,
+            'location_type': location.location_type,
+            'full_path': location.get_full_path(),
+            'address': address,
+        })
 
 
 class LocationImportExportView(LoginRequiredMixin, View):

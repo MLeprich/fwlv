@@ -13,9 +13,9 @@ from django.db.models import Q, Count, Max
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
-from .models import Vehicle, VehicleInspection, VehicleStatus, VehicleModel
+from .models import Vehicle, VehicleInspection, VehicleStatus, VehicleModel, VehicleType
 from inventory_base.models import Supplier
-from .forms import VehicleForm, VehicleInspectionForm
+from .forms import VehicleForm, VehicleInspectionForm, VehicleTypeForm
 from datetime import timedelta, datetime
 from calendar import monthcalendar
 
@@ -85,7 +85,8 @@ class VehicleListView(LoginRequiredMixin, ListView):
         queryset = Vehicle.objects.select_related(
             'home_location',
             'responsible_person',
-            'mobile_storage_location'
+            'mobile_storage_location',
+            'vehicle_type'
         ).annotate(
             inspection_count=Count('inspections')
         )
@@ -96,9 +97,7 @@ class VehicleListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(call_sign__icontains=search_query) |
                 Q(name__icontains=search_query) |
-                Q(license_plate__icontains=search_query) |
-                Q(manufacturer__icontains=search_query) |
-                Q(model__icontains=search_query)
+                Q(license_plate__icontains=search_query)
             )
 
         # Filter: Nur Aktive
@@ -108,10 +107,10 @@ class VehicleListView(LoginRequiredMixin, ListView):
         elif is_active == 'false':
             queryset = queryset.filter(is_active=False)
 
-        # Filter: Fahrzeugtyp
+        # Filter: Fahrzeugtyp (now FK-based)
         vehicle_type = self.request.GET.get('vehicle_type', '')
         if vehicle_type:
-            queryset = queryset.filter(vehicle_type=vehicle_type)
+            queryset = queryset.filter(vehicle_type_id=vehicle_type)
 
         # Filter: Status
         status = self.request.GET.get('status', '')
@@ -150,8 +149,7 @@ class VehicleListView(LoginRequiredMixin, ListView):
         context['retired_filter'] = self.request.GET.get('retired', '')
 
         # Für Filter-Dropdowns
-        from .models import VehicleType, VehicleStatus
-        context['vehicle_types'] = VehicleType.choices
+        context['vehicle_types'] = VehicleType.objects.all()
         context['vehicle_statuses'] = VehicleStatus.choices
 
         return context
@@ -744,12 +742,6 @@ class VehicleModelCreateView(LoginRequiredMixin, PermissionRequiredMixin, Create
         )
         return super().form_valid(form)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        from .models import VehicleType
-        context['vehicle_types'] = VehicleType.choices
-        return context
-
 
 class VehicleModelUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
@@ -768,12 +760,6 @@ class VehicleModelUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Update
         )
         return super().form_valid(form)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        from .models import VehicleType
-        context['vehicle_types'] = VehicleType.choices
-        return context
-
 
 class VehicleModelDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
@@ -789,6 +775,100 @@ class VehicleModelDeleteView(LoginRequiredMixin, PermissionRequiredMixin, Delete
         messages.success(
             request,
             _('Modell "{}" wurde erfolgreich gelöscht.').format(model)
+        )
+        return super().delete(request, *args, **kwargs)
+
+
+# ============================================================================
+# VEHICLE TYPE VIEWS
+# ============================================================================
+
+class VehicleTypeListView(LoginRequiredMixin, ListView):
+    """
+    Liste aller Fahrzeugtypen
+    """
+    model = VehicleType
+    template_name = 'vehicles/type_list.html'
+    context_object_name = 'vehicle_types'
+    paginate_by = 50
+
+    def get_queryset(self):
+        queryset = VehicleType.objects.annotate(
+            vehicle_count=Count('vehicles')
+        )
+
+        search_query = self.request.GET.get('search', '')
+        if search_query:
+            queryset = queryset.filter(
+                Q(name__icontains=search_query) |
+                Q(code__icontains=search_query)
+            )
+
+        is_active = self.request.GET.get('is_active', '')
+        if is_active == 'true':
+            queryset = queryset.filter(is_active=True)
+        elif is_active == 'false':
+            queryset = queryset.filter(is_active=False)
+
+        return queryset.order_by('order', 'name')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('search', '')
+        context['is_active_filter'] = self.request.GET.get('is_active', '')
+        return context
+
+
+class VehicleTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    """
+    Fahrzeugtyp erstellen
+    """
+    model = VehicleType
+    form_class = VehicleTypeForm
+    template_name = 'vehicles/type_form.html'
+    success_url = reverse_lazy('vehicles:type_list')
+    permission_required = 'vehicles.add_vehicletype'
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            _('Fahrzeugtyp "{}" wurde erfolgreich erstellt.').format(form.instance.name)
+        )
+        return super().form_valid(form)
+
+
+class VehicleTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    """
+    Fahrzeugtyp bearbeiten
+    """
+    model = VehicleType
+    form_class = VehicleTypeForm
+    template_name = 'vehicles/type_form.html'
+    success_url = reverse_lazy('vehicles:type_list')
+    permission_required = 'vehicles.change_vehicletype'
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            _('Fahrzeugtyp "{}" wurde erfolgreich aktualisiert.').format(form.instance.name)
+        )
+        return super().form_valid(form)
+
+
+class VehicleTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    """
+    Fahrzeugtyp löschen (mit Lösch-Schutz bei zugewiesenen Fahrzeugen)
+    """
+    model = VehicleType
+    template_name = 'vehicles/type_confirm_delete.html'
+    success_url = reverse_lazy('vehicles:type_list')
+    permission_required = 'vehicles.delete_vehicletype'
+
+    def delete(self, request, *args, **kwargs):
+        vehicle_type = self.get_object()
+        messages.success(
+            request,
+            _('Fahrzeugtyp "{}" wurde erfolgreich gelöscht.').format(vehicle_type.name)
         )
         return super().delete(request, *args, **kwargs)
 
@@ -842,11 +922,11 @@ class ExportVehiclesView(LoginRequiredMixin, View):
             cell.alignment = Alignment(horizontal='center')
 
         # Data
-        vehicles = Vehicle.objects.select_related('manufacturer', 'model', 'home_location', 'responsible_person').all()
+        vehicles = Vehicle.objects.select_related('manufacturer', 'model', 'home_location', 'responsible_person', 'vehicle_type').all()
         for row_num, vehicle in enumerate(vehicles, 2):
             ws.cell(row=row_num, column=1, value=vehicle.call_sign)
             ws.cell(row=row_num, column=2, value=vehicle.name)
-            ws.cell(row=row_num, column=3, value=vehicle.get_vehicle_type_display())
+            ws.cell(row=row_num, column=3, value=vehicle.vehicle_type.name if vehicle.vehicle_type else '')
             ws.cell(row=row_num, column=4, value=vehicle.license_plate)
             ws.cell(row=row_num, column=5, value=vehicle.get_status_display())
             ws.cell(row=row_num, column=6, value=vehicle.manufacturer.name if vehicle.manufacturer else '')
@@ -920,11 +1000,11 @@ class ExportModelsView(LoginRequiredMixin, View):
             cell.alignment = Alignment(horizontal='center')
 
         # Data
-        models = VehicleModel.objects.select_related('manufacturer').all()
+        models = VehicleModel.objects.select_related('manufacturer', 'vehicle_type').all()
         for row_num, model in enumerate(models, 2):
             ws.cell(row=row_num, column=1, value=model.manufacturer.name)
             ws.cell(row=row_num, column=2, value=model.name)
-            ws.cell(row=row_num, column=3, value=model.get_vehicle_type_display() if model.vehicle_type else '')
+            ws.cell(row=row_num, column=3, value=model.vehicle_type.name if model.vehicle_type else '')
             ws.cell(row=row_num, column=4, value=model.year_from)
             ws.cell(row=row_num, column=5, value=model.year_to)
             ws.cell(row=row_num, column=6, value=model.notes)
@@ -1075,12 +1155,14 @@ class ImportVehiclesView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
                     # Set optional fields
                     if vehicle_type:
-                        # Try to match vehicle_type
-                        from .models import VehicleType
-                        for choice_key, choice_label in VehicleType.choices:
-                            if choice_label.lower() == vehicle_type.lower():
-                                vehicle.vehicle_type = choice_key
-                                break
+                        # Try to match vehicle_type by name or code
+                        try:
+                            vt = VehicleType.objects.get(
+                                Q(name__iexact=vehicle_type) | Q(code__iexact=vehicle_type)
+                            )
+                            vehicle.vehicle_type = vt
+                        except VehicleType.DoesNotExist:
+                            pass
 
                     vehicle.save()
                     imported_count += 1
@@ -1162,12 +1244,14 @@ class ImportModelsView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
                     # Set optional fields
                     if len(row) > 2 and row[2]:
-                        # Try to match vehicle_type
-                        from .models import VehicleType
-                        for choice_key, choice_label in VehicleType.choices:
-                            if choice_label.lower() == str(row[2]).lower():
-                                model.vehicle_type = choice_key
-                                break
+                        # Try to match vehicle_type by name or code
+                        try:
+                            vt = VehicleType.objects.get(
+                                Q(name__iexact=str(row[2])) | Q(code__iexact=str(row[2]))
+                            )
+                            model.vehicle_type = vt
+                        except VehicleType.DoesNotExist:
+                            pass
 
                     if len(row) > 3 and row[3]:
                         model.year_from = int(row[3])

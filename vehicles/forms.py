@@ -6,7 +6,7 @@ Formulare für Fahrzeuge und Prüfungen mit Tailwind CSS Styling
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from .models import Vehicle, VehicleInspection, VehicleModel
+from .models import Vehicle, VehicleInspection, VehicleModel, VehicleType
 from inventory_base.models import Supplier
 
 
@@ -20,10 +20,12 @@ class VehicleForm(forms.ModelForm):
         # Nur aktive Hersteller und Modelle in Dropdowns anzeigen
         self.fields['manufacturer'].queryset = Supplier.objects.filter(is_active=True).order_by('name')
         self.fields['model'].queryset = VehicleModel.objects.filter(is_active=True).select_related('manufacturer').order_by('manufacturer__name', 'name')
+        self.fields['vehicle_type'].queryset = VehicleType.objects.filter(is_active=True)
 
         # Leere Option hinzufügen
         self.fields['manufacturer'].empty_label = _('Hersteller auswählen...')
         self.fields['model'].empty_label = _('Modell auswählen...')
+        self.fields['vehicle_type'].empty_label = _('Fahrzeugtyp auswählen...')
 
         # Name und Call Sign als optional markieren
         self.fields['name'].required = False
@@ -317,3 +319,40 @@ class VehicleInspectionForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+
+class VehicleTypeForm(forms.ModelForm):
+    """
+    Formular für Fahrzeugtyp erstellen/bearbeiten
+    """
+
+    class Meta:
+        model = VehicleType
+        fields = ['name', 'code', 'description', 'icon', 'order', 'is_active']
+
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': _('z.B. Löschfahrzeug, Drehleiter'),
+            }),
+            'code': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': _('z.B. hlf20, dlk'),
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'rows': 3,
+                'placeholder': _('Optionale Beschreibung des Fahrzeugtyps...'),
+            }),
+            'icon': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': _('z.B. 🚒'),
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'min': 0,
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500',
+            }),
+        }

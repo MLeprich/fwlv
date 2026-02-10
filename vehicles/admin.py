@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
-from .models import Vehicle, VehicleInspection, VehicleModel
+from .models import Vehicle, VehicleInspection, VehicleModel, VehicleType
 
 
 class VehicleInspectionInline(admin.TabularInline):
@@ -63,8 +63,6 @@ class VehicleAdmin(admin.ModelAdmin):
         'name',
         'license_plate',
         'vin',
-        'manufacturer',
-        'model',
     ]
 
     fieldsets = (
@@ -349,3 +347,19 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
         if obj:
             return ['created_at', 'created_by', 'updated_at', 'updated_by']
         return []
+
+
+@admin.register(VehicleType)
+class VehicleTypeAdmin(admin.ModelAdmin):
+    """
+    Admin-Interface für Fahrzeugtypen
+    """
+    list_display = ['name', 'code', 'icon', 'order', 'is_active', 'vehicle_count']
+    list_filter = ['is_active']
+    search_fields = ['name', 'code']
+    ordering = ['order', 'name']
+
+    def vehicle_count(self, obj):
+        count = obj.vehicles.count()
+        return format_html('<span style="font-weight: bold;">{}</span>', count)
+    vehicle_count.short_description = _('Fahrzeuge')

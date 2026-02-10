@@ -31,7 +31,50 @@
             {% if action == 'create' %}Neuer Lagerort{% else %}Lagerort bearbeiten{% endif %}
         </h1>
 
-        <form method="post" class="space-y-6" x-data="{ locationType: '{{ form.location_type.value|default:"room" }}' }">
+        <form method="post" class="space-y-6" x-data="{
+            locationType: '{{ form.location_type.value|default:"room" }}',
+            addressInherited: false,
+            inheritedFrom: '',
+            init() {
+                const parentSelect = document.getElementById('id_parent');
+                if (parentSelect) {
+                    parentSelect.addEventListener('change', (e) => this.fetchParentData(e.target.value));
+                }
+            },
+            async fetchParentData(parentId) {
+                if (!parentId) {
+                    this.addressInherited = false;
+                    this.inheritedFrom = '';
+                    return;
+                }
+                try {
+                    const resp = await fetch(`/locations/${parentId}/parent-data/`);
+                    if (!resp.ok) return;
+                    const data = await resp.json();
+                    if (data.address) {
+                        const fields = {
+                            'id_street': data.address.street,
+                            'id_house_number': data.address.house_number,
+                            'id_postal_code': data.address.postal_code,
+                            'id_city': data.address.city
+                        };
+                        let anyFilled = false;
+                        for (const [id, value] of Object.entries(fields)) {
+                            const el = document.getElementById(id);
+                            if (el && !el.value && value) {
+                                el.value = value;
+                                anyFilled = true;
+                            }
+                        }
+                        if (anyFilled) {
+                            this.addressInherited = true;
+                            this.inheritedFrom = data.full_path;
+                        }
+                    }
+                } catch(e) { console.error('Parent-Daten laden fehlgeschlagen:', e); }
+            }
+        }">
+
             {% csrf_token %}
 
             {% if form.non_field_errors %}
@@ -173,6 +216,13 @@
             <!-- Adresse -->
             <div class="border-b border-gray-200 pb-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Adresse (optional)</h2>
+                <div x-show="addressInherited" x-cloak
+                     class="mb-4 bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r-lg">
+                    <p class="text-sm text-blue-800">
+                        📍 Adresse vom übergeordneten Standort übernommen: <strong x-text="inheritedFrom"></strong>
+                    </p>
+                    <p class="text-xs text-blue-600 mt-1">Sie können die Felder bei Bedarf anpassen.</p>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.street.label }}</label>

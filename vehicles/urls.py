@@ -53,6 +53,12 @@ urlpatterns = [
     path('manufacturers/<int:pk>/edit/', views.VehicleModelUpdateView.as_view(), name='manufacturer_update'),
     path('manufacturers/<int:pk>/delete/', views.VehicleModelDeleteView.as_view(), name='manufacturer_delete'),
 
+    # Vehicle Types
+    path('vehicle-types/', views.VehicleTypeListView.as_view(), name='type_list'),
+    path('vehicle-types/create/', views.VehicleTypeCreateView.as_view(), name='type_create'),
+    path('vehicle-types/<int:pk>/edit/', views.VehicleTypeUpdateView.as_view(), name='type_update'),
+    path('vehicle-types/<int:pk>/delete/', views.VehicleTypeDeleteView.as_view(), name='type_delete'),
+
     # Vehicle Detail Alias
     path('vehicle/<int:pk>/', views.VehicleDetailView.as_view(), name='vehicle_detail'),
 

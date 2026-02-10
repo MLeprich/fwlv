@@ -166,7 +166,7 @@ window.treeChart = function() {
 
         buildFilterableLocations() {
             // Nur Standorte (site), Gebäude (building) und Räume (room) als Filter anzeigen
-            const allowedTypes = ['site', 'building', 'area', 'room'];
+            const allowedTypes = ['site', 'building', 'area', 'vehicle_hall', 'room'];
             this.filterableLocations = this.allLocations.filter(loc =>
                 allowedTypes.includes(loc.type)
             ).sort((a, b) => {
@@ -184,7 +184,7 @@ window.treeChart = function() {
         getFilterLabel(loc) {
             const indent = '  '.repeat(loc.level);
             const typeLabels = {
-                'site': '\u{1F3DB}\u{FE0F}', 'building': '\u{1F3E2}', 'area': '\u{1F333}', 'room': '\u{1F6AA}',
+                'site': '\u{1F3DB}\u{FE0F}', 'building': '\u{1F3E2}', 'area': '\u{1F333}', 'vehicle_hall': '\u{1F3D7}\u{FE0F}', 'room': '\u{1F6AA}',
                 'parking_spot': '\u{1F17F}\u{FE0F}', 'rack': '\u{1F4DA}', 'cabinet': '\u{1F5C4}\u{FE0F}', 'shelf': '\u{1F4CB}',
                 'drawer': '\u{1F4E5}', 'box': '\u{1F4E6}', 'vehicle': '\u{1F697}', 'container': '\u{1F4E6}'
             };
@@ -245,7 +245,7 @@ window.treeChart = function() {
 
         getIcon(type) {
             const icons = {
-                'site': '\u{1F3DB}\u{FE0F}', 'building': '\u{1F3E2}', 'area': '\u{1F333}', 'room': '\u{1F6AA}',
+                'site': '\u{1F3DB}\u{FE0F}', 'building': '\u{1F3E2}', 'area': '\u{1F333}', 'vehicle_hall': '\u{1F3D7}\u{FE0F}', 'room': '\u{1F6AA}',
                 'parking_spot': '\u{1F17F}\u{FE0F}', 'rack': '\u{1F4DA}', 'cabinet': '\u{1F5C4}\u{FE0F}', 'shelf': '\u{1F4CB}',
                 'drawer': '\u{1F4E5}', 'box': '\u{1F4E6}', 'vehicle': '\u{1F697}', 'container': '\u{1F4E6}', 'other': '\u{1F4CD}'
             };
@@ -254,7 +254,7 @@ window.treeChart = function() {
 
         getTypeClass(type) {
             if (type === 'site') return 'site';
-            if (['building', 'area'].includes(type)) return 'building';
+            if (['building', 'area', 'vehicle_hall'].includes(type)) return 'building';
             if (['room', 'parking_spot'].includes(type)) return 'room';
             if (['vehicle'].includes(type)) return 'vehicle';
             return 'storage';
@@ -480,7 +480,7 @@ window.treeChart = function() {
                 >
                     <option value="">Alle Standorte</option>
                     {% for loc in filterable_locations %}
-                    <option value="{{ loc.pk }}">{% if loc.level == 1 %}&nbsp;&nbsp;{% elif loc.level == 2 %}&nbsp;&nbsp;&nbsp;&nbsp;{% elif loc.level > 2 %}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{% endif %}{% if loc.location_type == 'site' %}🏛️{% elif loc.location_type == 'building' %}🏢{% elif loc.location_type == 'area' %}🌳{% elif loc.location_type == 'room' %}🚪{% else %}📍{% endif %} {{ loc.name }}</option>
+                    <option value="{{ loc.pk }}">{% if loc.level == 1 %}&nbsp;&nbsp;{% elif loc.level == 2 %}&nbsp;&nbsp;&nbsp;&nbsp;{% elif loc.level > 2 %}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{% endif %}{% if loc.location_type == 'site' %}🏛️{% elif loc.location_type == 'building' %}🏢{% elif loc.location_type == 'area' %}🌳{% elif loc.location_type == 'vehicle_hall' %}🏗️{% elif loc.location_type == 'room' %}🚪{% else %}📍{% endif %} {{ loc.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -489,6 +489,7 @@ window.treeChart = function() {
             <span class="inline-flex items-center gap-1"><span class="text-lg">🏛️</span> Standort/Wache</span>
             <span class="inline-flex items-center gap-1"><span class="text-lg">🏢</span> Gebäude</span>
             <span class="inline-flex items-center gap-1"><span class="text-lg">🌳</span> Außenbereich</span>
+            <span class="inline-flex items-center gap-1"><span class="text-lg">🏗️</span> Fahrzeughalle</span>
             <span class="inline-flex items-center gap-1"><span class="text-lg">🚪</span> Raum</span>
             <span class="inline-flex items-center gap-1"><span class="text-lg">🅿️</span> Stellplatz</span>
             <span class="inline-flex items-center gap-1"><span class="text-lg">📚</span> Regal</span>

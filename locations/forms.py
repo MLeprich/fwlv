@@ -22,9 +22,10 @@ HIERARCHY_RULES = {
     # Gebäude und Stellflächen müssen unter Standort sein
     LocationType.BUILDING: [LocationType.SITE],
     LocationType.AREA: [LocationType.SITE],
+    LocationType.VEHICLE_HALL: [LocationType.SITE],
     # Räume und Stellplätze müssen unter Gebäude/Stellfläche sein
-    LocationType.ROOM: [LocationType.BUILDING, LocationType.AREA],
-    LocationType.PARKING_SPOT: [LocationType.AREA, LocationType.BUILDING],
+    LocationType.ROOM: [LocationType.BUILDING, LocationType.AREA, LocationType.VEHICLE_HALL],
+    LocationType.PARKING_SPOT: [LocationType.AREA, LocationType.BUILDING, LocationType.VEHICLE_HALL],
     # Regale, Schränke etc. unter Räumen
     LocationType.RACK: [LocationType.ROOM, LocationType.AREA],
     LocationType.CABINET: [LocationType.ROOM],
@@ -34,7 +35,7 @@ HIERARCHY_RULES = {
     # Boxen unter Fächern oder Regalen
     LocationType.BOX: [LocationType.SHELF, LocationType.DRAWER, LocationType.RACK, LocationType.CABINET],
     # Fahrzeuge unter Stellfläche, Stellplatz oder Gebäude
-    LocationType.VEHICLE: [LocationType.PARKING_SPOT, LocationType.AREA, LocationType.BUILDING, LocationType.ROOM],
+    LocationType.VEHICLE: [LocationType.PARKING_SPOT, LocationType.AREA, LocationType.BUILDING, LocationType.ROOM, LocationType.VEHICLE_HALL],
     # Container flexibel
     LocationType.CONTAINER: [LocationType.SITE, LocationType.BUILDING, LocationType.AREA, LocationType.PARKING_SPOT],
 }

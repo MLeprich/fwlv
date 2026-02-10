@@ -173,7 +173,7 @@
 
                     <div>
                         <span class="text-sm text-gray-500">Fahrzeugtyp:</span>
-                        <p class="font-medium text-gray-900">{{ inspection.vehicle.get_vehicle_type_display }}</p>
+                        <p class="font-medium text-gray-900">{{ inspection.vehicle.vehicle_type.name|default:"-" }}</p>
                     </div>
 
                     <div>

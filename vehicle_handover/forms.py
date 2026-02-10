@@ -42,9 +42,8 @@ class ChecklistTemplateForm(forms.ModelForm):
                 'rows': 3,
                 'placeholder': _('Zusätzliche Informationen zu diesem Template...'),
             }),
-            'vehicle_types': forms.SelectMultiple(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
-                'size': 5,
+            'vehicle_types': forms.CheckboxSelectMultiple(attrs={
+                'class': 'text-sm',
             }),
             'is_default': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500',
@@ -56,22 +55,8 @@ class ChecklistTemplateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # Fahrzeugtypen aus vehicles.Vehicle-Modell holen
-        try:
-            from vehicles.models import Vehicle
-            # Hole Choices vom vehicle_type Feld
-            vehicle_type_field = Vehicle._meta.get_field('vehicle_type')
-            vehicle_type_choices = vehicle_type_field.choices
-
-            self.fields['vehicle_types'].widget = forms.CheckboxSelectMultiple(
-                choices=vehicle_type_choices,
-                attrs={'class': 'text-sm'}
-            )
-        except Exception as e:
-            # Fallback wenn Vehicle-Modell nicht verfügbar
-            print(f"Error loading vehicle types: {e}")
-            self.fields['vehicle_types'].help_text = _('JSON-Array, z.B. ["fire_truck", "ambulance"]')
+        from vehicles.models import VehicleType
+        self.fields['vehicle_types'].queryset = VehicleType.objects.filter(is_active=True)
 
 
 class ChecklistTemplateCategoryForm(forms.ModelForm):

@@ -105,12 +105,12 @@
             </div>
 
             <!-- Vehicle Types -->
-            {% if template.vehicle_types %}
+            {% if template.vehicle_types.all %}
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="font-semibold text-gray-900 mb-4">Fahrzeugtypen</h3>
                 <div class="flex flex-wrap gap-2">
-                    {% for vtype in template.vehicle_types %}
-                    <span class="px-2 py-1 bg-blue-50 text-blue-700 text-sm rounded">{{ vtype }}</span>
+                    {% for vtype in template.vehicle_types.all %}
+                    <span class="px-2 py-1 bg-blue-50 text-blue-700 text-sm rounded">{{ vtype.icon }} {{ vtype.name }}</span>
                     {% endfor %}
                 </div>
             </div>
