@@ -42,8 +42,8 @@
                                 class="w-32 h-32 rounded-full object-cover border-4 border-gray-100"
                             />
                             {% else %}
-                            <div class="w-32 h-32 rounded-full bg-primary-100 flex items-center justify-center border-4 border-gray-100">
-                                <span class="text-4xl text-primary-600 font-bold">
+                            <div class="w-32 h-32 rounded-full bg-blue-100 flex items-center justify-center border-4 border-gray-100">
+                                <span class="text-4xl text-blue-600 font-bold">
                                     {{ user.first_name.0|default:user.username.0|upper }}{{ user.last_name.0|default:""|upper }}
                                 </span>
                             </div>
@@ -52,7 +52,7 @@
                             <!-- Edit Button Overlay -->
                             <button
                                 onclick="document.getElementById('avatar-upload').click()"
-                                class="absolute bottom-0 right-0 w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors shadow-lg"
+                                class="absolute bottom-0 right-0 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors shadow-lg"
                                 title="Profilbild ändern"
                             >
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,46 +89,19 @@
                         </span>
                     </div>
 
-                    <!-- Quick Stats -->
-                    <div class="border-t border-gray-200 pt-4 space-y-4">
-                        <!-- Qualifikationen (Placeholder) -->
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm text-gray-600">Qualifikationen</span>
-                                <span class="text-sm font-semibold text-gray-900">12</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="bg-green-500 h-2 rounded-full" style="width: 85%"></div>
-                            </div>
-                            <p class="text-xs text-gray-500 mt-1">85% aktuell</p>
-                        </div>
-
-                        <!-- Pflichtstunden (Placeholder) -->
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm text-gray-600">Pflichtstunden</span>
-                                <span class="text-sm font-semibold text-gray-900">45/60</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="bg-yellow-500 h-2 rounded-full" style="width: 75%"></div>
-                            </div>
-                            <p class="text-xs text-gray-500 mt-1">Noch 15 Std. bis 31.12.2024</p>
-                        </div>
-                    </div>
-
                     <!-- Action Buttons -->
                     <div class="border-t border-gray-200 pt-4 mt-4 space-y-2">
-                        <a
-                            href="{% url 'core:profile' %}"
-                            class="block w-full px-4 py-2 bg-primary-600 text-white text-center rounded-lg hover:bg-primary-700 transition-colors font-medium"
-                        >
-                            ✏️ Profil bearbeiten
-                        </a>
                         <a
                             href="{% url 'core:password_change' %}"
                             class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors font-medium"
                         >
                             🔒 Passwort ändern
+                        </a>
+                        <a
+                            href="{% url 'core:pin_change' %}"
+                            class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                        >
+                            🔢 PIN ändern
                         </a>
                     </div>
                 </div>
@@ -143,36 +116,28 @@
                     <nav class="flex -mb-px overflow-x-auto">
                         <button
                             @click="activeTab = 'overview'"
-                            :class="activeTab === 'overview' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            :class="activeTab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                             class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors"
                         >
                             Übersicht
                         </button>
                         <button
                             @click="activeTab = 'data'"
-                            :class="activeTab === 'data' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            :class="activeTab === 'data' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                             class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors"
                         >
                             Persönliche Daten
                         </button>
                         <button
-                            @click="activeTab = 'qualifications'"
-                            :class="activeTab === 'qualifications' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                            class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors"
-                        >
-                            Qualifikationen
-                            <span class="ml-2 px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">12</span>
-                        </button>
-                        <button
                             @click="activeTab = 'activity'"
-                            :class="activeTab === 'activity' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            :class="activeTab === 'activity' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                             class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors"
                         >
                             Aktivitäten
                         </button>
                         <button
                             @click="activeTab = 'equipment'"
-                            :class="activeTab === 'equipment' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            :class="activeTab === 'equipment' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                             class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors"
                         >
                             Meine Ausrüstung
@@ -189,65 +154,38 @@
                     <!-- Tab: Übersicht -->
                     <div x-show="activeTab === 'overview'" x-cloak>
 
-                        <!-- Anstehende Aufgaben -->
-                        <div class="mb-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">⚠️ Anstehende Aufgaben</h3>
-                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r">
-                                <ul class="space-y-2 text-sm">
-                                    <li class="flex items-start">
-                                        <span class="text-yellow-600 mr-2">•</span>
-                                        <span>Atemschutz-Prüfung in 14 Tagen (28.03.2024)</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="text-yellow-600 mr-2">•</span>
-                                        <span>Erste-Hilfe-Kurs in 45 Tagen (15.04.2024)</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <!-- Statistiken -->
-                        <div class="mb-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Statistiken</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-                                    <div class="text-3xl font-bold text-blue-700 mb-1">28</div>
-                                    <div class="text-sm text-blue-600">Qualifikationen</div>
-                                </div>
-                                <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
-                                    <div class="text-3xl font-bold text-green-700 mb-1">156</div>
-                                    <div class="text-sm text-green-600">Schichten 2024</div>
-                                </div>
-                                <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                                    <div class="text-3xl font-bold text-purple-700 mb-1">12</div>
-                                    <div class="text-sm text-purple-600">Schulungen 2024</div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Letzte Aktivitäten (Timeline) -->
                         <div>
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">🕐 Letzte Aktivitäten</h3>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Letzte Aktivitäten</h3>
+
+                            {% if recent_activities %}
                             <div class="relative border-l-2 border-gray-200 pl-6 space-y-6">
+                                {% for activity in recent_activities %}
                                 <div class="relative">
-                                    <div class="absolute -left-8 w-4 h-4 bg-green-500 rounded-full border-4 border-white"></div>
-                                    <div class="text-sm text-gray-500 mb-1">15.03.2024</div>
-                                    <div class="font-medium text-gray-900">Atemschutz erneuert</div>
-                                    <div class="text-sm text-gray-600">Gültig bis: 15.03.2025</div>
+                                    <div class="absolute -left-8 w-4 h-4 bg-{{ activity.color }}-500 rounded-full border-4 border-white"></div>
+                                    <div class="text-sm text-gray-500 mb-1">{{ activity.date|date:"d.m.Y H:i" }}</div>
+                                    {% if activity.url %}
+                                    <a href="{{ activity.url }}" class="font-medium text-gray-900 hover:text-blue-600">
+                                        {% if activity.icon == 'truck' %}🚒{% elif activity.icon == 'clipboard-check' %}📋{% else %}📌{% endif %}
+                                        {{ activity.title }}
+                                    </a>
+                                    {% else %}
+                                    <div class="font-medium text-gray-900">
+                                        {% if activity.icon == 'truck' %}🚒{% elif activity.icon == 'clipboard-check' %}📋{% else %}📌{% endif %}
+                                        {{ activity.title }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="text-sm text-gray-600">{{ activity.detail }}</div>
                                 </div>
-                                <div class="relative">
-                                    <div class="absolute -left-8 w-4 h-4 bg-blue-500 rounded-full border-4 border-white"></div>
-                                    <div class="text-sm text-gray-500 mb-1">10.03.2024</div>
-                                    <div class="font-medium text-gray-900">Schulung Höhenrettung</div>
-                                    <div class="text-sm text-gray-600">8 Stunden • Trainer: Schmidt</div>
-                                </div>
-                                <div class="relative">
-                                    <div class="absolute -left-8 w-4 h-4 bg-purple-500 rounded-full border-4 border-white"></div>
-                                    <div class="text-sm text-gray-500 mb-1">01.03.2024</div>
-                                    <div class="font-medium text-gray-900">Kleidung ausgegeben</div>
-                                    <div class="text-sm text-gray-600">Einsatzjacke • Wert: 450 €</div>
-                                </div>
+                                {% endfor %}
                             </div>
+                            {% else %}
+                            <div class="text-center py-12 bg-gray-50 rounded-lg">
+                                <span class="text-4xl mb-2 block">📋</span>
+                                <p class="text-gray-500">Noch keine Aktivitäten vorhanden.</p>
+                                <p class="text-sm text-gray-400 mt-1">Fahrzeugübergaben und Geräteprüfungen werden hier angezeigt.</p>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -359,7 +297,7 @@
                                 </a>
                                 <button
                                     type="submit"
-                                    class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                                 >
                                     Änderungen speichern
                                 </button>
@@ -367,48 +305,44 @@
                         </form>
                     </div>
 
-                    <!-- Tab: Qualifikationen -->
-                    <div x-show="activeTab === 'qualifications'" x-cloak>
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-900">Qualifikationen (12)</h3>
-                        </div>
-
-                        <div class="space-y-4">
-                            <!-- Qualifikation Card -->
-                            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                <div class="flex items-start justify-between">
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <span class="text-xl">🎓</span>
-                                            <h4 class="font-semibold text-gray-900">Atemschutzgeräteträger</h4>
-                                            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
-                                                ✅ Gültig
-                                            </span>
-                                        </div>
-                                        <div class="text-sm text-gray-600 space-y-1">
-                                            <p>Code: AGT • Unbefristet</p>
-                                            <p>Erworben: 15.03.2015</p>
-                                            <p>Zertifikat: AGT-12345</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Weitere Qualifikationen (Placeholder) -->
-                            <div class="text-center py-8 text-gray-500">
-                                <p class="text-sm">Weitere Qualifikationen werden hier angezeigt...</p>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Tab: Aktivitäten -->
                     <div x-show="activeTab === 'activity'" x-cloak>
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Aktivitätsverlauf</h3>
 
-                        <div class="text-center py-12 text-gray-500">
-                            <span class="text-4xl mb-2 block">📋</span>
-                            <p class="text-sm">Aktivitätsverlauf wird in einer späteren Version implementiert.</p>
+                        {% if recent_activities %}
+                        <div class="space-y-3">
+                            {% for activity in recent_activities %}
+                            <div class="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 border border-gray-100">
+                                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-{{ activity.color }}-100 flex items-center justify-center">
+                                    {% if activity.icon == 'truck' %}
+                                    <span class="text-lg">🚒</span>
+                                    {% elif activity.icon == 'clipboard-check' %}
+                                    <span class="text-lg">📋</span>
+                                    {% else %}
+                                    <span class="text-lg">📌</span>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    {% if activity.url %}
+                                    <a href="{{ activity.url }}" class="font-medium text-gray-900 hover:text-blue-600">{{ activity.title }}</a>
+                                    {% else %}
+                                    <div class="font-medium text-gray-900">{{ activity.title }}</div>
+                                    {% endif %}
+                                    <div class="text-sm text-gray-600">{{ activity.detail }}</div>
+                                </div>
+                                <div class="flex-shrink-0 text-sm text-gray-400">
+                                    {{ activity.date|date:"d.m.Y" }}
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
+                        {% else %}
+                        <div class="text-center py-12 bg-gray-50 rounded-lg">
+                            <span class="text-4xl mb-2 block">📋</span>
+                            <p class="text-gray-500">Noch keine Aktivitäten vorhanden.</p>
+                            <p class="text-sm text-gray-400 mt-1">Fahrzeugübergaben und Geräteprüfungen werden hier angezeigt.</p>
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Tab: Meine Ausrüstung -->

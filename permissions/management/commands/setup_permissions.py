@@ -52,6 +52,7 @@ class Command(BaseCommand):
                 self._setup_btm_beauftragter()
                 self._setup_werkstattmeister()
                 self._setup_module_leads()
+                self._setup_sachbearbeiter_modules()
                 self._setup_lagerverwalter()
                 self._setup_wachleiter()
                 self._setup_sachbearbeiter()
@@ -191,6 +192,7 @@ class Command(BaseCommand):
             Modules.WIKI: 'Wiki',
             Modules.INFO_MONITORS: 'Info Monitors',
             Modules.VEHICLES: 'KFZ',
+            Modules.PROCUREMENT: 'Procurement',
         }
 
         for module_name, display_name in modules.items():
@@ -208,17 +210,18 @@ class Command(BaseCommand):
                 group.permissions.add(perm)
                 perms_added += 1
 
-            # Plus: Bestellfreigabe bis 1.000€
-            try:
-                procurement_perms = Permission.objects.filter(
-                    content_type__app_label=Modules.PROCUREMENT,
-                    codename__in=['create_order_request', 'view_order', 'approve_order_low']
-                )
-                for perm in procurement_perms:
-                    group.permissions.add(perm)
-                    perms_added += 1
-            except Permission.DoesNotExist:
-                pass
+            # Plus: Bestellfreigabe bis 1.000€ (nicht für Procurement selbst, da bereits enthalten)
+            if module_name != Modules.PROCUREMENT:
+                try:
+                    procurement_perms = Permission.objects.filter(
+                        content_type__app_label=Modules.PROCUREMENT,
+                        codename__in=['create_order_request', 'view_own_orders', 'approve_order_low']
+                    )
+                    for perm in procurement_perms:
+                        group.permissions.add(perm)
+                        perms_added += 1
+                except Permission.DoesNotExist:
+                    pass
 
             # Reporting für Modul
             try:
@@ -234,6 +237,48 @@ class Command(BaseCommand):
             status = 'erstellt' if created else 'aktualisiert'
             self.stdout.write(
                 f'  ✓ {display_name}: {status} ({perms_added} Permissions)'
+            )
+
+    def _setup_sachbearbeiter_modules(self):
+        """Sachbearbeiter pro Modul (view + add, kein change/delete)"""
+        self.stdout.write('\n4b. Sachbearbeiter pro Modul...')
+
+        modules = {
+            Modules.MEDICAL: 'Medical',
+            Modules.CLOTHING: 'Clothing',
+            Modules.MAGAZINE: 'Magazine',
+            Modules.WORKSHOP: 'Workshop',
+            Modules.DISINFECTION: 'Disinfection',
+            Modules.HEIGHT_RESCUE: 'Height Rescue',
+            Modules.DIVING: 'Diving',
+            Modules.EQUIPMENT: 'Equipment',
+            Modules.IT_HARDWARE: 'IT Hardware',
+            Modules.WIKI: 'Wiki',
+            Modules.INFO_MONITORS: 'Info Monitors',
+            Modules.VEHICLES: 'KFZ',
+            Modules.PROCUREMENT: 'Procurement',
+        }
+
+        for module_name, display_name in modules.items():
+            group_name = f'Sachbearbeiter {display_name}'
+            group, created = Group.objects.get_or_create(name=group_name)
+            group.permissions.clear()
+
+            perms_added = 0
+
+            # Nur view_* und add_* Permissions für dieses Modul
+            module_perms = Permission.objects.filter(
+                content_type__app_label=module_name
+            ).filter(
+                Q(codename__startswith='view_') | Q(codename__startswith='add_')
+            )
+            for perm in module_perms:
+                group.permissions.add(perm)
+                perms_added += 1
+
+            status = 'erstellt' if created else 'aktualisiert'
+            self.stdout.write(
+                f'  ✓ Sachbearbeiter {display_name}: {status} ({perms_added} Permissions)'
             )
 
     def _setup_lagerverwalter(self):

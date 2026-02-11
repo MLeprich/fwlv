@@ -64,13 +64,23 @@ def module_badges(request):
     if not request.user.is_authenticated:
         return {}
 
-    # TODO: Später mit echten Daten
     badges = {
         'critical_medications_count': 0,
         'pending_inspections': 0,
         'pending_approvals': 0,
         'vehicles_in_maintenance': 0,
     }
+
+    # Offene Procurement-Freigaben fuer den aktuellen Benutzer
+    try:
+        if hasattr(request.user, 'person'):
+            from procurement.models import OrderApproval, ApprovalStatus
+            badges['pending_approvals'] = OrderApproval.objects.filter(
+                approver=request.user.person,
+                status=ApprovalStatus.PENDING,
+            ).count()
+    except Exception:
+        pass
 
     return badges
 

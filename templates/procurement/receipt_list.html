@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Wareneingaenge - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'procurement:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bestellwesen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Wareneingaenge</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Wareneingaenge</h1>
+        {% if perms.procurement.add_goodsreceipt %}
+        <a href="{% url 'procurement:receipt_create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Wareneingang erfassen
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">WE-Nummer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bestellung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lieferant</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empfangen von</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qualitaet</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for receipt in receipts %}
+                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'procurement:receipt_detail' pk=receipt.pk %}'">
+                        <td class="px-6 py-4">
+                            <p class="font-medium text-indigo-600">{{ receipt.receipt_number }}</p>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700">
+                            {{ receipt.purchase_order.order_number }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700">
+                            {{ receipt.purchase_order.supplier.name|truncatechars:30 }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ receipt.received_by }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ receipt.receipt_date|date:"d.m.Y H:i" }}</td>
+                        <td class="px-6 py-4">
+                            {% if receipt.has_discrepancies %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Abweichungen</span>
+                            {% elif receipt.quality_check_passed %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">OK</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Nicht bestanden</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            Noch keine Wareneingaenge erfasst.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if is_paginated %}
+    <div class="flex items-center justify-between mt-6">
+        <p class="text-sm text-gray-700">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</p>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Zurueck</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Weiter</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

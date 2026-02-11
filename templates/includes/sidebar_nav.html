@@ -494,6 +494,32 @@
                     Dokumente
                 </span>
             </a>
+
+            <!-- Bestellwesen -->
+            {% if modules.procurement_enabled and perms.procurement.view_purchaseorder %}
+            <a
+                href="{% url 'procurement:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'procurement' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Bestellwesen'"
+            >
+                <span class="text-xl flex-shrink-0">🛒</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Bestellwesen
+                </span>
+                {% if pending_approvals > 0 %}
+                <span
+                    class="ml-auto bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold"
+                    x-show="$store.sidebar.expanded"
+                >
+                    {{ pending_approvals }}
+                </span>
+                {% endif %}
+            </a>
+            {% endif %}
         </div>
     </div>
 

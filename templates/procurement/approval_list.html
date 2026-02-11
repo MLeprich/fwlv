@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Offene Freigaben - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'procurement:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bestellwesen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Offene Freigaben</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Offene Freigaben</h1>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bestellung</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lieferant</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Angefordert von</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stufe</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Summe</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Angefordert am</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for approval in approvals %}
+                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'procurement:order_detail' pk=approval.purchase_order.pk %}'">
+                        <td class="px-6 py-4">
+                            <p class="font-medium text-indigo-600">{{ approval.purchase_order.order_number }}</p>
+                            <p class="text-sm text-gray-500">{{ approval.purchase_order.title|truncatechars:40 }}</p>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ approval.purchase_order.supplier.name }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ approval.purchase_order.requested_by }}</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-800 text-sm font-bold">
+                                {{ approval.approval_level }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right text-sm font-semibold text-gray-900">
+                            {{ approval.purchase_order.total_cost|floatformat:2 }} &euro;
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700">
+                            {{ approval.requested_date|date:"d.m.Y" }}
+                            {% if approval.is_overdue %}
+                            <span class="ml-1 text-red-600 font-medium">(ueberfaellig)</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            <p class="text-lg mb-2">Keine offenen Freigaben.</p>
+                            <p class="text-sm">Alle Ihre Freigaben sind erledigt.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if is_paginated %}
+    <div class="flex items-center justify-between mt-6">
+        <p class="text-sm text-gray-700">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</p>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Zurueck</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Weiter</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

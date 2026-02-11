@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ order.order_number }} - Bestellanforderung</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm 1.5cm;
+            @bottom-center {
+                content: "Seite " counter(page) " von " counter(pages);
+                font-size: 8pt;
+                color: #999;
+            }
+            @bottom-right {
+                content: "Erstellt: {{ generated_at }}";
+                font-size: 8pt;
+                color: #999;
+            }
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 10pt;
+            line-height: 1.5;
+            color: #333;
+        }
+        h1 {
+            font-size: 18pt;
+            color: #1e293b;
+            margin-bottom: 2pt;
+        }
+        .subtitle {
+            font-size: 11pt;
+            color: #64748b;
+            margin-bottom: 16pt;
+        }
+        .header-line {
+            border-top: 3pt solid #4f46e5;
+            margin-bottom: 16pt;
+        }
+        .order-number {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #4f46e5;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2pt 8pt;
+            border-radius: 3pt;
+            font-size: 9pt;
+            font-weight: 600;
+            background-color: #e0e7ff;
+            color: #3730a3;
+        }
+        h2 {
+            font-size: 12pt;
+            color: #4f46e5;
+            border-bottom: 1.5pt solid #4f46e5;
+            padding-bottom: 3pt;
+            margin-top: 18pt;
+            margin-bottom: 8pt;
+        }
+        .info-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12pt;
+        }
+        .info-grid td {
+            padding: 4pt 8pt;
+            vertical-align: top;
+            font-size: 9.5pt;
+        }
+        .info-grid .label {
+            color: #64748b;
+            font-size: 8.5pt;
+            width: 25%;
+        }
+        .info-grid .value {
+            color: #1e293b;
+            font-weight: 500;
+            width: 25%;
+        }
+        table.items {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12pt;
+        }
+        table.items thead th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            text-align: left;
+            padding: 6pt 8pt;
+            border-bottom: 1.5pt solid #cbd5e1;
+            font-size: 8.5pt;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5pt;
+        }
+        table.items thead th.right {
+            text-align: right;
+        }
+        table.items tbody td {
+            padding: 5pt 8pt;
+            border-bottom: 0.5pt solid #e2e8f0;
+            font-size: 9.5pt;
+        }
+        table.items tbody td.right {
+            text-align: right;
+        }
+        table.items tfoot td {
+            padding: 6pt 8pt;
+            font-size: 10pt;
+            font-weight: 700;
+            border-top: 1.5pt solid #4f46e5;
+        }
+        table.items tfoot td.right {
+            text-align: right;
+            color: #4f46e5;
+        }
+        .summary-box {
+            background-color: #f8fafc;
+            border: 1pt solid #cbd5e1;
+            border-radius: 4pt;
+            padding: 10pt;
+            margin-top: 16pt;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3pt;
+        }
+        .footer-note {
+            margin-top: 24pt;
+            font-size: 8pt;
+            color: #94a3b8;
+            border-top: 0.5pt solid #e2e8f0;
+            padding-top: 8pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-line"></div>
+
+    <table style="width: 100%; margin-bottom: 12pt;">
+        <tr>
+            <td style="vertical-align: top;">
+                <h1>Bestellanforderung</h1>
+                <div class="subtitle">{{ order.order_number }}</div>
+            </td>
+            <td style="text-align: right; vertical-align: top;">
+                <span class="status-badge">{{ order.get_status_display }}</span>
+                <br>
+                <span style="font-size: 9pt; color: #64748b;">Datum: {{ order.requested_date|date:"d.m.Y" }}</span>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Bestelldetails -->
+    <h2>Bestelldetails</h2>
+    <table class="info-grid">
+        {% if order.beschaffungsgrund %}
+        <tr>
+            <td class="label">Beschaffungsgrund</td>
+            <td class="value">{{ order.get_beschaffungsgrund_display }}</td>
+            <td class="label">Sachkonto</td>
+            <td class="value">{% if order.sachkonto %}{{ order.sachkonto }}{% else %}&mdash;{% endif %}</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td class="label">NKF-Nr.</td>
+            <td class="value">{% if order.nkf_nummer %}{{ order.nkf_nummer }}{% else %}&mdash;{% endif %}</td>
+            <td class="label">Fachbereich</td>
+            <td class="value">{% if order.department %}{{ order.department }}{% else %}&mdash;{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">Lieferort</td>
+            <td class="value">{% if order.delivery_location %}{{ order.delivery_location }}{% else %}&mdash;{% endif %}</td>
+            <td class="label">Lieferzeit</td>
+            <td class="value">{{ order.get_lieferzeit_display }}{% if order.lieferzeit == 'eilt' and order.eilt_begruendung %} ({{ order.eilt_begruendung }}){% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">Anbieter</td>
+            <td class="value">{% if order.supplier %}{{ order.supplier.name }}{% elif order.anbieter_freitext %}{{ order.anbieter_freitext }}{% else %}&mdash;{% endif %}</td>
+            <td class="label">Ansprechpartner</td>
+            <td class="value">{% if order.requested_by %}{{ order.requested_by }}{% else %}&mdash;{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">Vertreter</td>
+            <td class="value">{% if order.vertreter %}{{ order.vertreter }}{% else %}&mdash;{% endif %}</td>
+            <td class="label"></td>
+            <td class="value"></td>
+        </tr>
+        {% if order.verwendung_bs_fzg or order.verwendung_rd_fzg or order.verwendung_allgemein %}
+        <tr>
+            <td class="label">Verwendung BS Fzg.</td>
+            <td class="value">{% if order.verwendung_bs_fzg %}{{ order.verwendung_bs_fzg }}{% else %}&mdash;{% endif %}</td>
+            <td class="label">Verwendung RD Fzg.</td>
+            <td class="value">{% if order.verwendung_rd_fzg %}{{ order.verwendung_rd_fzg }}{% else %}&mdash;{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">Verwendung Allgemein</td>
+            <td class="value">{% if order.verwendung_allgemein %}{{ order.verwendung_allgemein }}{% else %}&mdash;{% endif %}</td>
+            <td class="label"></td>
+            <td class="value"></td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <!-- Positionen -->
+    <h2>Bestellpositionen</h2>
+    <table class="items">
+        <thead>
+            <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 45%;">Artikel-/Massnahmenbeschreibung</th>
+                <th class="right" style="width: 12%;">Menge</th>
+                <th style="width: 13%;">ME</th>
+                <th class="right" style="width: 15%;">Netto pro ME</th>
+                <th class="right" style="width: 15%;">Gesamt Netto</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ item.item_name }}</td>
+                <td class="right">{{ item.quantity|floatformat:2 }}</td>
+                <td>{{ item.unit }}</td>
+                <td class="right">{{ item.unit_price|floatformat:2 }} &euro;</td>
+                <td class="right">{{ item.line_total|floatformat:2 }} &euro;</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="5" style="text-align: right;">Gesamtsumme Netto</td>
+                <td class="right">{{ order.gesamtsumme_netto|floatformat:2 }} &euro;</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    {% if order.ordered_date or order.tracking_number %}
+    <h2>Bestellinformationen</h2>
+    <table class="info-grid">
+        <tr>
+            {% if order.ordered_date %}
+            <td class="label">Bestelldatum</td>
+            <td class="value">{{ order.ordered_date|date:"d.m.Y" }}</td>
+            {% endif %}
+            {% if order.tracking_number %}
+            <td class="label">Tracking-Nr.</td>
+            <td class="value">{{ order.tracking_number }}</td>
+            {% endif %}
+        </tr>
+    </table>
+    {% endif %}
+
+    <div class="footer-note">
+        Erstellt von {{ order.created_by|default:"&mdash;" }} am {{ order.created_at|date:"d.m.Y H:i" }}
+        &bull; Generiert aus dem Feuerwehr Lagerverwaltungssystem (FLVS) am {{ generated_at }}
+    </div>
+</body>
+</html>

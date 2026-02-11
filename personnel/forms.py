@@ -31,7 +31,9 @@ class PersonForm(forms.ModelForm):
 
     # Rollen für den neuen/existierenden Benutzer
     roles = forms.ModelMultipleChoiceField(
-        queryset=Group.objects.all().order_by('name'),
+        queryset=Group.objects.exclude(
+            name__regex=r'_(readers|editors)$'
+        ).order_by('name'),
         required=False,
         label='Benutzer-Rollen',
         help_text='Wählen Sie die Rollen für den Benutzer-Account',

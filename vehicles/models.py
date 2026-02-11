@@ -112,6 +112,12 @@ class VehicleType(models.Model):
         return self.name
 
 
+class VehicleRubrik(models.TextChoices):
+    """Fahrzeug-Rubrik (Verwendungszweck)"""
+    BS = 'bs', _('Brandschutz (BS)')
+    RD = 'rd', _('Rettungsdienst (RD)')
+
+
 class VehicleStatus(models.TextChoices):
     """Fahrzeugstatus"""
     OPERATIONAL = 'operational', _('Einsatzbereit')
@@ -144,6 +150,15 @@ class Vehicle(AuditedModel):
         related_name='vehicles',
         verbose_name=_('Fahrzeugtyp'),
         limit_choices_to={'is_active': True}
+    )
+
+    rubrik = models.CharField(
+        max_length=10,
+        choices=VehicleRubrik.choices,
+        blank=True,
+        verbose_name=_('Rubrik'),
+        help_text=_('BS = Brandschutz, RD = Rettungsdienst'),
+        db_index=True,
     )
 
     call_sign = models.CharField(

@@ -1,0 +1,26 @@
+<!-- Einzelne Formset-Zeile fuer Bestellpositionen -->
+<div class="item-row border border-gray-200 rounded-lg p-4 mb-4">
+    {{ form.id }}
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div class="md:col-span-4">
+            <label class="block text-xs text-gray-500 mb-1">Artikel *</label>
+            {{ form.item_name }}
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">Menge *</label>
+            {{ form.quantity }}
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">Einheit</label>
+            {{ form.unit }}
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">Einzelpreis *</label>
+            {{ form.unit_price }}
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">Artikel-URL</label>
+            {{ form.item_url }}
+        </div>
+    </div>
+</div>

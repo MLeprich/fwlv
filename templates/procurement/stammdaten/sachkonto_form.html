@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_create %}Neues Sachkonto{% else %}Sachkonto bearbeiten{% endif %} - Bestellwesen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'procurement:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bestellwesen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'procurement:stammdaten_overview' %}" class="text-gray-500 hover:text-gray-700">Stammdaten</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'procurement:sachkonto_list' %}" class="text-gray-500 hover:text-gray-700">Sachkonten</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if is_create %}Neu{% else %}Bearbeiten{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-6">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">
+            {% if is_create %}Neues Sachkonto{% else %}Sachkonto bearbeiten{% endif %}
+        </h1>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p class="text-red-800 font-medium">Bitte korrigieren Sie die folgenden Fehler:</p>
+            <ul class="mt-2 text-sm text-red-600 list-disc pl-5">
+                {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                <li>{{ field }}: {{ error }}</li>
+                {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Sachkonto-Daten</h2>
+            </div>
+            <div class="px-6 py-4 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Typ *</label>
+                        {{ form.typ }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nummer *</label>
+                        {{ form.nummer }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Sortierung</label>
+                        {{ form.sort_order }}
+                    </div>
+                    <div class="flex items-center pt-6">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            {{ form.is_active }}
+                            <span class="text-sm font-medium text-gray-700">Aktiv</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+            <a href="{% url 'procurement:sachkonto_list' %}" class="px-4 py-2 text-gray-600 hover:text-gray-900">Abbrechen</a>
+            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm font-medium">
+                {% if is_create %}Sachkonto erstellen{% else %}Aenderungen speichern{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

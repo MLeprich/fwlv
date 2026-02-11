@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+
+{% block title %}Bestellwesen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Bestellwesen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <span class="text-5xl">🛒</span>
+                <h1 class="text-3xl font-bold">Bestellwesen</h1>
+            </div>
+            <p class="text-indigo-100 text-lg">
+                Bestellungen, Freigaben und Wareneingaenge verwalten
+            </p>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Entwuerfe -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Entwuerfe</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ draft_orders }}</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <span class="text-3xl">📝</span>
+                </div>
+            </div>
+            <a href="{% url 'procurement:order_list' %}?status=draft" class="text-gray-600 hover:text-gray-900 text-sm font-medium mt-4 inline-block">
+                Anzeigen &rarr;
+            </a>
+        </div>
+
+        <!-- Warten auf Freigabe -->
+        <div class="bg-white rounded-lg shadow-sm border {% if pending_approval_orders > 0 %}border-amber-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Warten auf Freigabe</p>
+                    <p class="text-3xl font-bold {% if pending_approval_orders > 0 %}text-amber-600{% else %}text-gray-900{% endif %} mt-2">
+                        {{ pending_approval_orders }}
+                    </p>
+                </div>
+                <div class="{% if pending_approval_orders > 0 %}bg-amber-50{% else %}bg-gray-50{% endif %} rounded-lg p-3">
+                    <span class="text-3xl">⏳</span>
+                </div>
+            </div>
+            <a href="{% url 'procurement:order_list' %}?status=submitted" class="{% if pending_approval_orders > 0 %}text-amber-600 hover:text-amber-700{% else %}text-gray-600 hover:text-gray-900{% endif %} text-sm font-medium mt-4 inline-block">
+                Anzeigen &rarr;
+            </a>
+        </div>
+
+        <!-- Bestellt -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Bestellt</p>
+                    <p class="text-3xl font-bold text-blue-600 mt-2">{{ ordered_count }}</p>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-3">
+                    <span class="text-3xl">📦</span>
+                </div>
+            </div>
+            <a href="{% url 'procurement:order_list' %}?status=ordered" class="text-blue-600 hover:text-blue-700 text-sm font-medium mt-4 inline-block">
+                Anzeigen &rarr;
+            </a>
+        </div>
+
+        <!-- Teilweise geliefert -->
+        <div class="bg-white rounded-lg shadow-sm border {% if partially_received > 0 %}border-purple-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Teillieferung</p>
+                    <p class="text-3xl font-bold {% if partially_received > 0 %}text-purple-600{% else %}text-gray-900{% endif %} mt-2">
+                        {{ partially_received }}
+                    </p>
+                </div>
+                <div class="{% if partially_received > 0 %}bg-purple-50{% else %}bg-gray-50{% endif %} rounded-lg p-3">
+                    <span class="text-3xl">📬</span>
+                </div>
+            </div>
+            <a href="{% url 'procurement:order_list' %}?status=partially_received" class="text-gray-600 hover:text-gray-900 text-sm font-medium mt-4 inline-block">
+                Anzeigen &rarr;
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="flex flex-wrap gap-3 mb-8">
+        {% if perms.procurement.add_purchaseorder %}
+        <a href="{% url 'procurement:order_create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Neue Bestellung
+        </a>
+        {% endif %}
+        <a href="{% url 'procurement:order_list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Alle Bestellungen
+        </a>
+        <a href="{% url 'procurement:approval_list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Meine Freigaben
+        </a>
+        <a href="{% url 'procurement:receipt_list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Wareneingaenge
+        </a>
+        <a href="{% url 'procurement:supplier_list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Lieferanten
+        </a>
+        <a href="{% url 'procurement:stammdaten_overview' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Stammdaten
+        </a>
+        <a href="{% url 'procurement:department_list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Fachbereiche
+        </a>
+        <a href="{% url 'procurement:staff_management' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Personal verwalten
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Meine offenen Freigaben -->
+        {% if my_pending_approvals %}
+        <div class="bg-white rounded-lg shadow-sm border border-amber-200">
+            <div class="px-6 py-4 border-b border-amber-200 bg-amber-50">
+                <h2 class="text-lg font-semibold text-amber-800">Offene Freigaben</h2>
+            </div>
+            <div class="divide-y divide-gray-100">
+                {% for approval in my_pending_approvals %}
+                <a href="{% url 'procurement:order_detail' pk=approval.purchase_order.pk %}" class="block px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-gray-900">{{ approval.purchase_order.order_number }}</p>
+                            <p class="text-sm text-gray-500">{{ approval.purchase_order.title|truncatechars:50 }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-semibold text-gray-900">{{ approval.purchase_order.total_cost|floatformat:2 }} &euro;</p>
+                            <p class="text-xs text-gray-500">Stufe {{ approval.approval_level }}</p>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            <div class="px-6 py-3 border-t border-gray-100">
+                <a href="{% url 'procurement:approval_list' %}" class="text-amber-600 hover:text-amber-700 text-sm font-medium">
+                    Alle Freigaben anzeigen &rarr;
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Letzte Bestellungen -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Letzte Bestellungen</h2>
+            </div>
+            <div class="divide-y divide-gray-100">
+                {% for order in recent_orders %}
+                <a href="{% url 'procurement:order_detail' pk=order.pk %}" class="block px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <p class="font-medium text-gray-900">{{ order.order_number }}</p>
+                                {% include 'procurement/partials/_status_badge.html' with status=order.status %}
+                            </div>
+                            <p class="text-sm text-gray-500 mt-1">{{ order.title|truncatechars:40 }} &mdash; {{ order.supplier.name }}</p>
+                        </div>
+                        <p class="font-semibold text-gray-900">{{ order.total_cost|floatformat:2 }} &euro;</p>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="px-6 py-8 text-center text-gray-500">
+                    Noch keine Bestellungen vorhanden.
+                </div>
+                {% endfor %}
+            </div>
+            <div class="px-6 py-3 border-t border-gray-100">
+                <a href="{% url 'procurement:order_list' %}" class="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+                    Alle Bestellungen anzeigen &rarr;
+                </a>
+            </div>
+        </div>
+
+        <!-- Ueberfaellige Lieferungen -->
+        {% if overdue_deliveries %}
+        <div class="bg-white rounded-lg shadow-sm border border-red-200">
+            <div class="px-6 py-4 border-b border-red-200 bg-red-50">
+                <h2 class="text-lg font-semibold text-red-800">Ueberfaellige Lieferungen</h2>
+            </div>
+            <div class="divide-y divide-gray-100">
+                {% for order in overdue_deliveries %}
+                <a href="{% url 'procurement:order_detail' pk=order.pk %}" class="block px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-gray-900">{{ order.order_number }}</p>
+                            <p class="text-sm text-gray-500">{{ order.supplier.name }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-red-600 font-medium">Erwartet: {{ order.expected_delivery_date|date:"d.m.Y" }}</p>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

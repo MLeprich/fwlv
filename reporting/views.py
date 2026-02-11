@@ -4,9 +4,11 @@ Zeigt KPIs und Reports aus allen Lagermodulen
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.views.generic import TemplateView, ListView
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.db.models import Count, Sum, Q, Avg, F
 from django.db import models
 from django.utils import timezone
@@ -21,6 +23,7 @@ from equipment.models import EquipmentItem
 from vehicles.models import Vehicle, VehicleInspection
 from personnel.models import Person, Qualification
 from inventory_base.models import Supplier
+from procurement.models import PurchaseOrder, OrderItem, OrderStatus
 
 
 class ReportingDashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
@@ -119,6 +122,80 @@ class ReportingDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templa
         suppliers_total = Supplier.objects.filter(is_active=True).count()
 
         # ============================================================================
+        # BESTELLWESEN KPIs (Finanzkennzahlen)
+        # ============================================================================
+
+        from django.db.models.functions import TruncMonth, Coalesce
+
+        # Nur Bestellungen die tatsaechlich getaetigt wurden (nicht Entwuerfe)
+        placed_statuses = [
+            OrderStatus.APPROVED, OrderStatus.ORDERED,
+            OrderStatus.PARTIALLY_RECEIVED, OrderStatus.RECEIVED,
+            OrderStatus.CLOSED,
+        ]
+        placed_orders = PurchaseOrder.objects.filter(status__in=placed_statuses)
+
+        procurement_total_orders = placed_orders.count()
+        procurement_total_value = placed_orders.aggregate(
+            total=Coalesce(Sum('gesamtsumme_netto'), Decimal('0.00'))
+        )['total']
+
+        # Aktuelles Jahr
+        current_year = today.year
+        orders_this_year = placed_orders.filter(created_at__year=current_year)
+
+        procurement_year_orders = orders_this_year.count()
+        procurement_year_value = orders_this_year.aggregate(
+            total=Coalesce(Sum('gesamtsumme_netto'), Decimal('0.00'))
+        )['total']
+
+        # Aktueller Monat
+        current_month = today.month
+        orders_this_month = orders_this_year.filter(created_at__month=current_month)
+
+        procurement_month_orders = orders_this_month.count()
+        procurement_month_value = orders_this_month.aggregate(
+            total=Coalesce(Sum('gesamtsumme_netto'), Decimal('0.00'))
+        )['total']
+
+        # Ausgaben pro Fachbereich (aktuelles Jahr)
+        procurement_by_department = list(
+            orders_this_year.filter(department__isnull=False)
+            .values('department__name')
+            .annotate(
+                order_count=Count('id'),
+                total_netto=Coalesce(Sum('gesamtsumme_netto'), Decimal('0.00')),
+            )
+            .order_by('-total_netto')
+        )
+
+        # Monatsverlauf (aktuelles Jahr) - Ausgaben pro Monat
+        procurement_by_month = list(
+            orders_this_year
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(
+                order_count=Count('id'),
+                total_netto=Coalesce(Sum('gesamtsumme_netto'), Decimal('0.00')),
+            )
+            .order_by('month')
+        )
+
+        # Top 10 haeufigste Positionen (aktuelles Jahr)
+        procurement_top_items = list(
+            OrderItem.objects.filter(
+                purchase_order__in=orders_this_year
+            )
+            .values('item_name')
+            .annotate(
+                order_count=Count('id'),
+                total_quantity=Sum('quantity'),
+                total_netto=Coalesce(Sum('gesamtpreis_netto'), Decimal('0.00')),
+            )
+            .order_by('-order_count')[:10]
+        )
+
+        # ============================================================================
         # ZUSAMMENFASSUNG
         # ============================================================================
 
@@ -146,6 +223,18 @@ class ReportingDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templa
 
             # Lieferanten
             'suppliers_total': suppliers_total,
+
+            # Bestellwesen (Finanzkennzahlen)
+            'procurement_total_orders': procurement_total_orders,
+            'procurement_total_value': procurement_total_value,
+            'procurement_year_orders': procurement_year_orders,
+            'procurement_year_value': procurement_year_value,
+            'procurement_month_orders': procurement_month_orders,
+            'procurement_month_value': procurement_month_value,
+            'procurement_by_department': procurement_by_department,
+            'procurement_by_month': procurement_by_month,
+            'procurement_top_items': procurement_top_items,
+            'procurement_current_year': current_year,
 
             # Gesamtstatistiken
             'total_inventory_items': (
@@ -419,6 +508,30 @@ class PersonnelReportView(LoginRequiredMixin, PermissionRequiredMixin, TemplateV
         })
 
         return context
+
+
+@login_required
+@permission_required('reporting.view_reporting_dashboard', raise_exception=True)
+def dsgvo_personendaten_pdf(request):
+    """
+    Generiert ein PDF mit der Auflistung aller personenbezogenen Daten (DSGVO)
+    """
+    import weasyprint
+
+    html_string = render_to_string('reporting/dsgvo_personendaten_pdf.html', {
+        'user': request.user,
+        'generated_at': timezone.now().strftime('%d.%m.%Y %H:%M'),
+    })
+
+    pdf = weasyprint.HTML(
+        string=html_string,
+        base_url=request.build_absolute_uri('/')
+    ).write_pdf()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    filename = f'DSGVO_Personenbezogene_Daten_{timezone.now().strftime("%Y%m%d")}.pdf'
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    return response
 
 
 @login_required

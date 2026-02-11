@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Stammdaten - Bestellwesen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'procurement:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bestellwesen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Stammdaten</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Stammdaten</h1>
+        <p class="text-gray-600 mt-1">Stammdaten fuer das Bestellwesen verwalten</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Sachkonten -->
+        <a href="{% url 'procurement:sachkonto_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all p-6 group">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-indigo-50 rounded-lg p-3 group-hover:bg-indigo-100 transition-colors">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                </div>
+                <span class="text-2xl font-bold text-gray-900">{{ sachkonto_count }}</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Sachkonten</h3>
+            <p class="text-sm text-gray-500 mt-1">Sachkonten fuer Bestellanforderungen</p>
+        </a>
+
+        <!-- NKF-Nummern -->
+        <a href="{% url 'procurement:nkf_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all p-6 group">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-indigo-50 rounded-lg p-3 group-hover:bg-indigo-100 transition-colors">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>
+                </div>
+                <span class="text-2xl font-bold text-gray-900">{{ nkf_count }}</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">NKF-Nummern</h3>
+            <p class="text-sm text-gray-500 mt-1">Neues Kommunales Finanzmanagement</p>
+        </a>
+
+        <!-- Verwendung Allgemein -->
+        <a href="{% url 'procurement:verwendung_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all p-6 group">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-indigo-50 rounded-lg p-3 group-hover:bg-indigo-100 transition-colors">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                </div>
+                <span class="text-2xl font-bold text-gray-900">{{ verwendung_count }}</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Verwendung Allgemein</h3>
+            <p class="text-sm text-gray-500 mt-1">Allgemeine Verwendungszwecke</p>
+        </a>
+
+        <!-- Mengeneinheiten -->
+        <a href="{% url 'procurement:mengeneinheit_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all p-6 group">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-indigo-50 rounded-lg p-3 group-hover:bg-indigo-100 transition-colors">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+                </div>
+                <span class="text-2xl font-bold text-gray-900">{{ mengeneinheit_count }}</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Mengeneinheiten</h3>
+            <p class="text-sm text-gray-500 mt-1">Einheiten fuer Bestellpositionen</p>
+        </a>
+
+        <!-- Fachbereiche -->
+        <a href="{% url 'procurement:department_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all p-6 group">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-indigo-50 rounded-lg p-3 group-hover:bg-indigo-100 transition-colors">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                </div>
+                <span class="text-2xl font-bold text-gray-900">{{ department_count }}</span>
+            </div>
+            <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Fachbereiche</h3>
+            <p class="text-sm text-gray-500 mt-1">Fachbereiche fuer Bestellungen</p>
+        </a>
+    </div>
+</div>
+{% endblock %}

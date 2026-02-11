@@ -14,7 +14,7 @@ const BarcodeScanner = (function() {
     // Configuration
     const config = {
         minLength: 4,           // Minimum barcode length
-        maxLength: 50,          // Maximum barcode length
+        maxLength: 100,         // Maximum barcode/QR code length
         maxDelay: 50,           // Max ms between keystrokes (scanner is fast)
         endChars: ['Enter'],    // Characters that end the scan
         prefixes: ['EQ-', 'DIV-', 'CLO-', 'MED-', 'IT-', 'WS-'], // Known prefixes
@@ -211,11 +211,11 @@ const BarcodeScanner = (function() {
         if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
             buffer += event.key;
 
-            // Prevent default if we're building a barcode
+            // Prevent default if we're building a barcode or QR URL
             if (buffer.length > 2 && !isSearchField) {
-                // Check if it looks like a barcode (has a known prefix or is alphanumeric)
                 const looksLikeBarcode = config.prefixes.some(p => buffer.toUpperCase().startsWith(p)) ||
-                                          /^[A-Z0-9-]+$/i.test(buffer);
+                                          /^[A-Z0-9._\-]+$/i.test(buffer) ||
+                                          /^\/[a-z0-9_\-\/]*$/i.test(buffer);
                 if (looksLikeBarcode) {
                     event.preventDefault();
                 }
@@ -233,6 +233,31 @@ const BarcodeScanner = (function() {
      */
     function processScan(code) {
         console.log('[BarcodeScanner] Scanned:', code);
+
+        // Check if scanned value is a relative URL (from QR code)
+        if (isRelativeUrl(code)) {
+            playSound(true);
+            showFeedback('QR-Code erkannt', 'success');
+
+            // Call registered handlers first
+            let handled = false;
+            for (const handler of handlers) {
+                try {
+                    if (handler(code) === true) {
+                        handled = true;
+                        break;
+                    }
+                } catch (e) {
+                    console.error('[BarcodeScanner] Handler error:', e);
+                }
+            }
+
+            if (!handled) {
+                // Navigate directly to the URL
+                window.location.href = code;
+            }
+            return;
+        }
 
         // Validate barcode
         if (!isValidBarcode(code)) {
@@ -264,6 +289,13 @@ const BarcodeScanner = (function() {
     }
 
     /**
+     * Check if value is a relative URL (from QR codes)
+     */
+    function isRelativeUrl(code) {
+        return /^\/[a-z0-9_\-\/]+$/i.test(code) && code.length >= 4;
+    }
+
+    /**
      * Validate barcode format
      */
     function isValidBarcode(code) {
@@ -271,8 +303,8 @@ const BarcodeScanner = (function() {
             return false;
         }
 
-        // Allow alphanumeric codes with dashes
-        if (!/^[A-Z0-9-]+$/i.test(code)) {
+        // Allow alphanumeric codes with dashes, dots, and underscores
+        if (!/^[A-Z0-9._\-]+$/i.test(code)) {
             return false;
         }
 
@@ -280,45 +312,11 @@ const BarcodeScanner = (function() {
     }
 
     /**
-     * Default action: search for the barcode
+     * Default action: navigate to the scan endpoint which resolves articles and locations
      */
     function defaultSearchAction(code) {
-        // Check if there's a global search field
-        const searchField = document.getElementById('global-search') ||
-                           document.querySelector('input[name="search"]') ||
-                           document.querySelector('input[type="search"]');
-
-        if (searchField) {
-            searchField.value = code;
-            searchField.focus();
-
-            // Trigger input event
-            searchField.dispatchEvent(new Event('input', { bubbles: true }));
-
-            // If it's a form, submit it
-            const form = searchField.closest('form');
-            if (form) {
-                setTimeout(() => form.submit(), 100);
-            }
-        } else {
-            // No search field, try to navigate to a search page
-            const currentPath = window.location.pathname;
-
-            // Determine which module we're in
-            let searchUrl = '/search/?q=' + encodeURIComponent(code);
-
-            if (currentPath.includes('/equipment/')) {
-                searchUrl = '/equipment/devices/?search=' + encodeURIComponent(code);
-            } else if (currentPath.includes('/diving/')) {
-                searchUrl = '/diving/devices/?search=' + encodeURIComponent(code);
-            } else if (currentPath.includes('/clothing/')) {
-                searchUrl = '/clothing/items/?search=' + encodeURIComponent(code);
-            } else if (currentPath.includes('/it_hardware/')) {
-                searchUrl = '/it_hardware/devices/?search=' + encodeURIComponent(code);
-            }
-
-            window.location.href = searchUrl;
-        }
+        // Use the central scan endpoint which handles article + location lookup
+        window.location.href = '/core/scan/?q=' + encodeURIComponent(code);
     }
 
     /**

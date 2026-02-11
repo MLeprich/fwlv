@@ -22,6 +22,8 @@ from core.forms import (
     NotificationSettingsForm,
     AppearanceSettingsForm,
     PrivacySettingsForm,
+    PinSetupForm,
+    PinChangeForm,
 )
 
 # Imports für Profil-Ausrüstungsübersicht
@@ -188,6 +190,63 @@ class ProfileView(LoginRequiredMixin, UpdateView):
             context['assigned_clothing_value'] = 0
             context['clothing_movements'] = []
             context['magazine_movements'] = []
+
+        # Letzte Aktivitäten aus verschiedenen Modulen sammeln
+        recent_activities = []
+
+        # Fahrzeugübergaben (als Übergeber oder Empfänger)
+        try:
+            from vehicle_handover.models import VehicleHandover
+            handover_filter = Q(created_by=user)
+            if person:
+                handover_filter |= Q(handover_from=person) | Q(handover_to=person)
+            handovers = VehicleHandover.objects.filter(
+                handover_filter
+            ).select_related('vehicle', 'handover_from', 'handover_to').order_by('-handover_date')[:10]
+            for h in handovers:
+                role = ''
+                if person and h.handover_to == person:
+                    role = 'Empfänger'
+                elif person and h.handover_from == person:
+                    role = 'Übergeber'
+                recent_activities.append({
+                    'date': h.handover_date,
+                    'icon': 'truck',
+                    'color': 'blue',
+                    'title': f'Fahrzeugübergabe: {h.vehicle}',
+                    'detail': f'{role} — {h.get_status_display()}' if role else h.get_status_display(),
+                    'url': f'/vehicle-handover/handovers/{h.pk}/',
+                })
+        except Exception:
+            pass
+
+        # Geräteprüfungen (Equipment)
+        try:
+            from equipment.models import InspectionRecord
+            inspections = InspectionRecord.objects.filter(
+                inspector=user
+            ).select_related('device__master', 'inspection_type').order_by('-inspection_date')[:10]
+            for insp in inspections:
+                result_colors = {
+                    'passed': 'green',
+                    'passed_with_remarks': 'yellow',
+                    'failed': 'red',
+                    'incomplete': 'gray',
+                }
+                recent_activities.append({
+                    'date': insp.inspection_date,
+                    'icon': 'clipboard-check',
+                    'color': result_colors.get(insp.result, 'gray'),
+                    'title': f'Prüfung: {insp.device.master.name}',
+                    'detail': f'{insp.inspection_type.name} — {insp.get_result_display()}',
+                    'url': f'/equipment/device/{insp.device.pk}/',
+                })
+        except Exception:
+            pass
+
+        # Nach Datum sortieren und auf 15 begrenzen
+        recent_activities.sort(key=lambda x: x['date'], reverse=True)
+        context['recent_activities'] = recent_activities[:15]
 
         return context
 
@@ -1206,6 +1265,29 @@ def barcode_scan_view(request):
     except Exception as e:
         logger.debug(f"Workshop Tool search error: {e}")
 
+    # Locations (Lagerorte: Regal, Fach, Raum etc.)
+    try:
+        from locations.models import Location
+        locations = Location.objects.filter(
+            Q(code__iexact=scanned_value) |
+            Q(barcode__iexact=scanned_value) |
+            Q(room_number__iexact=scanned_value)
+        )[:1]
+        # Falls nicht per Code/Barcode/Raumnr. gefunden, prüfe auto-generierte Barcode-Werte
+        if not locations.exists():
+            for loc in Location.objects.filter(is_active=True).select_related('parent')[:500]:
+                if loc.get_barcode_value().lower() == scanned_value.lower():
+                    locations = Location.objects.filter(pk=loc.pk)[:1]
+                    break
+        for loc in locations:
+            found_items.append({
+                'url': f'/locations/{loc.pk}/',
+                'name': loc.get_full_path(),
+                'type': 'Lagerort'
+            })
+    except Exception as e:
+        logger.debug(f"Location search error: {e}")
+
     # 3. Ergebnis-Handling
     if len(found_items) == 1:
         # Eindeutiger Treffer -> direkt weiterleiten
@@ -1372,6 +1454,57 @@ def force_password_change_view(request):
         form = PasswordChangeForm(request.user)
 
     return render(request, 'core/force_password_change.html', {
+        'form': form,
+        'user': request.user
+    })
+
+
+@login_required
+def pin_setup_view(request):
+    """
+    Erzwungene PIN-Einrichtung für Benutzer ohne PIN
+    """
+    if request.user.has_pin() and not request.user.pin_must_change:
+        return redirect('core:dashboard')
+
+    if request.method == 'POST':
+        form = PinSetupForm(request.POST)
+        if form.is_valid():
+            user = request.user
+            user.set_pin(form.cleaned_data['pin'])
+            user.pin_must_change = False
+            user.save()
+            messages.success(
+                request,
+                'Ihr PIN wurde erfolgreich eingerichtet.'
+            )
+            return redirect('core:dashboard')
+    else:
+        form = PinSetupForm()
+
+    return render(request, 'core/pin_setup.html', {
+        'form': form,
+        'user': request.user
+    })
+
+
+@login_required
+def pin_change_view(request):
+    """
+    Freiwillige PIN-Änderung über das Profil
+    """
+    if request.method == 'POST':
+        form = PinChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = request.user
+            user.set_pin(form.cleaned_data['new_pin'])
+            user.save()
+            messages.success(request, 'Ihr PIN wurde erfolgreich geändert.')
+            return redirect('core:profile')
+    else:
+        form = PinChangeForm(request.user)
+
+    return render(request, 'core/pin_change.html', {
         'form': form,
         'user': request.user
     })

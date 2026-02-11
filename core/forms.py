@@ -5,6 +5,7 @@ Formulare für Benutzerprofil, Einstellungen, etc.
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core.validators import MinLengthValidator, RegexValidator
 from .models import UserSettings
 
 User = get_user_model()
@@ -304,3 +305,82 @@ class PasswordChangeCustomForm(forms.Form):
         if commit:
             self.user.save()
         return self.user
+
+
+pin_validators = [
+    MinLengthValidator(4, message='Der PIN muss genau 4 Ziffern lang sein.'),
+    RegexValidator(r'^\d{4}$', message='Der PIN muss genau 4 Ziffern enthalten.'),
+]
+
+PIN_WIDGET_ATTRS = {
+    'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-center text-2xl tracking-widest',
+    'inputmode': 'numeric',
+    'pattern': '[0-9]{4}',
+    'maxlength': '4',
+    'autocomplete': 'off',
+    'placeholder': '****',
+}
+
+
+class PinSetupForm(forms.Form):
+    """Formular zur erstmaligen PIN-Einrichtung"""
+    pin = forms.CharField(
+        label='Neuer PIN',
+        max_length=4,
+        validators=pin_validators,
+        widget=forms.PasswordInput(attrs=PIN_WIDGET_ATTRS),
+    )
+    pin_confirm = forms.CharField(
+        label='PIN wiederholen',
+        max_length=4,
+        validators=pin_validators,
+        widget=forms.PasswordInput(attrs=PIN_WIDGET_ATTRS),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pin = cleaned_data.get('pin')
+        pin_confirm = cleaned_data.get('pin_confirm')
+        if pin and pin_confirm and pin != pin_confirm:
+            raise forms.ValidationError('Die PINs stimmen nicht überein.')
+        return cleaned_data
+
+
+class PinChangeForm(forms.Form):
+    """Formular zur PIN-Änderung (erfordert aktuellen PIN)"""
+    current_pin = forms.CharField(
+        label='Aktueller PIN',
+        max_length=4,
+        validators=pin_validators,
+        widget=forms.PasswordInput(attrs=PIN_WIDGET_ATTRS),
+    )
+    new_pin = forms.CharField(
+        label='Neuer PIN',
+        max_length=4,
+        validators=pin_validators,
+        widget=forms.PasswordInput(attrs=PIN_WIDGET_ATTRS),
+    )
+    new_pin_confirm = forms.CharField(
+        label='Neuer PIN wiederholen',
+        max_length=4,
+        validators=pin_validators,
+        widget=forms.PasswordInput(attrs=PIN_WIDGET_ATTRS),
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_current_pin(self):
+        current_pin = self.cleaned_data.get('current_pin')
+        if current_pin and not self.user.check_pin(current_pin):
+            raise forms.ValidationError('Der aktuelle PIN ist falsch.')
+        return current_pin
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_pin = cleaned_data.get('new_pin')
+        new_pin_confirm = cleaned_data.get('new_pin_confirm')
+        if new_pin and new_pin_confirm and new_pin != new_pin_confirm:
+            raise forms.ValidationError('Die neuen PINs stimmen nicht überein.')
+        return cleaned_data

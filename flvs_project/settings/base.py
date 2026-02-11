@@ -115,6 +115,7 @@ MIDDLEWARE = [
     'django_otp.middleware.OTPMiddleware',  # 2FA Support
     'core.middleware.QRCodeScannerMiddleware',  # QR-Code/Barcode Scanner Redirect
     'core.middleware.PasswordChangeRequiredMiddleware',  # Force password change for new users
+    'core.middleware.PinSetupRequiredMiddleware',  # Force PIN setup for new users
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',  # Brute-Force Protection

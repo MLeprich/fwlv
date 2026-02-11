@@ -655,6 +655,37 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
             handover_id = wizard_data.get('handover_id')
             handover = get_object_or_404(VehicleHandover, pk=handover_id)
 
+            # PIN-Validierung
+            pin_errors = []
+            pin_receiver = request.POST.get('pin_receiver', '')
+            pin_giver = request.POST.get('pin_giver', '')
+
+            # Empfänger-PIN prüfen
+            receiver_person = handover.handover_to
+            if receiver_person and hasattr(receiver_person, 'user') and receiver_person.user:
+                if not receiver_person.user.has_pin():
+                    pin_errors.append(f'{receiver_person} hat noch keinen PIN eingerichtet.')
+                elif not receiver_person.user.check_pin(pin_receiver):
+                    pin_errors.append('Der PIN des Empfängers ist falsch.')
+            else:
+                pin_errors.append(f'{receiver_person} hat kein Benutzerkonto. PIN-Prüfung nicht möglich.')
+
+            # Übergeber-PIN prüfen (wenn vorhanden)
+            if handover.handover_from:
+                giver_person = handover.handover_from
+                if hasattr(giver_person, 'user') and giver_person.user:
+                    if not giver_person.user.has_pin():
+                        pin_errors.append(f'{giver_person} hat noch keinen PIN eingerichtet.')
+                    elif not giver_person.user.check_pin(pin_giver):
+                        pin_errors.append('Der PIN des Übergebers ist falsch.')
+                else:
+                    pin_errors.append(f'{giver_person} hat kein Benutzerkonto. PIN-Prüfung nicht möglich.')
+
+            if pin_errors:
+                context = self.get_context_data()
+                context['pin_errors'] = pin_errors
+                return render(request, self.get_template_names()[0], context)
+
             # Bestätigungen verarbeiten
             handover.confirmed_by_receiver = request.POST.get('confirm_receiver') == 'on'
             handover.confirmed_by_giver = request.POST.get('confirm_giver') == 'on'
@@ -1302,7 +1333,17 @@ def get_templates_for_vehicle(request, vehicle_pk):
     else:
         templates = ChecklistTemplate.objects.none()
     data = [{'id': t.pk, 'name': t.name, 'is_default': t.is_default} for t in templates]
-    return JsonResponse({'templates': data})
+
+    # Standort des Fahrzeugs (Heimatstandort oder verknüpfter Lagerort)
+    location_data = None
+    if vehicle.home_location_id:
+        location_data = {'id': str(vehicle.home_location_id), 'name': str(vehicle.home_location)}
+    else:
+        location_entry = getattr(vehicle, 'location_entry', None)
+        if location_entry:
+            location_data = {'id': str(location_entry.pk), 'name': str(location_entry)}
+
+    return JsonResponse({'templates': data, 'location': location_data})
 
 
 @login_required

@@ -53,6 +53,10 @@ urlpatterns = [
     # Force Password Change
     path('force-password-change/', views.force_password_change_view, name='force_password_change'),
 
+    # PIN-Code
+    path('pin-setup/', views.pin_setup_view, name='pin_setup'),
+    path('pin-change/', views.pin_change_view, name='pin_change'),
+
     # Authentication (Django built-in views)
     path('login/', auth_views.LoginView.as_view(
         template_name='core/login.html',

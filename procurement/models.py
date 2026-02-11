@@ -17,6 +17,27 @@ from decimal import Decimal
 from core.models.base import TimeStampedModel, AuditedModel
 
 
+class Beschaffungsgrund(models.TextChoices):
+    """Beschaffungsgrund fuer Bestellanforderung"""
+    VERTRAG = 'vertrag', _('Vertragliche Vereinbarung')
+    DIENSTLICH = 'dienstlich', _('Dienstliche Notwendigkeit')
+
+
+class Lieferzeit(models.TextChoices):
+    """Lieferzeit-Dringlichkeit"""
+    NORMAL = 'normal', _('Normal')
+    EILT = 'eilt', _('Eilt')
+
+
+class Beschaffungsstatus(models.TextChoices):
+    """Beschaffungsstatus der Bestellanforderung"""
+    BESTELLT = 'bestellt', _('Bereits bestellt')
+    ABGEHOLT = 'abgeholt', _('Bereits abgeholt')
+    DURCHGEFUEHRT = 'durchgefuehrt', _('Bereits durchgeführt')
+    GELIEFERT = 'geliefert', _('Bereits geliefert')
+    RECHNUNG = 'rechnung', _('Rechnung liegt vor')
+
+
 class OrderPriority(models.TextChoices):
     """Priorität einer Bestellung"""
     LOW = 'low', _('Niedrig')
@@ -54,6 +75,203 @@ class DeliveryStatus(models.TextChoices):
     IN_TRANSIT = 'in_transit', _('Unterwegs')
     DELIVERED = 'delivered', _('Geliefert')
     DELAYED = 'delayed', _('Verspätet')
+
+
+class Sachkonto(AuditedModel):
+    """
+    Sachkonto fuer Bestellanforderungen
+    z.B. KFZ-Aufwendungen (525135), Beschaffungswesen (543188)
+    """
+    typ = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name=_('Typ'),
+        help_text=_('z.B. KFZ-Aufwendungen, Beschaffungswesen')
+    )
+    nummer = models.CharField(
+        max_length=20,
+        verbose_name=_('Nummer'),
+        help_text=_('z.B. 525135, 543188')
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv')
+    )
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Sortierung')
+    )
+
+    class Meta:
+        db_table = 'procurement_sachkonto'
+        verbose_name = _('Sachkonto')
+        verbose_name_plural = _('Sachkonten')
+        ordering = ['sort_order', 'typ']
+
+    def __str__(self):
+        return f"{self.typ} ({self.nummer})"
+
+
+class NKFNummer(AuditedModel):
+    """
+    NKF-Nummer (Neues Kommunales Finanzmanagement)
+    z.B. 610002150100
+    """
+    nummer = models.CharField(
+        max_length=20,
+        unique=True,
+        verbose_name=_('Nummer'),
+        help_text=_('z.B. 610002150100')
+    )
+    bezeichnung = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_('Bezeichnung'),
+        help_text=_('Optionale Beschreibung')
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv')
+    )
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Sortierung')
+    )
+
+    class Meta:
+        db_table = 'procurement_nkf_nummer'
+        verbose_name = _('NKF-Nummer')
+        verbose_name_plural = _('NKF-Nummern')
+        ordering = ['sort_order', 'nummer']
+
+    def __str__(self):
+        if self.bezeichnung:
+            return f"{self.nummer} - {self.bezeichnung}"
+        return self.nummer
+
+
+class VerwendungAllgemein(AuditedModel):
+    """
+    Allgemeine Verwendungszwecke fuer Bestellanforderungen
+    z.B. Atemschutz, Kfz-Werkst., Bekleidung
+    """
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name=_('Name'),
+        help_text=_('z.B. Atemschutz, Kfz-Werkst.')
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv')
+    )
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Sortierung')
+    )
+
+    class Meta:
+        db_table = 'procurement_verwendung_allgemein'
+        verbose_name = _('Verwendung (Allgemein)')
+        verbose_name_plural = _('Verwendungen (Allgemein)')
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class Mengeneinheit(AuditedModel):
+    """
+    Mengeneinheiten fuer Bestellpositionen
+    z.B. Stck., Pack, Paar, Liter
+    """
+    name = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name=_('Name'),
+        help_text=_('z.B. Stck., Pack, Liter')
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv')
+    )
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Sortierung')
+    )
+
+    class Meta:
+        db_table = 'procurement_mengeneinheit'
+        verbose_name = _('Mengeneinheit')
+        verbose_name_plural = _('Mengeneinheiten')
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class ProcurementDepartment(AuditedModel):
+    """
+    Fachbereich für Bestellungen
+
+    z.B. Atemschutz, Fahrzeugtechnik, Bekleidung, etc.
+    """
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name=_('Name'),
+        help_text=_('z.B. Atemschutz, Fahrzeugtechnik')
+    )
+
+    code = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_('Kürzel'),
+        help_text=_('Optionales Kürzel, z.B. AS, FT')
+    )
+
+    description = models.TextField(
+        blank=True,
+        verbose_name=_('Beschreibung')
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv')
+    )
+
+    responsible_person = models.ForeignKey(
+        'personnel.Person',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='responsible_departments',
+        verbose_name=_('Verantwortliche Person')
+    )
+
+    budget_code = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_('Budgetcode'),
+        help_text=_('Standard-Budgetcode für diesen Fachbereich')
+    )
+
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Sortierung')
+    )
+
+    class Meta:
+        db_table = 'procurement_department'
+        verbose_name = _('Fachbereich')
+        verbose_name_plural = _('Fachbereiche')
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        if self.code:
+            return f"{self.code} - {self.name}"
+        return self.name
 
 
 class PurchaseOrder(AuditedModel):
@@ -98,20 +316,24 @@ class PurchaseOrder(AuditedModel):
         verbose_name=_('Priorität')
     )
 
-    # Lieferant
+    # Lieferant (optional, Alternative: anbieter_freitext)
     supplier = models.ForeignKey(
         'inventory_base.Supplier',
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name='purchase_orders',
         verbose_name=_('Lieferant')
     )
 
-    # Anforderung & Genehmigung
+    # Anforderung & Genehmigung (Ansprechpartner)
     requested_by = models.ForeignKey(
         'personnel.Person',
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name='purchase_orders_requested',
-        verbose_name=_('Angefordert von')
+        verbose_name=_('Ansprechpartner')
     )
 
     requested_date = models.DateField(
@@ -161,12 +383,122 @@ class PurchaseOrder(AuditedModel):
         verbose_name=_('Lieferstatus')
     )
 
-    # Lieferadresse
+    # Lieferadresse (Lieferort)
     delivery_location = models.ForeignKey(
         'locations.Location',
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name='purchase_orders',
-        verbose_name=_('Lieferadresse')
+        verbose_name=_('Lieferort')
+    )
+
+    # Fachbereich
+    department = models.ForeignKey(
+        ProcurementDepartment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='purchase_orders',
+        verbose_name=_('Fachbereich')
+    )
+
+    # === Neue Felder fuer Bestellanforderung (Excel-Vorlage) ===
+
+    beschaffungsgrund = models.CharField(
+        max_length=20,
+        choices=Beschaffungsgrund.choices,
+        blank=True,
+        verbose_name=_('Beschaffungsgrund')
+    )
+
+    sachkonto = models.ForeignKey(
+        Sachkonto,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='purchase_orders',
+        verbose_name=_('Sachkonto')
+    )
+
+    nkf_nummer = models.ForeignKey(
+        NKFNummer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='purchase_orders',
+        verbose_name=_('NKF-Nummer')
+    )
+
+    lieferzeit = models.CharField(
+        max_length=20,
+        choices=Lieferzeit.choices,
+        default=Lieferzeit.NORMAL,
+        verbose_name=_('Lieferzeit')
+    )
+
+    eilt_begruendung = models.TextField(
+        blank=True,
+        verbose_name=_('Eilt-Begruendung'),
+        help_text=_('Begruendung falls Lieferzeit "Eilt" gewaehlt')
+    )
+
+    anbieter_freitext = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_('Anbieter (Freitext)'),
+        help_text=_('Alternative zum Lieferanten-Dropdown')
+    )
+
+    verwendung_bs_fzg = models.ForeignKey(
+        'vehicles.Vehicle',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='procurement_bs',
+        verbose_name=_('Verwendung BS Fzg.')
+    )
+
+    verwendung_rd_fzg = models.ForeignKey(
+        'vehicles.Vehicle',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='procurement_rd',
+        verbose_name=_('Verwendung RD Fzg.')
+    )
+
+    verwendung_allgemein = models.ForeignKey(
+        VerwendungAllgemein,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='purchase_orders',
+        verbose_name=_('Verwendung Allgemein')
+    )
+
+    vertreter = models.ForeignKey(
+        'personnel.Person',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='purchase_orders_vertreter',
+        verbose_name=_('Vertreter')
+    )
+
+    beschaffungsstatus = models.CharField(
+        max_length=20,
+        choices=Beschaffungsstatus.choices,
+        blank=True,
+        verbose_name=_('Beschaffungsstatus')
+    )
+
+    gesamtsumme_netto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name=_('Gesamtsumme Netto (EUR)')
     )
 
     # Kosten
@@ -268,6 +600,14 @@ class PurchaseOrder(AuditedModel):
         verbose_name = _('Bestellung')
         verbose_name_plural = _('Bestellungen')
         ordering = ['-requested_date', '-order_number']
+        permissions = [
+            ('create_order_request', _('Kann Bestellanforderung erstellen')),
+            ('view_own_orders', _('Kann eigene Bestellungen anzeigen')),
+            ('approve_order_low', _('Kann Bestellungen bis 1.000 EUR freigeben')),
+            ('approve_order_medium', _('Kann Bestellungen bis 5.000 EUR freigeben')),
+            ('approve_order_high', _('Kann Bestellungen über 5.000 EUR freigeben')),
+            ('cancel_order', _('Kann Bestellungen stornieren')),
+        ]
         indexes = [
             models.Index(fields=['order_number']),
             models.Index(fields=['status']),
@@ -298,8 +638,9 @@ class PurchaseOrder(AuditedModel):
 
             self.order_number = f'PO-{year}-{new_num:04d}'
 
-        # Calculate totals
-        self.calculate_totals()
+        # Calculate totals (nur wenn Objekt bereits in DB existiert)
+        if self.pk:
+            self.calculate_totals()
 
         super().save(*args, **kwargs)
 
@@ -311,8 +652,8 @@ class PurchaseOrder(AuditedModel):
         )['total'] or Decimal('0.00')
 
         self.subtotal = items_total
-        self.tax_amount = (self.subtotal * self.tax_rate) / Decimal('100')
-        self.total_cost = self.subtotal + self.tax_amount + self.shipping_cost
+        self.tax_amount = (self.subtotal * Decimal(str(self.tax_rate))) / Decimal('100')
+        self.total_cost = self.subtotal + self.tax_amount + Decimal(str(self.shipping_cost))
 
     def get_approval_progress(self):
         """Gibt Freigabe-Fortschritt zurück (Anzahl approved / total)"""
@@ -390,8 +731,10 @@ class OrderItem(TimeStampedModel):
     )
 
     # Menge & Preis
-    quantity = models.PositiveIntegerField(
-        validators=[MinValueValidator(1)],
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
         verbose_name=_('Menge')
     )
 
@@ -404,8 +747,17 @@ class OrderItem(TimeStampedModel):
     unit_price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+        default=0,
         validators=[MinValueValidator(Decimal('0.00'))],
-        verbose_name=_('Einzelpreis (€)')
+        verbose_name=_('Einzelpreis (EUR)')
+    )
+
+    gesamtpreis_netto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name=_('Gesamtpreis Netto (EUR)')
     )
 
     # Lieferung
@@ -440,6 +792,14 @@ class OrderItem(TimeStampedModel):
         max_length=100,
         blank=True,
         verbose_name=_('Lieferanten-Artikelnummer')
+    )
+
+    # URL zum Artikel (z.B. im Online-Shop des Lieferanten)
+    item_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name=_('Artikel-URL'),
+        help_text=_('Link zum Artikel, z.B. im Online-Shop des Lieferanten')
     )
 
     # Notizen

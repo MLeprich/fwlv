@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Verzeichnis personenbezogener Daten</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm 1.5cm;
+            @bottom-center {
+                content: "Seite " counter(page) " von " counter(pages);
+                font-size: 8pt;
+                color: #999;
+            }
+            @bottom-right {
+                content: "Erstellt: {{ generated_at }}";
+                font-size: 8pt;
+                color: #999;
+            }
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 10pt;
+            line-height: 1.5;
+            color: #333;
+        }
+        h1 {
+            font-size: 18pt;
+            color: #1e293b;
+            margin-bottom: 4pt;
+        }
+        .subtitle {
+            font-size: 11pt;
+            color: #64748b;
+            margin-bottom: 20pt;
+        }
+        .org-info {
+            font-size: 9pt;
+            color: #64748b;
+            margin-bottom: 16pt;
+        }
+        h2 {
+            font-size: 13pt;
+            color: #1e40af;
+            border-bottom: 2px solid #1e40af;
+            padding-bottom: 4pt;
+            margin-top: 20pt;
+            margin-bottom: 8pt;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 14pt;
+        }
+        thead th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            text-align: left;
+            padding: 6pt 8pt;
+            border-bottom: 1.5pt solid #cbd5e1;
+            font-size: 9pt;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5pt;
+        }
+        tbody td {
+            padding: 5pt 8pt;
+            border-bottom: 0.5pt solid #e2e8f0;
+            font-size: 9.5pt;
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .badge {
+            display: inline-block;
+            padding: 1pt 6pt;
+            border-radius: 3pt;
+            font-size: 8pt;
+            font-weight: 600;
+        }
+        .badge-required {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .badge-optional {
+            background-color: #e0f2fe;
+            color: #075985;
+        }
+        .badge-auto {
+            background-color: #f3e8ff;
+            color: #6b21a8;
+        }
+        .badge-account {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .legal-box {
+            background-color: #f8fafc;
+            border: 1pt solid #cbd5e1;
+            border-radius: 4pt;
+            padding: 12pt;
+            margin-top: 20pt;
+            font-size: 9pt;
+            color: #475569;
+        }
+        .legal-box strong {
+            color: #1e293b;
+        }
+        .legal-box p {
+            margin: 4pt 0;
+        }
+        .section-note {
+            font-size: 9pt;
+            color: #64748b;
+            font-style: italic;
+            margin-bottom: 8pt;
+        }
+        .header-line {
+            border-top: 3pt solid #1e40af;
+            margin-bottom: 16pt;
+        }
+        .footer-note {
+            margin-top: 24pt;
+            font-size: 8pt;
+            color: #94a3b8;
+            border-top: 0.5pt solid #e2e8f0;
+            padding-top: 8pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-line"></div>
+
+    <h1>Verzeichnis personenbezogener Daten</h1>
+    <div class="subtitle">gem. Art. 30 DSGVO &mdash; Verarbeitungstätigkeit Personalverwaltung</div>
+    <div class="org-info">
+        System: Feuerwehr Lagerverwaltungssystem (FLVS) &bull; Erstellt von: {{ user.get_full_name|default:user.username }} &bull; Datum: {{ generated_at }}
+    </div>
+
+    <!-- 1. Stammdaten -->
+    <h2>1. Stammdaten</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30%;">Datenfeld</th>
+                <th style="width: 20%;">Typ</th>
+                <th style="width: 15%;">Erforderlich</th>
+                <th style="width: 35%;">Zweck</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Vorname</td>
+                <td>Text</td>
+                <td><span class="badge badge-required">Pflicht</span></td>
+                <td>Identifikation, Anrede, Dienstausweis</td>
+            </tr>
+            <tr>
+                <td>Nachname</td>
+                <td>Text</td>
+                <td><span class="badge badge-required">Pflicht</span></td>
+                <td>Identifikation, Anrede, Dienstausweis</td>
+            </tr>
+            <tr>
+                <td>Personalnummer</td>
+                <td>Text (eindeutig)</td>
+                <td><span class="badge badge-required">Pflicht</span></td>
+                <td>Eindeutige Zuordnung im System</td>
+            </tr>
+            <tr>
+                <td>Geburtsdatum</td>
+                <td>Datum</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Altersberechnung, Dienstfähigkeit</td>
+            </tr>
+            <tr>
+                <td>Foto</td>
+                <td>Bilddatei</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Personenerkennung, Dienstausweis</td>
+            </tr>
+            <tr>
+                <td>Dienstausweis-Foto</td>
+                <td>Bilddatei</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Digitaler Dienstausweis</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 2. Private Kontaktdaten -->
+    <h2>2. Private Kontaktdaten</h2>
+    <p class="section-note">Sichtbarkeit steuerbar &uuml;ber Einstellung &bdquo;Private Kontaktdaten &ouml;ffentlich&ldquo; pro Person.</p>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30%;">Datenfeld</th>
+                <th style="width: 20%;">Typ</th>
+                <th style="width: 15%;">Erforderlich</th>
+                <th style="width: 35%;">Zweck</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>E-Mail-Adresse</td>
+                <td>E-Mail</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Kontaktaufnahme, Benachrichtigungen</td>
+            </tr>
+            <tr>
+                <td>Telefonnummer</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Erreichbarkeit, Alarmierung</td>
+            </tr>
+            <tr>
+                <td>Mobilnummer</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Erreichbarkeit, Alarmierung</td>
+            </tr>
+            <tr>
+                <td>Stra&szlig;e</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Postzustellung, Anfahrtsberechnung</td>
+            </tr>
+            <tr>
+                <td>Hausnummer</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Postzustellung</td>
+            </tr>
+            <tr>
+                <td>PLZ</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Postzustellung</td>
+            </tr>
+            <tr>
+                <td>Stadt</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Postzustellung</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 3. Dienstliche Kontaktdaten -->
+    <h2>3. Dienstliche Kontaktdaten</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30%;">Datenfeld</th>
+                <th style="width: 20%;">Typ</th>
+                <th style="width: 15%;">Erforderlich</th>
+                <th style="width: 35%;">Zweck</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Dienstliche Telefonnummer</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Dienstliche Erreichbarkeit</td>
+            </tr>
+            <tr>
+                <td>Dienstliche Handynummer</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Dienstliche Erreichbarkeit</td>
+            </tr>
+            <tr>
+                <td>Raum / B&uuml;ro</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Auffinden am Arbeitsplatz</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 4. Notfallkontakt -->
+    <h2>4. Notfallkontakt</h2>
+    <p class="section-note">Daten einer dritten Person &mdash; Erhebung auf Basis der Einwilligung des Betroffenen.</p>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30%;">Datenfeld</th>
+                <th style="width: 20%;">Typ</th>
+                <th style="width: 15%;">Erforderlich</th>
+                <th style="width: 35%;">Zweck</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Name</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Identifikation des Notfallkontakts</td>
+            </tr>
+            <tr>
+                <td>Beziehung</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Einordnung des Verh&auml;ltnisses</td>
+            </tr>
+            <tr>
+                <td>Telefon</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Kontaktaufnahme im Notfall</td>
+            </tr>
+            <tr>
+                <td>Mobil</td>
+                <td>Text</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Kontaktaufnahme im Notfall</td>
+            </tr>
+            <tr>
+                <td>Adresse</td>
+                <td>Freitext</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Erreichbarkeit des Notfallkontakts</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 5. Dienstliche Laufbahn -->
+    <h2>5. Dienstliche Laufbahn</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30%;">Datenfeld</th>
+                <th style="width: 20%;">Typ</th>
+                <th style="width: 15%;">Erforderlich</th>
+                <th style="width: 35%;">Zweck</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Eintrittsdatum</td>
+                <td>Datum</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Dienstzeit-Berechnung, Bef&ouml;rderungen</td>
+            </tr>
+            <tr>
+                <td>Austrittsdatum</td>
+                <td>Datum</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Dokumentation des Dienstaustritts</td>
+            </tr>
+            <tr>
+                <td>Eintritt JF / FF / BF</td>
+                <td>Datum</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Organisationszugeh&ouml;rigkeit</td>
+            </tr>
+            <tr>
+                <td>Vorherige Feuerwehr</td>
+                <td>Text + Daten</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Laufbahn-Dokumentation</td>
+            </tr>
+            <tr>
+                <td>Dienstgrad-Historie</td>
+                <td>Verkn&uuml;pfung</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Bef&ouml;rderungshistorie, Urkunden</td>
+            </tr>
+            <tr>
+                <td>Qualifikationen / Zertifikate</td>
+                <td>Verkn&uuml;pfung + Dateien</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Nachweis der Befähigungen</td>
+            </tr>
+            <tr>
+                <td>Pr&uuml;fungen (G26 etc.)</td>
+                <td>Verkn&uuml;pfung + Dateien</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Arbeitsschutz, Dienstfähigkeit</td>
+            </tr>
+            <tr>
+                <td>Pflichtstunden</td>
+                <td>Verkn&uuml;pfung</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Nachweis Mindest-Dienststunden</td>
+            </tr>
+            <tr>
+                <td>Dienstunterbrechungen</td>
+                <td>Verkn&uuml;pfung</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Dokumentation von Abwesenheiten</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 6. System- & Nutzungsdaten -->
+    <h2>6. System- &amp; Nutzungsdaten</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30%;">Datenfeld</th>
+                <th style="width: 20%;">Typ</th>
+                <th style="width: 15%;">Erforderlich</th>
+                <th style="width: 35%;">Zweck</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Benutzername</td>
+                <td>Text</td>
+                <td><span class="badge badge-account">Bei Account</span></td>
+                <td>Anmeldung am System</td>
+            </tr>
+            <tr>
+                <td>Rollen / Berechtigungen</td>
+                <td>Verkn&uuml;pfung</td>
+                <td><span class="badge badge-account">Bei Account</span></td>
+                <td>Zugriffssteuerung</td>
+            </tr>
+            <tr>
+                <td>Letzter Login</td>
+                <td>Datum/Uhrzeit</td>
+                <td><span class="badge badge-auto">Automatisch</span></td>
+                <td>Sicherheits&uuml;berwachung</td>
+            </tr>
+            <tr>
+                <td>Erstellt am / von</td>
+                <td>Datum + Benutzer</td>
+                <td><span class="badge badge-auto">Automatisch</span></td>
+                <td>Audit-Trail, Nachvollziehbarkeit</td>
+            </tr>
+            <tr>
+                <td>Ge&auml;ndert am / von</td>
+                <td>Datum + Benutzer</td>
+                <td><span class="badge badge-auto">Automatisch</span></td>
+                <td>Audit-Trail, Nachvollziehbarkeit</td>
+            </tr>
+            <tr>
+                <td>Notizen (intern)</td>
+                <td>Freitext</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Interne Dokumentation</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Rechtsgrundlagen -->
+    <div class="legal-box">
+        <strong>Rechtsgrundlagen der Verarbeitung</strong>
+        <p><strong>Art. 6 Abs. 1 lit. b DSGVO</strong> &mdash; Vertragserf&uuml;llung / Dienstverh&auml;ltnis: Stammdaten, dienstliche Kontaktdaten, Laufbahndaten.</p>
+        <p><strong>Art. 6 Abs. 1 lit. c DSGVO</strong> &mdash; Rechtliche Verpflichtung: Arbeitsschutz-Nachweise (G26-Untersuchungen), Unfallverh&uuml;tungvorschriften, F&uuml;hrerschein-Pr&uuml;fungen.</p>
+        <p><strong>Art. 6 Abs. 1 lit. f DSGVO</strong> &mdash; Berechtigtes Interesse: Organisation des Feuerwehrdienstes, Einsatzbereitschaft, Qualifikations&uuml;berwachung.</p>
+        <p><strong>Art. 6 Abs. 1 lit. a DSGVO</strong> &mdash; Einwilligung: Notfallkontaktdaten (Drittdaten), Foto, private Kontaktdaten (sofern freiwillig angegeben).</p>
+
+        <p style="margin-top: 10pt;"><strong>Speicherdauer:</strong> Personenbezogene Daten werden f&uuml;r die Dauer der Zugeh&ouml;rigkeit zur Feuerwehr gespeichert.
+        Nach Austritt erfolgt eine L&ouml;schung gem&auml;&szlig; den geltenden Aufbewahrungsfristen.</p>
+
+        <p><strong>Betroffenenrechte:</strong> Auskunft (Art. 15), Berichtigung (Art. 16), L&ouml;schung (Art. 17), Einschr&auml;nkung (Art. 18),
+        Daten&uuml;bertragbarkeit (Art. 20), Widerspruch (Art. 21).</p>
+    </div>
+
+    <div class="footer-note">
+        Dieses Dokument wurde automatisch aus dem Feuerwehr Lagerverwaltungssystem (FLVS) generiert und dient der Dokumentation
+        gem&auml;&szlig; Art. 30 DSGVO. Es ersetzt nicht das vollst&auml;ndige Verzeichnis der Verarbeitungst&auml;tigkeiten.
+    </div>
+</body>
+</html>

@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Personal-Verwaltung - Bestellwesen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'procurement:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bestellwesen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Personal-Verwaltung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">👥</span>
+                    <h1 class="text-3xl font-bold">Besteller-Verwaltung</h1>
+                </div>
+                <p class="text-indigo-100 text-lg">
+                    Benutzer festlegen, die Bestellungen erstellen duerfen
+                </p>
+            </div>
+            <div class="hidden lg:block">
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20">
+                    <p class="text-indigo-100 text-sm mb-1">Besteller</p>
+                    <p class="text-4xl font-bold">{{ orderers_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Besteller-Liste -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <span>Besteller ({{ orderers_count }})</span>
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Diese Benutzer duerfen Bestellungen erstellen und ihre eigenen Bestellungen einsehen.
+            </p>
+
+            {% if orderers %}
+            <div class="space-y-2">
+                {% for orderer in orderers %}
+                <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-900">{{ orderer.get_full_name }}</p>
+                            <p class="text-xs text-gray-500">{{ orderer.username }}{% if orderer.email %} &middot; {{ orderer.email }}{% endif %}</p>
+                            {% if orderer.personnel_number %}
+                            <p class="text-xs text-gray-400 mt-0.5">PN: {{ orderer.personnel_number }}</p>
+                            {% endif %}
+                        </div>
+                        {% if is_module_admin %}
+                        <form method="post" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="remove">
+                            <input type="hidden" name="user_id" value="{{ orderer.id }}">
+                            <button type="submit"
+                                    class="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-medium transition-colors"
+                                    title="Besteller-Berechtigung entziehen"
+                                    onclick="return confirm('{{ orderer.get_full_name }} als Besteller entfernen?')">
+                                Entfernen
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <p class="text-sm">Noch keine Besteller zugewiesen</p>
+                <p class="text-xs mt-1">Weisen Sie rechts Benutzer zu, die Bestellungen erstellen duerfen.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Zuweisung -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                <span>Besteller hinzufuegen</span>
+            </h2>
+
+            {% if is_module_admin %}
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign">
+
+                <!-- Benutzer mit Suchfeld -->
+                <div x-data="{ open: false, search: '', selected: null, users: [] }" x-init="
+                    users = [
+                        {% for user in all_users %}
+                        {
+                            value: '{{ user.id }}',
+                            name: '{{ user.get_full_name|escapejs }}',
+                            username: '{{ user.username|escapejs }}',
+                            email: '{{ user.email|escapejs }}',
+                            personnel_number: '{{ user.personnel_number|default:""|escapejs }}'
+                        }{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ];
+                ">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Benutzer auswaehlen:
+                    </label>
+
+                    <input type="hidden" name="user_id" id="user_id_hidden" required :value="selected ? selected.value : ''">
+
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-left bg-white flex items-center justify-between"
+                        >
+                            <span class="truncate">
+                                <span x-show="!selected" class="text-gray-500">Benutzer auswaehlen...</span>
+                                <span x-show="selected" x-text="selected ? `${selected.name} (${selected.username})` : ''"></span>
+                            </span>
+                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-96 overflow-hidden"
+                        >
+                            <div class="p-2 border-b border-gray-200 sticky top-0 bg-white">
+                                <input
+                                    type="text"
+                                    x-model="search"
+                                    @click.stop
+                                    placeholder="Name, Username, Email oder PN..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
+                                >
+                            </div>
+
+                            <div class="overflow-y-auto max-h-80">
+                                <template x-for="user in users.filter(u => {
+                                    const s = search.toLowerCase();
+                                    return u.name.toLowerCase().includes(s) ||
+                                           u.username.toLowerCase().includes(s) ||
+                                           u.email.toLowerCase().includes(s) ||
+                                           u.personnel_number.toLowerCase().includes(s);
+                                })" :key="user.value">
+                                    <button
+                                        type="button"
+                                        @click="selected = user; open = false; search = ''"
+                                        class="w-full text-left px-4 py-3 hover:bg-indigo-50 border-b border-gray-100 last:border-0"
+                                        :class="selected && selected.value === user.value ? 'bg-indigo-100' : ''"
+                                    >
+                                        <div class="font-medium text-gray-900" x-text="user.name"></div>
+                                        <div class="text-xs text-gray-500 mt-0.5">
+                                            <span x-text="user.username"></span>
+                                            <span x-show="user.email"> &middot; </span>
+                                            <span x-text="user.email"></span>
+                                        </div>
+                                        <div x-show="user.personnel_number" class="text-xs text-gray-400 mt-0.5">
+                                            PN: <span x-text="user.personnel_number"></span>
+                                        </div>
+                                    </button>
+                                </template>
+                                <div
+                                    x-show="users.filter(u => {
+                                        const s = search.toLowerCase();
+                                        return u.name.toLowerCase().includes(s) ||
+                                               u.username.toLowerCase().includes(s) ||
+                                               u.email.toLowerCase().includes(s) ||
+                                               u.personnel_number.toLowerCase().includes(s);
+                                    }).length === 0"
+                                    class="px-4 py-8 text-center text-gray-500 text-sm"
+                                >
+                                    Keine Benutzer gefunden
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    Als Besteller hinzufuegen
+                </button>
+            </form>
+
+            <!-- Help Box -->
+            <div class="mt-6 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                <h4 class="font-bold text-indigo-900 text-sm mb-2">Was koennen Besteller?</h4>
+                <ul class="text-xs text-indigo-800 space-y-1">
+                    <li>Neue Bestellungen erstellen und bearbeiten (eigene)</li>
+                    <li>Bestellpositionen hinzufuegen und aendern</li>
+                    <li>Eigene Bestellungen einsehen</li>
+                    <li>Fachbereiche, Freigaben und Wareneingaenge einsehen</li>
+                </ul>
+                <p class="text-xs text-indigo-700 mt-3">
+                    Aenderungen werden sofort wirksam.
+                </p>
+            </div>
+            {% else %}
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 class="font-bold text-yellow-900 mb-1">Keine Berechtigung</h4>
+                <p class="text-sm text-yellow-800">
+                    Sie benoetigen Modulverantwortlichen-Rechte, um Besteller zu verwalten.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
+{% endblock %}

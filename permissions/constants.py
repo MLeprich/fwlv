@@ -31,6 +31,22 @@ class Roles:
     MODUL_WIKI = 'Modulverantwortlicher Wiki'
     MODUL_INFO_MONITORS = 'Modulverantwortlicher Info Monitors'
     MODUL_KFZ = 'Modulverantwortlicher KFZ'
+    MODUL_PROCUREMENT = 'Modulverantwortlicher Procurement'
+
+    # Sachbearbeiter pro Modul (view + add)
+    SACHBEARBEITER_MEDICAL = 'Sachbearbeiter Medical'
+    SACHBEARBEITER_CLOTHING = 'Sachbearbeiter Clothing'
+    SACHBEARBEITER_MAGAZINE = 'Sachbearbeiter Magazine'
+    SACHBEARBEITER_WORKSHOP = 'Sachbearbeiter Workshop'
+    SACHBEARBEITER_DISINFECTION = 'Sachbearbeiter Disinfection'
+    SACHBEARBEITER_HEIGHT_RESCUE = 'Sachbearbeiter Height Rescue'
+    SACHBEARBEITER_DIVING = 'Sachbearbeiter Diving'
+    SACHBEARBEITER_EQUIPMENT = 'Sachbearbeiter Equipment'
+    SACHBEARBEITER_IT_HARDWARE = 'Sachbearbeiter IT Hardware'
+    SACHBEARBEITER_WIKI = 'Sachbearbeiter Wiki'
+    SACHBEARBEITER_INFO_MONITORS = 'Sachbearbeiter Info Monitors'
+    SACHBEARBEITER_KFZ = 'Sachbearbeiter KFZ'
+    SACHBEARBEITER_PROCUREMENT = 'Sachbearbeiter Procurement'
 
     # Operative Rollen
     BEREICHSLEITUNG = 'Bereichsleitung'
@@ -58,6 +74,20 @@ class Roles:
             cls.MODUL_WIKI,
             cls.MODUL_INFO_MONITORS,
             cls.MODUL_KFZ,
+            cls.MODUL_PROCUREMENT,
+            cls.SACHBEARBEITER_MEDICAL,
+            cls.SACHBEARBEITER_CLOTHING,
+            cls.SACHBEARBEITER_MAGAZINE,
+            cls.SACHBEARBEITER_WORKSHOP,
+            cls.SACHBEARBEITER_DISINFECTION,
+            cls.SACHBEARBEITER_HEIGHT_RESCUE,
+            cls.SACHBEARBEITER_DIVING,
+            cls.SACHBEARBEITER_EQUIPMENT,
+            cls.SACHBEARBEITER_IT_HARDWARE,
+            cls.SACHBEARBEITER_WIKI,
+            cls.SACHBEARBEITER_INFO_MONITORS,
+            cls.SACHBEARBEITER_KFZ,
+            cls.SACHBEARBEITER_PROCUREMENT,
             cls.BEREICHSLEITUNG,
             cls.LAGERVERWALTER,
             cls.WACHLEITER,
@@ -81,6 +111,26 @@ class Roles:
             cls.MODUL_WIKI,
             cls.MODUL_INFO_MONITORS,
             cls.MODUL_KFZ,
+            cls.MODUL_PROCUREMENT,
+        ]
+
+    @classmethod
+    def get_sachbearbeiter_roles(cls):
+        """Gibt alle Sachbearbeiter-Modul-Rollen zurück"""
+        return [
+            cls.SACHBEARBEITER_MEDICAL,
+            cls.SACHBEARBEITER_CLOTHING,
+            cls.SACHBEARBEITER_MAGAZINE,
+            cls.SACHBEARBEITER_WORKSHOP,
+            cls.SACHBEARBEITER_DISINFECTION,
+            cls.SACHBEARBEITER_HEIGHT_RESCUE,
+            cls.SACHBEARBEITER_DIVING,
+            cls.SACHBEARBEITER_EQUIPMENT,
+            cls.SACHBEARBEITER_IT_HARDWARE,
+            cls.SACHBEARBEITER_WIKI,
+            cls.SACHBEARBEITER_INFO_MONITORS,
+            cls.SACHBEARBEITER_KFZ,
+            cls.SACHBEARBEITER_PROCUREMENT,
         ]
 
     @classmethod
@@ -611,6 +661,7 @@ def get_module_from_role(role_name):
             'Wiki': Modules.WIKI,
             'Info Monitors': Modules.INFO_MONITORS,
             'KFZ': Modules.VEHICLES,
+            'Procurement': Modules.PROCUREMENT,
         }
         return mapping.get(module_display)
     return None

@@ -63,6 +63,39 @@ class PasswordChangeRequiredMiddleware:
         return response
 
 
+class PinSetupRequiredMiddleware:
+    """
+    Middleware zum Erzwingen der PIN-Einrichtung
+
+    Wenn ein Benutzer das Flag 'pin_must_change' gesetzt hat und noch keinen PIN hat,
+    wird er zur PIN-Einrichtung weitergeleitet.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        allowed_paths = [
+            reverse('core:pin_setup'),
+            reverse('core:logout'),
+            reverse('core:force_password_change'),
+            '/static/',
+            '/media/',
+        ]
+
+        if (request.user.is_authenticated and
+            hasattr(request.user, 'pin_must_change') and
+            request.user.pin_must_change and
+            not request.user.has_pin()):
+
+            current_path = request.path
+            if not any(current_path.startswith(path) for path in allowed_paths):
+                return redirect('core:pin_setup')
+
+        response = self.get_response(request)
+        return response
+
+
 class ContentSecurityPolicyMiddleware:
     """
     CSP Middleware für FLVS

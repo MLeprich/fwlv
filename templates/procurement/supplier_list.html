@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Lieferanten - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'procurement:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bestellwesen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Lieferanten</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Lieferantenverzeichnis</h1>
+    </div>
+
+    <!-- Search -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <form method="get" class="flex gap-4">
+            <div class="flex-1">
+                <input type="text" name="search" value="{{ search }}" placeholder="Name, Ansprechpartner, E-Mail..."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 border border-gray-300">Suchen</button>
+            {% if search %}
+            <a href="{% url 'procurement:supplier_list' %}" class="px-4 py-2 text-gray-500 hover:text-gray-700">Zuruecksetzen</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for supplier in suppliers %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <h3 class="font-semibold text-gray-900 mb-2">{{ supplier.name }}</h3>
+            {% if supplier.contact_person %}
+            <p class="text-sm text-gray-600 mb-1">{{ supplier.contact_person }}</p>
+            {% endif %}
+            {% if supplier.email %}
+            <p class="text-sm text-gray-500">
+                <a href="mailto:{{ supplier.email }}" class="text-indigo-600 hover:text-indigo-700">{{ supplier.email }}</a>
+            </p>
+            {% endif %}
+            {% if supplier.phone %}
+            <p class="text-sm text-gray-500">{{ supplier.phone }}</p>
+            {% endif %}
+            {% if supplier.website %}
+            <p class="text-sm mt-2">
+                <a href="{{ supplier.website }}" target="_blank" class="text-indigo-600 hover:text-indigo-700">Website</a>
+            </p>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="col-span-3 text-center py-12 text-gray-500">
+            <p class="text-lg">Keine Lieferanten gefunden.</p>
+            <p class="text-sm mt-1">Lieferanten koennen ueber die Administration angelegt werden.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+    <div class="flex items-center justify-between mt-6">
+        <p class="text-sm text-gray-700">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</p>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Zurueck</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Weiter</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

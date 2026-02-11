@@ -70,6 +70,13 @@
                     </div>
 
                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.rubrik.label }}</label>
+                        {{ form.rubrik }}
+                        {% if form.rubrik.errors %}<p class="mt-1 text-sm text-red-600">{{ form.rubrik.errors.0 }}</p>{% endif %}
+                        <p class="mt-1 text-xs text-gray-500">BS = Brandschutz, RD = Rettungsdienst</p>
+                    </div>
+
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.license_plate.label }} *</label>
                         {{ form.license_plate }}
                         {% if form.license_plate.errors %}<p class="mt-1 text-sm text-red-600">{{ form.license_plate.errors.0 }}</p>{% endif %}

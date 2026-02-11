@@ -3,6 +3,7 @@ Custom User Model für FLVS
 Erweitert Django's AbstractUser mit feuerwehr-spezifischen Feldern
 """
 
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import AbstractUser, Group
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -71,6 +72,21 @@ class User(AbstractUser):
         default=False,
         verbose_name="Passwort muss geändert werden",
         help_text="Benutzer muss bei nächster Anmeldung das Passwort ändern"
+    )
+
+    # PIN-Code für Fahrzeugübergabe-Bestätigung
+    pin_code = models.CharField(
+        max_length=128,
+        blank=True,
+        default='',
+        verbose_name="PIN-Code (Hash)",
+        help_text="4-stelliger PIN-Code (gehashed gespeichert)"
+    )
+
+    pin_must_change = models.BooleanField(
+        default=True,
+        verbose_name="PIN muss eingerichtet werden",
+        help_text="Benutzer muss bei nächster Anmeldung einen PIN einrichten"
     )
 
     # Zeitbasierte Zugriffsbeschränkung (für spezielle Rollen)
@@ -207,6 +223,20 @@ class User(AbstractUser):
         Prüft ob Benutzer für BTM-Bereich autorisiert ist
         """
         return self.has_role('BTM-Beauftragter') or self.has_role('Administrator')
+
+    def set_pin(self, raw_pin):
+        """Setzt den PIN-Code (als Hash gespeichert)"""
+        self.pin_code = make_password(raw_pin)
+
+    def check_pin(self, raw_pin):
+        """Prüft ob der eingegebene PIN korrekt ist"""
+        if not self.pin_code:
+            return False
+        return check_password(raw_pin, self.pin_code)
+
+    def has_pin(self):
+        """Prüft ob ein PIN gesetzt ist"""
+        return bool(self.pin_code)
 
     def requires_2fa(self):
         """

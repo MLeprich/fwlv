@@ -250,6 +250,288 @@
         </div>
     </div>
 
+    <!-- Bestellwesen - Finanzkennzahlen -->
+    <div class="bg-white rounded-lg shadow border border-gray-200 mb-8">
+        <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4 rounded-t-lg flex items-center justify-between">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <span>🛒</span>
+                <span>Bestellwesen {{ procurement_current_year }}</span>
+            </h2>
+            <a href="{% url 'procurement:dashboard' %}" class="text-indigo-100 hover:text-white text-sm font-medium">
+                Zum Bestellwesen &rarr;
+            </a>
+        </div>
+        <div class="p-6">
+            <!-- Kennzahlen-Kacheln -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                    <p class="text-sm text-gray-500">Bestellungen gesamt</p>
+                    <p class="text-3xl font-bold text-indigo-700 mt-1">{{ procurement_total_orders }}</p>
+                    <p class="text-sm text-gray-600 mt-1">{{ procurement_total_value|floatformat:2 }} &euro; Netto</p>
+                </div>
+                <div class="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p class="text-sm text-gray-500">Laufendes Jahr ({{ procurement_current_year }})</p>
+                    <p class="text-3xl font-bold text-blue-700 mt-1">{{ procurement_year_orders }}</p>
+                    <p class="text-sm text-gray-600 mt-1">{{ procurement_year_value|floatformat:2 }} &euro; Netto</p>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                    <p class="text-sm text-gray-500">Laufender Monat</p>
+                    <p class="text-3xl font-bold text-green-700 mt-1">{{ procurement_month_orders }}</p>
+                    <p class="text-sm text-gray-600 mt-1">{{ procurement_month_value|floatformat:2 }} &euro; Netto</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Ausgaben pro Fachbereich -->
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Ausgaben nach Fachbereich ({{ procurement_current_year }})</h3>
+                    {% if procurement_by_department %}
+                    <div class="space-y-2">
+                        {% for dept in procurement_by_department %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">{{ dept.department__name }}</p>
+                                <p class="text-xs text-gray-500">{{ dept.order_count }} Bestellung{{ dept.order_count|pluralize:"en" }}</p>
+                            </div>
+                            <div class="text-right ml-4">
+                                <p class="text-sm font-bold text-gray-900">{{ dept.total_netto|floatformat:2 }} &euro;</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500 p-3">Noch keine Daten vorhanden.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Monatsverlauf -->
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Monatsverlauf ({{ procurement_current_year }})</h3>
+                    {% if procurement_by_month %}
+                    <div class="space-y-2">
+                        {% for entry in procurement_by_month %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">{{ entry.month|date:"F Y" }}</p>
+                                <p class="text-xs text-gray-500">{{ entry.order_count }} Bestellung{{ entry.order_count|pluralize:"en" }}</p>
+                            </div>
+                            <div class="text-right ml-4">
+                                <p class="text-sm font-bold text-gray-900">{{ entry.total_netto|floatformat:2 }} &euro;</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500 p-3">Noch keine Daten vorhanden.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Top 10 Positionen -->
+            <div class="mt-6">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Haeufigste Bestellpositionen ({{ procurement_current_year }})</h3>
+                {% if procurement_top_items %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200">
+                                <th class="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase">#</th>
+                                <th class="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase">Artikelbezeichnung</th>
+                                <th class="text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase">Anzahl Bestellungen</th>
+                                <th class="text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase">Gesamtmenge</th>
+                                <th class="text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase">Gesamtwert Netto</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for item in procurement_top_items %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-2 text-gray-500">{{ forloop.counter }}</td>
+                                <td class="px-4 py-2 text-gray-900 font-medium">{{ item.item_name|truncatechars:60 }}</td>
+                                <td class="px-4 py-2 text-right text-gray-700">{{ item.order_count }}x</td>
+                                <td class="px-4 py-2 text-right text-gray-700">{{ item.total_quantity|floatformat:0 }}</td>
+                                <td class="px-4 py-2 text-right font-semibold text-gray-900">{{ item.total_netto|floatformat:2 }} &euro;</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500 p-3">Noch keine Daten vorhanden.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Personenbezogene Daten (DSGVO-Übersicht) -->
+    <div class="bg-white rounded-lg shadow border border-gray-200 mb-8" x-data="{ open: false }">
+        <button @click="open = !open" class="w-full bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4 rounded-t-lg flex items-center justify-between cursor-pointer">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <span>🔒</span>
+                <span>Personenbezogene Daten (DSGVO)</span>
+            </h2>
+            <svg :class="open ? 'rotate-180' : ''" class="w-5 h-5 text-white transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+        <div x-show="open" x-collapse>
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <p class="text-sm text-gray-600">
+                        Folgende personenbezogene Daten werden im System gespeichert und verarbeitet. Diese Aufstellung dient der Transparenz
+                        gem. Art. 13/14 DSGVO (Verzeichnis der Verarbeitungstätigkeiten).
+                    </p>
+                    <a href="{% url 'reporting:dsgvo_personendaten_pdf' %}" target="_blank"
+                       class="ml-4 flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        PDF
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+
+                    <!-- Stammdaten -->
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="bg-blue-50 px-4 py-3 border-b border-gray-200">
+                            <h3 class="font-semibold text-blue-900 flex items-center gap-2">
+                                <span>👤</span> Stammdaten
+                            </h3>
+                        </div>
+                        <div class="p-4">
+                            <table class="w-full text-sm">
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr><td class="py-1.5 text-gray-600">Vorname</td><td class="py-1.5 text-right text-gray-400 text-xs">Pflicht</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Nachname</td><td class="py-1.5 text-right text-gray-400 text-xs">Pflicht</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Personalnummer</td><td class="py-1.5 text-right text-gray-400 text-xs">Pflicht</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Geburtsdatum</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Foto</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Dienstausweis-Foto</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Private Kontaktdaten -->
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="bg-red-50 px-4 py-3 border-b border-gray-200">
+                            <h3 class="font-semibold text-red-900 flex items-center gap-2">
+                                <span>📱</span> Private Kontaktdaten
+                            </h3>
+                        </div>
+                        <div class="p-4">
+                            <table class="w-full text-sm">
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr><td class="py-1.5 text-gray-600">E-Mail-Adresse</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Telefonnummer</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Mobilnummer</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Stra&szlig;e</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Hausnummer</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">PLZ</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Stadt</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Dienstliche Kontaktdaten -->
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="bg-indigo-50 px-4 py-3 border-b border-gray-200">
+                            <h3 class="font-semibold text-indigo-900 flex items-center gap-2">
+                                <span>🏢</span> Dienstliche Kontaktdaten
+                            </h3>
+                        </div>
+                        <div class="p-4">
+                            <table class="w-full text-sm">
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr><td class="py-1.5 text-gray-600">Dienstl. Telefonnummer</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Dienstl. Handynummer</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Raum / B&uuml;ro</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Notfallkontakt -->
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="bg-orange-50 px-4 py-3 border-b border-gray-200">
+                            <h3 class="font-semibold text-orange-900 flex items-center gap-2">
+                                <span>🆘</span> Notfallkontakt
+                            </h3>
+                        </div>
+                        <div class="p-4">
+                            <table class="w-full text-sm">
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr><td class="py-1.5 text-gray-600">Name</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Beziehung</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Telefon</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Mobil</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Adresse</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Dienstliche Laufbahn -->
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="bg-green-50 px-4 py-3 border-b border-gray-200">
+                            <h3 class="font-semibold text-green-900 flex items-center gap-2">
+                                <span>📋</span> Dienstliche Laufbahn
+                            </h3>
+                        </div>
+                        <div class="p-4">
+                            <table class="w-full text-sm">
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr><td class="py-1.5 text-gray-600">Eintrittsdatum</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Austrittsdatum</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Eintritt JF / FF / BF</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Vorherige Feuerwehr</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Dienstgrad-Historie</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Qualifikationen / Zertifikate</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Pr&uuml;fungen (G26 etc.)</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Pflichtstunden</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Dienstunterbrechungen</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- System- & Nutzungsdaten -->
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="bg-purple-50 px-4 py-3 border-b border-gray-200">
+                            <h3 class="font-semibold text-purple-900 flex items-center gap-2">
+                                <span>🖥️</span> System- &amp; Nutzungsdaten
+                            </h3>
+                        </div>
+                        <div class="p-4">
+                            <table class="w-full text-sm">
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr><td class="py-1.5 text-gray-600">Benutzername</td><td class="py-1.5 text-right text-gray-400 text-xs">Bei Account</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Rollen / Berechtigungen</td><td class="py-1.5 text-right text-gray-400 text-xs">Bei Account</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Letzter Login</td><td class="py-1.5 text-right text-gray-400 text-xs">Automatisch</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Erstellt am / von</td><td class="py-1.5 text-right text-gray-400 text-xs">Automatisch</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Ge&auml;ndert am / von</td><td class="py-1.5 text-right text-gray-400 text-xs">Automatisch</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">Notizen (intern)</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Rechtsgrundlage -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p class="text-xs text-gray-500">
+                        <strong>Rechtsgrundlage:</strong> Die Verarbeitung erfolgt auf Grundlage von Art. 6 Abs. 1 lit. b DSGVO (Vertragserf&uuml;llung / Dienstverh&auml;ltnis),
+                        Art. 6 Abs. 1 lit. c DSGVO (rechtliche Verpflichtung, z.B. Unfallverh&uuml;tung, G26-Nachweise) sowie Art. 6 Abs. 1 lit. f DSGVO
+                        (berechtigtes Interesse an der Organisation des Feuerwehrdienstes). Notfallkontaktdaten werden auf Grundlage einer Einwilligung
+                        gem. Art. 6 Abs. 1 lit. a DSGVO erhoben.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Hinweis-Box -->
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
         <div class="flex items-start gap-3">
