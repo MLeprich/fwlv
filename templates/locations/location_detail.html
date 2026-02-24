@@ -527,6 +527,41 @@
                             </div>
                             {% endif %}
 
+                            <!-- Equipment Devices (Geräte-Instanzen) -->
+                            {% if location.equipment_devices.exists %}
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    🔧 Ausrüstung (Geräte)
+                                    <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">{{ location.equipment_devices.count }}</span>
+                                </h4>
+                                <div class="space-y-2">
+                                    {% for device in location.equipment_devices.all|slice:":10" %}
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border hover:border-orange-300 transition-colors group">
+                                        <a href="{% url 'equipment:device_detail' device.pk %}" class="flex-grow">
+                                            <span class="font-mono text-sm text-gray-600">{{ device.inventory_number }}</span>
+                                            <span class="text-gray-800">{{ device.master.name }}</span>
+                                        </a>
+                                        {% if perms.locations.change_location %}
+                                        <button type="button"
+                                                hx-get="{% url 'locations:quick_move' 'equipment_device' device.pk %}"
+                                                hx-target="#modal-container"
+                                                hx-swap="innerHTML"
+                                                class="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                                title="Lagerort wechseln">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if location.equipment_devices.count > 10 %}
+                                    <p class="text-xs text-gray-500 mt-2">... und {{ location.equipment_devices.count|add:"-10" }} weitere</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
                             <!-- Magazine Items -->
                             {% if location.magazine_magazineitem_items.exists %}
                             <div class="bg-gray-50 rounded-lg p-4">

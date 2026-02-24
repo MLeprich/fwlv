@@ -151,7 +151,9 @@
                         {% if device.location %}
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Lagerort</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ device.location.name }}</dd>
+                            <dd class="mt-1 text-sm text-gray-900">
+                                <a href="{% url 'locations:detail' device.location.pk %}" class="text-primary-600 hover:text-primary-800 hover:underline">{{ device.location.name }}</a>
+                            </dd>
                         </div>
                         {% endif %}
                         {% if device.condition %}

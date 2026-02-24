@@ -541,6 +541,7 @@ class LocationQuickMoveView(LoginRequiredMixin, View):
         'medical_item': ('medical.MedicalItem', 'location', 'name', 'medical.change_medicalitem'),
         'clothing_item': ('clothing.ClothingItem', 'location', 'master.name', 'clothing.change_clothingitem'),
         'equipment_item': ('equipment.EquipmentItem', 'location', 'master.name', 'equipment.change_equipmentitem'),
+        'equipment_device': ('equipment.EquipmentDeviceInstance', 'location', 'master.name', 'equipment.change_equipmentdeviceinstance'),
         'magazine_item': ('magazine.MagazineItem', 'location', 'master.name', 'magazine.change_magazineitem'),
         'height_rescue_device': ('height_rescue.HeightRescueDeviceInstance', 'location', 'master.name', 'height_rescue.change_heightrescuedeviceinstance'),
         'workshop_item': ('workshop.WorkshopItem', 'location', 'master.name', 'workshop.change_workshopitem'),

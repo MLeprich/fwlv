@@ -401,6 +401,10 @@ class Location(MPTTModel, AuditedModel):
         if hasattr(self, 'equipment_equipmentitem_items'):
             count += self.equipment_equipmentitem_items.count()
 
+        # Equipment Devices (Geräte-Instanzen)
+        if hasattr(self, 'equipment_devices'):
+            count += self.equipment_devices.count()
+
         # Magazine Items
         if hasattr(self, 'magazine_magazineitem_items'):
             count += self.magazine_magazineitem_items.count()
