@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+
+{% block title %}Bevölkerungsschutz - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Bevölkerungsschutz</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-orange-600 to-red-800 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">&#x1F6E1;&#xFE0F;</span>
+                    <h1 class="text-3xl font-bold">Bevölkerungsschutz</h1>
+                </div>
+                <p class="text-orange-100 text-lg">
+                    Bund, Land & Kommune - Ausrüstung, Fahrzeuge, Medikamente
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bereich Filter -->
+    <div class="mb-6">
+        <div class="flex gap-2">
+            <a href="{% url 'civil_protection:dashboard' %}"
+               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if not selected_bereich %}bg-orange-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                Alle
+            </a>
+            <a href="{% url 'civil_protection:dashboard' %}?bereich=bund"
+               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if selected_bereich == 'bund' %}bg-orange-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                Bund
+            </a>
+            <a href="{% url 'civil_protection:dashboard' %}?bereich=land"
+               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if selected_bereich == 'land' %}bg-orange-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                Land
+            </a>
+            <a href="{% url 'civil_protection:dashboard' %}?bereich=kommune"
+               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if selected_bereich == 'kommune' %}bg-orange-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                Kommune
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Ausrüstung</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ equipment_count }}</p>
+                    <p class="text-sm text-gray-500 mt-1">{{ instance_count }} Instanzen</p>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-3"><span class="text-3xl">&#x2699;&#xFE0F;</span></div>
+            </div>
+            <a href="{% url 'civil_protection:equipment_list' %}{% if selected_bereich %}?bereich={{ selected_bereich }}{% endif %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium mt-4 inline-block">Alle anzeigen &rarr;</a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Fahrzeuge</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ vehicle_count }}</p>
+                    <p class="text-sm text-green-600 mt-1">{{ vehicles_operational }} einsatzbereit</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-3"><span class="text-3xl">&#x1F69B;</span></div>
+            </div>
+            <a href="{% url 'civil_protection:vehicle_list' %}{% if selected_bereich %}?bereich={{ selected_bereich }}{% endif %}" class="text-green-600 hover:text-green-700 text-sm font-medium mt-4 inline-block">Alle anzeigen &rarr;</a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Medikamente</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ medication_count }}</p>
+                </div>
+                <div class="bg-red-50 rounded-lg p-3"><span class="text-3xl">&#x1F48A;</span></div>
+            </div>
+            <a href="{% url 'civil_protection:medication_list' %}{% if selected_bereich %}?bereich={{ selected_bereich }}{% endif %}" class="text-red-600 hover:text-red-700 text-sm font-medium mt-4 inline-block">Alle anzeigen &rarr;</a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border {% if expiring_batches > 0 or expired_batches > 0 %}border-amber-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Chargen-Warnungen</p>
+                    <p class="text-3xl font-bold {% if expired_batches > 0 %}text-red-600{% elif expiring_batches > 0 %}text-amber-600{% else %}text-gray-900{% endif %} mt-2">
+                        {{ expiring_batches|add:expired_batches }}
+                    </p>
+                    {% if expired_batches > 0 %}
+                    <p class="text-sm text-red-600 mt-1">{{ expired_batches }} abgelaufen</p>
+                    {% endif %}
+                </div>
+                <div class="{% if expired_batches > 0 %}bg-red-50{% elif expiring_batches > 0 %}bg-amber-50{% else %}bg-gray-50{% endif %} rounded-lg p-3"><span class="text-3xl">&#x23F0;</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Notfallinformationspunkte</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ nip_count }}</p>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-3"><span class="text-3xl">&#x2139;&#xFE0F;</span></div>
+            </div>
+            <a href="{% url 'civil_protection:nip_list' %}" class="text-purple-600 hover:text-purple-700 text-sm font-medium mt-4 inline-block">Alle anzeigen &rarr;</a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Leuchtturmstandorte</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ leuchtturm_count }}</p>
+                </div>
+                <div class="bg-yellow-50 rounded-lg p-3"><span class="text-3xl">&#x1F3E0;</span></div>
+            </div>
+            <a href="{% url 'civil_protection:leuchtturm_list' %}" class="text-yellow-600 hover:text-yellow-700 text-sm font-medium mt-4 inline-block">Alle anzeigen &rarr;</a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border {% if active_lendings > 0 %}border-cyan-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Aktive Ausleihen</p>
+                    <p class="text-3xl font-bold {% if overdue_lendings > 0 %}text-red-600{% elif active_lendings > 0 %}text-cyan-600{% else %}text-gray-900{% endif %} mt-2">{{ active_lendings }}</p>
+                    {% if overdue_lendings > 0 %}
+                    <p class="text-sm text-red-600 mt-1">{{ overdue_lendings }} überfällig</p>
+                    {% endif %}
+                </div>
+                <div class="{% if overdue_lendings > 0 %}bg-red-50{% elif active_lendings > 0 %}bg-cyan-50{% else %}bg-gray-50{% endif %} rounded-lg p-3"><span class="text-3xl">&#x1F4E4;</span></div>
+            </div>
+            <a href="{% url 'civil_protection:lending_list' %}" class="text-cyan-600 hover:text-cyan-700 text-sm font-medium mt-4 inline-block">Alle anzeigen &rarr;</a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border {% if maintenance_due > 0 %}border-amber-200{% else %}border-gray-200{% endif %} hover:shadow-md transition-shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Wartung fällig</p>
+                    <p class="text-3xl font-bold {% if maintenance_due > 0 %}text-amber-600{% else %}text-gray-900{% endif %} mt-2">{{ maintenance_due }}</p>
+                </div>
+                <div class="{% if maintenance_due > 0 %}bg-amber-50{% else %}bg-gray-50{% endif %} rounded-lg p-3"><span class="text-3xl">&#x1F527;</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Cards -->
+    <h2 class="text-xl font-bold text-gray-900 mb-4">Bereiche</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <a href="{% url 'civil_protection:equipment_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all p-6 group">
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-100 rounded-lg p-3 group-hover:bg-blue-200 transition-colors">
+                    <span class="text-2xl">&#x2699;&#xFE0F;</span>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Ausrüstung</h3>
+                    <p class="text-sm text-gray-500">Generatoren, Pumpen, Zelte, Beleuchtung</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'civil_protection:equipment_instance_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all p-6 group">
+            <div class="flex items-center gap-4">
+                <div class="bg-indigo-100 rounded-lg p-3 group-hover:bg-indigo-200 transition-colors">
+                    <span class="text-2xl">&#x1F4CB;</span>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Geräte-Instanzen</h3>
+                    <p class="text-sm text-gray-500">Einzelne Geräte mit Inventarnummern</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'civil_protection:vehicle_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-green-300 transition-all p-6 group">
+            <div class="flex items-center gap-4">
+                <div class="bg-green-100 rounded-lg p-3 group-hover:bg-green-200 transition-colors">
+                    <span class="text-2xl">&#x1F69B;</span>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Fahrzeuge</h3>
+                    <p class="text-sm text-gray-500">GW-San, MTW, GKW, Feldküchen</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'civil_protection:medication_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-red-300 transition-all p-6 group">
+            <div class="flex items-center gap-4">
+                <div class="bg-red-100 rounded-lg p-3 group-hover:bg-red-200 transition-colors">
+                    <span class="text-2xl">&#x1F48A;</span>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Medikamente</h3>
+                    <p class="text-sm text-gray-500">Jodtabletten, Verbandmaterial, Chargen</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'civil_protection:nip_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-300 transition-all p-6 group">
+            <div class="flex items-center gap-4">
+                <div class="bg-purple-100 rounded-lg p-3 group-hover:bg-purple-200 transition-colors">
+                    <span class="text-2xl">&#x2139;&#xFE0F;</span>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Notfallinformationspunkte</h3>
+                    <p class="text-sm text-gray-500">Notfallinformationspunkte</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'civil_protection:leuchtturm_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-yellow-300 transition-all p-6 group">
+            <div class="flex items-center gap-4">
+                <div class="bg-yellow-100 rounded-lg p-3 group-hover:bg-yellow-200 transition-colors">
+                    <span class="text-2xl">&#x1F3E0;</span>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Leuchtturmstandorte</h3>
+                    <p class="text-sm text-gray-500">Anlaufstellen für den Bevölkerungsschutz</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'civil_protection:lending_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-cyan-300 transition-all p-6 group">
+            <div class="flex items-center gap-4">
+                <div class="bg-cyan-100 rounded-lg p-3 group-hover:bg-cyan-200 transition-colors">
+                    <span class="text-2xl">&#x1F4E4;</span>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Ausleihe</h3>
+                    <p class="text-sm text-gray-500">Bierzeltgarnituren, Kaffeemaschinen, Material</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'civil_protection:movement_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6 group">
+            <div class="flex items-center gap-4">
+                <div class="bg-gray-100 rounded-lg p-3 group-hover:bg-gray-200 transition-colors">
+                    <span class="text-2xl">&#x1F4E6;</span>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Lagerbewegungen</h3>
+                    <p class="text-sm text-gray-500">Warenein-/ausgang, Umlagerungen</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'civil_protection:inventory_check_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-teal-300 transition-all p-6 group">
+            <div class="flex items-center gap-4">
+                <div class="bg-teal-100 rounded-lg p-3 group-hover:bg-teal-200 transition-colors">
+                    <span class="text-2xl">&#x1F4CB;</span>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Inventuren</h3>
+                    <p class="text-sm text-gray-500">Bestandsprüfungen und Zählungen</p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

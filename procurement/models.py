@@ -393,9 +393,9 @@ class PurchaseOrder(AuditedModel):
         verbose_name=_('Lieferort')
     )
 
-    # Fachbereich
+    # Fachbereich (organization.Department - zusammengeführt aus ProcurementDepartment)
     department = models.ForeignKey(
-        ProcurementDepartment,
+        'organization.Department',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -466,6 +466,15 @@ class PurchaseOrder(AuditedModel):
         blank=True,
         related_name='procurement_rd',
         verbose_name=_('Verwendung RD Fzg.')
+    )
+
+    verwendung_ks_fzg = models.ForeignKey(
+        'vehicles.Vehicle',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='procurement_ks',
+        verbose_name=_('Verwendung KS Fzg.')
     )
 
     verwendung_allgemein = models.ForeignKey(

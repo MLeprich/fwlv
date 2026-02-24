@@ -72,10 +72,15 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Sachkonto</label>
                         {{ form.sachkonto }}
                     </div>
+                    {% if is_module_admin and not is_create %}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">NKF-Nr.</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">NKF-Nr. (Kostenstelle)</label>
                         {{ form.nkf_nummer }}
                     </div>
+                    {% else %}
+                    <!-- NKF-Nr. wird auf der Detailseite vom Modulverantwortlichen gepflegt -->
+                    <div class="hidden">{{ form.nkf_nummer }}</div>
+                    {% endif %}
                 </div>
 
                 <!-- Lieferort + Lieferzeit -->
@@ -109,7 +114,7 @@
                 </div>
 
                 <!-- Verwendung -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Verwendung BS Fzg.</label>
                         {{ form.verwendung_bs_fzg }}
@@ -117,6 +122,10 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Verwendung RD Fzg.</label>
                         {{ form.verwendung_rd_fzg }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Verwendung KS Fzg.</label>
+                        {{ form.verwendung_ks_fzg }}
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Verwendung Allgemein</label>
@@ -216,17 +225,21 @@
                                 {{ item_form.unit_price }}
                             </div>
                             <div class="md:col-span-1 flex items-center justify-center">
-                                {% if item_form.instance.pk %}
-                                <button type="button" onclick="this.closest('.item-row').querySelector('[id$=DELETE]').checked=true; this.closest('.item-row').style.display='none';"
+                                <button type="button" onclick="removeItemRow(this)"
                                         class="text-red-500 hover:text-red-700 p-1" title="Position entfernen">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </button>
-                                {% endif %}
                             </div>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
+
+                <button type="button" onclick="addItemRow()"
+                        class="mt-2 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Position hinzufuegen
+                </button>
             </div>
         </div>
 
@@ -255,6 +268,78 @@ function orderForm() {
                 });
             }
         }
+    }
+}
+
+function addItemRow() {
+    const formset = document.getElementById('item-formset');
+    const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+    const idx = parseInt(totalFormsInput.value);
+
+    // Clone from the last visible row
+    const rows = formset.querySelectorAll('.item-row');
+    const template = rows[rows.length - 1];
+    const newRow = template.cloneNode(true);
+
+    // Reset styling
+    newRow.classList.remove('border-red-300', 'bg-red-50');
+    // Remove error messages
+    const errorDivs = newRow.querySelectorAll('.text-red-600');
+    errorDivs.forEach(el => el.closest('.mb-2') ? el.closest('.mb-2').remove() : null);
+
+    // Update all name/id attributes from old index to new index
+    newRow.innerHTML = newRow.innerHTML.replace(
+        new RegExp('items-(\\d+)-', 'g'),
+        'items-' + idx + '-'
+    );
+
+    // Clear all input values
+    newRow.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(el => {
+        el.value = '';
+    });
+    newRow.querySelectorAll('select').forEach(el => {
+        el.selectedIndex = 0;
+    });
+    newRow.querySelectorAll('input[type="hidden"]').forEach(el => {
+        // Clear the id field (for new items) but keep others
+        if (el.name.endsWith('-id')) {
+            el.value = '';
+        }
+    });
+    // Uncheck DELETE if present
+    newRow.querySelectorAll('input[type="checkbox"]').forEach(el => {
+        el.checked = false;
+    });
+    newRow.style.display = '';
+
+    formset.appendChild(newRow);
+    totalFormsInput.value = idx + 1;
+
+    // Focus the first textarea in the new row
+    const firstInput = newRow.querySelector('textarea, input[type="text"]');
+    if (firstInput) firstInput.focus();
+}
+
+function removeItemRow(btn) {
+    const row = btn.closest('.item-row');
+    const deleteCheckbox = row.querySelector('[id$="-DELETE"]');
+    if (deleteCheckbox) {
+        // Existing saved item — mark for deletion
+        deleteCheckbox.checked = true;
+        row.style.display = 'none';
+    } else {
+        // New unsaved row — just remove from DOM and update TOTAL_FORMS
+        row.remove();
+        const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+        // Re-index all remaining rows
+        const rows = document.querySelectorAll('#item-formset .item-row');
+        rows.forEach((r, i) => {
+            r.innerHTML = r.innerHTML.replace(
+                new RegExp('items-\\d+-', 'g'),
+                'items-' + i + '-'
+            );
+        });
+        totalFormsInput.value = rows.length;
     }
 }
 </script>

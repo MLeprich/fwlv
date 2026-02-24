@@ -190,7 +190,7 @@
             <td class="label"></td>
             <td class="value"></td>
         </tr>
-        {% if order.verwendung_bs_fzg or order.verwendung_rd_fzg or order.verwendung_allgemein %}
+        {% if order.verwendung_bs_fzg or order.verwendung_rd_fzg or order.verwendung_ks_fzg or order.verwendung_allgemein %}
         <tr>
             <td class="label">Verwendung BS Fzg.</td>
             <td class="value">{% if order.verwendung_bs_fzg %}{{ order.verwendung_bs_fzg }}{% else %}&mdash;{% endif %}</td>
@@ -198,10 +198,10 @@
             <td class="value">{% if order.verwendung_rd_fzg %}{{ order.verwendung_rd_fzg }}{% else %}&mdash;{% endif %}</td>
         </tr>
         <tr>
+            <td class="label">Verwendung KS Fzg.</td>
+            <td class="value">{% if order.verwendung_ks_fzg %}{{ order.verwendung_ks_fzg }}{% else %}&mdash;{% endif %}</td>
             <td class="label">Verwendung Allgemein</td>
             <td class="value">{% if order.verwendung_allgemein %}{{ order.verwendung_allgemein }}{% else %}&mdash;{% endif %}</td>
-            <td class="label"></td>
-            <td class="value"></td>
         </tr>
         {% endif %}
     </table>

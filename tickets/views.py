@@ -11,8 +11,14 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.db.models import Q
 
-from .models import Ticket, TicketComment, TicketImage, CommentImage, TicketStatus, TicketPriority, TicketCategory
-from .forms import TicketCreateForm, TicketCommentForm, TicketCategoryForm
+from .models import (Ticket, TicketComment, TicketImage, CommentImage, TicketStatus, TicketPriority,
+                      TicketCategory, InfoMonitor, InfoMonitorVehicle, BereitschaftPerson,
+                      MappeLink, MappeKontakt, MappeAnleitung,
+                      GrossveranstaltungDashboard, GrossveranstaltungAbschnitt)
+from .forms import (TicketCreateForm, TicketCommentForm, TicketCategoryForm, InfoMonitorForm,
+                     InfoMonitorVehicleForm, BereitschaftPersonForm,
+                     MappeLinkForm, MappeKontaktForm, MappeAnleitungForm,
+                     GrossveranstaltungDashboardForm, GrossveranstaltungAbschnittFormSet)
 
 
 class TicketPermissionMixin(UserPassesTestMixin):
@@ -28,6 +34,19 @@ class TicketProcessorMixin(UserPassesTestMixin):
 
     def test_func(self):
         return self.request.user.has_perm('tickets.process_ticket')
+
+
+def _has_monitor_access(user):
+    """Prüft ob der User Zugang zum Info-Monitor hat (view, edit oder mappe)."""
+    return (user.has_perm('tickets.view_infomonitor') or
+            user.has_perm('tickets.edit_infomonitor') or
+            user.has_perm('tickets.edit_mappe'))
+
+
+def _has_mappe_access(user):
+    """Prüft ob der User Zugang zur Digitalen Mappe hat."""
+    return (user.has_perm('tickets.edit_mappe') or
+            user.has_perm('tickets.edit_infomonitor'))
 
 
 class TicketListView(LoginRequiredMixin, TicketPermissionMixin, ListView):
@@ -560,3 +579,523 @@ def category_delete(request, pk):
             messages.success(request, f'Kategorie "{name}" wurde gelöscht.')
 
     return redirect('tickets:category_list')
+
+
+# =============================================================================
+# Info-Monitor
+# =============================================================================
+
+class InfoMonitorDisplayView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+    """Info-Monitor Anzeige"""
+    model = InfoMonitor
+    template_name = 'tickets/infomonitor_display.html'
+    context_object_name = 'monitor'
+
+    def test_func(self):
+        return _has_monitor_access(self.request.user)
+
+    def get_object(self, queryset=None):
+        return InfoMonitor.load()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_edit'] = self.request.user.has_perm('tickets.edit_infomonitor')
+        context['can_edit_mappe'] = _has_mappe_access(self.request.user)
+        context['monitor_vehicles'] = self.object.monitor_vehicles.select_related(
+            'fahrzeug_ad', 'ersetzt_mit'
+        ).order_by('position')
+        context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
+        return context
+
+
+class InfoMonitorEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """Info-Monitor bearbeiten"""
+    model = InfoMonitor
+    form_class = InfoMonitorForm
+    template_name = 'tickets/infomonitor_form.html'
+
+    def test_func(self):
+        return self.request.user.has_perm('tickets.edit_infomonitor')
+
+    def get_object(self, queryset=None):
+        return InfoMonitor.load()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .forms import InfoMonitorVehicleFormSet, InfoMonitorSonstigesFormSet
+        if self.request.POST:
+            context['vehicle_formset'] = InfoMonitorVehicleFormSet(
+                self.request.POST, instance=self.object, prefix='vehicles'
+            )
+            context['sonstiges_formset'] = InfoMonitorSonstigesFormSet(
+                self.request.POST, instance=self.object, prefix='sonstiges'
+            )
+        else:
+            context['vehicle_formset'] = InfoMonitorVehicleFormSet(
+                instance=self.object, prefix='vehicles'
+            )
+            context['sonstiges_formset'] = InfoMonitorSonstigesFormSet(
+                instance=self.object, prefix='sonstiges'
+            )
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        vehicle_formset = context['vehicle_formset']
+        sonstiges_formset = context['sonstiges_formset']
+
+        if vehicle_formset.is_valid() and sonstiges_formset.is_valid():
+            form.instance.updated_by = self.request.user
+            self.object = form.save()
+            vehicle_formset.instance = self.object
+            vehicle_formset.save()
+            sonstiges_formset.instance = self.object
+            sonstiges_formset.save()
+            from django.core.cache import cache
+            cache.delete('infomonitor')
+            messages.success(self.request, 'Info-Monitor wurde aktualisiert.')
+            return redirect(self.get_success_url())
+        else:
+            return self.form_invalid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('tickets:infomonitor_display')
+
+
+class InfoMonitorKioskView(DetailView):
+    """Info-Monitor Kiosk-Vollbild (kein Login nötig)"""
+    model = InfoMonitor
+    template_name = 'tickets/infomonitor_kiosk.html'
+    context_object_name = 'monitor'
+
+    def get_object(self, queryset=None):
+        return InfoMonitor.load()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['mappe_links'] = MappeLink.objects.filter(is_active=True)
+        context['mappe_kontakte'] = MappeKontakt.objects.filter(is_active=True)
+        context['mappe_anleitungen'] = MappeAnleitung.objects.filter(is_active=True)
+        context['gv_dashboards'] = GrossveranstaltungDashboard.objects.filter(
+            is_active=True
+        ).prefetch_related('abschnitte').order_by('-created_at')
+        context['monitor_vehicles'] = self.object.monitor_vehicles.select_related(
+            'fahrzeug_ad', 'ersetzt_mit'
+        ).order_by('position')
+        context['vehicle_count'] = context['monitor_vehicles'].count()
+        context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
+        return context
+
+
+# =============================================================================
+# Bereitschaftspersonen-Verwaltung
+# =============================================================================
+
+class BereitschaftPersonListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """Liste der Bereitschaftspersonen"""
+    model = BereitschaftPerson
+    template_name = 'tickets/bereitschaft_person_list.html'
+    context_object_name = 'persons'
+
+    def test_func(self):
+        return self.request.user.has_perm('tickets.edit_infomonitor')
+
+    def get_queryset(self):
+        return BereitschaftPerson.objects.all().order_by('order', 'name')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = BereitschaftPersonForm()
+        return context
+
+
+class BereitschaftPersonCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    """Neue Bereitschaftsperson erstellen"""
+    model = BereitschaftPerson
+    form_class = BereitschaftPersonForm
+    template_name = 'tickets/bereitschaft_person_list.html'
+
+    def test_func(self):
+        return self.request.user.has_perm('tickets.edit_infomonitor')
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, f'"{form.instance.name}" wurde hinzugefügt.')
+        return redirect('tickets:bereitschaft_person_list')
+
+    def form_invalid(self, form):
+        messages.error(self.request, 'Bitte alle Pflichtfelder ausfüllen.')
+        return redirect('tickets:bereitschaft_person_list')
+
+
+class BereitschaftPersonUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """Bereitschaftsperson bearbeiten"""
+    model = BereitschaftPerson
+    form_class = BereitschaftPersonForm
+    template_name = 'tickets/bereitschaft_person_form.html'
+
+    def test_func(self):
+        return self.request.user.has_perm('tickets.edit_infomonitor')
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, f'"{form.instance.name}" wurde aktualisiert.')
+        return redirect('tickets:bereitschaft_person_list')
+
+
+def bereitschaft_person_delete(request, pk):
+    """Bereitschaftsperson löschen"""
+    if not request.user.has_perm('tickets.edit_infomonitor'):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:bereitschaft_person_list')
+
+    person = get_object_or_404(BereitschaftPerson, pk=pk)
+
+    if request.method == 'POST':
+        name = person.name
+        person.delete()
+        messages.success(request, f'"{name}" wurde gelöscht.')
+
+    return redirect('tickets:bereitschaft_person_list')
+
+
+# =============================================================================
+# Digitale Mappe – Übersicht
+# =============================================================================
+
+class MappeOverviewView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """Übersichtsseite der Digitalen Mappe"""
+    model = MappeLink
+    template_name = 'tickets/mappe_overview.html'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['link_count'] = MappeLink.objects.count()
+        context['kontakt_count'] = MappeKontakt.objects.count()
+        context['anleitung_count'] = MappeAnleitung.objects.count()
+        context['dashboard_count'] = GrossveranstaltungDashboard.objects.filter(is_active=True).count()
+        return context
+
+
+# =============================================================================
+# Digitale Mappe – Links
+# =============================================================================
+
+class MappeLinkListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """Liste der Mappe-Links"""
+    model = MappeLink
+    template_name = 'tickets/mappe_link_list.html'
+    context_object_name = 'items'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = MappeLinkForm()
+        return context
+
+
+class MappeLinkCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    """Neuen Mappe-Link erstellen"""
+    model = MappeLink
+    form_class = MappeLinkForm
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, f'Link "{form.instance.title}" wurde hinzugefügt.')
+        return redirect('tickets:mappe_link_list')
+
+    def form_invalid(self, form):
+        messages.error(self.request, 'Bitte alle Pflichtfelder ausfüllen.')
+        return redirect('tickets:mappe_link_list')
+
+
+class MappeLinkUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """Mappe-Link bearbeiten"""
+    model = MappeLink
+    form_class = MappeLinkForm
+    template_name = 'tickets/mappe_link_form.html'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, f'Link "{form.instance.title}" wurde aktualisiert.')
+        return redirect('tickets:mappe_link_list')
+
+
+def mappe_link_delete(request, pk):
+    """Mappe-Link löschen"""
+    if not _has_mappe_access(request.user):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:mappe_link_list')
+
+    obj = get_object_or_404(MappeLink, pk=pk)
+    if request.method == 'POST':
+        name = obj.title
+        obj.delete()
+        messages.success(request, f'Link "{name}" wurde gelöscht.')
+    return redirect('tickets:mappe_link_list')
+
+
+# =============================================================================
+# Digitale Mappe – Kontakte
+# =============================================================================
+
+class MappeKontaktListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """Liste der Mappe-Kontakte"""
+    model = MappeKontakt
+    template_name = 'tickets/mappe_kontakt_list.html'
+    context_object_name = 'items'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = MappeKontaktForm()
+        return context
+
+
+class MappeKontaktCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    """Neuen Mappe-Kontakt erstellen"""
+    model = MappeKontakt
+    form_class = MappeKontaktForm
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, f'Kontakt "{form.instance.name}" wurde hinzugefügt.')
+        return redirect('tickets:mappe_kontakt_list')
+
+    def form_invalid(self, form):
+        messages.error(self.request, 'Bitte alle Pflichtfelder ausfüllen.')
+        return redirect('tickets:mappe_kontakt_list')
+
+
+class MappeKontaktUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """Mappe-Kontakt bearbeiten"""
+    model = MappeKontakt
+    form_class = MappeKontaktForm
+    template_name = 'tickets/mappe_kontakt_form.html'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, f'Kontakt "{form.instance.name}" wurde aktualisiert.')
+        return redirect('tickets:mappe_kontakt_list')
+
+
+def mappe_kontakt_delete(request, pk):
+    """Mappe-Kontakt löschen"""
+    if not _has_mappe_access(request.user):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:mappe_kontakt_list')
+
+    obj = get_object_or_404(MappeKontakt, pk=pk)
+    if request.method == 'POST':
+        name = obj.name
+        obj.delete()
+        messages.success(request, f'Kontakt "{name}" wurde gelöscht.')
+    return redirect('tickets:mappe_kontakt_list')
+
+
+# =============================================================================
+# Digitale Mappe – Anleitungen
+# =============================================================================
+
+class MappeAnleitungListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """Liste der Mappe-Anleitungen"""
+    model = MappeAnleitung
+    template_name = 'tickets/mappe_anleitung_list.html'
+    context_object_name = 'items'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = MappeAnleitungForm()
+        return context
+
+
+class MappeAnleitungCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    """Neue Mappe-Anleitung erstellen"""
+    model = MappeAnleitung
+    form_class = MappeAnleitungForm
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, f'Anleitung "{form.instance.title}" wurde hinzugefügt.')
+        return redirect('tickets:mappe_anleitung_list')
+
+    def form_invalid(self, form):
+        messages.error(self.request, 'Bitte alle Pflichtfelder ausfüllen.')
+        return redirect('tickets:mappe_anleitung_list')
+
+
+class MappeAnleitungUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """Mappe-Anleitung bearbeiten"""
+    model = MappeAnleitung
+    form_class = MappeAnleitungForm
+    template_name = 'tickets/mappe_anleitung_form.html'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, f'Anleitung "{form.instance.title}" wurde aktualisiert.')
+        return redirect('tickets:mappe_anleitung_list')
+
+
+def mappe_anleitung_delete(request, pk):
+    """Mappe-Anleitung löschen"""
+    if not _has_mappe_access(request.user):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:mappe_anleitung_list')
+
+    obj = get_object_or_404(MappeAnleitung, pk=pk)
+    if request.method == 'POST':
+        name = obj.title
+        obj.delete()
+        messages.success(request, f'Anleitung "{name}" wurde gelöscht.')
+    return redirect('tickets:mappe_anleitung_list')
+
+
+# =============================================================================
+# Digitale Mappe – Großveranstaltungen Dashboards (eigenständig)
+# =============================================================================
+
+class GVDashboardListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """Liste der Großveranstaltungen-Dashboards"""
+    model = GrossveranstaltungDashboard
+    template_name = 'tickets/mappe_dashboard_list.html'
+    context_object_name = 'dashboards'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def get_queryset(self):
+        return GrossveranstaltungDashboard.objects.all().order_by('-created_at')
+
+
+class GVDashboardCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    """Neues Großveranstaltungen-Dashboard erstellen"""
+    model = GrossveranstaltungDashboard
+    form_class = GrossveranstaltungDashboardForm
+    template_name = 'tickets/gv_dashboard_form.html'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_new'] = True
+        if self.request.POST:
+            context['abschnitt_formset'] = GrossveranstaltungAbschnittFormSet(
+                self.request.POST, prefix='abschnitte'
+            )
+        else:
+            context['abschnitt_formset'] = GrossveranstaltungAbschnittFormSet(prefix='abschnitte')
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        abschnitt_formset = context['abschnitt_formset']
+
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+
+        if abschnitt_formset.is_valid():
+            self.object = form.save()
+            abschnitt_formset.instance = self.object
+            abschnitt_formset.save()
+            messages.success(self.request, f'Dashboard "{self.object.name}" wurde erstellt.')
+            return redirect('tickets:mappe_dashboard_detail', pk=self.object.pk)
+        else:
+            return self.form_invalid(form)
+
+
+class GVDashboardEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """Großveranstaltungen-Dashboard bearbeiten"""
+    model = GrossveranstaltungDashboard
+    form_class = GrossveranstaltungDashboardForm
+    template_name = 'tickets/gv_dashboard_form.html'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_new'] = False
+        if self.request.POST:
+            context['abschnitt_formset'] = GrossveranstaltungAbschnittFormSet(
+                self.request.POST, instance=self.object, prefix='abschnitte'
+            )
+        else:
+            context['abschnitt_formset'] = GrossveranstaltungAbschnittFormSet(
+                instance=self.object, prefix='abschnitte'
+            )
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        abschnitt_formset = context['abschnitt_formset']
+
+        form.instance.updated_by = self.request.user
+
+        if abschnitt_formset.is_valid():
+            self.object = form.save()
+            abschnitt_formset.instance = self.object
+            abschnitt_formset.save()
+            messages.success(self.request, f'Dashboard "{self.object.name}" wurde aktualisiert.')
+            return redirect('tickets:mappe_dashboard_detail', pk=self.object.pk)
+        else:
+            return self.form_invalid(form)
+
+
+class GVDashboardDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+    """Großveranstaltungen-Dashboard anzeigen"""
+    model = GrossveranstaltungDashboard
+    template_name = 'tickets/gv_dashboard_detail.html'
+    context_object_name = 'dashboard'
+
+    def test_func(self):
+        return _has_mappe_access(self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['abschnitte'] = self.object.abschnitte.all()
+        return context
+
+
+def gv_dashboard_delete(request, pk):
+    """Großveranstaltungen-Dashboard löschen"""
+    if not _has_mappe_access(request.user):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:mappe_dashboard_list')
+
+    dashboard = get_object_or_404(GrossveranstaltungDashboard, pk=pk)
+
+    if request.method == 'POST':
+        name = dashboard.name
+        dashboard.delete()
+        messages.success(request, f'Dashboard "{name}" wurde gelöscht.')
+
+    return redirect('tickets:mappe_dashboard_list')

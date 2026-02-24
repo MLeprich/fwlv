@@ -369,7 +369,7 @@ class MedicalBatchForm(forms.ModelForm):
 
     class Meta:
         model = MedicalBatch
-        fields = ['batch_number', 'received_date', 'expiry_date', 'quantity_received', 'location', 'supplier_batch_number', 'internal_order_number', 'external_order_number', 'notes']
+        fields = ['batch_number', 'received_date', 'expiry_date', 'quantity_received', 'unit_price', 'location', 'supplier_batch_number', 'internal_order_number', 'external_order_number', 'notes']
         widgets = {
             'batch_number': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
@@ -387,6 +387,12 @@ class MedicalBatchForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
                 'min': '0.01',
                 'step': '0.01'
+            }),
+            'unit_price': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                'min': '0.00',
+                'step': '0.01',
+                'placeholder': '0.00'
             }),
             'location': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
@@ -414,6 +420,7 @@ class MedicalBatchForm(forms.ModelForm):
             'received_date': 'Eingangsdatum *',
             'expiry_date': 'Verfallsdatum *',
             'quantity_received': 'Eingangsmenge *',
+            'unit_price': 'Einkaufspreis pro Einheit (EUR)',
             'location': 'Lagerort *',
             'supplier_batch_number': 'Lieferanten-Chargen-Nr.',
             'internal_order_number': 'Interne Bestellnummer',

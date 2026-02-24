@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}{{ instance.inventory_number }} - FLVS{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bevölkerungsschutz</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:equipment_instance_list' %}" class="text-gray-500 hover:text-gray-700">Geräte</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ instance.inventory_number }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+{% block content %}
+{% url 'civil_protection:equipment_instance_qrcode' instance.pk as qr_url %}
+{% url 'civil_protection:equipment_instance_barcode' instance.pk as bc_url %}
+<div class="max-w-4xl mx-auto px-6 py-6" x-data="{ codeModal: false, codeTab: 'qr' }">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">{{ instance.master.name }}</h1>
+        <div class="flex gap-2">
+            <button @click="codeModal = true" class="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                QR / Barcode
+            </button>
+            {% if perms.civil_protection.change_katsequipmentinstance %}
+            <a href="{% url 'civil_protection:equipment_instance_update' instance.pk %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Bearbeiten</a>
+            {% endif %}
+            <a href="{% url 'civil_protection:equipment_instance_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Zurück</a>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <dl class="grid grid-cols-2 gap-4">
+            <div><dt class="text-sm text-gray-500">Inventarnummer</dt><dd class="text-sm font-mono font-medium">{{ instance.inventory_number }}</dd></div>
+            <div><dt class="text-sm text-gray-500">Seriennummer</dt><dd class="text-sm">{{ instance.serial_number|default:"-" }}</dd></div>
+            <div><dt class="text-sm text-gray-500">Stammdaten</dt><dd class="text-sm"><a href="{% url 'civil_protection:equipment_detail' instance.master.pk %}" class="text-blue-600 hover:text-blue-700">{{ instance.master }}</a></dd></div>
+            <div><dt class="text-sm text-gray-500">Bereich</dt><dd class="text-sm"><span class="px-2 py-1 rounded-full text-xs font-medium {% if instance.bereich == 'bund' %}bg-blue-100 text-blue-700{% elif instance.bereich == 'land' %}bg-green-100 text-green-700{% else %}bg-amber-100 text-amber-700{% endif %}">{{ instance.get_bereich_display }}</span></dd></div>
+            <div><dt class="text-sm text-gray-500">Standort</dt><dd class="text-sm">{{ instance.location|default:"-" }}</dd></div>
+            <div><dt class="text-sm text-gray-500">Zustand</dt><dd class="text-sm">{{ instance.get_condition_display }}</dd></div>
+            <div><dt class="text-sm text-gray-500">Einsatzbereit</dt><dd class="text-sm">{% if instance.is_operational %}<span class="text-green-600 font-medium">Ja</span>{% else %}<span class="text-red-600 font-medium">Nein</span>{% endif %}</dd></div>
+            <div><dt class="text-sm text-gray-500">Kaufdatum</dt><dd class="text-sm">{{ instance.purchase_date|date:"d.m.Y"|default:"-" }}</dd></div>
+            <div><dt class="text-sm text-gray-500">Kaufpreis</dt><dd class="text-sm">{% if instance.purchase_price %}{{ instance.purchase_price }} EUR{% else %}-{% endif %}</dd></div>
+            <div><dt class="text-sm text-gray-500">Inbetriebnahme</dt><dd class="text-sm">{{ instance.commissioning_date|date:"d.m.Y"|default:"-" }}</dd></div>
+            <div><dt class="text-sm text-gray-500">Letzte Wartung</dt><dd class="text-sm">{{ instance.last_maintenance_date|date:"d.m.Y"|default:"-" }}</dd></div>
+            <div><dt class="text-sm text-gray-500">Nächste Wartung</dt><dd class="text-sm {% if instance.is_maintenance_due %}text-red-600 font-medium{% endif %}">{{ instance.next_maintenance_date|date:"d.m.Y"|default:"-" }}{% if instance.is_maintenance_due %} (fällig!){% endif %}</dd></div>
+        </dl>
+        {% if instance.notes %}
+        <div class="mt-4 pt-4 border-t"><h3 class="text-sm font-medium text-gray-700 mb-1">Notizen</h3><p class="text-sm text-gray-600">{{ instance.notes }}</p></div>
+        {% endif %}
+    </div>
+    {% include "civil_protection/includes/code_modal.html" with code_label=instance.inventory_number %}
+</div>
+{% endblock %}

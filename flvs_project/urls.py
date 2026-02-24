@@ -105,6 +105,12 @@ urlpatterns = [
     # Tickets App (Ticketsystem)
     path('tickets/', include('tickets.urls')),
 
+    # Defect Management App (Mängelwesen)
+    path('defect_management/', include('defect_management.urls')),
+
+    # Civil Protection App (Katastrophenschutz)
+    path('civil_protection/', include('civil_protection.urls')),
+
     # Placeholder für zukünftige Apps
     # path('workshop/', include('workshop.urls')),
     # path('notifications/', include('notifications.urls')),

@@ -59,6 +59,46 @@
         </div>
     </div>
 
+    <!-- Finanz-Kennzahlen (Buchwert) -->
+    {% if financials %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Buchwert Rettungsdienst</h2>
+        </div>
+        <div class="px-6 py-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Gesamtwert -->
+                <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-5 border border-emerald-200">
+                    <p class="text-sm font-medium text-emerald-700">Gesamtwert (Buchwert)</p>
+                    <p class="text-3xl font-bold text-emerald-900 mt-1">{{ financials.total_value|floatformat:2 }} EUR</p>
+                    <p class="text-xs text-emerald-600 mt-2">
+                        {{ financials.active_masters }} Artikel-Stammdaten
+                    </p>
+                </div>
+                <!-- Verbrauchsmaterial -->
+                <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                    <p class="text-sm font-medium text-gray-600">Verbrauchsmaterial</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ financials.batch_value|floatformat:2 }} EUR</p>
+                    <p class="text-xs text-gray-500 mt-2">
+                        {{ financials.active_batches }} aktive Chargen
+                        {% if financials.batches_without_price > 0 %}
+                        <span class="text-amber-600">({{ financials.batches_without_price }} ohne Preis)</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <!-- Medizintechnik -->
+                <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                    <p class="text-sm font-medium text-gray-600">Medizintechnik</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ financials.device_value|floatformat:2 }} EUR</p>
+                    <p class="text-xs text-gray-500 mt-2">
+                        {{ financials.active_devices }} aktive Geraete
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Context Actions Bar -->
     <div class="sticky top-0 z-10 bg-white border-b border-gray-200 -mx-6 px-6 py-4 shadow-sm mb-6">
         <div class="flex items-center justify-between">

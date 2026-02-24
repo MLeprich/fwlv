@@ -101,6 +101,7 @@
             </div>
         </div>
 
+        {% if person_sections.work_contact_visible and modules.phonebook_enabled %}
         <!-- Dienstliche Kontaktdaten -->
         <div class="bg-white rounded-lg shadow" x-data="{ open: true }">
             <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
@@ -150,7 +151,9 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
+        {% if person_sections.private_contact_visible %}
         <!-- Private Kontaktdaten -->
         <div class="bg-white rounded-lg shadow" x-data="{ open: true }">
             <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
@@ -220,7 +223,9 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
+        {% if person_sections.emergency_contact_visible %}
         <!-- Notfallkontakt -->
         <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
             <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
@@ -282,6 +287,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Feuerwehr-Daten -->
         <div class="bg-white rounded-lg shadow" x-data="{ open: true }">
@@ -364,6 +370,7 @@
             </div>
         </div>
 
+        {% if person_sections.organization_visible %}
         <!-- Organisationszugehörigkeit -->
         <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
             <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
@@ -596,7 +603,9 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
+        {% if person_sections.user_photo_visible %}
         <!-- Benutzer & Foto -->
         <div class="bg-white rounded-lg shadow" x-data="{ open: {% if not form.instance.pk or not form.instance.user %}true{% else %}false{% endif %} }">
             <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
@@ -703,7 +712,9 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
+        {% if person_sections.driving_license_visible and modules.driving_license_enabled %}
         <!-- Führerscheindaten -->
         <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
             <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
@@ -807,6 +818,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Pflichtstunden (nur bei Bearbeitung) -->
         {% if form.instance.pk %}
@@ -925,6 +937,7 @@
         </div>
         {% endif %}
 
+        {% if person_sections.notes_visible %}
         <!-- Notizen -->
         <div class="bg-white rounded-lg shadow" x-data="{ open: false }">
             <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-6 text-left">
@@ -945,6 +958,7 @@
                 {% if form.notes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>{% endif %}
             </div>
         </div>
+        {% endif %}
 
         <!-- Action Buttons -->
         <div class="flex items-center justify-end gap-3 pt-6 bg-white rounded-lg shadow p-6">

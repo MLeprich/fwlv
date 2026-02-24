@@ -53,11 +53,30 @@ class LocationListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'locations'
-        context['root_locations'] = Location.get_root_locations()
+        # recursetree braucht ALLE Knoten (MPTT cached children aus dem Queryset)
+        context['tree_locations'] = Location.objects.filter(is_active=True).order_by('tree_id', 'lft')
         # Flag ob Suche/Filter aktiv ist
         context['search_active'] = bool(self.request.GET.get('q') or self.request.GET.get('type'))
         context['search_query'] = self.request.GET.get('q', '')
         context['search_type'] = self.request.GET.get('type', '')
+
+        # Statistiken
+        from locations.models import LocationType
+        active = Location.objects.filter(is_active=True)
+        context['stats_sites'] = active.filter(location_type=LocationType.SITE).count()
+        context['stats_buildings'] = active.filter(
+            location_type__in=[LocationType.BUILDING, LocationType.AREA, LocationType.VEHICLE_HALL]
+        ).count()
+        context['stats_rooms'] = active.filter(
+            location_type__in=[LocationType.ROOM, LocationType.PARKING_SPOT]
+        ).count()
+        context['stats_storage'] = active.filter(
+            location_type__in=[
+                LocationType.RACK, LocationType.CABINET, LocationType.SHELF,
+                LocationType.DRAWER, LocationType.BOX,
+            ]
+        ).count()
+        context['stats_vehicles'] = active.filter(location_type=LocationType.VEHICLE).count()
         return context
 
 
@@ -147,6 +166,10 @@ class LocationCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
                 initial['parent'] = Location.objects.get(pk=parent_pk, is_active=True)
             except Location.DoesNotExist:
                 pass
+        # Support ?type=nip / ?type=leuchtturm for pre-selection
+        location_type = self.request.GET.get('type')
+        if location_type:
+            initial['location_type'] = location_type
         return initial
 
     def form_valid(self, form):

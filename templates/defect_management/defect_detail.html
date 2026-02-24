@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ defect.title }} - Mängelwesen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'defect_management:dashboard' %}" class="text-gray-500 hover:text-gray-700">Mängelwesen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ defect.title|truncatechars:40 }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ defect.title }}</h1>
+            <div class="flex items-center gap-3 mt-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    {% if defect.status == 'open' %}bg-red-100 text-red-800
+                    {% elif defect.status == 'in_progress' %}bg-yellow-100 text-yellow-800
+                    {% elif defect.status == 'resolved' %}bg-green-100 text-green-800
+                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ defect.get_status_display }}
+                </span>
+                <span class="text-sm text-gray-500">{{ defect.category.icon }} {{ defect.category.name }}</span>
+                <span class="text-sm text-gray-400">|</span>
+                <span class="text-sm text-gray-500">{{ defect.reported_date|date:"d.m.Y H:i" }}</span>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            {% if perms.defect_management.change_defect %}
+            <a href="{% url 'defect_management:update' defect.pk %}"
+               class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
+                Bearbeiten
+            </a>
+            {% endif %}
+            {% if perms.defect_management.delete_defect %}
+            <a href="{% url 'defect_management:delete' defect.pk %}"
+               class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">
+                Löschen
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Hauptinhalt -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Beschreibung -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-3">Beschreibung</h2>
+                <div class="prose prose-sm max-w-none text-gray-700">
+                    {{ defect.description|linebreaksbr }}
+                </div>
+            </div>
+
+            <!-- Behebungsnotiz -->
+            {% if defect.resolution_notes %}
+            <div class="bg-green-50 rounded-lg shadow p-6 border-l-4 border-green-500">
+                <h2 class="text-lg font-semibold text-green-900 mb-2">Behebungsnotiz</h2>
+                <div class="text-sm text-green-800">{{ defect.resolution_notes|linebreaksbr }}</div>
+                {% if defect.resolved_by %}
+                <p class="text-xs text-green-600 mt-2">
+                    Behoben von {{ defect.resolved_by.get_full_name|default:defect.resolved_by.username }}
+                    {% if defect.resolved_date %}am {{ defect.resolved_date|date:"d.m.Y H:i" }}{% endif %}
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Fotos -->
+            {% if defect.photos.all %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-3">Fotos</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {% for photo in defect.photos.all %}
+                    <div class="relative group">
+                        <a href="{{ photo.image.url }}" target="_blank">
+                            <img src="{{ photo.image.url }}" alt="{{ photo.description|default:'Mangel-Foto' }}"
+                                 class="w-full h-40 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity">
+                        </a>
+                        {% if photo.description %}
+                        <p class="text-xs text-gray-500 mt-1">{{ photo.description }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Kommentare -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Kommentare & Verlauf</h2>
+
+                {% if defect.comments.all %}
+                <div class="space-y-4 mb-6">
+                    {% for comment in defect.comments.all %}
+                    <div class="{% if comment.is_status_change %}bg-gray-50 border-l-4 border-gray-300{% else %}bg-white border border-gray-200{% endif %} rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-gray-900">
+                                {{ comment.created_by.get_full_name|default:comment.created_by.username }}
+                            </span>
+                            <span class="text-xs text-gray-500">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+                        </div>
+                        <p class="text-sm text-gray-700 {% if comment.is_status_change %}italic{% endif %}">
+                            {{ comment.text|linebreaksbr }}
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500 mb-4">Noch keine Kommentare.</p>
+                {% endif %}
+
+                <!-- Kommentar hinzufügen -->
+                <form method="post" action="{% url 'defect_management:add_comment' defect.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ comment_form.text }}
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit"
+                                class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
+                            Kommentar hinzufügen
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Seitenleiste -->
+        <div class="space-y-6">
+            <!-- Details -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Details</h3>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-xs text-gray-500">Gemeldet von</dt>
+                        <dd class="text-sm font-medium text-gray-900">
+                            {{ defect.created_by.get_full_name|default:defect.created_by.username }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-500">Gemeldet am</dt>
+                        <dd class="text-sm text-gray-900">{{ defect.reported_date|date:"d.m.Y H:i" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-500">Kategorie</dt>
+                        <dd class="text-sm text-gray-900">{{ defect.category.icon }} {{ defect.category.name }}</dd>
+                    </div>
+                    {% if defect.content_type and defect.object_id %}
+                    <div>
+                        <dt class="text-xs text-gray-500">Betroffenes Objekt</dt>
+                        <dd class="text-sm text-gray-900">{{ defect.get_related_object_display }}</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt class="text-xs text-gray-500">Zugewiesen an</dt>
+                        <dd class="text-sm text-gray-900">
+                            {% if defect.assigned_to %}
+                                {{ defect.assigned_to.get_full_name|default:defect.assigned_to.username }}
+                            {% else %}
+                                <span class="text-gray-400">Nicht zugewiesen</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    {% if defect.resolved_date %}
+                    <div>
+                        <dt class="text-xs text-gray-500">Behoben am</dt>
+                        <dd class="text-sm text-gray-900">{{ defect.resolved_date|date:"d.m.Y H:i" }}</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt class="text-xs text-gray-500">Letzte Änderung</dt>
+                        <dd class="text-sm text-gray-900">{{ defect.updated_at|date:"d.m.Y H:i" }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Schnell-Status-Änderung -->
+            {% if perms.defect_management.change_defect %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Status ändern</h3>
+                <form method="post" action="{% url 'defect_management:update' defect.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="assigned_to" value="{{ defect.assigned_to_id|default:'' }}">
+                    <input type="hidden" name="resolution_notes" value="{{ defect.resolution_notes }}">
+                    <div class="space-y-2">
+                        {{ update_form.status }}
+                    </div>
+                    <button type="submit"
+                            class="mt-3 w-full bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
+                        Status aktualisieren
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

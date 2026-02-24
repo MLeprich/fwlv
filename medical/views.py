@@ -41,8 +41,10 @@ from .forms import (
     MedicalStockMovementForm,
     MedicalBatchForm,
 )
-from django.views.generic import TemplateView, DeleteView
+from django.views.generic import TemplateView, DeleteView, View
+from django.urls import reverse
 from inventory_base.models import Category
+from permissions.constants import Roles
 
 
 # ============================================================================
@@ -1505,6 +1507,19 @@ class MedicalItemMasterDetailView(LoginRequiredMixin, DetailView):
                 next_inspection_date__lte=today
             ).count()
 
+        # Bestellung-generieren Button: Zeige wenn Mindestbestand unterschritten
+        # und User Procurement-Berechtigung hat
+        total_stock = context['total_stock']
+        if master.min_quantity and total_stock < master.min_quantity:
+            has_procurement_access = (
+                self.request.user.is_superuser or
+                self.request.user.has_perm('procurement.add_purchaseorder')
+            )
+            context['show_order_button'] = has_procurement_access
+            context['order_deficit'] = master.min_quantity - total_stock
+        else:
+            context['show_order_button'] = False
+
         return context
 
 
@@ -2754,3 +2769,69 @@ from .inventory_views import (
     MedicalInventoryProgressView,
     MedicalInventoryExportView,
 )
+
+
+# ============================================================================
+# BESTELLUNG AUS MINDESTBESTAND GENERIEREN
+# ============================================================================
+
+class GenerateOrderFromMasterView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Generiert eine Bestellanforderung (PurchaseOrder) aus einem MedicalItemMaster,
+    wenn der Mindestbestand unterschritten ist.
+    """
+    permission_required = 'procurement.add_purchaseorder'
+
+    def post(self, request, pk):
+        from procurement.models import PurchaseOrder, OrderItem, OrderStatus
+        from django.contrib.contenttypes.models import ContentType
+
+        master = get_object_or_404(MedicalItemMaster, pk=pk)
+
+        total_stock = master.get_total_stock()
+        if not master.min_quantity or total_stock >= master.min_quantity:
+            messages.warning(request, 'Mindestbestand ist nicht unterschritten.')
+            return redirect('medical:master_detail', pk=pk)
+
+        deficit = master.min_quantity - total_stock
+
+        # PurchaseOrder erstellen
+        order = PurchaseOrder()
+        order.title = f'Nachbestellung: {master.name}'
+        order.status = OrderStatus.DRAFT
+        order.requested_date = timezone.now().date()
+        order.created_by = request.user
+        order.updated_by = request.user
+
+        # Lieferant uebernehmen falls vorhanden
+        if master.supplier:
+            order.supplier = master.supplier
+
+        # Ansprechpartner setzen (Person des aktuellen Users)
+        if hasattr(request.user, 'person') and request.user.person:
+            order.requested_by = request.user.person
+
+        order.save()
+
+        # OrderItem mit Rueckverweis auf MedicalItemMaster
+        ct = ContentType.objects.get_for_model(MedicalItemMaster)
+        OrderItem.objects.create(
+            purchase_order=order,
+            item_name=master.name,
+            quantity=deficit,
+            unit=master.unit or 'Stück',
+            unit_price=0,
+            inventory_content_type=ct,
+            inventory_object_id=master.pk,
+        )
+
+        # Gesamtsumme berechnen
+        order.gesamtsumme_netto = 0
+        order.save(update_fields=['gesamtsumme_netto'])
+
+        messages.success(
+            request,
+            f'Bestellanforderung {order.order_number} wurde erstellt. '
+            f'Bitte vervollstaendigen Sie die Bestellung.'
+        )
+        return redirect('procurement:order_update', pk=order.pk)

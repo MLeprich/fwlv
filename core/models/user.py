@@ -3,7 +3,6 @@ Custom User Model für FLVS
 Erweitert Django's AbstractUser mit feuerwehr-spezifischen Feldern
 """
 
-from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import AbstractUser, Group
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -14,6 +13,13 @@ class WatchDivisionChoices(models.TextChoices):
     WA1 = 'WA1', _('WA1')
     WA2 = 'WA2', _('WA2')
     WA3 = 'WA3', _('WA3')
+
+
+class StaffPosition(models.TextChoices):
+    """Organisatorische Position / Dienststellung"""
+    MITARBEITER = 'mitarbeiter', _('Mitarbeiter')
+    STELLV_FBL = 'stellv_fbl', _('Stellv. Fachbereichsleiter')
+    FBL = 'fbl', _('Fachbereichsleiter')
 
 
 class User(AbstractUser):
@@ -58,6 +64,14 @@ class User(AbstractUser):
         blank=True,
         verbose_name="Position/Funktion",
         help_text="Position oder Funktion in der Feuerwehr"
+    )
+
+    staff_position = models.CharField(
+        max_length=20,
+        choices=StaffPosition.choices,
+        blank=True,
+        verbose_name="Dienststellung",
+        help_text="Organisatorische Dienststellung (steuert Freigabe-Gruppen)"
     )
 
     # 2FA Settings
@@ -177,6 +191,34 @@ class User(AbstractUser):
             except Group.DoesNotExist:
                 pass  # Gruppe existiert nicht, ignorieren
 
+    def sync_approval_groups(self):
+        """
+        Synchronisiert Freigabe-Gruppen basierend auf staff_position.
+        Entfernt alle Freigabe-Gruppen und weist die passende zu.
+        """
+        from permissions.constants import Roles
+        approval_group_names = [
+            Roles.FREIGABE_STUFE_1,
+            Roles.FREIGABE_STUFE_2,
+            Roles.FREIGABE_STUFE_3,
+        ]
+        # Alle Freigabe-Gruppen entfernen
+        approval_groups = Group.objects.filter(name__in=approval_group_names)
+        self.groups.remove(*approval_groups)
+
+        # Passende Gruppe basierend auf staff_position zuweisen
+        position_to_group = {
+            StaffPosition.STELLV_FBL: Roles.FREIGABE_STUFE_1,
+            StaffPosition.FBL: Roles.FREIGABE_STUFE_2,
+        }
+        target_group_name = position_to_group.get(self.staff_position)
+        if target_group_name:
+            try:
+                group = Group.objects.get(name=target_group_name)
+                self.groups.add(group)
+            except Group.DoesNotExist:
+                pass
+
     def __str__(self):
         if self.first_name and self.last_name:
             return f"{self.last_name}, {self.first_name}"
@@ -223,20 +265,6 @@ class User(AbstractUser):
         Prüft ob Benutzer für BTM-Bereich autorisiert ist
         """
         return self.has_role('BTM-Beauftragter') or self.has_role('Administrator')
-
-    def set_pin(self, raw_pin):
-        """Setzt den PIN-Code (als Hash gespeichert)"""
-        self.pin_code = make_password(raw_pin)
-
-    def check_pin(self, raw_pin):
-        """Prüft ob der eingegebene PIN korrekt ist"""
-        if not self.pin_code:
-            return False
-        return check_password(raw_pin, self.pin_code)
-
-    def has_pin(self):
-        """Prüft ob ein PIN gesetzt ist"""
-        return bool(self.pin_code)
 
     def requires_2fa(self):
         """

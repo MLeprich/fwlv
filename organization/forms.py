@@ -20,6 +20,9 @@ class DepartmentForm(forms.ModelForm):
             'name',
             'abbreviation',
             'description',
+            'head',
+            'deputy_head',
+            'budget_code',
             'sort_order',
             'is_active',
         ]
@@ -38,6 +41,16 @@ class DepartmentForm(forms.ModelForm):
                 'rows': 4,
                 'placeholder': _('Beschreibung der Abteilung...'),
             }),
+            'head': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+            }),
+            'deputy_head': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+            }),
+            'budget_code': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': _('z.B. KST-4711'),
+            }),
             'sort_order': forms.NumberInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                 'min': '0',
@@ -46,6 +59,16 @@ class DepartmentForm(forms.ModelForm):
                 'class': 'w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500',
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from personnel.models import Person
+        person_qs = Person.objects.filter(is_active=True).order_by('last_name', 'first_name')
+        self.fields['head'].queryset = person_qs
+        self.fields['head'].required = False
+        self.fields['deputy_head'].queryset = person_qs
+        self.fields['deputy_head'].required = False
+        self.fields['budget_code'].required = False
 
 
 class VolunteerUnitForm(forms.ModelForm):

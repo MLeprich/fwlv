@@ -67,6 +67,10 @@
                             <option value="vehicle" {% if request.GET.type == 'vehicle' %}selected{% endif %}>🚗 Fahrzeug</option>
                             <option value="container" {% if request.GET.type == 'container' %}selected{% endif %}>📦 Container</option>
                         </optgroup>
+                        <optgroup label="Bevölkerungsschutz">
+                            <option value="nip" {% if request.GET.type == 'nip' %}selected{% endif %}>ℹ️ NIP</option>
+                            <option value="leuchtturm" {% if request.GET.type == 'leuchtturm' %}selected{% endif %}>🏠 Leuchtturm</option>
+                        </optgroup>
                         <option value="other" {% if request.GET.type == 'other' %}selected{% endif %}>📍 Sonstiges</option>
                     </select>
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
@@ -80,22 +84,26 @@
     <div class="py-6 mt-6">
 
         <!-- Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
             <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
                 <p class="text-gray-500 text-sm font-medium mb-1">Standorte/Wachen</p>
-                <p class="text-3xl font-bold text-gray-900">{{ root_locations.count }}</p>
+                <p class="text-3xl font-bold text-gray-900">{{ stats_sites }}</p>
             </div>
             <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
                 <p class="text-gray-500 text-sm font-medium mb-1">Gebäude & Bereiche</p>
-                <p class="text-3xl font-bold text-gray-900">{{ locations|length }}</p>
+                <p class="text-3xl font-bold text-gray-900">{{ stats_buildings }}</p>
             </div>
             <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
                 <p class="text-gray-500 text-sm font-medium mb-1">Räume & Stellplätze</p>
-                <p class="text-3xl font-bold text-gray-900">{{ locations|length }}</p>
+                <p class="text-3xl font-bold text-gray-900">{{ stats_rooms }}</p>
             </div>
             <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
                 <p class="text-gray-500 text-sm font-medium mb-1">Lagerstrukturen</p>
-                <p class="text-3xl font-bold text-gray-900">0</p>
+                <p class="text-3xl font-bold text-gray-900">{{ stats_storage }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+                <p class="text-gray-500 text-sm font-medium mb-1">Fahrzeuge (mobil)</p>
+                <p class="text-3xl font-bold text-gray-900">{{ stats_vehicles }}</p>
             </div>
         </div>
 
@@ -153,6 +161,8 @@
                                         {% elif node.location_type == 'box' %}📦
                                         {% elif node.location_type == 'vehicle' %}🚗
                                         {% elif node.location_type == 'container' %}📦
+                                        {% elif node.location_type == 'nip' %}ℹ️
+                                        {% elif node.location_type == 'leuchtturm' %}🏠
                                         {% else %}📍
                                         {% endif %}
                                     </span>
@@ -208,16 +218,29 @@
                             </a>
                         </div>
                     {% endif %}
-                {% elif root_locations %}
-                    <!-- Hierarchische Ansicht -->
-                    {% recursetree root_locations %}
-                    <div class="{% if not node.is_root_node %}ml-8{% endif %} mb-2">
-                        <div class="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
-                            <div class="flex items-center gap-3 flex-1">
-                                <!-- Icon based on type -->
-                                <span class="text-xl">
+                {% elif tree_locations %}
+                    <!-- Hierarchische Ansicht (aufklappbar) -->
+                    {% recursetree tree_locations %}
+                    <div class="{% if not node.is_root_node %}ml-6 border-l-2 border-gray-200{% endif %}"
+                         {% if not node.is_leaf_node %}x-data="{ open: {{ node.is_root_node|yesno:'true,false' }} }"{% endif %}>
+                        <div class="flex items-center justify-between p-3 {% if node.is_root_node %}bg-gradient-to-r from-blue-50 to-white border border-blue-100{% else %}bg-gray-50 hover:bg-gray-100{% endif %} rounded-lg transition-colors mb-1 {% if not node.is_root_node %}ml-4{% endif %}">
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                <!-- Toggle Button -->
+                                {% if not node.is_leaf_node %}
+                                <button @click="open = !open" class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 transition-colors text-gray-500">
+                                    <svg class="w-4 h-4 transition-transform duration-200" :class="open ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </button>
+                                {% else %}
+                                <span class="flex-shrink-0 w-6"></span>
+                                {% endif %}
+
+                                <!-- Icon -->
+                                <span class="text-xl flex-shrink-0">
                                     {% if node.location_type == 'site' %}🏛️
                                     {% elif node.location_type == 'building' %}🏢
+                                    {% elif node.location_type == 'vehicle_hall' %}🏗️
                                     {% elif node.location_type == 'area' %}🌳
                                     {% elif node.location_type == 'room' %}🚪
                                     {% elif node.location_type == 'parking_spot' %}🅿️
@@ -226,59 +249,62 @@
                                     {% elif node.location_type == 'shelf' %}📋
                                     {% elif node.location_type == 'drawer' %}📥
                                     {% elif node.location_type == 'box' %}📦
-                                    {% elif node.location_type == 'vehicle' %}🚗
+                                    {% elif node.location_type == 'vehicle' %}🚒
                                     {% elif node.location_type == 'container' %}📦
+                                    {% elif node.location_type == 'nip' %}ℹ️
+                                    {% elif node.location_type == 'leuchtturm' %}🏠
                                     {% else %}📍
                                     {% endif %}
                                 </span>
 
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2">
-                                        <a href="{% url 'locations:detail' node.pk %}" class="font-medium text-gray-900 hover:text-blue-600">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <a href="{% url 'locations:detail' node.pk %}" class="font-medium text-gray-900 hover:text-blue-600 truncate">
                                             {{ node.name }}
                                         </a>
-                                        <span class="text-xs text-gray-500 font-mono bg-gray-200 px-2 py-0.5 rounded">
+                                        <span class="text-xs text-gray-500 font-mono bg-gray-200 px-2 py-0.5 rounded flex-shrink-0">
                                             {{ node.code }}
                                         </span>
                                     </div>
-                                    <p class="text-xs text-gray-500 mt-1">{{ node.get_location_type_display }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">{{ node.get_location_type_display }}</p>
                                 </div>
 
-                                <!-- Children count -->
-                                {% if node.get_children.count > 0 %}
-                                <span class="text-xs text-gray-500">
-                                    {{ node.get_children.count }} Unter-Lagerorte
+                                <!-- Children count badge -->
+                                {% if not node.is_leaf_node %}
+                                <span class="flex-shrink-0 inline-flex items-center px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full font-medium"
+                                      @click="open = !open"
+                                      role="button">
+                                    {{ node.get_descendant_count }}
+                                    <span class="hidden sm:inline ml-1">Unter-Lagerorte</span>
                                 </span>
                                 {% endif %}
 
-                                <!-- Climate controlled badge -->
                                 {% if node.climate_controlled %}
-                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
-                                    ❄️ Klimatisiert
+                                <span class="flex-shrink-0 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                                    ❄️ Klima
                                 </span>
                                 {% endif %}
 
-                                <!-- Access restricted badge -->
                                 {% if node.access_restricted %}
-                                <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
-                                    🔒 Zugriff beschränkt
+                                <span class="flex-shrink-0 px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+                                    🔒
                                 </span>
                                 {% endif %}
                             </div>
 
-                            <div class="flex items-center gap-2">
-                                <a href="{% url 'locations:detail' node.pk %}" class="text-blue-600 hover:text-blue-800 text-sm">
-                                    👁️
+                            <div class="flex items-center gap-1 ml-2 flex-shrink-0">
+                                <a href="{% url 'locations:detail' node.pk %}" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Details">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 </a>
-                                <a href="{% url 'locations:edit' node.pk %}" class="text-gray-600 hover:text-gray-800 text-sm">
-                                    ✏️
+                                <a href="{% url 'locations:edit' node.pk %}" class="p-1.5 text-gray-500 hover:bg-gray-200 rounded transition-colors" title="Bearbeiten">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 </a>
                             </div>
                         </div>
 
-                        <!-- Children -->
+                        <!-- Children (aufklappbar) -->
                         {% if not node.is_leaf_node %}
-                        <div class="children">
+                        <div x-show="open" x-collapse.duration.200ms class="children">
                             {{ children }}
                         </div>
                         {% endif %}

@@ -101,6 +101,9 @@
                                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Name
                                     </th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Leitung
+                                    </th>
                                     <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Status
                                     </th>
@@ -133,6 +136,23 @@
                                                 </div>
                                             </div>
                                         </td>
+                                        <td class="px-4 py-3">
+                                            <div class="text-sm">
+                                                {% if dept.head %}
+                                                <div class="text-gray-900">
+                                                    <span class="font-medium">FBL:</span> {{ dept.head }}
+                                                </div>
+                                                {% endif %}
+                                                {% if dept.deputy_head %}
+                                                <div class="text-gray-600">
+                                                    <span class="font-medium">Stellv.:</span> {{ dept.deputy_head }}
+                                                </div>
+                                                {% endif %}
+                                                {% if not dept.head and not dept.deputy_head %}
+                                                <span class="text-gray-400">—</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
                                         <td class="px-4 py-3 text-center">
                                             {% if dept.is_active %}
                                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -158,7 +178,7 @@
                                     {% endfor %}
                                 {% else %}
                                 <tr>
-                                    <td colspan="3" class="px-6 py-12 text-center">
+                                    <td colspan="4" class="px-6 py-12 text-center">
                                         <div class="text-4xl mb-4">🏢</div>
                                         <p class="text-lg font-medium text-gray-900 mb-2">Keine Abteilungen gefunden</p>
                                         <p class="text-sm text-gray-600 mb-4">
@@ -205,11 +225,17 @@
                                 </div>
 
                                 <!-- Details -->
-                                {% if dept.description %}
                                 <div class="space-y-1 text-sm text-gray-600 mb-3">
+                                    {% if dept.head %}
+                                    <p><strong>FBL:</strong> {{ dept.head }}</p>
+                                    {% endif %}
+                                    {% if dept.deputy_head %}
+                                    <p><strong>Stellv.:</strong> {{ dept.deputy_head }}</p>
+                                    {% endif %}
+                                    {% if dept.description %}
                                     <p><strong>Beschreibung:</strong> {{ dept.description|truncatewords:15 }}</p>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
 
                                 <!-- Actions -->
                                 <div class="flex gap-2 pt-3 border-t border-gray-200">

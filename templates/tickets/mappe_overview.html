@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Digitale Mappe - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:list' %}" class="text-gray-500 hover:text-gray-700">Leitstelle</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:infomonitor_display' %}" class="text-gray-500 hover:text-gray-700">Info-Monitor</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Digitale Mappe</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-teal-600 to-teal-800 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                    <h1 class="text-2xl font-bold">Digitale Mappe</h1>
+                </div>
+                <p class="text-teal-100">Wichtige Links, Ansprechpartner und Anleitungen f&uuml;r die Leitstelle</p>
+            </div>
+            <a href="{% url 'tickets:infomonitor_display' %}" class="bg-teal-700/50 hover:bg-teal-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Info-Monitor
+            </a>
+        </div>
+    </div>
+
+    <!-- Kacheln -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        <!-- Links -->
+        <a href="{% url 'tickets:mappe_link_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6 group">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="bg-blue-100 text-blue-600 p-3 rounded-lg group-hover:bg-blue-200 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900">Wichtige Links</h2>
+                    <p class="text-sm text-gray-500">{{ link_count }} Eintr&auml;ge</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">URLs und Webseiten, die f&uuml;r den Leitstellenbetrieb wichtig sind.</p>
+        </a>
+
+        <!-- Kontakte -->
+        <a href="{% url 'tickets:mappe_kontakt_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6 group">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="bg-green-100 text-green-600 p-3 rounded-lg group-hover:bg-green-200 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900">Ansprechpartner</h2>
+                    <p class="text-sm text-gray-500">{{ kontakt_count }} Eintr&auml;ge</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">Wichtige Kontaktpersonen mit Telefon und E-Mail.</p>
+        </a>
+
+        <!-- Anleitungen -->
+        <a href="{% url 'tickets:mappe_anleitung_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6 group">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="bg-amber-100 text-amber-600 p-3 rounded-lg group-hover:bg-amber-200 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900">Anleitungen</h2>
+                    <p class="text-sm text-gray-500">{{ anleitung_count }} Eintr&auml;ge</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">Anleitungen und Ma&szlig;nahmen f&uuml;r den Leitstellenbetrieb.</p>
+        </a>
+
+        <!-- Großveranstaltungen -->
+        <a href="{% url 'tickets:mappe_dashboard_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6 group overflow-hidden">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="bg-red-100 text-red-600 p-3 rounded-lg group-hover:bg-red-200 transition-colors flex-shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <h2 class="text-lg font-bold text-gray-900 break-words hyphens-auto" lang="de">Gro&szlig;veranstaltungen</h2>
+                    <p class="text-sm text-gray-500">{{ dashboard_count }} Dashboard{{ dashboard_count|pluralize:"s" }}</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">Dashboards f&uuml;r Gro&szlig;veranstaltungen verwalten.</p>
+        </a>
+
+    </div>
+</div>
+{% endblock %}

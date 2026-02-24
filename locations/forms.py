@@ -5,7 +5,7 @@ Locations Forms
 from django import forms
 from django.core.exceptions import ValidationError
 from mptt.forms import TreeNodeChoiceField
-from .models import Location, LocationType
+from .models import Location, LocationType, LocationBereich, LocationBvsStatus
 
 
 # Typen, bei denen Raum-/Stellplatznummer sinnvoll ist
@@ -19,12 +19,12 @@ TYPES_WITH_ROOM_NUMBER = [
 HIERARCHY_RULES = {
     # Standort/Wache darf nur Root sein (kein Parent)
     LocationType.SITE: [],
-    # Gebäude und Stellflächen müssen unter Standort sein
-    LocationType.BUILDING: [LocationType.SITE],
-    LocationType.AREA: [LocationType.SITE],
+    # Gebäude und Stellflächen müssen unter Standort, NIP oder Leuchtturm sein
+    LocationType.BUILDING: [LocationType.SITE, LocationType.NIP, LocationType.LEUCHTTURM],
+    LocationType.AREA: [LocationType.SITE, LocationType.NIP, LocationType.LEUCHTTURM],
     LocationType.VEHICLE_HALL: [LocationType.SITE],
-    # Räume und Stellplätze müssen unter Gebäude/Stellfläche sein
-    LocationType.ROOM: [LocationType.BUILDING, LocationType.AREA, LocationType.VEHICLE_HALL],
+    # Räume und Stellplätze müssen unter Gebäude/Stellfläche/NIP/Leuchtturm sein
+    LocationType.ROOM: [LocationType.BUILDING, LocationType.AREA, LocationType.VEHICLE_HALL, LocationType.NIP, LocationType.LEUCHTTURM],
     LocationType.PARKING_SPOT: [LocationType.AREA, LocationType.BUILDING, LocationType.VEHICLE_HALL],
     # Regale, Schränke etc. unter Räumen
     LocationType.RACK: [LocationType.ROOM, LocationType.AREA],
@@ -38,6 +38,10 @@ HIERARCHY_RULES = {
     LocationType.VEHICLE: [LocationType.PARKING_SPOT, LocationType.AREA, LocationType.BUILDING, LocationType.ROOM, LocationType.VEHICLE_HALL],
     # Container flexibel
     LocationType.CONTAINER: [LocationType.SITE, LocationType.BUILDING, LocationType.AREA, LocationType.PARKING_SPOT],
+    # Bevölkerungsschutz: NIP und Leuchtturm dürfen Root sein oder unter SITE
+    # None in der Liste = Parent optional
+    LocationType.NIP: [None, LocationType.SITE],
+    LocationType.LEUCHTTURM: [None, LocationType.SITE],
 }
 
 
@@ -63,27 +67,49 @@ class LocationForm(forms.ModelForm):
             'access_restricted', 'access_instructions',
             'climate_controlled', 'temperature_min', 'temperature_max',
             'technical_equipment',
-            'is_active', 'notes'
+            'is_active', 'notes',
+            # Bevölkerungsschutz-Felder
+            'bvs_status', 'bereich', 'capacity_persons', 'opening_hours',
+            'contact_name', 'contact_phone', 'contact_email',
+            'latitude', 'longitude',
+            'power_supply_available', 'heating_available',
+            'water_supply_available', 'communication_available',
         ]
+        TW = 'w-full px-3 py-2 border border-gray-300 rounded-lg'
+        TW_CB = 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
-            'code': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
-            'location_type': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg', 'x-model': 'locationType'}),
-            'description': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg', 'rows': 3}),
-            'street': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
-            'house_number': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
-            'postal_code': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
-            'city': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
-            'capacity': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
-            'capacity_unit': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
-            'access_instructions': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg', 'rows': 2}),
-            'temperature_min': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
-            'temperature_max': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
-            'technical_equipment': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg', 'rows': 3, 'placeholder': 'z.B. Beamer, Prowise-Board, Soundsystem, WLAN'}),
-            'notes': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg', 'rows': 2}),
-            'room_number': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg', 'placeholder': 'z.B. R.102'}),
-            'barcode': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg', 'placeholder': 'Optional - wird sonst automatisch generiert'}),
-            'linked_vehicle': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
+            'name': forms.TextInput(attrs={'class': TW}),
+            'code': forms.TextInput(attrs={'class': TW}),
+            'location_type': forms.Select(attrs={'class': TW, 'x-model': 'locationType'}),
+            'description': forms.Textarea(attrs={'class': TW, 'rows': 3}),
+            'street': forms.TextInput(attrs={'class': TW}),
+            'house_number': forms.TextInput(attrs={'class': TW}),
+            'postal_code': forms.TextInput(attrs={'class': TW}),
+            'city': forms.TextInput(attrs={'class': TW}),
+            'capacity': forms.NumberInput(attrs={'class': TW}),
+            'capacity_unit': forms.TextInput(attrs={'class': TW}),
+            'access_instructions': forms.Textarea(attrs={'class': TW, 'rows': 2}),
+            'temperature_min': forms.NumberInput(attrs={'class': TW}),
+            'temperature_max': forms.NumberInput(attrs={'class': TW}),
+            'technical_equipment': forms.Textarea(attrs={'class': TW, 'rows': 3, 'placeholder': 'z.B. Beamer, Prowise-Board, Soundsystem, WLAN'}),
+            'notes': forms.Textarea(attrs={'class': TW, 'rows': 2}),
+            'room_number': forms.TextInput(attrs={'class': TW, 'placeholder': 'z.B. R.102'}),
+            'barcode': forms.TextInput(attrs={'class': TW, 'placeholder': 'Optional - wird sonst automatisch generiert'}),
+            'linked_vehicle': forms.Select(attrs={'class': TW}),
+            # Bevölkerungsschutz
+            'bvs_status': forms.Select(attrs={'class': TW}),
+            'bereich': forms.Select(attrs={'class': TW}),
+            'capacity_persons': forms.NumberInput(attrs={'class': TW, 'min': '0'}),
+            'opening_hours': forms.Textarea(attrs={'class': TW, 'rows': 2}),
+            'contact_name': forms.TextInput(attrs={'class': TW}),
+            'contact_phone': forms.TextInput(attrs={'class': TW}),
+            'contact_email': forms.EmailInput(attrs={'class': TW}),
+            'latitude': forms.NumberInput(attrs={'class': TW, 'step': '0.000001'}),
+            'longitude': forms.NumberInput(attrs={'class': TW, 'step': '0.000001'}),
+            'power_supply_available': forms.CheckboxInput(attrs={'class': TW_CB}),
+            'heating_available': forms.CheckboxInput(attrs={'class': TW_CB}),
+            'water_supply_available': forms.CheckboxInput(attrs={'class': TW_CB}),
+            'communication_available': forms.CheckboxInput(attrs={'class': TW_CB}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -136,15 +162,19 @@ class LocationForm(forms.ModelForm):
                         'parent': f'{dict(LocationType.choices).get(location_type)} darf keinen übergeordneten Standort haben (nur als Hauptstandort erlaubt).'
                     })
             else:
-                # Muss einen Parent eines bestimmten Typs haben
+                # None in der Liste = Parent ist optional
+                parent_optional = None in allowed_parents
+                actual_allowed = [t for t in allowed_parents if t is not None]
+
                 if not parent:
-                    allowed_names = [str(dict(LocationType.choices).get(t, t)) for t in allowed_parents]
-                    raise ValidationError({
-                        'parent': f'{dict(LocationType.choices).get(location_type)} muss einem übergeordneten Standort zugeordnet sein. '
-                                  f'Erlaubte übergeordnete Typen: {", ".join(allowed_names)}'
-                    })
-                elif parent.location_type not in allowed_parents:
-                    allowed_names = [str(dict(LocationType.choices).get(t, t)) for t in allowed_parents]
+                    if not parent_optional:
+                        allowed_names = [str(dict(LocationType.choices).get(t, t)) for t in actual_allowed]
+                        raise ValidationError({
+                            'parent': f'{dict(LocationType.choices).get(location_type)} muss einem übergeordneten Standort zugeordnet sein. '
+                                      f'Erlaubte übergeordnete Typen: {", ".join(allowed_names)}'
+                        })
+                elif parent.location_type not in actual_allowed:
+                    allowed_names = [str(dict(LocationType.choices).get(t, t)) for t in actual_allowed]
                     raise ValidationError({
                         'parent': f'{dict(LocationType.choices).get(location_type)} kann nicht direkt unter '
                                   f'{parent.get_location_type_display()} "{parent.name}" angelegt werden. '

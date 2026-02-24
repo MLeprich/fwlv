@@ -37,16 +37,18 @@ FILE_CSS = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focu
 
 
 class ProcurementDepartmentForm(forms.ModelForm):
-    """Formular fuer Fachbereiche"""
+    """Formular fuer Fachbereiche (nutzt organization.Department)"""
 
     class Meta:
-        model = ProcurementDepartment
+        from organization.models import Department
+        model = Department
         fields = [
             'name',
-            'code',
+            'abbreviation',
             'description',
             'is_active',
-            'responsible_person',
+            'head',
+            'deputy_head',
             'budget_code',
             'sort_order',
         ]
@@ -55,7 +57,7 @@ class ProcurementDepartmentForm(forms.ModelForm):
                 'class': INPUT_CSS,
                 'placeholder': 'z.B. Atemschutz',
             }),
-            'code': forms.TextInput(attrs={
+            'abbreviation': forms.TextInput(attrs={
                 'class': INPUT_CSS,
                 'placeholder': 'z.B. AS',
             }),
@@ -65,7 +67,8 @@ class ProcurementDepartmentForm(forms.ModelForm):
                 'placeholder': 'Beschreibung des Fachbereichs...',
             }),
             'is_active': forms.CheckboxInput(attrs={'class': CHECKBOX_CSS}),
-            'responsible_person': forms.Select(attrs={'class': SELECT_CSS}),
+            'head': forms.Select(attrs={'class': SELECT_CSS}),
+            'deputy_head': forms.Select(attrs={'class': SELECT_CSS}),
             'budget_code': forms.TextInput(attrs={
                 'class': INPUT_CSS,
                 'placeholder': 'z.B. KST-4711',
@@ -80,11 +83,14 @@ class ProcurementDepartmentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from personnel.models import Person
-        self.fields['responsible_person'].queryset = Person.objects.filter(
+        person_qs = Person.objects.filter(
             is_active=True
         ).order_by('last_name', 'first_name')
-        self.fields['responsible_person'].required = False
-        self.fields['code'].required = False
+        self.fields['head'].queryset = person_qs
+        self.fields['head'].required = False
+        self.fields['deputy_head'].queryset = person_qs
+        self.fields['deputy_head'].required = False
+        self.fields['abbreviation'].required = False
         self.fields['description'].required = False
         self.fields['budget_code'].required = False
 
@@ -197,6 +203,7 @@ class PurchaseOrderForm(forms.ModelForm):
             'anbieter_freitext',
             'verwendung_bs_fzg',
             'verwendung_rd_fzg',
+            'verwendung_ks_fzg',
             'verwendung_allgemein',
             'requested_by',
             'vertreter',
@@ -223,6 +230,7 @@ class PurchaseOrderForm(forms.ModelForm):
             }),
             'verwendung_bs_fzg': forms.Select(attrs={'class': SELECT_CSS}),
             'verwendung_rd_fzg': forms.Select(attrs={'class': SELECT_CSS}),
+            'verwendung_ks_fzg': forms.Select(attrs={'class': SELECT_CSS}),
             'verwendung_allgemein': forms.Select(attrs={'class': SELECT_CSS}),
             'requested_by': forms.Select(attrs={'class': SELECT_CSS}),
             'vertreter': forms.Select(attrs={'class': SELECT_CSS}),
@@ -262,6 +270,10 @@ class PurchaseOrderForm(forms.ModelForm):
             is_active=True, rubrik=VehicleRubrik.RD
         ).order_by('call_sign')
         self.fields['verwendung_rd_fzg'].required = False
+        self.fields['verwendung_ks_fzg'].queryset = Vehicle.objects.filter(
+            is_active=True, rubrik=VehicleRubrik.KS
+        ).order_by('call_sign')
+        self.fields['verwendung_ks_fzg'].required = False
 
         # Personen
         from personnel.models import Person
@@ -281,8 +293,9 @@ class PurchaseOrderForm(forms.ModelForm):
         self.fields['delivery_location'].required = False
         self.fields['delivery_location'].label = _('Lieferort')
 
-        # Fachbereich
-        self.fields['department'].queryset = ProcurementDepartment.objects.filter(
+        # Fachbereich (organization.Department)
+        from organization.models import Department
+        self.fields['department'].queryset = Department.objects.filter(
             is_active=True
         ).order_by('sort_order', 'name')
         self.fields['department'].required = False

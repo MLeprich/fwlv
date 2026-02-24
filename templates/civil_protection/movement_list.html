@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}KatS-Lagerbewegungen - FLVS{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bevölkerungsschutz</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Lagerbewegungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">KatS-Lagerbewegungen</h1>
+        {% if perms.civil_protection.add_katsstockmovement %}
+        <a href="{% url 'civil_protection:movement_create' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">+ Neue Bewegung</a>
+        {% endif %}
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artikel</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Menge</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Von</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nach</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referenz</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for m in movement_list %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 text-sm text-gray-600">{{ m.movement_date|date:"d.m.Y H:i" }}</td>
+                    <td class="px-6 py-4 text-sm"><span class="px-2 py-1 rounded-full text-xs font-medium {% if m.movement_type == 'incoming' %}bg-green-100 text-green-700{% elif m.movement_type == 'outgoing' %}bg-red-100 text-red-700{% elif m.movement_type == 'transfer' %}bg-blue-100 text-blue-700{% else %}bg-gray-100 text-gray-700{% endif %}">{{ m.get_movement_type_display }}</span></td>
+                    <td class="px-6 py-4 text-sm text-gray-900">{% if m.equipment_master %}{{ m.equipment_master.name }}{% elif m.medication_master %}{{ m.medication_master.name }}{% else %}-{% endif %}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 font-medium">{{ m.quantity }} {{ m.unit }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">{{ m.from_location|default:"-" }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">{{ m.to_location|default:"-" }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">{{ m.reference_number|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="px-6 py-12 text-center text-gray-500">Keine Lagerbewegungen vorhanden.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if is_paginated %}
+    <div class="mt-4 flex justify-center">
+        <nav class="flex gap-1">
+            {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-white border rounded-lg hover:bg-gray-50">&laquo;</a>{% endif %}
+            <span class="px-3 py-2 bg-blue-600 text-white rounded-lg">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-white border rounded-lg hover:bg-gray-50">&raquo;</a>{% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

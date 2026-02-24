@@ -499,11 +499,7 @@
                         <p class="font-medium text-gray-900">{{ handover.get_handover_type_display }}</p>
                     </div>
                     <div>
-                        <p class="text-gray-600">Übergeben von</p>
-                        <p class="font-medium text-gray-900">{{ handover.handover_from|default:"Erstinbetriebnahme" }}</p>
-                    </div>
-                    <div>
-                        <p class="text-gray-600">Übergeben an</p>
+                        <p class="text-gray-600">Übernommen von</p>
                         <p class="font-medium text-gray-900">{{ handover.handover_to }}</p>
                     </div>
                     <div>
@@ -532,17 +528,6 @@
                         <span class="text-sm text-gray-600">Empfänger ausstehend</span>
                         {% endif %}
                     </div>
-                    {% if handover.handover_from %}
-                    <div class="flex items-center">
-                        {% if handover.confirmed_by_giver %}
-                        <span class="text-green-600 text-xl mr-2">✅</span>
-                        <span class="text-sm text-green-700 font-medium">Übergeber hat bestätigt</span>
-                        {% else %}
-                        <span class="text-gray-400 text-xl mr-2">⬜</span>
-                        <span class="text-sm text-gray-600">Übergeber ausstehend</span>
-                        {% endif %}
-                    </div>
-                    {% endif %}
                 </div>
             </div>
 

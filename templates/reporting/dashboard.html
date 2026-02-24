@@ -412,6 +412,7 @@
                         </div>
                     </div>
 
+                    {% if person_sections.private_contact_visible %}
                     <!-- Private Kontaktdaten -->
                     <div class="border border-gray-200 rounded-lg overflow-hidden">
                         <div class="bg-red-50 px-4 py-3 border-b border-gray-200">
@@ -433,7 +434,9 @@
                             </table>
                         </div>
                     </div>
+                    {% endif %}
 
+                    {% if person_sections.work_contact_visible and modules.phonebook_enabled %}
                     <!-- Dienstliche Kontaktdaten -->
                     <div class="border border-gray-200 rounded-lg overflow-hidden">
                         <div class="bg-indigo-50 px-4 py-3 border-b border-gray-200">
@@ -451,7 +454,9 @@
                             </table>
                         </div>
                     </div>
+                    {% endif %}
 
+                    {% if person_sections.emergency_contact_visible %}
                     <!-- Notfallkontakt -->
                     <div class="border border-gray-200 rounded-lg overflow-hidden">
                         <div class="bg-orange-50 px-4 py-3 border-b border-gray-200">
@@ -471,6 +476,7 @@
                             </table>
                         </div>
                     </div>
+                    {% endif %}
 
                     <!-- Dienstliche Laufbahn -->
                     <div class="border border-gray-200 rounded-lg overflow-hidden">
@@ -484,18 +490,25 @@
                                 <tbody class="divide-y divide-gray-100">
                                     <tr><td class="py-1.5 text-gray-600">Eintrittsdatum</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
                                     <tr><td class="py-1.5 text-gray-600">Austrittsdatum</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    {% if person_sections.organization_visible %}
                                     <tr><td class="py-1.5 text-gray-600">Eintritt JF / FF / BF</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
                                     <tr><td class="py-1.5 text-gray-600">Vorherige Feuerwehr</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    {% endif %}
                                     <tr><td class="py-1.5 text-gray-600">Dienstgrad-Historie</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
                                     <tr><td class="py-1.5 text-gray-600">Qualifikationen / Zertifikate</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
                                     <tr><td class="py-1.5 text-gray-600">Pr&uuml;fungen (G26 etc.)</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
                                     <tr><td class="py-1.5 text-gray-600">Pflichtstunden</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
                                     <tr><td class="py-1.5 text-gray-600">Dienstunterbrechungen</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    {% if person_sections.driving_license_visible and modules.driving_license_enabled %}
+                                    <tr><td class="py-1.5 text-gray-600">F&uuml;hrerscheinklassen</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    <tr><td class="py-1.5 text-gray-600">F&uuml;hrerschein-Ablaufdaten</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    {% endif %}
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
+                    {% if person_sections.user_photo_visible %}
                     <!-- System- & Nutzungsdaten -->
                     <div class="border border-gray-200 rounded-lg overflow-hidden">
                         <div class="bg-purple-50 px-4 py-3 border-b border-gray-200">
@@ -511,11 +524,14 @@
                                     <tr><td class="py-1.5 text-gray-600">Letzter Login</td><td class="py-1.5 text-right text-gray-400 text-xs">Automatisch</td></tr>
                                     <tr><td class="py-1.5 text-gray-600">Erstellt am / von</td><td class="py-1.5 text-right text-gray-400 text-xs">Automatisch</td></tr>
                                     <tr><td class="py-1.5 text-gray-600">Ge&auml;ndert am / von</td><td class="py-1.5 text-right text-gray-400 text-xs">Automatisch</td></tr>
+                                    {% if person_sections.notes_visible %}
                                     <tr><td class="py-1.5 text-gray-600">Notizen (intern)</td><td class="py-1.5 text-right text-gray-400 text-xs">Optional</td></tr>
+                                    {% endif %}
                                 </tbody>
                             </table>
                         </div>
                     </div>
+                    {% endif %}
 
                 </div>
 

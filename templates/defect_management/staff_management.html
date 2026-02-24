@@ -1,0 +1,376 @@
+{% extends 'base.html' %}
+
+{% block title %}Personal-Verwaltung - Mängelwesen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'defect_management:dashboard' %}" class="text-gray-500 hover:text-gray-700">Mängelwesen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Personal-Verwaltung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-red-600 to-orange-700 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <h1 class="text-3xl font-bold">Personal-Verwaltung</h1>
+                </div>
+                <p class="text-red-100 text-lg">
+                    Mängelmelder und Mängelbearbeiter für das Mängelwesen-Modul verwalten
+                </p>
+            </div>
+            <div class="hidden lg:block">
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20">
+                    <p class="text-red-100 text-sm mb-1">Gesamt-Personal</p>
+                    <p class="text-4xl font-bold">{{ total_staff }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-600">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Mängelbearbeiter</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ editors_count }}</p>
+                </div>
+                <div class="bg-red-100 rounded-full p-3">
+                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-3">Voller CRUD-Zugriff + Zuweisung</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-600">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Mängelmelder</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ reporters_count }}</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-3">Lesen + Mängel melden</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-600">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Verfügbare Benutzer</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ available_users.count }}</p>
+                </div>
+                <div class="bg-purple-100 rounded-full p-3">
+                    <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-3">Noch nicht zugewiesen</p>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Mängelbearbeiter (Editors) -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                <span>Mängelbearbeiter ({{ editors_count }})</span>
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Bearbeiter können Mängel einsehen, bearbeiten, zuweisen und schliessen.
+            </p>
+
+            {% if editors %}
+            <div class="space-y-2">
+                {% for editor in editors %}
+                <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-900">{{ editor.get_full_name }}</p>
+                            <p class="text-xs text-gray-500">{{ editor.username }}</p>
+                        </div>
+                        {% if is_module_admin %}
+                        <div class="flex gap-1">
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="downgrade">
+                                <input type="hidden" name="user_id" value="{{ editor.id }}">
+                                <button type="submit"
+                                        class="px-2 py-1 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded text-xs"
+                                        title="Zu Mängelmelder herabstufen"
+                                        onclick="return confirm('{{ editor.get_full_name }} zu Mängelmelder herabstufen?')">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                                </button>
+                            </form>
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="remove">
+                                <input type="hidden" name="user_id" value="{{ editor.id }}">
+                                <button type="submit"
+                                        class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs"
+                                        title="Entfernen"
+                                        onclick="return confirm('{{ editor.get_full_name }} aus dem Team entfernen?')">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                <p class="text-sm mt-2">Noch keine Bearbeiter zugewiesen</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Mängelmelder (Reporters) -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+                <span>Mängelmelder ({{ reporters_count }})</span>
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Melder können Mängel einsehen und neue Mängel erfassen.
+            </p>
+
+            {% if reporters %}
+            <div class="space-y-2">
+                {% for reporter in reporters %}
+                <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-900">{{ reporter.get_full_name }}</p>
+                            <p class="text-xs text-gray-500">{{ reporter.username }}</p>
+                        </div>
+                        {% if is_module_admin %}
+                        <div class="flex gap-1">
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="upgrade">
+                                <input type="hidden" name="user_id" value="{{ reporter.id }}">
+                                <button type="submit"
+                                        class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs"
+                                        title="Zu Mängelbearbeiter hochstufen"
+                                        onclick="return confirm('{{ reporter.get_full_name }} zu Mängelbearbeiter hochstufen?')">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                                </button>
+                            </form>
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="remove">
+                                <input type="hidden" name="user_id" value="{{ reporter.id }}">
+                                <button type="submit"
+                                        class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs"
+                                        title="Entfernen"
+                                        onclick="return confirm('{{ reporter.get_full_name }} aus dem Team entfernen?')">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+                <p class="text-sm mt-2">Noch keine Melder zugewiesen</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Zuweisung (Assignment Form) -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+                <span>Benutzer zuweisen</span>
+            </h2>
+
+            {% if is_module_admin %}
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign">
+
+                <!-- Benutzer mit Suchfeld -->
+                <div x-data="{ open: false, search: '', selected: null, users: [] }" x-init="
+                    users = [
+                        {% for user in all_users %}
+                        {
+                            value: '{{ user.id }}',
+                            name: '{{ user.get_full_name|escapejs }}',
+                            username: '{{ user.username|escapejs }}',
+                            email: '{{ user.email|escapejs }}'
+                        }{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ];
+                ">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Benutzer auswählen:
+                    </label>
+
+                    <input type="hidden" name="user_id" id="user_id_hidden" required :value="selected ? selected.value : ''">
+
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-left bg-white flex items-center justify-between"
+                        >
+                            <span class="truncate">
+                                <span x-show="!selected" class="text-gray-500">Benutzer auswählen...</span>
+                                <span x-show="selected" x-text="selected ? `${selected.name} (${selected.username})` : ''"></span>
+                            </span>
+                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-96 overflow-hidden"
+                        >
+                            <div class="p-2 border-b border-gray-200 sticky top-0 bg-white">
+                                <input
+                                    type="text"
+                                    x-model="search"
+                                    @click.stop
+                                    placeholder="Benutzer suchen..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm"
+                                >
+                            </div>
+
+                            <div class="overflow-y-auto max-h-80">
+                                <template x-for="user in users.filter(u => {
+                                    const s = search.toLowerCase();
+                                    return u.name.toLowerCase().includes(s) ||
+                                           u.username.toLowerCase().includes(s) ||
+                                           u.email.toLowerCase().includes(s);
+                                })" :key="user.value">
+                                    <button
+                                        type="button"
+                                        @click="selected = user; open = false; search = ''"
+                                        class="w-full text-left px-4 py-3 hover:bg-red-50 border-b border-gray-100 last:border-0"
+                                        :class="selected && selected.value === user.value ? 'bg-red-100' : ''"
+                                    >
+                                        <div class="font-medium text-gray-900" x-text="user.name"></div>
+                                        <div class="text-xs text-gray-500 mt-0.5">
+                                            <span x-text="user.username"></span>
+                                            <span x-show="user.email"> &bull; </span>
+                                            <span x-text="user.email"></span>
+                                        </div>
+                                    </button>
+                                </template>
+                                <div
+                                    x-show="users.filter(u => {
+                                        const s = search.toLowerCase();
+                                        return u.name.toLowerCase().includes(s) ||
+                                               u.username.toLowerCase().includes(s) ||
+                                               u.email.toLowerCase().includes(s);
+                                    }).length === 0"
+                                    class="px-4 py-8 text-center text-gray-500 text-sm"
+                                >
+                                    Keine Benutzer gefunden
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Rolle:
+                    </label>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-red-50 cursor-pointer">
+                            <input type="radio" name="role" value="editor" required class="mr-3 text-red-600 focus:ring-red-500">
+                            <div>
+                                <p class="font-medium text-gray-900">Mängelbearbeiter</p>
+                                <p class="text-xs text-gray-500">Volle CRUD-Rechte + Zuweisung</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-orange-50 cursor-pointer">
+                            <input type="radio" name="role" value="reporter" required class="mr-3 text-orange-600 focus:ring-orange-500">
+                            <div>
+                                <p class="font-medium text-gray-900">Mängelmelder</p>
+                                <p class="text-xs text-gray-500">Lesen + Mängel melden</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-3 font-medium transition-colors">
+                    Benutzer zuweisen
+                </button>
+            </form>
+
+            <!-- Help Box -->
+            <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="flex items-start gap-2">
+                    <svg class="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <h4 class="font-bold text-yellow-900 text-sm mb-1">Hinweise</h4>
+                        <ul class="text-xs text-yellow-800 space-y-1">
+                            <li>Mängelbearbeiter können Mängel bearbeiten, zuweisen und schliessen</li>
+                            <li>Mängelmelder können Mängel einsehen und neue melden</li>
+                            <li>Benutzer können jederzeit hoch-/herabgestuft werden</li>
+                            <li>Änderungen werden sofort wirksam</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p class="text-sm text-yellow-800">
+                    Sie benötigen Modulverantwortlichen-Rechte, um Personal zu verwalten.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
+{% endblock %}

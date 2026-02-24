@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Link bearbeiten - Digitale Mappe - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:list' %}" class="text-gray-500 hover:text-gray-700">Leitstelle</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:infomonitor_display' %}" class="text-gray-500 hover:text-gray-700">Info-Monitor</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:mappe_overview' %}" class="text-gray-500 hover:text-gray-700">Digitale Mappe</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:mappe_link_list' %}" class="text-gray-500 hover:text-gray-700">Links</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Bearbeiten</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="bg-indigo-50 border-b border-indigo-200 px-6 py-4 rounded-t-lg">
+            <h1 class="text-lg font-bold text-indigo-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                "{{ object.title }}" bearbeiten
+            </h1>
+        </div>
+        <div class="p-6">
+            {% if form.errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg mb-6">
+                <div class="flex">
+                    <span class="text-red-600 font-bold mr-2">Fehler:</span>
+                    <div class="text-sm text-red-700">
+                        {% for field, errors in form.errors.items %}
+                            <p>{{ field }}: {{ errors.0 }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Titel *</label>
+                    {{ form.title }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">URL *</label>
+                    {{ form.url }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                    {{ form.description }}
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Reihenfolge</label>
+                        {{ form.order }}
+                    </div>
+                    <div class="flex items-center pt-6">
+                        <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            {{ form.is_active }}
+                            Aktiv
+                        </label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <a href="{% url 'tickets:mappe_link_list' %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                        Abbrechen
+                    </a>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+                        Speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

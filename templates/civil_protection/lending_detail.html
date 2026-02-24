@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% block title %}{{ lending.lending_number }} - FLVS{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bevölkerungsschutz</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:lending_list' %}" class="text-gray-500 hover:text-gray-700">Ausleihen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ lending.lending_number }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ lending.lending_number }}</h1>
+            <p class="text-sm text-gray-500 mt-1">{{ lending.get_borrower_display }}{% if lending.borrower_organization %} &ndash; {{ lending.borrower_organization }}{% endif %}</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+            {% if lending.status != 'zurueckgegeben' and perms.civil_protection.change_katslending %}
+            <a href="{% url 'civil_protection:lending_return' lending.pk %}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">Rückgabe erfassen</a>
+            {% endif %}
+            <a href="{% url 'civil_protection:lending_ausgabe_pdf' lending.pk %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium" target="_blank">Ausgabe-PDF</a>
+            {% if lending.actual_return_date %}
+            <a href="{% url 'civil_protection:lending_rueckgabe_pdf' lending.pk %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium" target="_blank">Rückgabe-PDF</a>
+            {% endif %}
+            {% if perms.civil_protection.change_katslending %}
+            <a href="{% url 'civil_protection:lending_update' lending.pk %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Bearbeiten</a>
+            {% endif %}
+            <a href="{% url 'civil_protection:lending_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Zurück</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Hauptdaten -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Ausleihe-Daten</h2>
+                <dl class="grid grid-cols-2 gap-4">
+                    <div>
+                        <dt class="text-sm text-gray-500">Ausleihe-Nr.</dt>
+                        <dd class="text-sm font-mono font-medium">{{ lending.lending_number }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Status</dt>
+                        <dd class="text-sm">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium
+                                {% if lending.status == 'offen' %}bg-yellow-100 text-yellow-700
+                                {% elif lending.status == 'ausgegeben' %}bg-blue-100 text-blue-700
+                                {% elif lending.status == 'zurueckgegeben' %}bg-green-100 text-green-700
+                                {% elif lending.status == 'ueberfaellig' %}bg-red-100 text-red-700
+                                {% endif %}">{{ lending.get_status_display }}</span>
+                            {% if lending.is_overdue and lending.status != 'zurueckgegeben' %}
+                            <span class="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Überfällig!</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Bereich</dt>
+                        <dd class="text-sm">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium {% if lending.bereich == 'bund' %}bg-blue-100 text-blue-700{% elif lending.bereich == 'land' %}bg-green-100 text-green-700{% else %}bg-amber-100 text-amber-700{% endif %}">{{ lending.get_bereich_display }}</span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Verwendungszweck</dt>
+                        <dd class="text-sm">{{ lending.purpose|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Ausgabedatum</dt>
+                        <dd class="text-sm font-medium">{{ lending.lending_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Geplantes Rückgabedatum</dt>
+                        <dd class="text-sm font-medium {% if lending.is_overdue and lending.status != 'zurueckgegeben' %}text-red-600{% endif %}">{{ lending.expected_return_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% if lending.actual_return_date %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Tatsächliches Rückgabedatum</dt>
+                        <dd class="text-sm font-medium text-green-600">{{ lending.actual_return_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+                {% if lending.notes %}
+                <div class="mt-4 pt-4 border-t">
+                    <h3 class="text-sm font-medium text-gray-700 mb-1">Notizen</h3>
+                    <p class="text-sm text-gray-600 whitespace-pre-line">{{ lending.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Positionen -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Ausgeliehene Artikel ({{ items|length }})</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artikel</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">KatS-Ausrüstung</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Menge</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Zurückgegeben</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zustand (Ausgabe)</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zustand (Rückgabe)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {% for item in items %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm text-gray-600">{{ forloop.counter }}</td>
+                                <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ item.item_name }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-600">{{ item.equipment_master|default:"-" }}</td>
+                                <td class="px-4 py-3 text-sm text-right text-gray-900">{{ item.quantity }}</td>
+                                <td class="px-4 py-3 text-sm text-right {% if item.is_fully_returned %}text-green-600{% elif item.quantity_returned > 0 %}text-yellow-600{% else %}text-gray-400{% endif %}">
+                                    {{ item.quantity_returned }}
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-600">{{ item.condition_out|default:"-" }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-600">{{ item.condition_in|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">Keine Positionen vorhanden.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Ausleihender</h2>
+                <dl class="space-y-3">
+                    {% if lending.borrower %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Interne Person</dt>
+                        <dd class="text-sm font-medium">{{ lending.borrower }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if lending.borrower_name %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Name</dt>
+                        <dd class="text-sm font-medium">{{ lending.borrower_name }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if lending.borrower_organization %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Organisation</dt>
+                        <dd class="text-sm">{{ lending.borrower_organization }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if lending.borrower_phone %}
+                    <div>
+                        <dt class="text-sm text-gray-500">Telefon</dt>
+                        <dd class="text-sm"><a href="tel:{{ lending.borrower_phone }}" class="text-blue-600 hover:text-blue-800">{{ lending.borrower_phone }}</a></dd>
+                    </div>
+                    {% endif %}
+                    {% if lending.borrower_email %}
+                    <div>
+                        <dt class="text-sm text-gray-500">E-Mail</dt>
+                        <dd class="text-sm"><a href="mailto:{{ lending.borrower_email }}" class="text-blue-600 hover:text-blue-800">{{ lending.borrower_email }}</a></dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Metadaten</h2>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm text-gray-500">Erstellt von</dt>
+                        <dd class="text-sm">{{ lending.created_by|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Erstellt am</dt>
+                        <dd class="text-sm">{{ lending.created_at|date:"d.m.Y H:i" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Zuletzt bearbeitet</dt>
+                        <dd class="text-sm">{{ lending.updated_at|date:"d.m.Y H:i" }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

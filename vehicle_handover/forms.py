@@ -156,7 +156,6 @@ class VehicleHandoverForm(forms.ModelForm):
         fields = [
             'vehicle',
             'checklist_template',
-            'handover_from',
             'handover_to',
             'handover_type',
             'handover_date',
@@ -171,9 +170,6 @@ class VehicleHandoverForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
             }),
             'checklist_template': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
-            }),
-            'handover_from': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
             }),
             'handover_to': forms.Select(attrs={
@@ -225,7 +221,6 @@ class VehicleHandoverForm(forms.ModelForm):
         elif step == 2:
             # Diese Felder wurden bereits in Step 1 gesetzt (sind im Objekt vorhanden)
             self.fields['vehicle'].required = False
-            self.fields['handover_from'].required = False
             self.fields['handover_to'].required = False
             self.fields['handover_type'].required = False
             self.fields['handover_date'].required = False
@@ -386,6 +381,36 @@ HandoverDefectFormSet = inlineformset_factory(
     min_num=0,
     validate_min=False,
 )
+
+
+# ============================================================================
+# Öffentliche Formulare (ohne Login)
+# ============================================================================
+
+class PublicVehicleHandoverStep1Form(VehicleHandoverForm):
+    """Öffentliches Formular für Fahrzeugübergabe Step 1 mit Melder-Daten"""
+
+    reporter_first_name = forms.CharField(
+        max_length=100,
+        label=_('Vorname'),
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+            'placeholder': _('Ihr Vorname'),
+        }),
+    )
+    reporter_last_name = forms.CharField(
+        max_length=100,
+        label=_('Nachname'),
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+            'placeholder': _('Ihr Nachname'),
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # handover_to nicht benötigt — der Melder IST die übernehmende Person
+        self.fields['handover_to'].required = False
 
 
 # ===== 360° Fahrzeuginnenraum-Verwaltung =====

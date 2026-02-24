@@ -370,6 +370,121 @@
                 </div>
             </div>
 
+            <!-- Bevölkerungsschutz (nur NIP + Leuchtturm) -->
+            <div class="border-b border-gray-200 pb-6" x-show="locationType === 'nip' || locationType === 'leuchtturm'" x-cloak>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Bevölkerungsschutz</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.bvs_status.label }}</label>
+                        {{ form.bvs_status }}
+                        {% if form.bvs_status.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.bvs_status.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.bereich.label }}</label>
+                        {{ form.bereich }}
+                        {% if form.bereich.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.bereich.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.capacity_persons.label }}</label>
+                        {{ form.capacity_persons }}
+                        {% if form.capacity_persons.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.capacity_persons.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.opening_hours.label }}</label>
+                        {{ form.opening_hours }}
+                        {% if form.opening_hours.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.opening_hours.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ansprechpartner (nur NIP + Leuchtturm) -->
+            <div class="border-b border-gray-200 pb-6" x-show="locationType === 'nip' || locationType === 'leuchtturm'" x-cloak>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Ansprechpartner</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.contact_name.label }}</label>
+                        {{ form.contact_name }}
+                        {% if form.contact_name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.contact_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.contact_phone.label }}</label>
+                        {{ form.contact_phone }}
+                        {% if form.contact_phone.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.contact_phone.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.contact_email.label }}</label>
+                        {{ form.contact_email }}
+                        {% if form.contact_email.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.contact_email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- GPS-Koordinaten (nur NIP + Leuchtturm) -->
+            <div class="border-b border-gray-200 pb-6" x-show="locationType === 'nip' || locationType === 'leuchtturm'" x-cloak>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">GPS-Koordinaten</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.latitude.label }}</label>
+                        {{ form.latitude }}
+                        {% if form.latitude.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.latitude.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.longitude.label }}</label>
+                        {{ form.longitude }}
+                        {% if form.longitude.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.longitude.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Infrastruktur (nur Leuchtturm) -->
+            <div class="border-b border-gray-200 pb-6" x-show="locationType === 'leuchtturm'" x-cloak>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Infrastruktur</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.power_supply_available }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.power_supply_available.label }}</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.heating_available }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.heating_available.label }}</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.water_supply_available }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.water_supply_available.label }}</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            {{ form.communication_available }}
+                            <span class="ml-2 text-sm text-gray-700">{{ form.communication_available.label }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Status & Notizen -->
             <div>
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Status & Notizen</h2>

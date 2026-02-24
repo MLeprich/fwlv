@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if is_new %}Neues Dashboard{% else %}{{ form.instance.name }} bearbeiten{% endif %} - Großveranstaltungen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:list' %}" class="text-gray-500 hover:text-gray-700">Leitstelle</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:infomonitor_display' %}" class="text-gray-500 hover:text-gray-700">Info-Monitor</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:mappe_overview' %}" class="text-gray-500 hover:text-gray-700">Digitale Mappe</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:mappe_dashboard_list' %}" class="text-gray-500 hover:text-gray-700">Gro&szlig;veranstaltungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if is_new %}Neues Dashboard{% else %}Bearbeiten{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-6" x-data="gvDashboardForm()">
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="bg-red-50 border-b border-red-200 px-6 py-4 rounded-t-lg">
+            <h1 class="text-lg font-bold text-red-800 flex items-center gap-2">
+                {% if is_new %}
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Neues Dashboard erstellen
+                {% else %}
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                {{ form.instance.name }} bearbeiten
+                {% endif %}
+            </h1>
+        </div>
+
+        <div class="p-6">
+            {% if form.errors or abschnitt_formset.errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg mb-6">
+                <div class="flex">
+                    <span class="text-red-600 font-bold mr-2">Fehler:</span>
+                    <div class="text-sm text-red-700">
+                        {% for field, errors in form.errors.items %}
+                            <p>{{ field }}: {{ errors.0 }}</p>
+                        {% endfor %}
+                        {% if abschnitt_formset.non_form_errors %}
+                            {% for error in abschnitt_formset.non_form_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+
+                <!-- Grunddaten -->
+                <div class="space-y-4">
+                    <h2 class="text-base font-semibold text-gray-800 border-b border-gray-200 pb-2">Grunddaten</h2>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                        {{ form.name }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                        {{ form.description }}
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        {{ form.is_active }}
+                        <label class="text-sm font-medium text-gray-700">Aktiv</label>
+                    </div>
+                </div>
+
+                <!-- Typ-Auswahl -->
+                <div class="space-y-4">
+                    <h2 class="text-base font-semibold text-gray-800 border-b border-gray-200 pb-2">Dashboard-Typ</h2>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="relative flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors"
+                               :class="dashboardType === 'pdf' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'">
+                            <input type="radio" name="dashboard_type" value="pdf"
+                                   x-model="dashboardType"
+                                   class="mt-0.5 mr-3 text-blue-600 focus:ring-blue-500">
+                            <div>
+                                <span class="block text-sm font-medium text-gray-900">PDF-Dokument</span>
+                                <span class="block text-xs text-gray-500 mt-1">PDF-Datei hochladen und im Browser anzeigen</span>
+                            </div>
+                        </label>
+
+                        <label class="relative flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors"
+                               :class="dashboardType === 'dynamic' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'">
+                            <input type="radio" name="dashboard_type" value="dynamic"
+                                   x-model="dashboardType"
+                                   class="mt-0.5 mr-3 text-green-600 focus:ring-green-500">
+                            <div>
+                                <span class="block text-sm font-medium text-gray-900">Dynamisches Layout</span>
+                                <span class="block text-xs text-gray-500 mt-1">Karte, Einheiten und Textabschnitte</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- PDF-Sektion -->
+                <div x-show="dashboardType === 'pdf'" x-collapse class="space-y-4">
+                    <h2 class="text-base font-semibold text-gray-800 border-b border-gray-200 pb-2">PDF-Datei</h2>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">PDF hochladen *</label>
+                        {{ form.pdf_file }}
+                        {% if form.instance.pdf_file %}
+                        <p class="text-xs text-gray-500 mt-1">Aktuelle Datei: {{ form.instance.pdf_file.name }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Dynamik-Sektion -->
+                <div x-show="dashboardType === 'dynamic'" x-collapse class="space-y-6">
+
+                    <!-- Karte & Info-Datei -->
+                    <div class="space-y-4">
+                        <h2 class="text-base font-semibold text-gray-800 border-b border-gray-200 pb-2">Karte &amp; Info-Datei (linke Spalte)</h2>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Kartenausschnitt (Bild)</label>
+                            {{ form.map_image }}
+                            {% if form.instance.map_image %}
+                            <div class="mt-2">
+                                <img src="{{ form.instance.map_image.url }}" alt="Aktuelle Karte" class="max-h-32 rounded border border-gray-200">
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Info-Datei (Bild oder PDF)</label>
+                            {{ form.info_datei }}
+                            <p class="text-xs text-gray-500 mt-1">Funkskizze, Lagekarte oder andere Informationen als Bild oder PDF-Datei.</p>
+                            {% if form.instance.info_datei %}
+                            <div class="mt-2">
+                                {% if form.instance.info_datei.name|lower|slice:"-4:" == ".pdf" %}
+                                <p class="text-xs text-gray-600 flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                    Aktuelle Datei: {{ form.instance.info_datei.name }}
+                                </p>
+                                {% else %}
+                                <img src="{{ form.instance.info_datei.url }}" alt="Aktuelle Info-Datei" class="max-h-32 rounded border border-gray-200">
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Abschnitte -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between border-b border-gray-200 pb-2">
+                            <h2 class="text-base font-semibold text-gray-800">Textabschnitte (rechte Spalte)</h2>
+                            <button type="button" @click="addAbschnitt()" class="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Abschnitt hinzuf&uuml;gen
+                            </button>
+                        </div>
+
+                        {{ abschnitt_formset.management_form }}
+
+                        <div id="abschnitt-container">
+                            {% for aform in abschnitt_formset %}
+                            <div class="abschnitt-row bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4 {% if aform.DELETE.value %}hidden{% endif %}" data-index="{{ forloop.counter0 }}">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-sm font-medium text-gray-600">Abschnitt {{ forloop.counter }}</span>
+                                    <button type="button" onclick="removeAbschnittRow(this)" class="text-red-500 hover:text-red-700 text-xs font-medium flex items-center gap-1">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                        Entfernen
+                                    </button>
+                                </div>
+                                {% for hidden in aform.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">&Uuml;berschrift</label>
+                                        {{ aform.title }}
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Inhalt</label>
+                                        {{ aform.content }}
+                                    </div>
+                                </div>
+                                <div class="hidden">
+                                    {{ aform.DELETE }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <a href="{% url 'tickets:mappe_dashboard_list' %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                        Abbrechen
+                    </a>
+                    <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        {% if is_new %}Dashboard erstellen{% else %}Speichern{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function gvDashboardForm() {
+    return {
+        dashboardType: '{{ form.instance.dashboard_type|default:"dynamic" }}',
+        addAbschnitt() {
+            const container = document.getElementById('abschnitt-container');
+            const totalForms = document.getElementById('id_abschnitte-TOTAL_FORMS');
+            const idx = parseInt(totalForms.value);
+
+            const tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
+
+            const html = `
+                <div class="abschnitt-row bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4" data-index="${idx}">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-medium text-gray-600">Neuer Abschnitt</span>
+                        <button type="button" onclick="removeAbschnittRow(this)" class="text-red-500 hover:text-red-700 text-xs font-medium flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            Entfernen
+                        </button>
+                    </div>
+                    <input type="hidden" name="abschnitte-${idx}-id" id="id_abschnitte-${idx}-id">
+                    <input type="hidden" name="abschnitte-${idx}-order" id="id_abschnitte-${idx}-order" value="${idx}">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">&Uuml;berschrift</label>
+                            <input type="text" name="abschnitte-${idx}-title" id="id_abschnitte-${idx}-title"
+                                   class="${tw}" placeholder="&Uuml;berschrift" maxlength="300">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Inhalt</label>
+                            <textarea name="abschnitte-${idx}-content" id="id_abschnitte-${idx}-content"
+                                      class="${tw}" rows="4" placeholder="Inhalt..."></textarea>
+                        </div>
+                    </div>
+                    <div class="hidden">
+                        <input type="checkbox" name="abschnitte-${idx}-DELETE" id="id_abschnitte-${idx}-DELETE">
+                    </div>
+                </div>`;
+
+            container.insertAdjacentHTML('beforeend', html);
+            totalForms.value = idx + 1;
+        }
+    }
+}
+
+function removeAbschnittRow(btn) {
+    const row = btn.closest('.abschnitt-row');
+    const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+    if (deleteCheckbox) {
+        deleteCheckbox.checked = true;
+        row.classList.add('hidden');
+    } else {
+        row.remove();
+    }
+}
+</script>
+{% endblock %}

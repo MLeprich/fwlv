@@ -1,0 +1,446 @@
+{% extends 'base.html' %}
+{% block title %}Neue Lagerbewegung - FLVS{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bevölkerungsschutz</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:movement_list' %}" class="text-gray-500 hover:text-gray-700">Lagerbewegungen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Neue Bewegung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6" x-data="movementForm()">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Neue Lagerbewegung erfassen</h1>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r">
+            <div class="text-sm text-red-700">
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 1. Bewegungsart & Bereich -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Bewegungsart</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="{{ form.movement_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Bewegungsart <span class="text-red-500">*</span></label>
+                    <select name="{{ form.movement_type.name }}" id="{{ form.movement_type.id_for_label }}"
+                        x-model="movementType"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">-- Auswählen --</option>
+                        {% for value, label in form.fields.movement_type.choices %}
+                        {% if value %}
+                        <option value="{{ value }}" {% if form.movement_type.value == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                    {% if form.movement_type.errors %}<p class="text-xs text-red-500 mt-1">{{ form.movement_type.errors.0 }}</p>{% endif %}
+                    <p class="mt-2 text-xs text-gray-500">
+                        <strong>Wareneingang:</strong> Neue Lieferung &middot;
+                        <strong>Warenausgang:</strong> Verbrauch/Entnahme &middot;
+                        <strong>Umlagerung:</strong> Zwischen Lagerorten
+                    </p>
+                </div>
+                <div>
+                    <label for="{{ form.bereich.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Bereich</label>
+                    {{ form.bereich }}
+                    {% if form.bereich.errors %}<p class="text-xs text-red-500 mt-1">{{ form.bereich.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Artikel (Ausrüstung ODER Medikament) -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Artikel</h2>
+
+            <!-- Tab-Auswahl: Ausrüstung oder Medikament -->
+            <div class="flex gap-2 mb-6">
+                <button type="button" @click="articleType = 'equipment'"
+                    :class="articleType === 'equipment' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                    class="px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+                    Ausrüstung
+                </button>
+                <button type="button" @click="articleType = 'medication'"
+                    :class="articleType === 'medication' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                    class="px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+                    Medikament
+                </button>
+            </div>
+
+            <!-- Ausrüstung -->
+            <div x-show="articleType === 'equipment'" x-cloak>
+                <!-- Searchable Equipment Master -->
+                <div class="mb-4" x-data="searchableSelect({
+                    fieldId: '{{ form.equipment_master.id_for_label }}',
+                    placeholder: 'Ausrüstung suchen (Name, Artikelnr.)...',
+                    emptyLabel: 'Ausrüstung auswählen...',
+                    onChange: (val) => { loadEquipmentInstances(val); clearField('{{ form.medication_master.id_for_label }}'); clearField('{{ form.batch.id_for_label }}'); }
+                })">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ausrüstungs-Stammdaten</label>
+                    <div class="hidden">{{ form.equipment_master }}</div>
+                    <div class="relative">
+                        <button type="button" @click="toggle()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between">
+                            <span x-text="selectedText" class="truncate" :class="selectedValue ? 'text-gray-900' : 'text-gray-400'"></span>
+                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="isOpen" @click.away="close()" x-cloak class="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                            <div class="p-2 border-b border-gray-200">
+                                <input type="text" x-model="search" @click.stop x-ref="searchInput" placeholder="Suchen..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div class="overflow-y-auto max-h-60">
+                                <button type="button" @click="select('', emptyLabel)" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                <template x-for="opt in filteredOptions()" :key="opt.value">
+                                    <button type="button" @click="select(opt.value, opt.text)" class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm" :class="selectedValue === opt.value ? 'bg-blue-100 font-medium' : ''" x-text="opt.text"></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    {% if form.equipment_master.errors %}<p class="text-xs text-red-500 mt-1">{{ form.equipment_master.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Instanzen (dynamisch geladen) -->
+                <div x-show="equipmentInstances.length > 0" x-cloak class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Verfügbare Instanzen (<span x-text="equipmentInstances.length"></span>)</label>
+                    <div class="space-y-1 max-h-48 overflow-y-auto">
+                        <template x-for="inst in equipmentInstances" :key="inst.id">
+                            <button type="button" @click="selectEquipmentInstance(inst)"
+                                class="w-full text-left px-3 py-2 rounded border text-sm hover:bg-blue-100 transition-colors"
+                                :class="selectedEquipmentInstance === inst.id ? 'border-blue-500 bg-blue-100 font-medium' : 'border-gray-200 bg-white'">
+                                <span class="font-mono" x-text="inst.inventory_number"></span>
+                                <span class="text-gray-500" x-show="inst.serial_number" x-text="' (SN: ' + inst.serial_number + ')'"></span>
+                                <span class="text-gray-500" x-text="' - ' + inst.condition"></span>
+                                <span class="text-gray-400 text-xs" x-show="inst.location_name" x-text="' @ ' + inst.location_name"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Klicken Sie auf eine Instanz, um den Lagerort zu übernehmen.</p>
+                </div>
+            </div>
+
+            <!-- Medikament -->
+            <div x-show="articleType === 'medication'" x-cloak>
+                <!-- Searchable Medication Master -->
+                <div class="mb-4" x-data="searchableSelect({
+                    fieldId: '{{ form.medication_master.id_for_label }}',
+                    placeholder: 'Medikament suchen (Name, Artikelnr., PZN)...',
+                    emptyLabel: 'Medikament auswählen...',
+                    onChange: (val) => { loadMedicationBatches(val); clearField('{{ form.equipment_master.id_for_label }}'); }
+                })">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Medikamenten-Stammdaten</label>
+                    <div class="hidden">{{ form.medication_master }}</div>
+                    <div class="relative">
+                        <button type="button" @click="toggle()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between">
+                            <span x-text="selectedText" class="truncate" :class="selectedValue ? 'text-gray-900' : 'text-gray-400'"></span>
+                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="isOpen" @click.away="close()" x-cloak class="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                            <div class="p-2 border-b border-gray-200">
+                                <input type="text" x-model="search" @click.stop x-ref="searchInput" placeholder="Suchen..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div class="overflow-y-auto max-h-60">
+                                <button type="button" @click="select('', emptyLabel)" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                <template x-for="opt in filteredOptions()" :key="opt.value">
+                                    <button type="button" @click="select(opt.value, opt.text)" class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm" :class="selectedValue === opt.value ? 'bg-blue-100 font-medium' : ''" x-text="opt.text"></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    {% if form.medication_master.errors %}<p class="text-xs text-red-500 mt-1">{{ form.medication_master.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Chargen (dynamisch geladen) -->
+                <div x-show="medicationBatches.length > 0" x-cloak class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Verfügbare Chargen (<span x-text="medicationBatches.length"></span>)</label>
+                    <div class="hidden">{{ form.batch }}</div>
+                    <div class="space-y-1 max-h-48 overflow-y-auto">
+                        <template x-for="batch in medicationBatches" :key="batch.id">
+                            <button type="button" @click="selectBatch(batch)"
+                                class="w-full text-left px-3 py-2 rounded border text-sm hover:bg-green-100 transition-colors"
+                                :class="selectedBatchId === batch.id ? 'border-green-500 bg-green-100 font-medium' : 'border-gray-200 bg-white'">
+                                <span class="font-mono font-medium" x-text="batch.batch_number"></span>
+                                <span class="text-gray-600" x-text="' - Bestand: ' + batch.quantity + ' ' + batch.unit"></span>
+                                <span class="text-gray-500" x-text="' - Ablauf: ' + batch.expiry_date"></span>
+                                <span class="text-gray-400 text-xs" x-show="batch.location_name" x-text="' @ ' + batch.location_name"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Klicken Sie auf eine Charge, um Lagerort und Daten zu übernehmen.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Menge & Einheit -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Menge & Kosten</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label for="{{ form.quantity.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Menge <span class="text-red-500">*</span></label>
+                    {{ form.quantity }}
+                    {% if form.quantity.errors %}<p class="text-xs text-red-500 mt-1">{{ form.quantity.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.unit.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Einheit</label>
+                    {{ form.unit }}
+                    {% if form.unit.errors %}<p class="text-xs text-red-500 mt-1">{{ form.unit.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.unit_cost.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Stückkosten (EUR)</label>
+                    {{ form.unit_cost }}
+                    {% if form.unit_cost.errors %}<p class="text-xs text-red-500 mt-1">{{ form.unit_cost.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Lagerorte -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Lagerorte</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Quelllagerort -->
+                <div x-data="searchableSelect({
+                    fieldId: '{{ form.from_location.id_for_label }}',
+                    placeholder: 'Lagerort suchen...',
+                    emptyLabel: 'Quelllagerort auswählen...'
+                })" @set-from-location.window="selectByValue($event.detail.id, $event.detail.name)">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quelllagerort (Von)</label>
+                    <div class="hidden">{{ form.from_location }}</div>
+                    <div class="relative">
+                        <button type="button" @click="toggle()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between">
+                            <span x-text="selectedText" class="truncate" :class="selectedValue ? 'text-gray-900' : 'text-gray-400'"></span>
+                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="isOpen" @click.away="close()" x-cloak class="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                            <div class="p-2 border-b border-gray-200">
+                                <input type="text" x-model="search" @click.stop x-ref="searchInput" placeholder="Suchen..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div class="overflow-y-auto max-h-60">
+                                <button type="button" @click="select('', emptyLabel)" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                <template x-for="opt in filteredOptions()" :key="opt.value">
+                                    <button type="button" @click="select(opt.value, opt.text)" class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm" :class="selectedValue === opt.value ? 'bg-blue-100 font-medium' : ''" x-text="opt.text"></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Erforderlich bei Warenausgang und Umlagerung</p>
+                    {% if form.from_location.errors %}<p class="text-xs text-red-500 mt-1">{{ form.from_location.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Ziellagerort -->
+                <div x-data="searchableSelect({
+                    fieldId: '{{ form.to_location.id_for_label }}',
+                    placeholder: 'Lagerort suchen...',
+                    emptyLabel: 'Ziellagerort auswählen...'
+                })" @set-to-location.window="selectByValue($event.detail.id, $event.detail.name)">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ziellagerort (Nach)</label>
+                    <div class="hidden">{{ form.to_location }}</div>
+                    <div class="relative">
+                        <button type="button" @click="toggle()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between">
+                            <span x-text="selectedText" class="truncate" :class="selectedValue ? 'text-gray-900' : 'text-gray-400'"></span>
+                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="isOpen" @click.away="close()" x-cloak class="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                            <div class="p-2 border-b border-gray-200">
+                                <input type="text" x-model="search" @click.stop x-ref="searchInput" placeholder="Suchen..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div class="overflow-y-auto max-h-60">
+                                <button type="button" @click="select('', emptyLabel)" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                <template x-for="opt in filteredOptions()" :key="opt.value">
+                                    <button type="button" @click="select(opt.value, opt.text)" class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm" :class="selectedValue === opt.value ? 'bg-blue-100 font-medium' : ''" x-text="opt.text"></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Erforderlich bei Wareneingang und Umlagerung</p>
+                    {% if form.to_location.errors %}<p class="text-xs text-red-500 mt-1">{{ form.to_location.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Zusatzinformationen -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Zusatzinformationen</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="{{ form.reference_number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Referenznummer</label>
+                    {{ form.reference_number }}
+                    {% if form.reference_number.errors %}<p class="text-xs text-red-500 mt-1">{{ form.reference_number.errors.0 }}</p>{% endif %}
+                </div>
+                <div>&nbsp;</div>
+                <div class="md:col-span-2">
+                    <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Notizen</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}<p class="text-xs text-red-500 mt-1">{{ form.notes.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex justify-end gap-3">
+            <a href="{% url 'civil_protection:movement_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Abbrechen</a>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Lagerbewegung erfassen</button>
+        </div>
+    </form>
+</div>
+
+<script>
+/* ========================================================================
+   Wiederverwendbares Searchable-Select-Dropdown (Alpine.js Komponente)
+   ======================================================================== */
+function searchableSelect(config) {
+    return {
+        fieldId: config.fieldId,
+        placeholder: config.placeholder || 'Suchen...',
+        emptyLabel: config.emptyLabel || 'Auswählen...',
+        onChange: config.onChange || null,
+        isOpen: false,
+        search: '',
+        selectedValue: '',
+        selectedText: '',
+        options: [],
+
+        init() {
+            const sel = document.getElementById(this.fieldId);
+            if (!sel) return;
+            this.options = Array.from(sel.options)
+                .filter(o => o.value)
+                .map(o => ({ value: o.value, text: o.text }));
+            if (sel.value) {
+                const found = this.options.find(o => o.value === sel.value);
+                if (found) {
+                    this.selectedValue = found.value;
+                    this.selectedText = found.text;
+                }
+            }
+            if (!this.selectedText) this.selectedText = this.emptyLabel;
+        },
+
+        toggle() {
+            this.isOpen = !this.isOpen;
+            if (this.isOpen) {
+                this.search = '';
+                this.$nextTick(() => { if (this.$refs.searchInput) this.$refs.searchInput.focus(); });
+            }
+        },
+
+        close() { this.isOpen = false; },
+
+        filteredOptions() {
+            if (!this.search) return this.options;
+            const q = this.search.toLowerCase();
+            return this.options.filter(o => o.text.toLowerCase().includes(q));
+        },
+
+        select(value, text) {
+            this.selectedValue = value;
+            this.selectedText = value ? text : this.emptyLabel;
+            const sel = document.getElementById(this.fieldId);
+            if (sel) { sel.value = value; sel.dispatchEvent(new Event('change')); }
+            this.isOpen = false;
+            if (this.onChange) this.onChange(value);
+        },
+
+        selectByValue(value, fallbackText) {
+            const found = this.options.find(o => o.value === String(value));
+            if (found) {
+                this.select(found.value, found.text);
+            } else if (value && fallbackText) {
+                this.selectedValue = String(value);
+                this.selectedText = fallbackText;
+                const sel = document.getElementById(this.fieldId);
+                if (sel) { sel.value = value; }
+            }
+        }
+    };
+}
+
+/* ========================================================================
+   Hauptformular-Logik
+   ======================================================================== */
+function movementForm() {
+    return {
+        movementType: '{{ form.movement_type.value|default:"" }}',
+        articleType: '{{ form.equipment_master.value|yesno:"equipment,medication,equipment" }}',
+        equipmentInstances: [],
+        selectedEquipmentInstance: null,
+        medicationBatches: [],
+        selectedBatchId: null,
+
+        init() {
+            // Erkenne ob Medikament vorausgewählt
+            const medVal = document.getElementById('{{ form.medication_master.id_for_label }}');
+            if (medVal && medVal.value) this.articleType = 'medication';
+        },
+
+        clearField(fieldId) {
+            const el = document.getElementById(fieldId);
+            if (el) { el.value = ''; el.dispatchEvent(new Event('change')); }
+        },
+
+        async loadEquipmentInstances(masterId) {
+            this.equipmentInstances = [];
+            this.selectedEquipmentInstance = null;
+            if (!masterId) return;
+            try {
+                const resp = await fetch(`/civil_protection/equipment/${masterId}/instances-json/`);
+                if (resp.ok) this.equipmentInstances = await resp.json();
+            } catch (e) { console.error('Fehler beim Laden der Instanzen:', e); }
+        },
+
+        selectEquipmentInstance(inst) {
+            this.selectedEquipmentInstance = inst.id;
+            if (inst.location_id) {
+                this.$dispatch('set-from-location', { id: String(inst.location_id), name: inst.location_name });
+            }
+        },
+
+        async loadMedicationBatches(masterId) {
+            this.medicationBatches = [];
+            this.selectedBatchId = null;
+            this.clearField('{{ form.batch.id_for_label }}');
+            if (!masterId) return;
+            try {
+                const resp = await fetch(`/civil_protection/medications/${masterId}/batches-json/`);
+                if (resp.ok) this.medicationBatches = await resp.json();
+            } catch (e) { console.error('Fehler beim Laden der Chargen:', e); }
+        },
+
+        selectBatch(batch) {
+            this.selectedBatchId = batch.id;
+            // Setze hidden batch-Feld
+            const batchSel = document.getElementById('{{ form.batch.id_for_label }}');
+            if (batchSel) {
+                // Prüfe ob Option existiert, sonst erstelle sie
+                let opt = batchSel.querySelector(`option[value="${batch.id}"]`);
+                if (!opt) {
+                    opt = document.createElement('option');
+                    opt.value = batch.id;
+                    opt.text = batch.batch_number;
+                    batchSel.appendChild(opt);
+                }
+                batchSel.value = batch.id;
+            }
+            // Setze Quelllagerort aus der Charge
+            if (batch.location_id) {
+                this.$dispatch('set-from-location', { id: String(batch.location_id), name: batch.location_name });
+            }
+        }
+    };
+}
+</script>
+
+<style>[x-cloak] { display: none !important; }</style>
+{% endblock %}

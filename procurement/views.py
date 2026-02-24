@@ -10,7 +10,7 @@ from django.views.generic import (
 )
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.db.models import Q, Sum, F
@@ -49,6 +49,7 @@ from .forms import (
     OrderMarkOrderedForm,
 )
 from permissions.constants import Roles
+from organization.models import Department as OrgDepartment
 
 from core.models import SystemSettings
 
@@ -180,7 +181,7 @@ class OrderDetailView(LoginRequiredMixin, ProcurementModuleGuardMixin, DetailVie
             'supplier', 'requested_by', 'approved_by', 'delivery_location',
             'department', 'created_by', 'updated_by',
             'sachkonto', 'nkf_nummer', 'verwendung_allgemein',
-            'verwendung_bs_fzg', 'verwendung_rd_fzg', 'vertreter',
+            'verwendung_bs_fzg', 'verwendung_rd_fzg', 'verwendung_ks_fzg', 'vertreter',
         ).prefetch_related('items', 'approvals__approver', 'goods_receipts')
 
     def get_context_data(self, **kwargs):
@@ -226,6 +227,16 @@ class OrderDetailView(LoginRequiredMixin, ProcurementModuleGuardMixin, DetailVie
         # Status-Verwaltung fuer Modulverantwortliche
         context['can_change_status'] = self.request.user.has_perm('procurement.change_purchaseorder')
         context['order_status_choices'] = OrderStatus.choices
+
+        # Modulverantwortlicher-Check fuer Inline-NKF-Bearbeitung
+        context['is_module_admin'] = (
+            self.request.user.is_superuser or
+            self.request.user.groups.filter(
+                name__in=[Roles.ADMINISTRATOR, Roles.MODUL_PROCUREMENT]
+            ).exists()
+        )
+        if context['is_module_admin']:
+            context['nkf_choices'] = NKFNummer.objects.filter(is_active=True)
 
         return context
 
@@ -282,13 +293,23 @@ class OrderCreateView(LoginRequiredMixin, ProcurementModuleGuardMixin, Permissio
 
 
 class OrderUpdateView(LoginRequiredMixin, ProcurementModuleGuardMixin, PermissionRequiredMixin, UpdateView):
-    """Bestellung bearbeiten (nur im DRAFT-Status)"""
+    """Bestellung bearbeiten (DRAFT fuer alle, alle Status fuer Modulverantwortliche)"""
     model = PurchaseOrder
     form_class = PurchaseOrderForm
     template_name = 'procurement/order_form.html'
     permission_required = 'procurement.change_purchaseorder'
 
+    def _is_module_admin(self):
+        return (
+            self.request.user.is_superuser or
+            self.request.user.groups.filter(
+                name__in=[Roles.ADMINISTRATOR, Roles.MODUL_PROCUREMENT]
+            ).exists()
+        )
+
     def get_queryset(self):
+        if self._is_module_admin():
+            return PurchaseOrder.objects.all()
         return PurchaseOrder.objects.filter(status=OrderStatus.DRAFT)
 
     def get_form_kwargs(self):
@@ -300,6 +321,7 @@ class OrderUpdateView(LoginRequiredMixin, ProcurementModuleGuardMixin, Permissio
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'procurement'
         context['is_create'] = False
+        context['is_module_admin'] = self._is_module_admin()
         if self.request.POST:
             context['item_formset'] = OrderItemFormSet(self.request.POST, instance=self.object)
         else:
@@ -443,7 +465,7 @@ class OrderPDFView(LoginRequiredMixin, ProcurementModuleGuardMixin, View):
                 'supplier', 'requested_by', 'delivery_location',
                 'department', 'sachkonto', 'nkf_nummer',
                 'verwendung_allgemein', 'verwendung_bs_fzg',
-                'verwendung_rd_fzg', 'vertreter', 'created_by',
+                'verwendung_rd_fzg', 'verwendung_ks_fzg', 'vertreter', 'created_by',
             ),
             pk=pk,
         )
@@ -728,14 +750,14 @@ class ProcurementDepartmentPermissionMixin:
 
 
 class DepartmentListView(LoginRequiredMixin, ProcurementModuleGuardMixin, ProcurementDepartmentPermissionMixin, ListView):
-    """Liste aller Fachbereiche"""
-    model = ProcurementDepartment
+    """Liste aller Fachbereiche (aus organization.Department)"""
+    model = OrgDepartment
     template_name = 'procurement/department_list.html'
     context_object_name = 'departments'
 
     def get_queryset(self):
-        return ProcurementDepartment.objects.select_related(
-            'responsible_person'
+        return OrgDepartment.objects.select_related(
+            'head', 'deputy_head'
         ).order_by('sort_order', 'name')
 
     def get_context_data(self, **kwargs):
@@ -745,8 +767,8 @@ class DepartmentListView(LoginRequiredMixin, ProcurementModuleGuardMixin, Procur
 
 
 class DepartmentCreateView(LoginRequiredMixin, ProcurementModuleGuardMixin, ProcurementDepartmentPermissionMixin, CreateView):
-    """Neuen Fachbereich anlegen"""
-    model = ProcurementDepartment
+    """Neuen Fachbereich anlegen (organization.Department)"""
+    model = OrgDepartment
     form_class = ProcurementDepartmentForm
     template_name = 'procurement/department_form.html'
 
@@ -757,8 +779,6 @@ class DepartmentCreateView(LoginRequiredMixin, ProcurementModuleGuardMixin, Proc
         return context
 
     def form_valid(self, form):
-        form.instance.created_by = self.request.user
-        form.instance.updated_by = self.request.user
         messages.success(self.request, f'Fachbereich "{form.instance.name}" wurde erstellt.')
         return super().form_valid(form)
 
@@ -767,8 +787,8 @@ class DepartmentCreateView(LoginRequiredMixin, ProcurementModuleGuardMixin, Proc
 
 
 class DepartmentUpdateView(LoginRequiredMixin, ProcurementModuleGuardMixin, ProcurementDepartmentPermissionMixin, UpdateView):
-    """Fachbereich bearbeiten"""
-    model = ProcurementDepartment
+    """Fachbereich bearbeiten (organization.Department)"""
+    model = OrgDepartment
     form_class = ProcurementDepartmentForm
     template_name = 'procurement/department_form.html'
 
@@ -779,7 +799,6 @@ class DepartmentUpdateView(LoginRequiredMixin, ProcurementModuleGuardMixin, Proc
         return context
 
     def form_valid(self, form):
-        form.instance.updated_by = self.request.user
         messages.success(self.request, f'Fachbereich "{form.instance.name}" wurde aktualisiert.')
         return super().form_valid(form)
 
@@ -788,8 +807,8 @@ class DepartmentUpdateView(LoginRequiredMixin, ProcurementModuleGuardMixin, Proc
 
 
 class DepartmentDeleteView(LoginRequiredMixin, ProcurementModuleGuardMixin, ProcurementDepartmentPermissionMixin, DeleteView):
-    """Fachbereich loeschen"""
-    model = ProcurementDepartment
+    """Fachbereich loeschen (organization.Department)"""
+    model = OrgDepartment
     template_name = 'procurement/department_confirm_delete.html'
     success_url = reverse_lazy('procurement:department_list')
 
@@ -1141,3 +1160,51 @@ class MengeneinheitDeleteView(LoginRequiredMixin, ProcurementModuleGuardMixin, P
         obj = self.get_object()
         messages.success(self.request, f'Mengeneinheit "{obj.name}" wurde geloescht.')
         return super().form_valid(form)
+
+
+# ============================================================================
+# Inline NKF-Nr. Update (AJAX)
+# ============================================================================
+
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+import json
+
+
+@login_required
+@require_POST
+def order_update_nkf(request, pk):
+    """Inline-Update der NKF-Nr. auf der Detailseite (nur Modulverantwortliche)"""
+    is_module_admin = (
+        request.user.is_superuser or
+        request.user.groups.filter(
+            name__in=[Roles.ADMINISTRATOR, Roles.MODUL_PROCUREMENT]
+        ).exists()
+    )
+    if not is_module_admin:
+        return JsonResponse({'error': 'Keine Berechtigung'}, status=403)
+
+    order = get_object_or_404(PurchaseOrder, pk=pk)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Ungueltige Daten'}, status=400)
+
+    nkf_id = data.get('nkf_nummer')
+    if nkf_id:
+        try:
+            nkf = NKFNummer.objects.get(pk=int(nkf_id))
+            order.nkf_nummer = nkf
+        except (NKFNummer.DoesNotExist, ValueError, TypeError):
+            return JsonResponse({'error': 'NKF-Nr. nicht gefunden'}, status=400)
+    else:
+        order.nkf_nummer = None
+
+    order.updated_by = request.user
+    order.save(update_fields=['nkf_nummer', 'updated_by', 'updated_at'])
+
+    return JsonResponse({
+        'success': True,
+        'nkf_display': str(order.nkf_nummer) if order.nkf_nummer else '',
+    })

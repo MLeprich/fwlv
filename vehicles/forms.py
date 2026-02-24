@@ -38,6 +38,7 @@ class VehicleForm(forms.ModelForm):
             'call_sign',
             'vehicle_type',
             'rubrik',
+            'bereich',
             'license_plate',
             'manufacturer',
             'model',
@@ -80,6 +81,9 @@ class VehicleForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
             'rubrik': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+            }),
+            'bereich': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
             }),
             'license_plate': forms.TextInput(attrs={

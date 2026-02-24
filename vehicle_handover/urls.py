@@ -8,6 +8,11 @@ from . import views
 app_name = 'vehicle_handover'
 
 urlpatterns = [
+    # Öffentliche Views (ohne Login)
+    path('public/create/', views.PublicHandoverCreateView.as_view(), name='public_create'),
+    path('public/success/', views.PublicHandoverSuccessView.as_view(), name='public_success'),
+    path('public/api/vehicle/<int:vehicle_pk>/templates/', views.public_get_templates_for_vehicle, name='public_api_vehicle_templates'),
+
     # Dashboard
     path('', views.HandoverDashboardView.as_view(), name='dashboard'),
 

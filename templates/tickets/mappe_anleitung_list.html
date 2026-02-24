@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Anleitungen - Digitale Mappe - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:list' %}" class="text-gray-500 hover:text-gray-700">Leitstelle</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:infomonitor_display' %}" class="text-gray-500 hover:text-gray-700">Info-Monitor</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:mappe_overview' %}" class="text-gray-500 hover:text-gray-700">Digitale Mappe</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Anleitungen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-amber-600 to-amber-800 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <h1 class="text-2xl font-bold">Anleitungen / Ma&szlig;nahmen</h1>
+                </div>
+                <p class="text-amber-100">Anleitungen und Ma&szlig;nahmen f&uuml;r den Leitstellenbetrieb verwalten</p>
+            </div>
+            <a href="{% url 'tickets:mappe_overview' %}" class="bg-amber-700/50 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Digitale Mappe
+            </a>
+        </div>
+    </div>
+
+    <!-- Neue Anleitung hinzuf&uuml;gen -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="bg-green-50 border-b border-green-200 px-6 py-3 rounded-t-lg">
+            <h2 class="text-base font-bold text-green-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Neue Anleitung hinzuf&uuml;gen
+            </h2>
+        </div>
+        <div class="p-6">
+            <form method="post" action="{% url 'tickets:mappe_anleitung_create' %}" class="space-y-4">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    <div class="md:col-span-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Titel *</label>
+                        {{ form.title }}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Reih.</label>
+                        {{ form.order }}
+                    </div>
+                    <div class="md:col-span-2 flex items-center pt-1">
+                        <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            {{ form.is_active }}
+                            Aktiv
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Inhalt *</label>
+                    {{ form.content }}
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors">
+                        Hinzuf&uuml;gen
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="bg-gray-50 border-b border-gray-200 px-6 py-3 rounded-t-lg">
+            <h2 class="text-base font-bold text-gray-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                </svg>
+                Vorhandene Anleitungen ({{ items|length }})
+            </h2>
+        </div>
+        {% if items %}
+        <div class="divide-y divide-gray-100">
+            {% for item in items %}
+            <div class="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <span class="text-xs text-gray-400 font-mono w-6 text-right flex-shrink-0">{{ item.order }}</span>
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-gray-900">{{ item.title }}</p>
+                        <p class="text-xs text-gray-500 truncate">{{ item.content|truncatewords:20 }}</p>
+                    </div>
+                    {% if not item.is_active %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 flex-shrink-0">Inaktiv</span>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0 ml-4">
+                    <a href="{% url 'tickets:mappe_anleitung_edit' item.pk %}" class="text-indigo-600 hover:text-indigo-800 p-1.5 rounded hover:bg-indigo-50 transition-colors" title="Bearbeiten">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </a>
+                    <form method="post" action="{% url 'tickets:mappe_anleitung_delete' item.pk %}" onsubmit="return confirm('&quot;{{ item.title }}&quot; wirklich l&ouml;schen?');" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="text-red-600 hover:text-red-800 p-1.5 rounded hover:bg-red-50 transition-colors" title="L&ouml;schen">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-12 text-center text-gray-500">
+            <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p class="text-sm">Noch keine Anleitungen angelegt.</p>
+            <p class="text-xs text-gray-400 mt-1">F&uuml;gen Sie oben die erste Anleitung hinzu.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

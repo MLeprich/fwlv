@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}{{ nip.name }} - FLVS{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bevölkerungsschutz</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:nip_list' %}" class="text-gray-500 hover:text-gray-700">NIPs</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ nip.name }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ nip.name }}</h1>
+            <span class="px-3 py-1 rounded-full text-sm font-medium {% if nip.bvs_status == 'aktiv' %}bg-green-100 text-green-700{% elif nip.bvs_status == 'geplant' %}bg-blue-100 text-blue-700{% elif nip.bvs_status == 'inaktiv' %}bg-gray-100 text-gray-600{% else %}bg-yellow-100 text-yellow-700{% endif %}">{{ nip.get_bvs_status_display }}</span>
+        </div>
+        <div class="flex gap-2">
+            {% if perms.locations.change_location %}
+            <a href="{% url 'locations:edit' nip.pk %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Bearbeiten</a>
+            {% endif %}
+            <a href="{% url 'civil_protection:nip_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Zurück</a>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Standort-Informationen</h2>
+            <dl class="grid grid-cols-2 gap-4">
+                <div class="col-span-2"><dt class="text-sm text-gray-500">Adresse</dt><dd class="text-sm">{{ nip.get_address|default:"-" }}</dd></div>
+                <div><dt class="text-sm text-gray-500">Kapazität</dt><dd class="text-sm">{% if nip.capacity_persons %}{{ nip.capacity_persons }} Personen{% else %}-{% endif %}</dd></div>
+                <div><dt class="text-sm text-gray-500">GPS</dt><dd class="text-sm">{% if nip.latitude %}{{ nip.latitude }}, {{ nip.longitude }}{% else %}-{% endif %}</dd></div>
+            </dl>
+            {% if nip.opening_hours %}<div class="mt-4 pt-4 border-t"><h3 class="text-sm font-medium text-gray-700 mb-1">Öffnungszeiten</h3><p class="text-sm text-gray-600 whitespace-pre-line">{{ nip.opening_hours }}</p></div>{% endif %}
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Ansprechpartner</h2>
+            <dl class="space-y-3">
+                <div><dt class="text-sm text-gray-500">Name</dt><dd class="text-sm">{{ nip.contact_name|default:"-" }}</dd></div>
+                <div><dt class="text-sm text-gray-500">Telefon</dt><dd class="text-sm">{{ nip.contact_phone|default:"-" }}</dd></div>
+                <div><dt class="text-sm text-gray-500">E-Mail</dt><dd class="text-sm">{{ nip.contact_email|default:"-" }}</dd></div>
+            </dl>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Zugewiesene Geräte ({{ nip.kats_equipment_instances.count }})</h2>
+            <div class="space-y-2">
+                {% for eq in nip.kats_equipment_instances.all %}
+                <div class="p-2 rounded border border-gray-200 text-sm">{{ eq.inventory_number }} - {{ eq.master.name }}</div>
+                {% empty %}
+                <p class="text-sm text-gray-500">Keine Geräte zugewiesen.</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Zugewiesene Fahrzeuge ({{ nip.kats_vehicles.count }})</h2>
+            <div class="space-y-2">
+                {% for v in nip.kats_vehicles.all %}
+                <div class="p-2 rounded border border-gray-200 text-sm">{{ v.name }} ({{ v.license_plate }})</div>
+                {% empty %}
+                <p class="text-sm text-gray-500">Keine Fahrzeuge zugewiesen.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% if nip.notes %}
+    <div class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Notizen</h2>
+        <p class="text-sm text-gray-600">{{ nip.notes }}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

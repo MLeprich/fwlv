@@ -9,6 +9,7 @@ from PIL import Image
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import models
 from django.conf import settings
+from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
@@ -369,6 +370,358 @@ class TicketImage(TimeStampedModel):
         super().save(*args, **kwargs)
 
 
+class BereitschaftKategorie(models.TextChoices):
+    """Kategorien für Bereitschaftspersonen"""
+    C_DIENST = 'c_dienst', _('C-Dienst')
+    LNA = 'lna', _('LNA')
+    ORDNUNGSAMT = 'ordnungsamt', _('Ordnungsamt')
+    GESUNDHEITSAMT = 'gesundheitsamt', _('Gesundheitsamt')
+    VETERINAERAMT = 'veterinaeramt', _('Veterinäramt')
+
+
+class BereitschaftPerson(models.Model):
+    """
+    Personen, die für Bereitschaftsdienste im Info-Monitor auswählbar sind.
+    """
+    name = models.CharField(
+        max_length=200,
+        verbose_name=_('Name')
+    )
+    kategorie = models.CharField(
+        max_length=20,
+        choices=BereitschaftKategorie.choices,
+        default=BereitschaftKategorie.C_DIENST,
+        verbose_name=_('Kategorie')
+    )
+    phone = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Telefon')
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv')
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Reihenfolge')
+    )
+
+    class Meta:
+        verbose_name = _('Bereitschaftsperson')
+        verbose_name_plural = _('Bereitschaftspersonen')
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class MappeLink(models.Model):
+    """Wichtiger Link für die digitale Mappe der Leitstelle"""
+    title = models.CharField(max_length=200, verbose_name=_('Titel'))
+    url = models.URLField(max_length=500, verbose_name=_('URL'))
+    description = models.CharField(max_length=500, blank=True, verbose_name=_('Beschreibung'))
+    is_active = models.BooleanField(default=True, verbose_name=_('Aktiv'))
+    order = models.PositiveIntegerField(default=0, verbose_name=_('Reihenfolge'))
+
+    class Meta:
+        verbose_name = _('Wichtiger Link')
+        verbose_name_plural = _('Wichtige Links')
+        ordering = ['order', 'title']
+
+    def __str__(self):
+        return self.title
+
+
+class MappeKontakt(models.Model):
+    """Wichtiger Ansprechpartner für die digitale Mappe der Leitstelle"""
+    name = models.CharField(max_length=200, verbose_name=_('Name'))
+    funktion = models.CharField(max_length=200, verbose_name=_('Funktion / Rolle'))
+    phone = models.CharField(max_length=100, blank=True, verbose_name=_('Telefon'))
+    email = models.EmailField(blank=True, verbose_name=_('E-Mail'))
+    is_active = models.BooleanField(default=True, verbose_name=_('Aktiv'))
+    order = models.PositiveIntegerField(default=0, verbose_name=_('Reihenfolge'))
+
+    class Meta:
+        verbose_name = _('Wichtiger Ansprechpartner')
+        verbose_name_plural = _('Wichtige Ansprechpartner')
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class MappeAnleitung(models.Model):
+    """Anleitung / Maßnahme für die digitale Mappe der Leitstelle"""
+    title = models.CharField(max_length=300, verbose_name=_('Titel'))
+    content = models.TextField(verbose_name=_('Inhalt'))
+    is_active = models.BooleanField(default=True, verbose_name=_('Aktiv'))
+    order = models.PositiveIntegerField(default=0, verbose_name=_('Reihenfolge'))
+
+    class Meta:
+        verbose_name = _('Anleitung / Maßnahme')
+        verbose_name_plural = _('Anleitungen / Maßnahmen')
+        ordering = ['order', 'title']
+
+    def __str__(self):
+        return self.title
+
+
+class InfoMonitor(models.Model):
+    """
+    Info-Monitor für die Leitstelle (Singleton, pk=1)
+    Zeigt Bereitschaftsdienste, Personalstärken, Fahrzeugstatus und Notizen.
+    """
+
+    # =========================================================================
+    # BEREITSCHAFT
+    # =========================================================================
+    bereitschaft_c_dienst = models.ForeignKey(
+        BereitschaftPerson,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('C-Dienst')
+    )
+    bereitschaft_lna = models.ForeignKey(
+        BereitschaftPerson,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('LNA')
+    )
+    bereitschaft_o_amt = models.ForeignKey(
+        BereitschaftPerson,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('Ordnungsamt')
+    )
+    bereitschaft_g_amt = models.ForeignKey(
+        BereitschaftPerson,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('Gesundheitsamt')
+    )
+    bereitschaft_veterinaeramt = models.ForeignKey(
+        BereitschaftPerson,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('Veterinäramt')
+    )
+    bereitschaft_vet_datetime = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name=_('Veterinäramt Datum/Uhrzeit')
+    )
+
+    # Änderungs-Zeitstempel pro Bereitschafts-Slot
+    bereitschaft_c_dienst_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('C-Dienst geändert am'))
+    bereitschaft_lna_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('LNA geändert am'))
+    bereitschaft_o_amt_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Ordnungsamt geändert am'))
+    bereitschaft_g_amt_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Gesundheitsamt geändert am'))
+    bereitschaft_veterinaeramt_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Veterinäramt geändert am'))
+
+    # =========================================================================
+    # PERSONAL – FW1
+    # =========================================================================
+    personal_fw1_loeschzug = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Löschzug'))
+    personal_fw1_ergaenzung = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Ergänzung'))
+    personal_fw1_5_rtw = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 RTW'))
+    personal_fw1_ktw = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 KTW'))
+    personal_fw1_taucher = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Taucher'))
+    personal_fw1_hoehenretter = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Höhenretter'))
+
+    # PERSONAL – FW2
+    personal_fw2_loeschzug = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Löschzug'))
+    personal_fw2_ergaenzung = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Ergänzung'))
+    personal_fw2_5_rtw = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 RTW'))
+    personal_fw2_ktw = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 KTW'))
+    personal_fw2_taucher = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Taucher'))
+    personal_fw2_hoehenretter = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Höhenretter'))
+
+    # Sonderfunktionen im Dienst
+    taucher_im_dienst = models.BooleanField(default=False, verbose_name=_('Taucher im Dienst'))
+    hoehenretter_im_dienst = models.BooleanField(default=False, verbose_name=_('Höhenretter im Dienst'))
+
+    # =========================================================================
+    # GERÄTE
+    # =========================================================================
+    geraete = models.TextField(
+        blank=True,
+        verbose_name=_('Geräte')
+    )
+
+    # =========================================================================
+    # LAUFBAND
+    # =========================================================================
+    laufband_text = models.TextField(
+        blank=True,
+        default='',
+        verbose_name=_('Laufband-Text')
+    )
+    laufband_geschwindigkeit = models.PositiveIntegerField(
+        default=20,
+        verbose_name=_('Laufband-Geschwindigkeit'),
+        help_text=_('Sekunden pro Durchlauf (5-60)')
+    )
+
+    # =========================================================================
+    # SONSTIGES
+    # =========================================================================
+    sonstiges_1 = models.TextField(blank=True, verbose_name=_('Sonstiges 1'))
+    sonstiges_2 = models.TextField(blank=True, verbose_name=_('Sonstiges 2'))
+    sonstiges_3 = models.TextField(blank=True, verbose_name=_('Sonstiges 3'))
+    sonstiges_4 = models.TextField(blank=True, verbose_name=_('Sonstiges 4'))
+    sonstiges_5 = models.TextField(blank=True, verbose_name=_('Sonstiges 5'))
+
+    # =========================================================================
+    # META
+    # =========================================================================
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Aktualisiert am'))
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('Aktualisiert von')
+    )
+
+    class Meta:
+        verbose_name = _('Info-Monitor')
+        verbose_name_plural = _('Info-Monitor')
+        permissions = [
+            ('edit_infomonitor', 'Kann LST Infomonitor bearbeiten'),
+            ('edit_mappe', 'Kann Digitale Mappe bearbeiten'),
+        ]
+
+    def __str__(self):
+        return 'Info-Monitor'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        # Bereitschafts-Änderungen tracken
+        if self.pk:
+            try:
+                old = InfoMonitor.objects.get(pk=1)
+                from django.utils import timezone as _tz
+                now = _tz.now()
+                _slots = [
+                    ('bereitschaft_c_dienst_id', 'bereitschaft_c_dienst_changed_at'),
+                    ('bereitschaft_lna_id', 'bereitschaft_lna_changed_at'),
+                    ('bereitschaft_o_amt_id', 'bereitschaft_o_amt_changed_at'),
+                    ('bereitschaft_g_amt_id', 'bereitschaft_g_amt_changed_at'),
+                    ('bereitschaft_veterinaeramt_id', 'bereitschaft_veterinaeramt_changed_at'),
+                ]
+                for fk_field, ts_field in _slots:
+                    if getattr(self, fk_field) != getattr(old, fk_field):
+                        setattr(self, ts_field, now)
+            except InfoMonitor.DoesNotExist:
+                pass
+        super().save(*args, **kwargs)
+        cache.delete('infomonitor')
+
+    @classmethod
+    def load(cls):
+        from django.core.cache import cache as _cache
+        obj = _cache.get('infomonitor')
+        if obj is None:
+            obj, _ = cls.objects.get_or_create(pk=1)
+            _cache.set('infomonitor', obj, 60 * 5)
+        return obj
+
+
+class InfoMonitorVehicle(models.Model):
+    """
+    Dynamischer Fahrzeug-Slot für den Info-Monitor.
+    Bis zu 9 Einträge pro Monitor (Außer Dienst + Ersetzung).
+    """
+    monitor = models.ForeignKey(
+        InfoMonitor,
+        on_delete=models.CASCADE,
+        related_name='monitor_vehicles',
+        verbose_name=_('Info-Monitor')
+    )
+    fahrzeug_ad = models.ForeignKey(
+        'vehicles.Vehicle',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('Außer Dienst')
+    )
+    ersetzt_mit = models.ForeignKey(
+        'vehicles.Vehicle',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('Ersetzt mit')
+    )
+    bemerkung = models.CharField(
+        max_length=300,
+        blank=True,
+        default='',
+        verbose_name=_('Bemerkung')
+    )
+    position = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Position')
+    )
+
+    class Meta:
+        verbose_name = _('Info-Monitor Fahrzeug')
+        verbose_name_plural = _('Info-Monitor Fahrzeuge')
+        ordering = ['position']
+
+    def __str__(self):
+        return f'Fahrzeug {self.position + 1}: {self.fahrzeug_ad or "—"}'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        cache.delete('infomonitor')
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        cache.delete('infomonitor')
+
+
+class InfoMonitorSonstiges(models.Model):
+    """
+    Dynamischer Sonstiges-Eintrag für den Info-Monitor.
+    Ersetzt die festen sonstiges_1..5 Felder.
+    """
+    monitor = models.ForeignKey(
+        InfoMonitor,
+        on_delete=models.CASCADE,
+        related_name='monitor_sonstiges',
+        verbose_name=_('Info-Monitor')
+    )
+    text = models.TextField(
+        blank=True,
+        verbose_name=_('Text')
+    )
+    position = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Position')
+    )
+
+    class Meta:
+        verbose_name = _('Info-Monitor Sonstiges')
+        verbose_name_plural = _('Info-Monitor Sonstiges')
+        ordering = ['position']
+
+    def __str__(self):
+        return f'Sonstiges {self.position + 1}: {self.text[:50]}' if self.text else f'Sonstiges {self.position + 1}'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        cache.delete('infomonitor')
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        cache.delete('infomonitor')
+
+
 class CommentImage(TimeStampedModel):
     """Bild zu einem Kommentar"""
 
@@ -410,3 +763,118 @@ class CommentImage(TimeStampedModel):
                 'image/jpeg', resized.getbuffer().nbytes, None
             )
         super().save(*args, **kwargs)
+
+
+# =============================================================================
+# Großveranstaltungen – Eigenständiges Dashboard-System
+# =============================================================================
+
+class GrossveranstaltungDashboard(models.Model):
+    """
+    Dashboard für Großveranstaltungen.
+    Zwei Modi: PDF (eingebettetes PDF) oder dynamisch (Karte + Einheiten + Abschnitte).
+    """
+
+    class DashboardType(models.TextChoices):
+        PDF = 'pdf', _('PDF-Dokument')
+        DYNAMIC = 'dynamic', _('Dynamisches Layout')
+
+    name = models.CharField(
+        max_length=200,
+        verbose_name=_('Name')
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name=_('Beschreibung')
+    )
+    dashboard_type = models.CharField(
+        max_length=10,
+        choices=DashboardType.choices,
+        default=DashboardType.DYNAMIC,
+        verbose_name=_('Dashboard-Typ')
+    )
+    pdf_file = models.FileField(
+        upload_to='grossveranstaltungen/pdfs/%Y/%m/',
+        blank=True,
+        null=True,
+        verbose_name=_('PDF-Datei')
+    )
+    map_image = models.ImageField(
+        upload_to='grossveranstaltungen/maps/%Y/%m/',
+        blank=True,
+        null=True,
+        verbose_name=_('Kartenausschnitt')
+    )
+    einheiten_text = models.TextField(
+        blank=True,
+        verbose_name=_('Einheiten / Fahrzeuge')
+    )
+    info_datei = models.FileField(
+        upload_to='grossveranstaltungen/info/%Y/%m/',
+        blank=True,
+        null=True,
+        verbose_name=_('Info-Datei (Bild/PDF)'),
+        help_text=_('Funkskizze, Lagekarte o.ä. als Bild oder PDF')
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv')
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Erstellt am'))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Aktualisiert am'))
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('Erstellt von')
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('Aktualisiert von')
+    )
+
+    class Meta:
+        verbose_name = _('Großveranstaltung-Dashboard')
+        verbose_name_plural = _('Großveranstaltung-Dashboards')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse('tickets:mappe_dashboard_detail', kwargs={'pk': self.pk})
+
+
+class GrossveranstaltungAbschnitt(models.Model):
+    """
+    Textabschnitt (rechte Spalte) eines dynamischen Großveranstaltungs-Dashboards.
+    """
+    dashboard = models.ForeignKey(
+        GrossveranstaltungDashboard,
+        on_delete=models.CASCADE,
+        related_name='abschnitte',
+        verbose_name=_('Dashboard')
+    )
+    title = models.CharField(
+        max_length=300,
+        verbose_name=_('Überschrift')
+    )
+    content = models.TextField(
+        verbose_name=_('Inhalt')
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Reihenfolge')
+    )
+
+    class Meta:
+        verbose_name = _('Dashboard-Abschnitt')
+        verbose_name_plural = _('Dashboard-Abschnitte')
+        ordering = ['order', 'pk']
+
+    def __str__(self):
+        return self.title

@@ -1,0 +1,314 @@
+<!-- DSGVO Section (nur für Superuser) -->
+{% if user.is_superuser %}
+<div x-show="activeSection === 'dsgvo'" x-cloak class="p-6">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">DSGVO - Datensparsamkeit</h2>
+
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r mb-6">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <div class="ml-3">
+                <p class="text-sm text-blue-700 font-medium">Datensparsamkeit (Art. 5 Abs. 1c DSGVO)</p>
+                <p class="text-sm text-blue-600 mt-1">
+                    Bestimmen Sie, welche optionalen Daten-Bereiche im Personalformular angezeigt werden.
+                    Deaktivierte Bereiche werden im Formular ausgeblendet und es werden keine Daten erhoben.
+                    Bereits erfasste Daten bleiben in der Datenbank erhalten.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- DSGVO Toggles -->
+    <form method="post" action="{% url 'core:settings' %}">
+        {% csrf_token %}
+        <input type="hidden" name="section" value="dsgvo">
+
+        <!-- Einstellungen-Tabs -->
+        <div class="mb-8">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                Einstellungen-Tabs
+            </h3>
+
+            <div class="space-y-3">
+                <!-- Datenschutz-Tab -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">🛡️</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Datenschutz-Tab</h4>
+                                    {% if privacy_tab_visible %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Sichtbar</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Ausgeblendet</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Datenschutz-Tab in den Benutzer-Einstellungen anzeigen (Datenerfassung, Datenspeicherung, Datenexport). Superuser sehen den Tab immer.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="privacy_tab_visible" value="true" class="sr-only peer" {% if privacy_tab_visible %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Personalformular-Bereiche -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                Optionale Bereiche im Personalformular
+            </h3>
+
+            <div class="space-y-3">
+                <!-- Dienstliche Kontaktdaten -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">🏢</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Dienstliche Kontaktdaten</h4>
+                                    {% if person_sections.work_contact_visible %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Sichtbar</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Ausgeblendet</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Standort, Raum, dienstliche Telefonnummern und Wachabteilung. Wird automatisch ausgeblendet wenn das Telefonbuch-Modul deaktiviert ist.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="person_section_work_contact_visible" value="true" class="sr-only peer" {% if person_sections.work_contact_visible %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Private Kontaktdaten -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">📞</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Private Kontaktdaten</h4>
+                                    {% if person_sections.private_contact_visible %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Sichtbar</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Ausgeblendet</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Private E-Mail, Telefonnummer, Mobilnummer und Anschrift der Person.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="person_section_private_contact_visible" value="true" class="sr-only peer" {% if person_sections.private_contact_visible %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notfallkontakt -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">🚨</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Notfallkontakt</h4>
+                                    {% if person_sections.emergency_contact_visible %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Sichtbar</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Ausgeblendet</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Kontaktperson für Notfälle mit Name, Beziehung, Telefon und Adresse.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="person_section_emergency_contact_visible" value="true" class="sr-only peer" {% if person_sections.emergency_contact_visible %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Organisationszugehörigkeit -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">🏛️</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Organisationszugehörigkeit</h4>
+                                    {% if person_sections.organization_visible %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Sichtbar</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Ausgeblendet</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Jugendfeuerwehr-, Freiwillige FW- und Berufsfeuerwehr-Zugehörigkeit mit Eintrittsdaten.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="person_section_organization_visible" value="true" class="sr-only peer" {% if person_sections.organization_visible %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Benutzer & Foto -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">🔐</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Benutzer & Foto</h4>
+                                    {% if person_sections.user_photo_visible %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Sichtbar</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Ausgeblendet</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Benutzer-Account, Rollen-Zuweisung und Profilfoto.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="person_section_user_photo_visible" value="true" class="sr-only peer" {% if person_sections.user_photo_visible %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Führerscheindaten -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">🚗</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Führerscheindaten</h4>
+                                    {% if person_sections.driving_license_visible %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Sichtbar</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Ausgeblendet</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Führerscheinklassen und Ablaufdaten. Wird automatisch ausgeblendet wenn das Führerschein-Modul deaktiviert ist.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="person_section_driving_license_visible" value="true" class="sr-only peer" {% if person_sections.driving_license_visible %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notizen -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">📝</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Notizen</h4>
+                                    {% if person_sections.notes_visible %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Sichtbar</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Ausgeblendet</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Interne Anmerkungen und Notizen zur Person.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="person_section_notes_visible" value="true" class="sr-only peer" {% if person_sections.notes_visible %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+            <button
+                type="submit"
+                class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 transition-colors font-medium shadow-sm"
+            >
+                Änderungen speichern
+            </button>
+        </div>
+    </form>
+
+    <!-- Hinweise -->
+    <div class="bg-gray-50 border-l-4 border-gray-400 p-4 rounded-r mt-6">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 text-gray-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <div class="ml-3">
+                <p class="text-sm text-gray-700">
+                    <span class="font-medium">Nicht deaktivierbar:</span> Die Bereiche
+                    <strong>Basis-Informationen</strong> und
+                    <strong>Feuerwehr-Daten</strong> sind Pflichtbereiche und immer sichtbar.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endif %}

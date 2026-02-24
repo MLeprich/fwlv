@@ -60,6 +60,7 @@ urlpatterns = [
     path('bestellungen/<int:pk>/stornieren/', views.OrderCancelView.as_view(), name='order_cancel'),
     path('bestellungen/<int:pk>/bestellt/', views.OrderMarkOrderedView.as_view(), name='order_mark_ordered'),
     path('bestellungen/<int:pk>/status/', views.OrderChangeStatusView.as_view(), name='order_change_status'),
+    path('bestellungen/<int:pk>/nkf/', views.order_update_nkf, name='order_update_nkf'),
     path('bestellungen/<int:pk>/pdf/', views.OrderPDFView.as_view(), name='order_pdf'),
 
     # Approval Workflow

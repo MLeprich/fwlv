@@ -11,8 +11,9 @@ from core.views import user_management
 app_name = 'core'
 
 urlpatterns = [
-    # Dashboard
-    path('', views.DashboardView.as_view(), name='dashboard'),
+    # Landing Page (öffentlich) & Dashboard (authentifiziert)
+    path('', views.LandingPageView.as_view(), name='landing'),
+    path('dashboard/', views.DashboardView.as_view(), name='dashboard'),
 
     # User Profile & Settings
     path('profile/', views.ProfileView.as_view(), name='profile'),
@@ -53,10 +54,6 @@ urlpatterns = [
     # Force Password Change
     path('force-password-change/', views.force_password_change_view, name='force_password_change'),
 
-    # PIN-Code
-    path('pin-setup/', views.pin_setup_view, name='pin_setup'),
-    path('pin-change/', views.pin_change_view, name='pin_change'),
-
     # Authentication (Django built-in views)
     path('login/', auth_views.LoginView.as_view(
         template_name='core/login.html',
@@ -64,7 +61,7 @@ urlpatterns = [
     ), name='login'),
 
     path('logout/', auth_views.LogoutView.as_view(
-        next_page='core:login'
+        next_page='core:landing'
     ), name='logout'),
 
     path('password-change/', auth_views.PasswordChangeView.as_view(
@@ -99,4 +96,5 @@ urlpatterns = [
     path('verwaltung/users/<int:pk>/roles/', user_management.UserRoleAssignView.as_view(), name='assign_roles'),
     path('verwaltung/users/<int:pk>/ticket-permissions/', user_management.UserTicketPermissionsView.as_view(), name='user_ticket_permissions'),
     path('verwaltung/users/<int:pk>/wbf-settings/', user_management.UserWBFSettingsView.as_view(), name='user_wbf_settings'),
+    path('verwaltung/users/<int:pk>/staff-position/', user_management.UserStaffPositionView.as_view(), name='user_staff_position'),
 ]

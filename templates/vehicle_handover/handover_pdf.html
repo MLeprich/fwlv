@@ -356,11 +356,7 @@
                 <div class="info-value">{{ handover.vehicle }}</div>
             </div>
             <div class="info-row">
-                <div class="info-label">Übergeben von:</div>
-                <div class="info-value">{{ handover.handover_from|default:"Erstinbetriebnahme" }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Übergeben an:</div>
+                <div class="info-label">Übernommen von:</div>
                 <div class="info-value">{{ handover.handover_to }}</div>
             </div>
             <div class="info-row">
@@ -502,17 +498,6 @@
             {% endif %}
         </div>
 
-        {% if handover.handover_from %}
-        <div class="signature-box">
-            <div class="signature-label">Übergeber</div>
-            <div class="signature-name">{{ handover.handover_from }}</div>
-            {% if handover.confirmed_by_giver %}
-            <div style="color: #059669; margin-top: 5px;">✓ Digital bestätigt am {{ handover.updated_at|date:"d.m.Y, H:i" }}</div>
-            {% else %}
-            <div style="color: #dc2626; margin-top: 5px;">⚠ Noch nicht bestätigt</div>
-            {% endif %}
-        </div>
-        {% endif %}
     </div>
 
     <!-- Footer -->

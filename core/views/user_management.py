@@ -155,14 +155,22 @@ class UserDetailView(RoleRequiredMixin, DetailView):
         context['has_create_ticket'] = user_obj.has_perm('tickets.create_ticket')
         context['has_process_ticket'] = user_obj.has_perm('tickets.process_ticket')
 
+        # Info-Monitor & Mappe-Berechtigungen
+        context['has_view_infomonitor'] = user_obj.has_perm('tickets.view_infomonitor')
+        context['has_edit_infomonitor'] = user_obj.has_perm('tickets.edit_infomonitor')
+        context['has_edit_mappe'] = user_obj.has_perm('tickets.edit_mappe')
+
         # Feuerwachen für WBF-Dropdown (Typ 'site' = Standort/Wache)
         context['wbf_locations'] = Location.objects.filter(
             location_type='site'
         ).order_by('name')
 
         # Wachabteilungen für WBF-Dropdown
-        from core.models.user import WatchDivisionChoices
+        from core.models.user import WatchDivisionChoices, StaffPosition
         context['watch_divisions'] = WatchDivisionChoices.choices
+
+        # Dienststellung-Optionen
+        context['staff_positions'] = StaffPosition.choices
 
         return context
 
@@ -210,23 +218,27 @@ class UserTicketPermissionsView(RoleRequiredMixin, DetailView):
 
         user_obj = self.get_object()
 
-        # Get ticket permissions
+        # Get all Leitstelle permissions
         create_perm = Permission.objects.get(codename='create_ticket', content_type__app_label='tickets')
         process_perm = Permission.objects.get(codename='process_ticket', content_type__app_label='tickets')
+        view_infomonitor_perm = Permission.objects.get(codename='view_infomonitor', content_type__app_label='tickets')
+        edit_infomonitor_perm = Permission.objects.get(codename='edit_infomonitor', content_type__app_label='tickets')
+        edit_mappe_perm = Permission.objects.get(codename='edit_mappe', content_type__app_label='tickets')
 
-        # Handle create_ticket permission
-        if request.POST.get('create_ticket'):
-            user_obj.user_permissions.add(create_perm)
-        else:
-            user_obj.user_permissions.remove(create_perm)
+        # Handle each permission
+        for perm, field_name in [
+            (create_perm, 'create_ticket'),
+            (process_perm, 'process_ticket'),
+            (view_infomonitor_perm, 'view_infomonitor'),
+            (edit_infomonitor_perm, 'edit_infomonitor'),
+            (edit_mappe_perm, 'edit_mappe'),
+        ]:
+            if request.POST.get(field_name):
+                user_obj.user_permissions.add(perm)
+            else:
+                user_obj.user_permissions.remove(perm)
 
-        # Handle process_ticket permission
-        if request.POST.get('process_ticket'):
-            user_obj.user_permissions.add(process_perm)
-        else:
-            user_obj.user_permissions.remove(process_perm)
-
-        messages.success(request, f'Ticket-Berechtigungen für {user_obj.get_full_name()} wurden aktualisiert.')
+        messages.success(request, f'Leitstelle-Berechtigungen für {user_obj.get_full_name()} wurden aktualisiert.')
         return redirect('core:user_detail', pk=user_obj.pk)
 
 
@@ -350,6 +362,27 @@ class UserSetPasswordView(RoleRequiredMixin, View):
             'user_obj': user_obj,
             'current_module': 'administration',
         })
+
+
+class UserStaffPositionView(RoleRequiredMixin, View):
+    """Dienststellung für einen Benutzer verwalten"""
+    required_roles = [Roles.ADMINISTRATOR]
+
+    def post(self, request, pk):
+        user_obj = get_object_or_404(User, pk=pk)
+
+        staff_position = request.POST.get('staff_position', '')
+        user_obj.staff_position = staff_position
+        user_obj.save()
+
+        # Freigabe-Gruppen synchronisieren
+        user_obj.sync_approval_groups()
+
+        messages.success(
+            request,
+            f'Dienststellung für {user_obj.get_full_name()} wurde aktualisiert.'
+        )
+        return redirect('core:user_detail', pk=user_obj.pk)
 
 
 class UserWBFSettingsView(RoleRequiredMixin, View):

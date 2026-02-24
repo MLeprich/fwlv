@@ -93,6 +93,24 @@ class SystemSettings(models.Model):
         help_text="KFZ-Werkstatt und Werkzeugverwaltung"
     )
 
+    phonebook_enabled = models.BooleanField(
+        default=True,
+        verbose_name="Telefonbuch",
+        help_text="Internes Telefonbuch mit Kontaktdaten"
+    )
+
+    defect_management_enabled = models.BooleanField(
+        default=True,
+        verbose_name="Mängelwesen",
+        help_text="Mängelerfassung und -verwaltung für Räume, Fahrzeuge und Ausrüstung"
+    )
+
+    civil_protection_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Bevölkerungsschutz",
+        help_text="Bevölkerungsschutz-Modul (Bund, Land & Kommune)"
+    )
+
     # ============================================================================
     # SECURITY
     # ============================================================================
@@ -123,6 +141,62 @@ class SystemSettings(models.Model):
         default=False,
         verbose_name="REST API",
         help_text="REST API für externe Integrationen"
+    )
+
+    # ============================================================================
+    # DSGVO - SETTINGS TAB VISIBILITY
+    # ============================================================================
+
+    privacy_tab_visible = models.BooleanField(
+        default=False,
+        verbose_name="Datenschutz-Tab",
+        help_text="Datenschutz-Tab in den Benutzer-Einstellungen anzeigen"
+    )
+
+    # ============================================================================
+    # DSGVO - PERSON FORM SECTION VISIBILITY
+    # ============================================================================
+
+    person_section_work_contact_visible = models.BooleanField(
+        default=True,
+        verbose_name="Dienstliche Kontaktdaten",
+        help_text="Standort, Raum, dienstliche Telefonnummern im Personalformular anzeigen"
+    )
+
+    person_section_private_contact_visible = models.BooleanField(
+        default=True,
+        verbose_name="Private Kontaktdaten",
+        help_text="E-Mail, Telefon, Adresse im Personalformular anzeigen"
+    )
+
+    person_section_emergency_contact_visible = models.BooleanField(
+        default=True,
+        verbose_name="Notfallkontakt",
+        help_text="Notfallkontakt-Bereich im Personalformular anzeigen"
+    )
+
+    person_section_organization_visible = models.BooleanField(
+        default=True,
+        verbose_name="Organisationszugehörigkeit",
+        help_text="JF, FF, BF-Zugehörigkeit im Personalformular anzeigen"
+    )
+
+    person_section_user_photo_visible = models.BooleanField(
+        default=True,
+        verbose_name="Benutzer & Foto",
+        help_text="Benutzer-Account und Profilfoto im Personalformular anzeigen"
+    )
+
+    person_section_driving_license_visible = models.BooleanField(
+        default=True,
+        verbose_name="Führerscheindaten",
+        help_text="Führerscheinklassen im Personalformular anzeigen"
+    )
+
+    person_section_notes_visible = models.BooleanField(
+        default=True,
+        verbose_name="Notizen",
+        help_text="Interne Anmerkungen im Personalformular anzeigen"
     )
 
     # ============================================================================
@@ -226,4 +300,10 @@ class SystemSettings(models.Model):
             modules.append('diving')
         if self.workshop_enabled:
             modules.append('workshop')
+        if self.phonebook_enabled:
+            modules.append('phonebook')
+        if self.defect_management_enabled:
+            modules.append('defect_management')
+        if self.civil_protection_enabled:
+            modules.append('civil_protection')
         return modules

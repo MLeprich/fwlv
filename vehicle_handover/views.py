@@ -27,6 +27,7 @@ from .forms import (
     CategoryFormSet,
     ItemFormSet,
     VehicleHandoverForm,
+    PublicVehicleHandoverStep1Form,
     HandoverChecklistFormSet,
     HandoverPhotoFormSet,
     HandoverDefectFormSet,
@@ -46,15 +47,12 @@ class HandoverDashboardView(LoginRequiredMixin, TemplateView):
 
         # Statistiken
         context['template_count'] = ChecklistTemplate.objects.filter(is_active=True).count()
-        context['handover_count'] = VehicleHandover.objects.count()
-        context['recent_handovers'] = VehicleHandover.objects.select_related(
-            'vehicle', 'handover_to', 'handover_from'
-        ).order_by('-handover_date')[:5]
-
-        # Offene Übergaben (nicht abgeschlossen)
-        context['pending_handovers'] = VehicleHandover.objects.filter(
+        context['handover_count'] = VehicleHandover.objects.exclude(status='in_progress').count()
+        context['recent_handovers'] = VehicleHandover.objects.exclude(
             status='in_progress'
-        ).select_related('vehicle', 'handover_to').count()
+        ).select_related(
+            'vehicle', 'handover_to'
+        ).order_by('-handover_date')[:5]
 
         # Übergaben mit Mängeln
         context['defects_handovers'] = VehicleHandover.objects.filter(
@@ -655,40 +653,8 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
             handover_id = wizard_data.get('handover_id')
             handover = get_object_or_404(VehicleHandover, pk=handover_id)
 
-            # PIN-Validierung
-            pin_errors = []
-            pin_receiver = request.POST.get('pin_receiver', '')
-            pin_giver = request.POST.get('pin_giver', '')
-
-            # Empfänger-PIN prüfen
-            receiver_person = handover.handover_to
-            if receiver_person and hasattr(receiver_person, 'user') and receiver_person.user:
-                if not receiver_person.user.has_pin():
-                    pin_errors.append(f'{receiver_person} hat noch keinen PIN eingerichtet.')
-                elif not receiver_person.user.check_pin(pin_receiver):
-                    pin_errors.append('Der PIN des Empfängers ist falsch.')
-            else:
-                pin_errors.append(f'{receiver_person} hat kein Benutzerkonto. PIN-Prüfung nicht möglich.')
-
-            # Übergeber-PIN prüfen (wenn vorhanden)
-            if handover.handover_from:
-                giver_person = handover.handover_from
-                if hasattr(giver_person, 'user') and giver_person.user:
-                    if not giver_person.user.has_pin():
-                        pin_errors.append(f'{giver_person} hat noch keinen PIN eingerichtet.')
-                    elif not giver_person.user.check_pin(pin_giver):
-                        pin_errors.append('Der PIN des Übergebers ist falsch.')
-                else:
-                    pin_errors.append(f'{giver_person} hat kein Benutzerkonto. PIN-Prüfung nicht möglich.')
-
-            if pin_errors:
-                context = self.get_context_data()
-                context['pin_errors'] = pin_errors
-                return render(request, self.get_template_names()[0], context)
-
             # Bestätigungen verarbeiten
             handover.confirmed_by_receiver = request.POST.get('confirm_receiver') == 'on'
-            handover.confirmed_by_giver = request.POST.get('confirm_giver') == 'on'
             handover.completeness_check_done = True
             handover.status = 'completed' if handover.is_complete() else 'in_progress'
             handover.save()
@@ -739,11 +705,10 @@ class HandoverListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         queryset = VehicleHandover.objects.select_related(
             'vehicle',
-            'handover_from',
             'handover_to',
             'location',
             'checklist_template',
-        ).order_by('-handover_date')
+        ).exclude(status='in_progress').order_by('-handover_date')
 
         # Filter
         status = self.request.GET.get('status')
@@ -760,6 +725,8 @@ class HandoverListView(LoginRequiredMixin, ListView):
                 Q(vehicle__call_sign__icontains=search) |
                 Q(handover_to__first_name__icontains=search) |
                 Q(handover_to__last_name__icontains=search) |
+                Q(reporter_first_name__icontains=search) |
+                Q(reporter_last_name__icontains=search) |
                 Q(notes__icontains=search)
             )
 
@@ -770,10 +737,10 @@ class HandoverListView(LoginRequiredMixin, ListView):
         context['status_filter'] = self.request.GET.get('status', '')
         context['search_query'] = self.request.GET.get('search', '')
 
-        # Statistiken
-        context['total_handovers'] = VehicleHandover.objects.count()
-        context['pending_handovers'] = VehicleHandover.objects.filter(status='in_progress').count()
+        # Statistiken (nur abgeschlossene)
+        context['total_handovers'] = VehicleHandover.objects.exclude(status='in_progress').count()
         context['completed_handovers'] = VehicleHandover.objects.filter(status='completed').count()
+        context['defects_handovers'] = VehicleHandover.objects.filter(status='defects_noted').count()
 
         return context
 
@@ -789,7 +756,6 @@ class HandoverDetailView(LoginRequiredMixin, DetailView):
     def get_queryset(self):
         return VehicleHandover.objects.select_related(
             'vehicle',
-            'handover_from',
             'handover_to',
             'location',
             'checklist_template',
@@ -839,7 +805,6 @@ def handover_pdf_export(request, pk):
     handover = get_object_or_404(
         VehicleHandover.objects.select_related(
             'vehicle',
-            'handover_from',
             'handover_to',
             'location',
             'checklist_template',
@@ -915,7 +880,6 @@ def handover_defect_pdf_export(request, pk):
     handover = get_object_or_404(
         VehicleHandover.objects.select_related(
             'vehicle',
-            'handover_from',
             'handover_to',
             'location',
             'created_by',
@@ -977,6 +941,298 @@ def handover_defect_pdf_export(request, pk):
     response['Content-Disposition'] = f'inline; filename="{filename}"'
 
     return response
+
+
+# ============================================================================
+# Öffentliche Views (ohne Login)
+# ============================================================================
+
+class PublicHandoverCreateView(TemplateView):
+    """
+    Öffentlicher Multi-Step Wizard für Fahrzeugübergabe (ohne Login).
+    Nutzt das gleiche Wizard-Pattern wie HandoverCreateWizardView.
+    """
+
+    STEPS = {
+        1: 'grunddaten',
+        2: 'fahrzeugdaten',
+        3: 'checkliste',
+        4: 'fotos',
+        5: 'maengel',
+        6: 'bestaetigung',
+    }
+
+    def get_template_names(self):
+        step = self.get_current_step()
+        step_name = self.STEPS.get(step, 'grunddaten')
+        return [f'vehicle_handover/public_wizard/step{step}_{step_name}.html']
+
+    def get_current_step(self):
+        return int(self.request.GET.get('step', 1))
+
+    def get(self, request, *args, **kwargs):
+        step = self.get_current_step()
+        wizard_data = request.session.get('public_handover_wizard', {})
+
+        if step in [2, 3, 4, 5, 6]:
+            handover_id = wizard_data.get('handover_id')
+            if not handover_id:
+                messages.warning(request, _('Bitte beginnen Sie bei Schritt 1.'))
+                return redirect(f"{reverse('vehicle_handover:public_create')}?step=1")
+
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        step = self.get_current_step()
+
+        context['current_step'] = step
+        context['step_name'] = self.STEPS.get(step)
+        context['total_steps'] = len(self.STEPS)
+        context['step_progress'] = int((step / len(self.STEPS)) * 100)
+        context['is_public'] = True
+
+        wizard_data = self.request.session.get('public_handover_wizard', {})
+
+        if step == 1:
+            form = PublicVehicleHandoverStep1Form(initial=wizard_data.get('step1', {}), step=1)
+            context['form'] = form
+        elif step == 2:
+            handover_id = wizard_data.get('handover_id')
+            handover = get_object_or_404(VehicleHandover, pk=handover_id)
+            form = VehicleHandoverForm(instance=handover, step=2)
+            context['form'] = form
+            context['handover'] = handover
+        elif step == 3:
+            handover_id = wizard_data.get('handover_id')
+            if handover_id:
+                handover = get_object_or_404(VehicleHandover, pk=handover_id)
+                context['handover'] = handover
+                checklist_items = handover.checklist_items.all().order_by('category', 'order')
+                context['checklist_items'] = checklist_items
+                formset = HandoverChecklistFormSet(instance=handover, queryset=checklist_items)
+                for form, item in zip(formset.forms, checklist_items):
+                    form.initial['item_name'] = item.item_name
+                    form.initial['category'] = item.category
+                context['formset'] = formset
+        elif step == 4:
+            handover_id = wizard_data.get('handover_id')
+            if handover_id:
+                handover = get_object_or_404(VehicleHandover, pk=handover_id)
+                context['handover'] = handover
+                context['formset'] = HandoverPhotoFormSet(instance=handover)
+                context['existing_photos'] = handover.photos.all().order_by('order', 'photo_type')
+        elif step == 5:
+            handover_id = wizard_data.get('handover_id')
+            if handover_id:
+                handover = get_object_or_404(VehicleHandover, pk=handover_id)
+                context['handover'] = handover
+                context['formset'] = HandoverDefectFormSet(instance=handover)
+                context['existing_defects'] = handover.defects.all()
+        elif step == 6:
+            handover_id = wizard_data.get('handover_id')
+            if handover_id:
+                handover = get_object_or_404(VehicleHandover, pk=handover_id)
+                context['handover'] = handover
+                context['checklist_completion'] = handover.get_checklist_completion()
+                context['photo_count'] = handover.get_photo_count()
+                context['defect_count'] = handover.defects.count()
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        step = self.get_current_step()
+        wizard_data = request.session.get('public_handover_wizard', {})
+
+        if step == 1:
+            form = PublicVehicleHandoverStep1Form(request.POST, step=step)
+            if form.is_valid():
+                serializable_data = {}
+                for key, value in form.cleaned_data.items():
+                    if hasattr(value, 'pk'):
+                        serializable_data[key] = value.pk
+                    elif isinstance(value, (str, int, float, bool, type(None))):
+                        serializable_data[key] = value
+                    else:
+                        serializable_data[key] = str(value)
+
+                wizard_data[f'step{step}'] = serializable_data
+
+                if not wizard_data.get('handover_id'):
+                    with transaction.atomic():
+                        handover = form.save(commit=False)
+                        if not handover.odometer_reading:
+                            handover.odometer_reading = 0
+                        handover.created_by = None
+                        handover.updated_by = None
+                        handover.reporter_first_name = form.cleaned_data.get('reporter_first_name', '')
+                        handover.reporter_last_name = form.cleaned_data.get('reporter_last_name', '')
+                        handover.save()
+
+                        if handover.checklist_template:
+                            self._create_checklist_from_template(handover)
+
+                        wizard_data['handover_id'] = handover.pk
+
+                request.session['public_handover_wizard'] = wizard_data
+                request.session.modified = True
+                return redirect(f"{reverse('vehicle_handover:public_create')}?step={step + 1}")
+            else:
+                messages.error(request, _('Bitte korrigieren Sie die Fehler im Formular.'))
+                context = self.get_context_data()
+                context['form'] = form
+                return render(request, self.get_template_names()[0], context)
+
+        elif step == 2:
+            handover_id = wizard_data.get('handover_id')
+            if not handover_id:
+                return redirect(f"{reverse('vehicle_handover:public_create')}?step=1")
+
+            handover = get_object_or_404(VehicleHandover, pk=handover_id)
+            form = VehicleHandoverForm(request.POST, instance=handover, step=step)
+            if form.is_valid():
+                with transaction.atomic():
+                    handover.odometer_reading = form.cleaned_data.get('odometer_reading')
+                    if form.cleaned_data.get('fuel_level') is not None:
+                        handover.fuel_level = form.cleaned_data.get('fuel_level')
+                    if form.cleaned_data.get('notes'):
+                        handover.notes = form.cleaned_data.get('notes')
+                    update_fields = ['odometer_reading', 'notes', 'updated_at']
+                    if form.cleaned_data.get('fuel_level') is not None:
+                        update_fields.append('fuel_level')
+                    handover.save(update_fields=update_fields)
+
+                serializable_data = {}
+                for key, value in form.cleaned_data.items():
+                    if hasattr(value, 'pk'):
+                        serializable_data[key] = value.pk
+                    elif isinstance(value, (str, int, float, bool, type(None))):
+                        serializable_data[key] = value
+                    else:
+                        serializable_data[key] = str(value)
+
+                wizard_data[f'step{step}'] = serializable_data
+                request.session['public_handover_wizard'] = wizard_data
+                request.session.modified = True
+                return redirect(f"{reverse('vehicle_handover:public_create')}?step={step + 1}")
+            else:
+                messages.error(request, _('Bitte korrigieren Sie die Fehler im Formular.'))
+                context = self.get_context_data()
+                context['form'] = form
+                return render(request, self.get_template_names()[0], context)
+
+        elif step == 3:
+            handover_id = wizard_data.get('handover_id')
+            handover = get_object_or_404(VehicleHandover, pk=handover_id)
+            formset = HandoverChecklistFormSet(request.POST, instance=handover)
+            if formset.is_valid():
+                formset.save()
+                return redirect(f"{reverse('vehicle_handover:public_create')}?step=4")
+            else:
+                context = self.get_context_data()
+                context['formset'] = formset
+                return render(request, self.get_template_names()[0], context)
+
+        elif step == 4:
+            handover_id = wizard_data.get('handover_id')
+            handover = get_object_or_404(VehicleHandover, pk=handover_id)
+            formset = HandoverPhotoFormSet(request.POST, request.FILES, instance=handover)
+            if formset.is_valid():
+                formset.save()
+                return redirect(f"{reverse('vehicle_handover:public_create')}?step=5")
+            else:
+                context = self.get_context_data()
+                context['formset'] = formset
+                return render(request, self.get_template_names()[0], context)
+
+        elif step == 5:
+            handover_id = wizard_data.get('handover_id')
+            handover = get_object_or_404(VehicleHandover, pk=handover_id)
+            formset = HandoverDefectFormSet(request.POST, instance=handover)
+            if formset.is_valid():
+                with transaction.atomic():
+                    defects = formset.save(commit=False)
+                    for defect in defects:
+                        defect.created_by = None
+                        defect.updated_by = None
+                        defect.save()
+                    handover.has_defects = handover.defects.count() > 0
+                    handover.defects_count = handover.defects.count()
+                    handover.save()
+                return redirect(f"{reverse('vehicle_handover:public_create')}?step=6")
+            else:
+                context = self.get_context_data()
+                context['formset'] = formset
+                return render(request, self.get_template_names()[0], context)
+
+        elif step == 6:
+            handover_id = wizard_data.get('handover_id')
+            handover = get_object_or_404(VehicleHandover, pk=handover_id)
+
+            handover.confirmed_by_receiver = request.POST.get('confirm_receiver') == 'on'
+            handover.completeness_check_done = True
+            handover.status = 'completed' if handover.is_complete() else 'in_progress'
+            handover.save()
+
+            if 'public_handover_wizard' in request.session:
+                del request.session['public_handover_wizard']
+
+            return redirect('vehicle_handover:public_success')
+
+        return redirect('vehicle_handover:public_create')
+
+    def _create_checklist_from_template(self, handover):
+        """Erstellt Checklisten-Items aus Template"""
+        if not handover.checklist_template:
+            return
+
+        template = handover.checklist_template
+        categories = template.categories.prefetch_related('items').all()
+
+        checklist_items = []
+        for category in categories:
+            for item in category.items.all():
+                checklist_items.append(
+                    HandoverChecklist(
+                        handover=handover,
+                        item_name=item.name,
+                        category=category.name,
+                        order=item.order,
+                        serial_number='',
+                        notes='',
+                    )
+                )
+
+        HandoverChecklist.objects.bulk_create(checklist_items)
+
+
+class PublicHandoverSuccessView(TemplateView):
+    """Danke-Seite nach öffentlicher Fahrzeugübergabe"""
+    template_name = 'vehicle_handover/public_success.html'
+
+
+def public_get_templates_for_vehicle(request, vehicle_pk):
+    """Returns matching ChecklistTemplates as JSON for a vehicle (public, no login)"""
+    from vehicles.models import Vehicle
+    vehicle = get_object_or_404(Vehicle, pk=vehicle_pk)
+    if vehicle.vehicle_type:
+        templates = ChecklistTemplate.objects.filter(
+            is_active=True,
+            vehicle_types=vehicle.vehicle_type
+        ).distinct()
+    else:
+        templates = ChecklistTemplate.objects.none()
+    data = [{'id': t.pk, 'name': t.name, 'is_default': t.is_default} for t in templates]
+
+    location_data = None
+    if vehicle.home_location_id:
+        location_data = {'id': str(vehicle.home_location_id), 'name': str(vehicle.home_location)}
+    else:
+        location_entry = getattr(vehicle, 'location_entry', None)
+        if location_entry:
+            location_data = {'id': str(location_entry.pk), 'name': str(location_entry)}
+
+    return JsonResponse({'templates': data, 'location': location_data})
 
 
 # ===== 360° Fahrzeuginnenraum-Verwaltung =====
@@ -1365,7 +1621,6 @@ def handover_resume(request, pk):
         'step1': {
             'vehicle': handover.vehicle_id,
             'checklist_template': handover.checklist_template_id if handover.checklist_template else None,
-            'handover_from': handover.handover_from_id if handover.handover_from else None,
             'handover_to': handover.handover_to_id,
             'handover_type': handover.handover_type,
             'handover_date': handover.handover_date.isoformat(),

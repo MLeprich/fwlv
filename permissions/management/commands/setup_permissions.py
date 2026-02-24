@@ -57,6 +57,9 @@ class Command(BaseCommand):
                 self._setup_wachleiter()
                 self._setup_sachbearbeiter()
                 self._setup_standard_user()
+                self._setup_approval_groups()
+                self._setup_lst_infomonitor()
+                self._cleanup_legacy_groups()
 
                 if options['dry_run']:
                     raise CommandError('DRY RUN - Keine Änderungen vorgenommen')
@@ -193,6 +196,8 @@ class Command(BaseCommand):
             Modules.INFO_MONITORS: 'Info Monitors',
             Modules.VEHICLES: 'KFZ',
             Modules.PROCUREMENT: 'Procurement',
+            Modules.DEFECT_MANAGEMENT: 'Defect Management',
+            Modules.CIVIL_PROTECTION: 'Civil Protection',
         }
 
         for module_name, display_name in modules.items():
@@ -206,6 +211,9 @@ class Command(BaseCommand):
             module_perms = Permission.objects.filter(
                 content_type__app_label=module_name
             )
+            # Medical: BTM-Permissions ausschließen (nur BTM-Beauftragter)
+            if module_name == Modules.MEDICAL:
+                module_perms = module_perms.exclude(codename__icontains='btm')
             for perm in module_perms:
                 group.permissions.add(perm)
                 perms_added += 1
@@ -222,6 +230,15 @@ class Command(BaseCommand):
                         perms_added += 1
                 except Permission.DoesNotExist:
                     pass
+
+            # Inventur-Permissions für Lager-Module
+            if module_name in Modules.get_inventory_modules():
+                inventory_perms = Permission.objects.filter(
+                    content_type__app_label=Modules.INVENTORY_CHECK
+                )
+                for perm in inventory_perms:
+                    group.permissions.add(perm)
+                    perms_added += 1
 
             # Reporting für Modul
             try:
@@ -257,6 +274,8 @@ class Command(BaseCommand):
             Modules.INFO_MONITORS: 'Info Monitors',
             Modules.VEHICLES: 'KFZ',
             Modules.PROCUREMENT: 'Procurement',
+            Modules.DEFECT_MANAGEMENT: 'Defect Management',
+            Modules.CIVIL_PROTECTION: 'Civil Protection',
         }
 
         for module_name, display_name in modules.items():
@@ -282,7 +301,7 @@ class Command(BaseCommand):
             )
 
     def _setup_lagerverwalter(self):
-        """Lagerverwalter Gruppe"""
+        """Lagerverwalter Gruppe - Nur Standorte & Lagerorte"""
         self.stdout.write('\n5. Lagerverwalter...')
 
         group, created = Group.objects.get_or_create(name=Roles.LAGERVERWALTER)
@@ -290,41 +309,13 @@ class Command(BaseCommand):
 
         perms_added = 0
 
-        # View + Add für alle Lager-Module
-        inventory_modules = Modules.get_inventory_modules()
-
-        for module in inventory_modules:
-            module_perms = Permission.objects.filter(
-                content_type__app_label=module
-            ).filter(
-                Q(codename__startswith='view_') | Q(codename__startswith='add_')
-            )
-            for perm in module_perms:
-                group.permissions.add(perm)
-                perms_added += 1
-
-        # Inventur
-        try:
-            inventory_perms = Permission.objects.filter(
-                content_type__app_label=Modules.INVENTORY_CHECK
-            )
-            for perm in inventory_perms:
-                group.permissions.add(perm)
-                perms_added += 1
-        except Permission.DoesNotExist:
-            pass
-
-        # Locations: View
-        try:
-            location_perms = Permission.objects.filter(
-                content_type__app_label=Modules.LOCATIONS,
-                codename__startswith='view_'
-            )
-            for perm in location_perms:
-                group.permissions.add(perm)
-                perms_added += 1
-        except Permission.DoesNotExist:
-            pass
+        # Locations: Vollzugriff (CRUD)
+        location_perms = Permission.objects.filter(
+            content_type__app_label=Modules.LOCATIONS
+        )
+        for perm in location_perms:
+            group.permissions.add(perm)
+            perms_added += 1
 
         status = 'erstellt' if created else 'aktualisiert'
         self.stdout.write(
@@ -469,6 +460,110 @@ class Command(BaseCommand):
                 f'  ✓ {status} ({perms_added} Permissions)'
             )
         )
+
+    def _setup_approval_groups(self):
+        """Freigabe-Gruppen für Bestellwesen (Stufe 1/2/3)"""
+        self.stdout.write('\n9. Freigabe-Gruppen...')
+
+        approval_groups = {
+            Roles.FREIGABE_STUFE_1: {
+                'description': 'Freigabe bis 1.000 EUR',
+                'codenames': ['approve_order_low', 'view_own_orders', 'create_order_request'],
+            },
+            Roles.FREIGABE_STUFE_2: {
+                'description': 'Freigabe bis 5.000 EUR',
+                'codenames': ['approve_order_low', 'approve_order_medium', 'view_own_orders', 'create_order_request'],
+            },
+            Roles.FREIGABE_STUFE_3: {
+                'description': 'Unbegrenzte Freigabe',
+                'codenames': ['approve_order_low', 'approve_order_medium', 'approve_order_high', 'view_own_orders', 'create_order_request', 'cancel_order'],
+            },
+        }
+
+        for group_name, config in approval_groups.items():
+            group, created = Group.objects.get_or_create(name=group_name)
+            group.permissions.clear()
+
+            perms_added = 0
+            for codename in config['codenames']:
+                try:
+                    perm = Permission.objects.get(
+                        content_type__app_label=Modules.PROCUREMENT,
+                        codename=codename
+                    )
+                    group.permissions.add(perm)
+                    perms_added += 1
+                except Permission.DoesNotExist:
+                    pass
+
+            # Auch View-Rechte für Procurement-Modelle
+            view_perms = Permission.objects.filter(
+                content_type__app_label=Modules.PROCUREMENT,
+                codename__startswith='view_'
+            )
+            for perm in view_perms:
+                group.permissions.add(perm)
+                perms_added += 1
+
+            status = 'erstellt' if created else 'aktualisiert'
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'  ✓ {group_name}: {status} ({perms_added} Permissions) - {config["description"]}'
+                )
+            )
+
+    def _setup_lst_infomonitor(self):
+        """LST Infomonitor Gruppe"""
+        self.stdout.write('\n10. LST Infomonitor...')
+
+        group, created = Group.objects.get_or_create(name=Roles.LST_INFOMONITOR)
+        group.permissions.clear()
+
+        perms_added = 0
+        for codename in ['edit_infomonitor', 'view_infomonitor']:
+            try:
+                perm = Permission.objects.get(
+                    content_type__app_label='tickets',
+                    codename=codename
+                )
+                group.permissions.add(perm)
+                perms_added += 1
+            except Permission.DoesNotExist:
+                pass
+
+        status = 'erstellt' if created else 'aktualisiert'
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'  ✓ {status} ({perms_added} Permissions)'
+            )
+        )
+
+    def _cleanup_legacy_groups(self):
+        """Entfernt veraltete Gruppen die nicht mehr verwendet werden"""
+        self.stdout.write('\n9. Bereinigung veralteter Gruppen...')
+
+        legacy_groups = [
+            'Modulverantwortlicher',  # Alte generische Gruppe ohne Modulname
+        ]
+
+        for group_name in legacy_groups:
+            try:
+                group = Group.objects.get(name=group_name)
+                user_count = group.user_set.count()
+                if user_count > 0:
+                    usernames = list(group.user_set.values_list('username', flat=True))
+                    group.user_set.clear()
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f'  ✓ {group_name}: {user_count} User entfernt ({", ".join(usernames)})'
+                        )
+                    )
+                group.delete()
+                self.stdout.write(
+                    self.style.SUCCESS(f'  ✓ {group_name}: gelöscht')
+                )
+            except Group.DoesNotExist:
+                pass
 
     def _print_summary(self):
         """Gibt Zusammenfassung aus"""

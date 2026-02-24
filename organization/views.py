@@ -29,7 +29,7 @@ class DepartmentListView(LoginRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('head', 'deputy_head')
 
         # Filter: Aktiv/Inaktiv
         status = self.request.GET.get('status')

@@ -69,11 +69,20 @@
                         {% if form.vehicle_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.vehicle_type.errors.0 }}</p>{% endif %}
                     </div>
 
-                    <div>
+                    <div x-data="{ rubrik: '{{ form.rubrik.value|default:'' }}' }">
                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.rubrik.label }}</label>
-                        {{ form.rubrik }}
+                        <div x-init="$el.querySelector('select').addEventListener('change', e => rubrik = e.target.value)">
+                            {{ form.rubrik }}
+                        </div>
                         {% if form.rubrik.errors %}<p class="mt-1 text-sm text-red-600">{{ form.rubrik.errors.0 }}</p>{% endif %}
-                        <p class="mt-1 text-xs text-gray-500">BS = Brandschutz, RD = Rettungsdienst</p>
+                        <p class="mt-1 text-xs text-gray-500">BS = Brandschutz, RD = Rettungsdienst, KS = Katastrophenschutz</p>
+
+                        <div x-show="rubrik === 'ks'" x-cloak class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.bereich.label }}</label>
+                            {{ form.bereich }}
+                            {% if form.bereich.errors %}<p class="mt-1 text-sm text-red-600">{{ form.bereich.errors.0 }}</p>{% endif %}
+                            <p class="mt-1 text-xs text-gray-500">Zuordnung im Bevölkerungsschutz</p>
+                        </div>
                     </div>
 
                     <div>

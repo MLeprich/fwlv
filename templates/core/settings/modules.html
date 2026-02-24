@@ -1,5 +1,5 @@
-<!-- Module Section (nur für Admins) -->
-{% if user.is_staff or user.is_superuser %}
+<!-- Module Section (nur für Superuser) -->
+{% if user.is_superuser %}
 <div x-show="activeSection === 'modules'" x-cloak class="p-6">
     <h2 class="text-2xl font-bold text-gray-900 mb-6">Module</h2>
 
@@ -482,6 +482,120 @@
                         <div class="flex items-center ml-4">
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" name="workshop_enabled" value="true" class="sr-only peer" {% if modules.workshop_enabled %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Telefonbuch Modul -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">📞</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Telefonbuch</h4>
+                                    {% if modules.phonebook_enabled %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktiv</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inaktiv</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Internes Telefonbuch mit dienstlichen und privaten Kontaktdaten.
+                                </p>
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                        </svg>
+                                        Kontakte, Suche, Standorte
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="phonebook_enabled" value="true" class="sr-only peer" {% if modules.phonebook_enabled %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mängelwesen Modul -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">&#x26A0;&#xFE0F;</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Mängelwesen</h4>
+                                    {% if modules.defect_management_enabled %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktiv</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inaktiv</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Mängelerfassung und -verwaltung für Räume, Fahrzeuge und Ausrüstung mit Status-Workflow.
+                                </p>
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                                        </svg>
+                                        Meldungen, Status-Tracking, Kommentare
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="defect_management_enabled" value="true" class="sr-only peer" {% if modules.defect_management_enabled %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bevölkerungsschutz Modul -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">&#x1F6E1;&#xFE0F;</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Bevölkerungsschutz</h4>
+                                    {% if modules.civil_protection_enabled %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktiv</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inaktiv</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Bevölkerungsschutz-Modul für Bund, Land und Kommune mit Ausrüstung, Fahrzeugen, Medikamenten, NIPs und Leuchtturmstandorten.
+                                </p>
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                        </svg>
+                                        Ausrüstung, Fahrzeuge, Medikamente, NIPs, Leuchttürme
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="civil_protection_enabled" value="true" class="sr-only peer" {% if modules.civil_protection_enabled %}checked{% endif %}>
                                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
                             </label>
                         </div>

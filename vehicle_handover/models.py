@@ -273,6 +273,36 @@ class VehicleHandover(AuditedModel):
     inkl. Dokumentation des Fahrzeugzustands
     """
 
+    # Override AuditedModel fields to allow anonymous submissions
+    created_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.PROTECT,
+        related_name='vehicle_handover_vehiclehandover_created',
+        verbose_name=_('Erstellt von'),
+        null=True,
+        blank=True,
+    )
+    updated_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.PROTECT,
+        related_name='vehicle_handover_vehiclehandover_updated',
+        verbose_name=_('Aktualisiert von'),
+        null=True,
+        blank=True,
+    )
+
+    # Anonyme Melder-Felder
+    reporter_first_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Melder (Vorname)'),
+    )
+    reporter_last_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Melder (Nachname)'),
+    )
+
     # Fahrzeug-Referenz
     vehicle = models.ForeignKey(
         'vehicles.Vehicle',
@@ -433,7 +463,6 @@ class VehicleHandover(AuditedModel):
         return (
             self.completeness_check_done and
             self.confirmed_by_receiver and
-            (self.confirmed_by_giver or not self.handover_from) and
             self.get_checklist_completion() == 100
         )
 

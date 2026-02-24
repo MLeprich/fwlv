@@ -22,8 +22,6 @@ from core.forms import (
     NotificationSettingsForm,
     AppearanceSettingsForm,
     PrivacySettingsForm,
-    PinSetupForm,
-    PinChangeForm,
 )
 
 # Imports für Profil-Ausrüstungsübersicht
@@ -38,6 +36,25 @@ try:
     MAGAZINE_AVAILABLE = True
 except ImportError:
     MAGAZINE_AVAILABLE = False
+
+
+class LandingPageView(TemplateView):
+    """
+    Öffentliche Landing Page mit Aktions-Buttons und Login-Formular.
+    Eingeloggte User werden zum Dashboard weitergeleitet.
+    """
+    template_name = 'core/landing.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect('core:dashboard')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from django.contrib.auth.forms import AuthenticationForm
+        context['login_form'] = AuthenticationForm()
+        return context
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -96,8 +113,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # Meine Aufgaben (Placeholder)
         context['my_tasks'] = []
 
-        # Benachrichtigungen (Placeholder)
-        context['recent_notifications'] = []
+        # Benachrichtigungen
+        try:
+            from notifications.models import Notification
+            context['recent_notifications'] = list(
+                Notification.objects.filter(
+                    recipient=user,
+                    is_archived=False
+                ).order_by('-created_at')[:5]
+            )
+        except Exception:
+            context['recent_notifications'] = []
 
         # Modul-spezifische Badges
         try:
@@ -367,6 +393,9 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.height_rescue_enabled = request.POST.get('height_rescue_enabled') == 'true'
                 sys_settings.diving_enabled = request.POST.get('diving_enabled') == 'true'
                 sys_settings.workshop_enabled = request.POST.get('workshop_enabled') == 'true'
+                sys_settings.phonebook_enabled = request.POST.get('phonebook_enabled') == 'true'
+                sys_settings.defect_management_enabled = request.POST.get('defect_management_enabled') == 'true'
+                sys_settings.civil_protection_enabled = request.POST.get('civil_protection_enabled') == 'true'
                 sys_settings.updated_by = user
                 sys_settings.save()
 
@@ -396,6 +425,32 @@ class SettingsView(LoginRequiredMixin, View):
 
                 status = 'aktiviert' if sys_settings.two_factor_auth_enabled else 'deaktiviert'
                 messages.success(request, f'Zwei-Faktor-Authentifizierung wurde {status}.')
+                return redirect('core:settings')
+            else:
+                messages.error(request, 'Keine Berechtigung für diese Aktion.')
+                return redirect('core:settings')
+
+        elif section == 'dsgvo':
+            # Nur Superuser dürfen DSGVO-Einstellungen ändern
+            if user.is_superuser:
+                from core.models import SystemSettings
+
+                sys_settings = SystemSettings.load()
+
+                sys_settings.privacy_tab_visible = request.POST.get('privacy_tab_visible') == 'true'
+                sys_settings.person_section_work_contact_visible = request.POST.get('person_section_work_contact_visible') == 'true'
+                sys_settings.person_section_private_contact_visible = request.POST.get('person_section_private_contact_visible') == 'true'
+                sys_settings.person_section_emergency_contact_visible = request.POST.get('person_section_emergency_contact_visible') == 'true'
+                sys_settings.person_section_organization_visible = request.POST.get('person_section_organization_visible') == 'true'
+                sys_settings.person_section_user_photo_visible = request.POST.get('person_section_user_photo_visible') == 'true'
+                sys_settings.person_section_driving_license_visible = request.POST.get('person_section_driving_license_visible') == 'true'
+                sys_settings.person_section_notes_visible = request.POST.get('person_section_notes_visible') == 'true'
+                sys_settings.updated_by = user
+                sys_settings.save()
+
+                SystemSettings.clear_cache()
+
+                messages.success(request, 'DSGVO-Einstellungen erfolgreich gespeichert.')
                 return redirect('core:settings')
             else:
                 messages.error(request, 'Keine Berechtigung für diese Aktion.')
@@ -1454,57 +1509,6 @@ def force_password_change_view(request):
         form = PasswordChangeForm(request.user)
 
     return render(request, 'core/force_password_change.html', {
-        'form': form,
-        'user': request.user
-    })
-
-
-@login_required
-def pin_setup_view(request):
-    """
-    Erzwungene PIN-Einrichtung für Benutzer ohne PIN
-    """
-    if request.user.has_pin() and not request.user.pin_must_change:
-        return redirect('core:dashboard')
-
-    if request.method == 'POST':
-        form = PinSetupForm(request.POST)
-        if form.is_valid():
-            user = request.user
-            user.set_pin(form.cleaned_data['pin'])
-            user.pin_must_change = False
-            user.save()
-            messages.success(
-                request,
-                'Ihr PIN wurde erfolgreich eingerichtet.'
-            )
-            return redirect('core:dashboard')
-    else:
-        form = PinSetupForm()
-
-    return render(request, 'core/pin_setup.html', {
-        'form': form,
-        'user': request.user
-    })
-
-
-@login_required
-def pin_change_view(request):
-    """
-    Freiwillige PIN-Änderung über das Profil
-    """
-    if request.method == 'POST':
-        form = PinChangeForm(request.user, request.POST)
-        if form.is_valid():
-            user = request.user
-            user.set_pin(form.cleaned_data['new_pin'])
-            user.save()
-            messages.success(request, 'Ihr PIN wurde erfolgreich geändert.')
-            return redirect('core:profile')
-    else:
-        form = PinChangeForm(request.user)
-
-    return render(request, 'core/pin_change.html', {
         'form': form,
         'user': request.user
     })

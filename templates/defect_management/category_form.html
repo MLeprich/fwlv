@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_update %}Kategorie bearbeiten{% else %}Neue Kategorie{% endif %} - Mängelwesen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'defect_management:dashboard' %}" class="text-gray-500 hover:text-gray-700">Mängelwesen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'defect_management:category_list' %}" class="text-gray-500 hover:text-gray-700">Kategorien</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if is_update %}Bearbeiten{% else %}Neue Kategorie{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">{% if is_update %}Kategorie bearbeiten{% else %}Neue Kategorie{% endif %}</h1>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r">
+            <div class="flex">
+                <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <div class="ml-3">
+                    <p class="text-sm text-red-700 font-medium">Bitte korrigieren Sie die folgenden Fehler:</p>
+                    <ul class="mt-1 text-sm text-red-600 list-disc list-inside">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="bg-white rounded-lg shadow p-6 space-y-5">
+            <!-- Name -->
+            <div>
+                <label for="id_name" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                {{ form.name }}
+            </div>
+
+            <!-- Icon + Farbe -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="id_icon" class="block text-sm font-medium text-gray-700 mb-1">Icon</label>
+                    {{ form.icon }}
+                    <p class="text-xs text-gray-500 mt-1">Emoji oder Unicode-Symbol</p>
+                </div>
+                <div>
+                    <label for="id_color" class="block text-sm font-medium text-gray-700 mb-1">Farbe</label>
+                    {{ form.color }}
+                    <p class="text-xs text-gray-500 mt-1">Tailwind-Farbklasse (z.B. red, blue)</p>
+                </div>
+            </div>
+
+            <!-- Beschreibung -->
+            <div>
+                <label for="id_description" class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                {{ form.description }}
+            </div>
+
+            <!-- Sortierung + Aktiv -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="id_sort_order" class="block text-sm font-medium text-gray-700 mb-1">Sortierung</label>
+                    {{ form.sort_order }}
+                    <p class="text-xs text-gray-500 mt-1">Kleinere Werte erscheinen zuerst</p>
+                </div>
+                <div class="flex items-center mt-6">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        {{ form.is_active }}
+                        <span class="text-sm font-medium text-gray-700">Aktiv</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Objekt-Lookup -->
+        <div class="bg-white rounded-lg shadow p-6 space-y-5">
+            <h2 class="text-lg font-semibold text-gray-900">Objekt-Verknüpfung</h2>
+            <p class="text-sm text-gray-500">
+                Wenn diese Kategorie mit einem bestimmten Django-Model verknüpft ist,
+                wird beim Erstellen eines Mangels ein dynamisches Objekt-Dropdown angezeigt.
+            </p>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="id_app_label" class="block text-sm font-medium text-gray-700 mb-1">App-Label</label>
+                    {{ form.app_label }}
+                    <p class="text-xs text-gray-500 mt-1">Django App-Name, z.B. "vehicles"</p>
+                </div>
+                <div>
+                    <label for="id_model_name" class="block text-sm font-medium text-gray-700 mb-1">Model-Name</label>
+                    {{ form.model_name }}
+                    <p class="text-xs text-gray-500 mt-1">Django Model (lowercase), z.B. "vehicle"</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex items-center justify-between">
+            <a href="{% url 'defect_management:category_list' %}"
+               class="text-gray-600 hover:text-gray-800 font-medium">
+                Abbrechen
+            </a>
+            <button type="submit"
+                    class="bg-red-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-sm">
+                {% if is_update %}Speichern{% else %}Kategorie erstellen{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

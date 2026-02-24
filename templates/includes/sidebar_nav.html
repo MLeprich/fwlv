@@ -226,6 +226,27 @@
                 {% endif %}
             </a>
             {% endif %}
+
+            <!-- Bevölkerungsschutz -->
+            {% if modules.civil_protection_enabled %}
+            {% if perms.civil_protection.view_katsequipmentmaster %}
+            <a
+                href="{% url 'civil_protection:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'civil_protection' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Bevölkerungsschutz'"
+            >
+                <span class="text-xl flex-shrink-0">&#x1F6E1;&#xFE0F;</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Bevölkerungsschutz
+                </span>
+            </a>
+            {% endif %}
+            {% endif %}
+
         </div>
     </div>
 
@@ -392,6 +413,7 @@
             {% endif %}
 
             <!-- Telefonbuch -->
+            {% if modules.phonebook_enabled %}
             <a
                 href="{% url 'personnel:phonebook' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
@@ -406,6 +428,7 @@
                     Telefonbuch
                 </span>
             </a>
+            {% endif %}
 
             <!-- Führerscheinüberprüfung -->
             {% if modules.driving_license_enabled and perms.driving_license.view_drivinglicensecheck %}
@@ -441,21 +464,41 @@
                 </span>
             </a>
 
-            <!-- Tickets -->
+            <!-- Leitstelle -->
             {% if modules.tickets_enabled %}
-            {% if perms.tickets.create_ticket or perms.tickets.process_ticket %}
+            {% if perms.tickets.create_ticket or perms.tickets.process_ticket or perms.tickets.view_infomonitor or perms.tickets.edit_infomonitor or perms.tickets.edit_mappe %}
             <a
-                href="{% url 'tickets:list' %}"
+                href="{% if perms.tickets.create_ticket or perms.tickets.process_ticket %}{% url 'tickets:list' %}{% else %}{% url 'tickets:infomonitor_display' %}{% endif %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
                        {% if current_module == 'tickets' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
-                x-tooltip="'Tickets'"
+                x-tooltip="'Leitstelle'"
             >
                 <span class="text-xl flex-shrink-0">🎫</span>
                 <span
                     class="text-sm truncate"
                     x-show="$store.sidebar.expanded"
                 >
-                    Tickets
+                    Leitstelle
+                </span>
+            </a>
+            {% endif %}
+            {% endif %}
+
+            <!-- Mängelwesen -->
+            {% if modules.defect_management_enabled %}
+            {% if perms.defect_management.view_defect %}
+            <a
+                href="{% url 'defect_management:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'defect_management' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Mängelwesen'"
+            >
+                <span class="text-xl flex-shrink-0">&#x26A0;&#xFE0F;</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Mängelwesen
                 </span>
             </a>
             {% endif %}
@@ -646,6 +689,23 @@
                     x-show="$store.sidebar.expanded"
                 >
                     Reports & KPIs
+                </span>
+            </a>
+            {% endif %}
+
+            {% if perms.reporting.view_inventory_dashboard %}
+            <a
+                href="{% url 'reporting:inventory_dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'inventory_dashboard' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Lager Dashboard'"
+            >
+                <span class="text-xl flex-shrink-0">📦</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Lager Dashboard
                 </span>
             </a>
             {% endif %}

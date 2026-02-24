@@ -48,6 +48,8 @@
                             {% elif location.location_type == 'box' %}📦
                             {% elif location.location_type == 'vehicle' %}🚗
                             {% elif location.location_type == 'container' %}📦
+                            {% elif location.location_type == 'nip' %}ℹ️
+                            {% elif location.location_type == 'leuchtturm' %}🏠
                             {% else %}📍
                             {% endif %}
                         </span>
@@ -74,6 +76,88 @@
             <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg mb-6">
                 <h3 class="text-blue-900 font-semibold text-sm mb-2">📍 Hierarchie</h3>
                 <p class="text-blue-800 text-sm">{{ location.get_full_path }}</p>
+            </div>
+            {% endif %}
+
+            <!-- BvS Info (NIP / Leuchtturm) -->
+            {% if location.location_type == 'nip' or location.location_type == 'leuchtturm' %}
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% if location.bvs_status %}
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">Status</p>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium {% if location.bvs_status == 'aktiv' %}bg-green-100 text-green-700{% elif location.bvs_status == 'geplant' %}bg-blue-100 text-blue-700{% elif location.bvs_status == 'inaktiv' %}bg-gray-100 text-gray-600{% else %}bg-yellow-100 text-yellow-700{% endif %}">{{ location.get_bvs_status_display }}</span>
+                    </div>
+                    {% endif %}
+                    {% if location.bereich %}
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">Bereich</p>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-700">{{ location.get_bereich_display }}</span>
+                    </div>
+                    {% endif %}
+                    {% if location.capacity_persons %}
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">Kapazität</p>
+                        <p class="text-sm font-medium text-gray-900">{{ location.capacity_persons }} Personen</p>
+                    </div>
+                    {% endif %}
+                    {% if location.opening_hours %}
+                    <div class="md:col-span-2">
+                        <p class="text-xs text-gray-500 mb-1">Öffnungszeiten</p>
+                        <p class="text-sm text-gray-700 whitespace-pre-line">{{ location.opening_hours }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if location.contact_name or location.contact_phone or location.contact_email %}
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <p class="text-xs text-gray-500 mb-2 font-semibold">Ansprechpartner</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {% if location.contact_name %}
+                        <div><p class="text-sm font-medium text-gray-900">{{ location.contact_name }}</p></div>
+                        {% endif %}
+                        {% if location.contact_phone %}
+                        <div><p class="text-sm text-gray-700">{{ location.contact_phone }}</p></div>
+                        {% endif %}
+                        {% if location.contact_email %}
+                        <div><p class="text-sm text-gray-700">{{ location.contact_email }}</p></div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if location.latitude and location.longitude %}
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <p class="text-xs text-gray-500 mb-1">GPS-Koordinaten</p>
+                    <p class="text-sm font-mono text-gray-700">{{ location.latitude }}, {{ location.longitude }}</p>
+                </div>
+                {% endif %}
+
+                {% if location.location_type == 'leuchtturm' %}
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <p class="text-xs text-gray-500 mb-2 font-semibold">Infrastruktur</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full {% if location.power_supply_available %}bg-green-500{% else %}bg-red-400{% endif %}"></span><span class="text-sm">Stromversorgung</span></div>
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full {% if location.heating_available %}bg-green-500{% else %}bg-red-400{% endif %}"></span><span class="text-sm">Heizung</span></div>
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full {% if location.water_supply_available %}bg-green-500{% else %}bg-red-400{% endif %}"></span><span class="text-sm">Wasserversorgung</span></div>
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full {% if location.communication_available %}bg-green-500{% else %}bg-red-400{% endif %}"></span><span class="text-sm">Kommunikation</span></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if location.kats_equipment_instances.exists %}
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <p class="text-xs text-gray-500 mb-2 font-semibold">KatS-Ausrüstung ({{ location.kats_equipment_instances.count }})</p>
+                    <div class="space-y-1">
+                        {% for eq in location.kats_equipment_instances.all|slice:":10" %}
+                        <div class="p-2 rounded border border-gray-200 text-sm">{{ eq.inventory_number }} - {{ eq.master.name }}</div>
+                        {% endfor %}
+                        {% if location.kats_equipment_instances.count > 10 %}
+                        <p class="text-xs text-gray-500">... und {{ location.kats_equipment_instances.count|add:"-10" }} weitere</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
             {% endif %}
 

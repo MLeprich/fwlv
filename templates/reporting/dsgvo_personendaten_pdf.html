@@ -137,8 +137,8 @@
         System: Feuerwehr Lagerverwaltungssystem (FLVS) &bull; Erstellt von: {{ user.get_full_name|default:user.username }} &bull; Datum: {{ generated_at }}
     </div>
 
-    <!-- 1. Stammdaten -->
-    <h2>1. Stammdaten</h2>
+    <!-- Stammdaten (immer sichtbar) -->
+    <h2>Stammdaten</h2>
     <table>
         <thead>
             <tr>
@@ -188,8 +188,9 @@
         </tbody>
     </table>
 
-    <!-- 2. Private Kontaktdaten -->
-    <h2>2. Private Kontaktdaten</h2>
+    {% if person_sections.private_contact_visible %}
+    <!-- Private Kontaktdaten -->
+    <h2>Private Kontaktdaten</h2>
     <p class="section-note">Sichtbarkeit steuerbar &uuml;ber Einstellung &bdquo;Private Kontaktdaten &ouml;ffentlich&ldquo; pro Person.</p>
     <table>
         <thead>
@@ -245,9 +246,11 @@
             </tr>
         </tbody>
     </table>
+    {% endif %}
 
-    <!-- 3. Dienstliche Kontaktdaten -->
-    <h2>3. Dienstliche Kontaktdaten</h2>
+    {% if person_sections.work_contact_visible and modules.phonebook_enabled %}
+    <!-- Dienstliche Kontaktdaten -->
+    <h2>Dienstliche Kontaktdaten</h2>
     <table>
         <thead>
             <tr>
@@ -278,9 +281,11 @@
             </tr>
         </tbody>
     </table>
+    {% endif %}
 
-    <!-- 4. Notfallkontakt -->
-    <h2>4. Notfallkontakt</h2>
+    {% if person_sections.emergency_contact_visible %}
+    <!-- Notfallkontakt -->
+    <h2>Notfallkontakt</h2>
     <p class="section-note">Daten einer dritten Person &mdash; Erhebung auf Basis der Einwilligung des Betroffenen.</p>
     <table>
         <thead>
@@ -324,9 +329,10 @@
             </tr>
         </tbody>
     </table>
+    {% endif %}
 
-    <!-- 5. Dienstliche Laufbahn -->
-    <h2>5. Dienstliche Laufbahn</h2>
+    <!-- Dienstliche Laufbahn -->
+    <h2>Dienstliche Laufbahn</h2>
     <table>
         <thead>
             <tr>
@@ -349,6 +355,7 @@
                 <td><span class="badge badge-optional">Optional</span></td>
                 <td>Dokumentation des Dienstaustritts</td>
             </tr>
+            {% if person_sections.organization_visible %}
             <tr>
                 <td>Eintritt JF / FF / BF</td>
                 <td>Datum</td>
@@ -361,6 +368,7 @@
                 <td><span class="badge badge-optional">Optional</span></td>
                 <td>Laufbahn-Dokumentation</td>
             </tr>
+            {% endif %}
             <tr>
                 <td>Dienstgrad-Historie</td>
                 <td>Verkn&uuml;pfung</td>
@@ -379,6 +387,20 @@
                 <td><span class="badge badge-optional">Optional</span></td>
                 <td>Arbeitsschutz, Dienstfähigkeit</td>
             </tr>
+            {% if person_sections.driving_license_visible and modules.driving_license_enabled %}
+            <tr>
+                <td>F&uuml;hrerscheinklassen</td>
+                <td>Verkn&uuml;pfung</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>Fahrerlaubnis, Einsatzfahrzeuge</td>
+            </tr>
+            <tr>
+                <td>F&uuml;hrerschein-Ablaufdatum</td>
+                <td>Datum</td>
+                <td><span class="badge badge-optional">Optional</span></td>
+                <td>&Uuml;berwachung der G&uuml;ltigkeit</td>
+            </tr>
+            {% endif %}
             <tr>
                 <td>Pflichtstunden</td>
                 <td>Verkn&uuml;pfung</td>
@@ -394,8 +416,9 @@
         </tbody>
     </table>
 
-    <!-- 6. System- & Nutzungsdaten -->
-    <h2>6. System- &amp; Nutzungsdaten</h2>
+    {% if person_sections.user_photo_visible %}
+    <!-- System- & Nutzungsdaten -->
+    <h2>System- &amp; Nutzungsdaten</h2>
     <table>
         <thead>
             <tr>
@@ -436,14 +459,17 @@
                 <td><span class="badge badge-auto">Automatisch</span></td>
                 <td>Audit-Trail, Nachvollziehbarkeit</td>
             </tr>
+            {% if person_sections.notes_visible %}
             <tr>
                 <td>Notizen (intern)</td>
                 <td>Freitext</td>
                 <td><span class="badge badge-optional">Optional</span></td>
                 <td>Interne Dokumentation</td>
             </tr>
+            {% endif %}
         </tbody>
     </table>
+    {% endif %}
 
     <!-- Rechtsgrundlagen -->
     <div class="legal-box">

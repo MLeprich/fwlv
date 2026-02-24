@@ -113,6 +113,51 @@
                 {% endif %}
             </div>
 
+            <!-- Leitung -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Fachbereichsleiter -->
+                <div>
+                    <label for="{{ form.head.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                        {{ form.head.label }}
+                    </label>
+                    {{ form.head }}
+                    {% if form.head.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.head.help_text }}</p>
+                    {% endif %}
+                    {% if form.head.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.head.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Stellv. Fachbereichsleiter -->
+                <div>
+                    <label for="{{ form.deputy_head.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                        {{ form.deputy_head.label }}
+                    </label>
+                    {{ form.deputy_head }}
+                    {% if form.deputy_head.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.deputy_head.help_text }}</p>
+                    {% endif %}
+                    {% if form.deputy_head.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.deputy_head.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Budget Code -->
+            <div>
+                <label for="{{ form.budget_code.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.budget_code.label }}
+                </label>
+                {{ form.budget_code }}
+                {% if form.budget_code.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ form.budget_code.help_text }}</p>
+                {% endif %}
+                {% if form.budget_code.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.budget_code.errors.0 }}</p>
+                {% endif %}
+            </div>
+
             <!-- Two Column Layout for Sort Order and Active Status -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Sort Order -->

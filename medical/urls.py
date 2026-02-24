@@ -23,6 +23,7 @@ urlpatterns = [
     path('masters/<int:pk>/delete/', views.MedicalItemMasterDeleteView.as_view(), name='master_delete'),
     path('masters/<int:pk>/qrcode/', views.master_qrcode_view, name='master_qrcode'),
     path('masters/<int:pk>/barcode/', views.master_barcode_view, name='master_barcode'),
+    path('masters/<int:pk>/order/', views.GenerateOrderFromMasterView.as_view(), name='master_generate_order'),
 
     # ========================================================================
     # GERÄTE-INSTANZEN (Device Instances)

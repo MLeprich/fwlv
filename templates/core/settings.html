@@ -68,6 +68,7 @@
                         <span class="font-medium text-sm">Sicherheit</span>
                     </button>
 
+                    {% if privacy_tab_visible or user.is_superuser %}
                     <button
                         @click="activeSection = 'privacy'"
                         :class="activeSection === 'privacy' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
@@ -76,6 +77,7 @@
                         <span class="text-xl">🛡️</span>
                         <span class="font-medium text-sm">Datenschutz</span>
                     </button>
+                    {% endif %}
 
                     {% if user.is_superuser %}
                     <div class="border-t border-gray-200 my-2"></div>
@@ -96,6 +98,15 @@
                     >
                         <span class="text-xl">🧩</span>
                         <span class="font-medium text-sm">Module</span>
+                    </button>
+
+                    <button
+                        @click="activeSection = 'dsgvo'"
+                        :class="activeSection === 'dsgvo' ? 'bg-primary-50 text-primary-700 border-primary-700' : 'text-gray-700 hover:bg-gray-50 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left border-l-4"
+                    >
+                        <span class="text-xl">🛡️</span>
+                        <span class="font-medium text-sm">DSGVO</span>
                     </button>
 
                     <button
@@ -129,10 +140,13 @@
                 {% include 'core/settings/notifications.html' %}
                 {% include 'core/settings/appearance.html' %}
                 {% include 'core/settings/security.html' %}
+                {% if privacy_tab_visible or user.is_superuser %}
                 {% include 'core/settings/privacy.html' %}
+                {% endif %}
                 {% if user.is_superuser %}
                 {% include 'core/settings/api.html' %}
                 {% include 'core/settings/modules.html' %}
+                {% include 'core/settings/dsgvo.html' %}
                 {% include 'core/settings/system.html' %}
                 {% include 'core/settings/backup.html' %}
                 {% endif %}

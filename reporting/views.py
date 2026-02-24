@@ -9,8 +9,10 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.views.generic import TemplateView, ListView
 from django.http import HttpResponse
 from django.template.loader import render_to_string
-from django.db.models import Count, Sum, Q, Avg, F
+from django.core.paginator import Paginator
+from django.db.models import Count, Sum, Q, Avg, F, Min
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
@@ -24,6 +26,7 @@ from vehicles.models import Vehicle, VehicleInspection
 from personnel.models import Person, Qualification
 from inventory_base.models import Supplier
 from procurement.models import PurchaseOrder, OrderItem, OrderStatus
+from locations.models import Location
 
 
 class ReportingDashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
@@ -521,7 +524,7 @@ def dsgvo_personendaten_pdf(request):
     html_string = render_to_string('reporting/dsgvo_personendaten_pdf.html', {
         'user': request.user,
         'generated_at': timezone.now().strftime('%d.%m.%Y %H:%M'),
-    })
+    }, request=request)
 
     pdf = weasyprint.HTML(
         string=html_string,
@@ -546,3 +549,389 @@ def module_report(request, module_name):
     # TODO: Modul-spezifische Reports implementieren
 
     return render(request, 'reporting/module_report.html', context)
+
+
+class InventoryDashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    """
+    Modulübergreifendes Lager-Dashboard
+    Aggregiert Bestände aus Medical, Equipment und Civil Protection
+    """
+    template_name = 'reporting/inventory_dashboard.html'
+    permission_required = 'reporting.view_inventory_dashboard'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_module'] = 'inventory_dashboard'
+
+        # GET-Parameter
+        search = self.request.GET.get('search', '').strip()
+        module_filter = self.request.GET.get('module', '')
+        location_id = self.request.GET.get('location', '')
+        status_filter = self.request.GET.get('status', '')
+        sort = self.request.GET.get('sort', 'name')
+        sort_dir = self.request.GET.get('dir', 'asc')
+        page_number = self.request.GET.get('page', 1)
+
+        today = timezone.now().date()
+        expiry_threshold = today + timedelta(days=90)
+
+        # Civil Protection enabled?
+        from core.models import SystemSettings
+        try:
+            sys_settings = SystemSettings.objects.first()
+            civil_protection_enabled = sys_settings.civil_protection_enabled if sys_settings else False
+        except Exception:
+            civil_protection_enabled = False
+
+        # Collect items from all modules
+        items = []
+
+        if not module_filter or module_filter == 'medical':
+            items.extend(self._get_medical_items(search, location_id, today, expiry_threshold))
+
+        if not module_filter or module_filter == 'equipment':
+            items.extend(self._get_equipment_items(search, location_id, today, expiry_threshold))
+
+        if civil_protection_enabled and (not module_filter or module_filter == 'civil_protection'):
+            items.extend(self._get_civil_protection_items(search, location_id, today, expiry_threshold))
+
+        # Status filter
+        if status_filter:
+            items = [i for i in items if i['stock_status'] == status_filter]
+
+        # KPIs (before pagination)
+        kpis = self._compute_kpis(items)
+
+        # Sort
+        reverse = sort_dir == 'desc'
+        sort_key_map = {
+            'name': lambda x: (x['name'] or '').lower(),
+            'item_number': lambda x: (x['item_number'] or '').lower(),
+            'total_stock': lambda x: x['total_stock'] or 0,
+            'stock_status': lambda x: {'expired': 0, 'low': 1, 'expiring': 2, 'ok': 3}.get(x['stock_status'], 4),
+            'module': lambda x: x['module_label'],
+        }
+        sort_func = sort_key_map.get(sort, sort_key_map['name'])
+        items.sort(key=sort_func, reverse=reverse)
+
+        # Pagination
+        paginator = Paginator(items, 50)
+        page_obj = paginator.get_page(page_number)
+
+        # Locations for dropdown
+        locations = Location.objects.filter(is_active=True).order_by('name')
+
+        context.update({
+            'items': page_obj,
+            'page_obj': page_obj,
+            'kpis': kpis,
+            'locations': locations,
+            'civil_protection_enabled': civil_protection_enabled,
+            # Preserve filter state
+            'search': search,
+            'module_filter': module_filter,
+            'location_filter': location_id,
+            'status_filter': status_filter,
+            'sort': sort,
+            'dir': sort_dir,
+        })
+
+        return context
+
+    def get_template_names(self):
+        if self.request.headers.get('HX-Request'):
+            return ['reporting/_inventory_table_partial.html']
+        return [self.template_name]
+
+    def _get_medical_items(self, search, location_id, today, expiry_threshold):
+        from medical.models import MedicalItemMaster, MedicalBatch, MedicalDeviceInstance, MedicalItemType
+
+        qs = MedicalItemMaster.objects.filter(is_active=True)
+
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(master_number__icontains=search))
+
+        qs = qs.annotate(
+            batch_stock=Sum(
+                'batches__quantity_remaining',
+                filter=Q(batches__quantity_remaining__gt=0, batches__is_recalled=False)
+            ),
+            device_count=Count(
+                'device_instances',
+                filter=Q(device_instances__is_active=True)
+            ),
+            earliest_expiry=Min(
+                'batches__expiry_date',
+                filter=Q(batches__quantity_remaining__gt=0, batches__is_recalled=False)
+            ),
+        )
+
+        # Location filter
+        if location_id:
+            batch_loc = MedicalBatch.objects.filter(
+                location_id=location_id, quantity_remaining__gt=0
+            ).values_list('master_id', flat=True)
+            device_loc = MedicalDeviceInstance.objects.filter(
+                location_id=location_id, is_active=True
+            ).values_list('master_id', flat=True)
+            master_ids = set(batch_loc) | set(device_loc)
+            qs = qs.filter(pk__in=master_ids)
+
+        items = []
+        for master in qs:
+            if master.item_type == MedicalItemType.DEVICE:
+                total_stock = master.device_count or 0
+            else:
+                total_stock = int(master.batch_stock or 0)
+
+            min_stock = int(master.min_quantity) if master.min_quantity else None
+            expiry = master.earliest_expiry
+
+            stock_status = self._calc_status(total_stock, min_stock, expiry, today, expiry_threshold)
+
+            # Locations
+            loc_names = self._get_medical_locations(master)
+
+            items.append({
+                'module': 'medical',
+                'module_label': 'Rettungsdienst',
+                'module_color': 'blue',
+                'item_number': master.master_number,
+                'name': master.name,
+                'category': master.get_item_type_display(),
+                'locations': loc_names,
+                'total_stock': total_stock,
+                'min_stock': min_stock,
+                'stock_status': stock_status,
+                'expiry_date': expiry,
+                'detail_url': reverse('medical:master_detail', args=[master.pk]),
+            })
+
+        return items
+
+    def _get_medical_locations(self, master):
+        from medical.models import MedicalBatch, MedicalDeviceInstance, MedicalItemType
+
+        loc_set = set()
+        if master.item_type == MedicalItemType.DEVICE:
+            locs = MedicalDeviceInstance.objects.filter(
+                master=master, is_active=True, location__isnull=False
+            ).values_list('location__name', flat=True).distinct()
+        else:
+            locs = MedicalBatch.objects.filter(
+                master=master, quantity_remaining__gt=0, is_recalled=False, location__isnull=False
+            ).values_list('location__name', flat=True).distinct()
+        loc_set.update(locs)
+        loc_list = sorted(loc_set)
+        if len(loc_list) > 3:
+            return loc_list[:3] + [f'+{len(loc_list) - 3}']
+        return loc_list
+
+    def _get_equipment_items(self, search, location_id, today, expiry_threshold):
+        from equipment.models import EquipmentItemMaster, EquipmentBatch, EquipmentDeviceInstance
+
+        qs = EquipmentItemMaster.objects.filter(is_active=True)
+
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(master_number__icontains=search))
+
+        qs = qs.annotate(
+            device_count=Count(
+                'device_instances',
+                filter=Q(device_instances__is_active=True)
+            ),
+            batch_stock=Sum(
+                'batches__quantity_remaining',
+                filter=Q(batches__quantity_remaining__gt=0, batches__is_recalled=False)
+            ),
+            earliest_expiry=Min(
+                'batches__expiry_date',
+                filter=Q(batches__quantity_remaining__gt=0, batches__is_recalled=False)
+            ),
+        )
+
+        # Location filter
+        if location_id:
+            batch_loc = EquipmentBatch.objects.filter(
+                location_id=location_id, quantity_remaining__gt=0
+            ).values_list('master_id', flat=True)
+            device_loc = EquipmentDeviceInstance.objects.filter(
+                location_id=location_id, is_active=True
+            ).values_list('master_id', flat=True)
+            master_ids = set(batch_loc) | set(device_loc)
+            qs = qs.filter(pk__in=master_ids)
+
+        items = []
+        for master in qs:
+            total_stock = (master.device_count or 0) + int(master.batch_stock or 0)
+            expiry = master.earliest_expiry
+
+            stock_status = self._calc_status(total_stock, None, expiry, today, expiry_threshold)
+
+            loc_names = self._get_equipment_locations(master)
+
+            items.append({
+                'module': 'equipment',
+                'module_label': 'Ausrüstung',
+                'module_color': 'orange',
+                'item_number': master.master_number,
+                'name': master.name,
+                'category': master.get_equipment_type_display(),
+                'locations': loc_names,
+                'total_stock': total_stock,
+                'min_stock': None,
+                'stock_status': stock_status,
+                'expiry_date': expiry,
+                'detail_url': reverse('equipment:master_detail', args=[master.pk]),
+            })
+
+        return items
+
+    def _get_equipment_locations(self, master):
+        from equipment.models import EquipmentBatch, EquipmentDeviceInstance
+
+        loc_set = set()
+        batch_locs = EquipmentBatch.objects.filter(
+            master=master, quantity_remaining__gt=0, is_recalled=False, location__isnull=False
+        ).values_list('location__name', flat=True).distinct()
+        loc_set.update(batch_locs)
+        device_locs = EquipmentDeviceInstance.objects.filter(
+            master=master, is_active=True, location__isnull=False
+        ).values_list('location__name', flat=True).distinct()
+        loc_set.update(device_locs)
+        loc_list = sorted(loc_set)
+        if len(loc_list) > 3:
+            return loc_list[:3] + [f'+{len(loc_list) - 3}']
+        return loc_list
+
+    def _get_civil_protection_items(self, search, location_id, today, expiry_threshold):
+        from civil_protection.models import (
+            KatSEquipmentMaster, KatSEquipmentInstance,
+            KatSMedicationMaster, KatSMedicationBatch,
+        )
+
+        items = []
+
+        # KatS Equipment
+        eq_qs = KatSEquipmentMaster.objects.filter(is_active=True)
+        if search:
+            eq_qs = eq_qs.filter(Q(name__icontains=search) | Q(master_number__icontains=search))
+
+        eq_qs = eq_qs.annotate(
+            instance_count=Count(
+                'instances',
+                filter=Q(instances__is_active=True)
+            ),
+        )
+
+        if location_id:
+            instance_ids = KatSEquipmentInstance.objects.filter(
+                location_id=location_id, is_active=True
+            ).values_list('master_id', flat=True)
+            eq_qs = eq_qs.filter(pk__in=set(instance_ids))
+
+        for master in eq_qs:
+            total_stock = master.instance_count or 0
+            min_stock = int(master.min_quantity) if master.min_quantity else None
+            stock_status = self._calc_status(total_stock, min_stock, None, today, expiry_threshold)
+
+            loc_set = set()
+            locs = KatSEquipmentInstance.objects.filter(
+                master=master, is_active=True, location__isnull=False
+            ).values_list('location__name', flat=True).distinct()
+            loc_set.update(locs)
+            loc_list = sorted(loc_set)
+            if len(loc_list) > 3:
+                loc_list = loc_list[:3] + [f'+{len(loc_list) - 3}']
+
+            items.append({
+                'module': 'civil_protection',
+                'module_label': 'Bevölkerungsschutz',
+                'module_color': 'green',
+                'item_number': master.master_number,
+                'name': master.name,
+                'category': master.get_equipment_type_display(),
+                'locations': loc_list,
+                'total_stock': total_stock,
+                'min_stock': min_stock,
+                'stock_status': stock_status,
+                'expiry_date': None,
+                'detail_url': reverse('civil_protection:equipment_detail', args=[master.pk]),
+            })
+
+        # KatS Medications
+        med_qs = KatSMedicationMaster.objects.filter(is_active=True)
+        if search:
+            med_qs = med_qs.filter(Q(name__icontains=search) | Q(master_number__icontains=search))
+
+        med_qs = med_qs.annotate(
+            batch_stock=Sum(
+                'batches__quantity_remaining',
+                filter=Q(batches__quantity_remaining__gt=0, batches__is_recalled=False)
+            ),
+            earliest_expiry=Min(
+                'batches__expiry_date',
+                filter=Q(batches__quantity_remaining__gt=0, batches__is_recalled=False)
+            ),
+        )
+
+        if location_id:
+            batch_ids = KatSMedicationBatch.objects.filter(
+                location_id=location_id, quantity_remaining__gt=0
+            ).values_list('master_id', flat=True)
+            med_qs = med_qs.filter(pk__in=set(batch_ids))
+
+        for master in med_qs:
+            total_stock = int(master.batch_stock or 0)
+            min_stock = int(master.min_quantity) if master.min_quantity else None
+            expiry = master.earliest_expiry
+            stock_status = self._calc_status(total_stock, min_stock, expiry, today, expiry_threshold)
+
+            loc_set = set()
+            locs = KatSMedicationBatch.objects.filter(
+                master=master, quantity_remaining__gt=0, is_recalled=False, location__isnull=False
+            ).values_list('location__name', flat=True).distinct()
+            loc_set.update(locs)
+            loc_list = sorted(loc_set)
+            if len(loc_list) > 3:
+                loc_list = loc_list[:3] + [f'+{len(loc_list) - 3}']
+
+            items.append({
+                'module': 'civil_protection',
+                'module_label': 'Bevölkerungsschutz',
+                'module_color': 'green',
+                'item_number': master.master_number,
+                'name': master.name,
+                'category': master.get_medication_type_display(),
+                'locations': loc_list,
+                'total_stock': total_stock,
+                'min_stock': min_stock,
+                'stock_status': stock_status,
+                'expiry_date': expiry,
+                'detail_url': reverse('civil_protection:medication_detail', args=[master.pk]),
+            })
+
+        return items
+
+    @staticmethod
+    def _calc_status(total_stock, min_stock, expiry_date, today, expiry_threshold):
+        if expiry_date and expiry_date < today:
+            return 'expired'
+        if min_stock is not None and total_stock < min_stock:
+            return 'low'
+        if expiry_date and expiry_date <= expiry_threshold:
+            return 'expiring'
+        return 'ok'
+
+    @staticmethod
+    def _compute_kpis(items):
+        total = len(items)
+        low = sum(1 for i in items if i['stock_status'] == 'low')
+        expiring = sum(1 for i in items if i['stock_status'] == 'expiring')
+        expired = sum(1 for i in items if i['stock_status'] == 'expired')
+        return {
+            'total': total,
+            'low': low,
+            'expiring': expiring,
+            'expired': expired,
+        }

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Leuchtturmstandorte - FLVS{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bevölkerungsschutz</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Leuchtturmstandorte</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Leuchtturmstandorte</h1>
+        {% if perms.locations.add_location %}
+        <a href="{% url 'locations:create' %}?type=leuchtturm" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">+ Neu anlegen</a>
+        {% endif %}
+    </div>
+    <div class="mb-4">
+        <form method="get" class="flex gap-2">
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Suche nach Name oder Stadt..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Suchen</button>
+        </form>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for lt in leuchtturm_list %}
+        <a href="{% url 'civil_protection:leuchtturm_detail' lt.pk %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-yellow-300 transition-all p-6">
+            <div class="flex items-start justify-between mb-3">
+                <h3 class="font-semibold text-gray-900">{{ lt.name }}</h3>
+                <span class="px-2 py-1 rounded-full text-xs font-medium {% if lt.bvs_status == 'aktiv' %}bg-green-100 text-green-700{% elif lt.bvs_status == 'geplant' %}bg-blue-100 text-blue-700{% elif lt.bvs_status == 'inaktiv' %}bg-gray-100 text-gray-600{% else %}bg-yellow-100 text-yellow-700{% endif %}">{{ lt.get_bvs_status_display }}</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">{{ lt.get_address|default:"Keine Adresse" }}</p>
+            <div class="flex flex-wrap gap-2 mb-2">
+                {% if lt.power_supply_available %}<span class="px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded">Strom</span>{% endif %}
+                {% if lt.heating_available %}<span class="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded">Heizung</span>{% endif %}
+                {% if lt.water_supply_available %}<span class="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded">Wasser</span>{% endif %}
+                {% if lt.communication_available %}<span class="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs rounded">Kommunikation</span>{% endif %}
+            </div>
+            {% if lt.capacity_persons %}<p class="text-xs text-gray-500">Kapazität: {{ lt.capacity_persons }} Personen</p>{% endif %}
+        </a>
+        {% empty %}
+        <div class="col-span-3 text-center py-12 text-gray-500">Keine Leuchtturmstandorte gefunden.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

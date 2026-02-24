@@ -11,6 +11,19 @@ from mptt.models import MPTTModel, TreeForeignKey
 from core.models.base import TimeStampedModel, AuditedModel
 
 
+class LocationBereich(models.TextChoices):
+    BUND = 'bund', _('Bund')
+    LAND = 'land', _('Land')
+    KOMMUNE = 'kommune', _('Kommune')
+
+
+class LocationBvsStatus(models.TextChoices):
+    AKTIV = 'aktiv', _('Aktiv')
+    INAKTIV = 'inaktiv', _('Inaktiv')
+    GEPLANT = 'geplant', _('Geplant')
+    VORUEBERGEHEND_GESCHLOSSEN = 'voruebergehend_geschlossen', _('Vorübergehend geschlossen')
+
+
 class LocationType(models.TextChoices):
     """
     Typen von Lagerorten - Hierarchisch organisiert
@@ -54,6 +67,10 @@ class LocationType(models.TextChoices):
     # Mobile & Spezial
     VEHICLE = 'vehicle', _('Fahrzeug (mobil)')
     CONTAINER = 'container', _('Container')
+
+    # Bevölkerungsschutz
+    NIP = 'nip', _('Notfallinformationspunkt (NIP)')
+    LEUCHTTURM = 'leuchtturm', _('Leuchtturmstandort')
 
     # Sonstiges
     OTHER = 'other', _('Sonstiges')
@@ -99,7 +116,7 @@ class Location(MPTTModel, AuditedModel):
     )
 
     location_type = models.CharField(
-        max_length=20,
+        max_length=30,
         choices=LocationType.choices,
         default=LocationType.ROOM,
         verbose_name=_('Typ'),
@@ -244,6 +261,68 @@ class Location(MPTTModel, AuditedModel):
         blank=True,
         verbose_name=_('Notizen'),
         help_text=_('Interne Notizen')
+    )
+
+    # --- Bevölkerungsschutz-Felder (NIP / Leuchtturm) ---
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6,
+        null=True, blank=True,
+        verbose_name=_('Breitengrad'),
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6,
+        null=True, blank=True,
+        verbose_name=_('Längengrad'),
+    )
+    contact_name = models.CharField(
+        max_length=200, blank=True,
+        verbose_name=_('Ansprechpartner'),
+    )
+    contact_phone = models.CharField(
+        max_length=50, blank=True,
+        verbose_name=_('Telefon'),
+    )
+    contact_email = models.EmailField(
+        blank=True,
+        verbose_name=_('E-Mail'),
+    )
+    opening_hours = models.TextField(
+        blank=True,
+        verbose_name=_('Öffnungszeiten'),
+    )
+    capacity_persons = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name=_('Kapazität (Personen)'),
+    )
+    bvs_status = models.CharField(
+        max_length=40,
+        choices=LocationBvsStatus.choices,
+        blank=True,
+        verbose_name=_('BvS-Status'),
+        help_text=_('Status für NIP/Leuchtturm'),
+    )
+    bereich = models.CharField(
+        max_length=30,
+        choices=LocationBereich.choices,
+        blank=True,
+        verbose_name=_('Bereich'),
+        help_text=_('Bund/Land/Kommune'),
+    )
+    power_supply_available = models.BooleanField(
+        default=False,
+        verbose_name=_('Stromversorgung vorhanden'),
+    )
+    heating_available = models.BooleanField(
+        default=False,
+        verbose_name=_('Heizung vorhanden'),
+    )
+    water_supply_available = models.BooleanField(
+        default=False,
+        verbose_name=_('Wasserversorgung vorhanden'),
+    )
+    communication_available = models.BooleanField(
+        default=False,
+        verbose_name=_('Kommunikation vorhanden'),
     )
 
     class MPTTMeta:

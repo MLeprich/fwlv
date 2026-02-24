@@ -1,0 +1,33 @@
+{% extends 'public_base.html' %}
+
+{% block title %}Fahrzeugübergabe abgeschlossen - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto text-center">
+
+    <div class="bg-white rounded-lg shadow p-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+
+        <h1 class="text-2xl font-bold text-gray-900 mb-3">Vielen Dank!</h1>
+        <p class="text-gray-600 mb-8">
+            Die Fahrzeugübergabe wurde erfolgreich dokumentiert und gespeichert.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="{% url 'vehicle_handover:public_create' %}"
+               class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                Weitere Übergabe erstellen
+            </a>
+            <a href="{% url 'core:landing' %}"
+               class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                Zur Startseite
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

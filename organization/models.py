@@ -38,6 +38,35 @@ class Department(models.Model):
         blank=True,
         verbose_name=_('Beschreibung')
     )
+
+    # Leitung
+    head = models.ForeignKey(
+        'personnel.Person',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='headed_departments',
+        verbose_name=_('Fachbereichsleiter'),
+        help_text=_('Leiter/in dieser Abteilung')
+    )
+    deputy_head = models.ForeignKey(
+        'personnel.Person',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deputy_headed_departments',
+        verbose_name=_('Stellv. Fachbereichsleiter'),
+        help_text=_('Stellvertretende/r Leiter/in dieser Abteilung')
+    )
+
+    # Procurement-Felder (zusammengeführt aus ProcurementDepartment)
+    budget_code = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_('Budgetcode'),
+        help_text=_('Standard-Budgetcode für diesen Fachbereich')
+    )
+
     is_active = models.BooleanField(
         default=True,
         verbose_name=_('Aktiv')

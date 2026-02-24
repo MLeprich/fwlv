@@ -289,7 +289,6 @@ class VehicleHandoverAdmin(admin.ModelAdmin):
     list_display = (
         'vehicle',
         'handover_type_badge',
-        'handover_from',
         'handover_to',
         'handover_date',
         'status_badge',
@@ -316,8 +315,6 @@ class VehicleHandoverAdmin(admin.ModelAdmin):
         'vehicle__radio_callsign',
         'handover_to__first_name',
         'handover_to__last_name',
-        'handover_from__first_name',
-        'handover_from__last_name',
         'notes',
     )
 
@@ -335,7 +332,6 @@ class VehicleHandoverAdmin(admin.ModelAdmin):
         (_('Fahrzeug & Personen'), {
             'fields': (
                 'vehicle',
-                'handover_from',
                 'handover_to',
                 'location',
             )
@@ -365,7 +361,6 @@ class VehicleHandoverAdmin(admin.ModelAdmin):
         }),
         (_('Bestätigung'), {
             'fields': (
-                'confirmed_by_giver',
                 'confirmed_by_receiver',
             )
         }),
@@ -402,7 +397,6 @@ class VehicleHandoverAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs.select_related(
             'vehicle',
-            'handover_from',
             'handover_to',
             'location',
             'created_by',
@@ -534,15 +528,9 @@ class VehicleHandoverAdmin(admin.ModelAdmin):
             checks.append('✗ Vollständigkeitsprüfung fehlt')
 
         if obj.confirmed_by_receiver:
-            checks.append('✓ Bestätigt durch Empfänger')
+            checks.append('✓ Bestätigt durch Übernehmenden')
         else:
-            checks.append('✗ Bestätigung Empfänger fehlt')
-
-        if obj.handover_from:
-            if obj.confirmed_by_giver:
-                checks.append('✓ Bestätigt durch Übergeber')
-            else:
-                checks.append('✗ Bestätigung Übergeber fehlt')
+            checks.append('✗ Bestätigung Übernehmender fehlt')
 
         completion = obj.get_checklist_completion()
         if completion == 100:

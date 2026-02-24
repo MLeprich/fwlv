@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Info-Monitor - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:list' %}" class="text-gray-500 hover:text-gray-700">Leitstelle</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Info-Monitor</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <h1 class="text-2xl font-bold">Info-Monitor</h1>
+                </div>
+                <p class="text-indigo-100">Leitstelle &mdash; Bereitschaft, Personal, Fahrzeuge</p>
+            </div>
+            <div class="flex items-center gap-3">
+                {% if can_edit_mappe %}
+                <a href="{% url 'tickets:mappe_overview' %}" class="bg-white text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                    Digitale Mappe
+                </a>
+                {% endif %}
+                {% if can_edit %}
+                <a href="{% url 'tickets:bereitschaft_person_list' %}" class="bg-white text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    Bereitschaftspersonen
+                </a>
+                <a href="{% url 'tickets:infomonitor_edit' %}" class="bg-white text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    Bearbeiten
+                </a>
+                {% endif %}
+                {% if can_edit %}
+                <a href="{% url 'tickets:infomonitor_kiosk' %}" target="_blank" class="bg-indigo-700/50 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                    </svg>
+                    Kiosk-Modus
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Bereitschaft -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="bg-amber-50 border-b border-amber-200 px-6 py-3 rounded-t-lg">
+            <h2 class="text-lg font-bold text-amber-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                Bereitschaft
+            </h2>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">C-Dienst</p>
+                <p class="text-sm font-semibold text-gray-900">{{ monitor.bereitschaft_c_dienst|default:"&mdash;" }}</p>
+                {% if monitor.bereitschaft_c_dienst_changed_at %}<p class="text-xs text-gray-400 mt-1">Geändert: {{ monitor.bereitschaft_c_dienst_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">LNA</p>
+                <p class="text-sm font-semibold text-gray-900">{{ monitor.bereitschaft_lna|default:"&mdash;" }}</p>
+                {% if monitor.bereitschaft_lna_changed_at %}<p class="text-xs text-gray-400 mt-1">Geändert: {{ monitor.bereitschaft_lna_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Ordnungsamt</p>
+                <p class="text-sm font-semibold text-gray-900">{{ monitor.bereitschaft_o_amt|default:"&mdash;" }}</p>
+                {% if monitor.bereitschaft_o_amt_changed_at %}<p class="text-xs text-gray-400 mt-1">Geändert: {{ monitor.bereitschaft_o_amt_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Gesundheitsamt</p>
+                <p class="text-sm font-semibold text-gray-900">{{ monitor.bereitschaft_g_amt|default:"&mdash;" }}</p>
+                {% if monitor.bereitschaft_g_amt_changed_at %}<p class="text-xs text-gray-400 mt-1">Geändert: {{ monitor.bereitschaft_g_amt_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Veterinäramt</p>
+                <p class="text-sm font-semibold text-gray-900">{{ monitor.bereitschaft_veterinaeramt|default:"&mdash;" }}</p>
+                {% if monitor.bereitschaft_veterinaeramt_changed_at %}<p class="text-xs text-gray-400 mt-1">Geändert: {{ monitor.bereitschaft_veterinaeramt_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Veterinäramt Datum/Uhrzeit</p>
+                <p class="text-sm font-semibold text-gray-900">{% if monitor.bereitschaft_vet_datetime %}{{ monitor.bereitschaft_vet_datetime|date:"d.m.Y H:i" }}{% else %}&mdash;{% endif %}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Personal -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="bg-green-50 border-b border-green-200 px-6 py-3 rounded-t-lg">
+            <h2 class="text-lg font-bold text-green-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Personal
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-2 pr-4 text-gray-500 font-medium"></th>
+                            <th class="text-center py-2 px-3 text-gray-500 font-medium">Löschzug</th>
+                            <th class="text-center py-2 px-3 text-gray-500 font-medium">Ergänzung</th>
+                            <th class="text-center py-2 px-3 text-gray-500 font-medium">RTW</th>
+                            <th class="text-center py-2 px-3 text-gray-500 font-medium">KTW</th>
+                            <th class="text-center py-2 px-3 text-gray-500 font-medium">Taucher</th>
+                            <th class="text-center py-2 px-3 text-gray-500 font-medium">Höhenretter</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-2 pr-4 font-semibold text-gray-900">FW 1</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw1_loeschzug }}</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw1_ergaenzung }}</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw1_5_rtw }}</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw1_ktw }}</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw1_taucher }}</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw1_hoehenretter }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 pr-4 font-semibold text-gray-900">FW 2</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw2_loeschzug }}</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw2_ergaenzung }}</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw2_5_rtw }}</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw2_ktw }}</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw2_taucher }}</td>
+                            <td class="py-2 px-3 text-center font-mono text-lg">{{ monitor.personal_fw2_hoehenretter }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Fahrzeuge / Geräte -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="bg-red-50 border-b border-red-200 px-6 py-3 rounded-t-lg">
+            <h2 class="text-lg font-bold text-red-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Fahrzeuge / Geräte
+            </h2>
+        </div>
+        <div class="p-6">
+            {% if monitor_vehicles %}
+            <div class="overflow-x-auto mb-6">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-2 pr-4 text-gray-500 font-medium">#</th>
+                            <th class="text-left py-2 px-3 text-gray-500 font-medium">Außer Dienst</th>
+                            <th class="text-left py-2 px-3 text-gray-500 font-medium">Ersetzt mit</th>
+                            <th class="text-left py-2 px-3 text-gray-500 font-medium">Bemerkung</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in monitor_vehicles %}
+                        <tr class="border-b border-gray-100">
+                            <td class="py-2 pr-4 text-gray-400">{{ forloop.counter }}</td>
+                            <td class="py-2 px-3 font-semibold text-red-700">{{ v.fahrzeug_ad|default:"&mdash;" }}</td>
+                            <td class="py-2 px-3 font-semibold text-green-700">{{ v.ersetzt_mit|default:"&mdash;" }}</td>
+                            <td class="py-2 px-3 text-gray-600">{{ v.bemerkung|default:"" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 mb-6">Keine Fahrzeuge außer Dienst.</p>
+            {% endif %}
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Geräte</p>
+                <p class="text-sm text-gray-900 whitespace-pre-wrap">{{ monitor.geraete|default:"&mdash;" }}</p>
+            </div>
+        </div>
+    </div>
+
+    {% if monitor.laufband_text %}
+    <!-- 3b. Laufband -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="bg-purple-50 border-b border-purple-200 px-6 py-3 rounded-t-lg">
+            <h2 class="text-lg font-bold text-purple-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
+                Laufband
+            </h2>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Laufband-Text</p>
+                <p class="text-sm text-gray-900 whitespace-pre-wrap">{{ monitor.laufband_text }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Geschwindigkeit</p>
+                <p class="text-sm text-gray-900">{{ monitor.laufband_geschwindigkeit }} Sekunden pro Durchlauf</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 4. Sonstiges -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="bg-blue-50 border-b border-blue-200 px-6 py-3 rounded-t-lg">
+            <h2 class="text-lg font-bold text-blue-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Sonstiges
+            </h2>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for s in monitor_sonstiges %}
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sonstiges {{ forloop.counter }}</p>
+                <p class="text-sm text-gray-900 whitespace-pre-wrap">{{ s.text|default:"&mdash;" }}</p>
+            </div>
+            {% empty %}
+            <div>
+                <p class="text-sm text-gray-400">Keine Eintr&auml;ge vorhanden.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Zuletzt aktualisiert -->
+    <div class="text-center text-sm text-gray-500">
+        Zuletzt aktualisiert: {% if monitor.updated_at %}{{ monitor.updated_at|date:"d.m.Y H:i" }}{% else %}&mdash;{% endif %}
+        {% if monitor.updated_by %} von {{ monitor.updated_by.get_full_name|default:monitor.updated_by.username }}{% endif %}
+    </div>
+</div>
+{% endblock %}

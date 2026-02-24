@@ -5,9 +5,12 @@ Formulare für das Ticketsystem
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.forms import ClearableFileInput
+from django.forms import ClearableFileInput, inlineformset_factory
 
-from .models import Ticket, TicketComment, TicketImage, CommentImage, TicketStatus, TicketPriority, TicketCategory
+from .models import (Ticket, TicketComment, TicketImage, CommentImage, TicketStatus, TicketPriority,
+                      TicketCategory, InfoMonitor, InfoMonitorVehicle, InfoMonitorSonstiges,
+                      BereitschaftPerson, BereitschaftKategorie, MappeLink, MappeKontakt,
+                      MappeAnleitung, GrossveranstaltungDashboard, GrossveranstaltungAbschnitt)
 
 User = get_user_model()
 
@@ -167,3 +170,238 @@ class TicketStatusForm(forms.Form):
         }),
         label='Status'
     )
+
+
+class InfoMonitorForm(forms.ModelForm):
+    """Formular für den Leitstelle Info-Monitor"""
+
+    class Meta:
+        model = InfoMonitor
+        exclude = ['updated_at', 'updated_by',
+                   'bereitschaft_c_dienst_changed_at', 'bereitschaft_lna_changed_at',
+                   'bereitschaft_o_amt_changed_at', 'bereitschaft_g_amt_changed_at',
+                   'bereitschaft_veterinaeramt_changed_at',
+                   'sonstiges_1', 'sonstiges_2', 'sonstiges_3', 'sonstiges_4', 'sonstiges_5']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
+
+        # Bereitschaftsfelder nach Kategorie filtern
+        bereitschaft_field_kategorie = {
+            'bereitschaft_c_dienst': BereitschaftKategorie.C_DIENST,
+            'bereitschaft_lna': BereitschaftKategorie.LNA,
+            'bereitschaft_o_amt': BereitschaftKategorie.ORDNUNGSAMT,
+            'bereitschaft_g_amt': BereitschaftKategorie.GESUNDHEITSAMT,
+            'bereitschaft_veterinaeramt': BereitschaftKategorie.VETERINAERAMT,
+        }
+
+        for field_name, kat in bereitschaft_field_kategorie.items():
+            self.fields[field_name].queryset = BereitschaftPerson.objects.filter(
+                is_active=True, kategorie=kat
+            )
+            self.fields[field_name].widget.attrs.update({'class': tw})
+
+        for name, field in self.fields.items():
+            if isinstance(field, forms.IntegerField):
+                field.widget = forms.NumberInput(attrs={'class': tw, 'min': '0'})
+            elif isinstance(field, forms.DateTimeField):
+                field.widget = forms.DateTimeInput(attrs={'class': tw, 'type': 'datetime-local'})
+            elif isinstance(field, forms.CharField) and not isinstance(field.widget, forms.Textarea):
+                field.widget.attrs.setdefault('class', tw)
+
+        textarea_fields = ['geraete']
+        for name in textarea_fields:
+            self.fields[name].widget = forms.Textarea(attrs={'class': tw, 'rows': 2})
+
+        # Laufband
+        self.fields['laufband_text'].widget = forms.Textarea(attrs={'class': tw, 'rows': 2, 'placeholder': 'Text für das Laufband...'})
+        self.fields['laufband_geschwindigkeit'].widget = forms.NumberInput(attrs={'class': tw, 'min': '5', 'max': '60'})
+
+
+class InfoMonitorVehicleForm(forms.ModelForm):
+    """Formular für einen Fahrzeug-Slot im Info-Monitor"""
+
+    class Meta:
+        model = InfoMonitorVehicle
+        fields = ['fahrzeug_ad', 'ersetzt_mit', 'bemerkung', 'position']
+        widgets = {
+            'position': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from vehicles.models import Vehicle
+        tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
+        vehicle_qs = Vehicle.objects.filter(is_active=True).order_by('name')
+        self.fields['fahrzeug_ad'].queryset = vehicle_qs
+        self.fields['fahrzeug_ad'].widget.attrs.update({'class': tw})
+        self.fields['ersetzt_mit'].queryset = vehicle_qs
+        self.fields['ersetzt_mit'].widget.attrs.update({'class': tw})
+        self.fields['bemerkung'].widget.attrs.update({'class': tw, 'placeholder': 'Bemerkung...'})
+
+
+InfoMonitorVehicleFormSet = inlineformset_factory(
+    InfoMonitor,
+    InfoMonitorVehicle,
+    form=InfoMonitorVehicleForm,
+    extra=1,
+    can_delete=True,
+)
+
+
+class InfoMonitorSonstigesForm(forms.ModelForm):
+    """Formular für einen Sonstiges-Eintrag im Info-Monitor"""
+
+    class Meta:
+        from .models import InfoMonitorSonstiges
+        model = InfoMonitorSonstiges
+        fields = ['text', 'position']
+        widgets = {
+            'position': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
+        self.fields['text'].widget = forms.Textarea(attrs={'class': tw, 'rows': 2, 'placeholder': 'Sonstiges...'})
+
+
+InfoMonitorSonstigesFormSet = inlineformset_factory(
+    InfoMonitor,
+    InfoMonitorSonstiges,
+    form=InfoMonitorSonstigesForm,
+    extra=1,
+    can_delete=True,
+)
+
+
+class BereitschaftPersonForm(forms.ModelForm):
+    """Formular für Bereitschaftspersonen"""
+
+    class Meta:
+        model = BereitschaftPerson
+        fields = ['name', 'kategorie', 'phone', 'is_active', 'order']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+                'placeholder': 'Name der Person'
+            }),
+            'kategorie': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+                'placeholder': 'Telefonnummer'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+                'min': 0
+            }),
+        }
+
+
+TW = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
+TW_CB = 'rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
+
+
+class MappeLinkForm(forms.ModelForm):
+    """Formular für Mappe-Links"""
+
+    class Meta:
+        model = MappeLink
+        fields = ['title', 'url', 'description', 'is_active', 'order']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': TW, 'placeholder': 'Titel des Links'}),
+            'url': forms.URLInput(attrs={'class': TW, 'placeholder': 'https://...'}),
+            'description': forms.TextInput(attrs={'class': TW, 'placeholder': 'Optionale Beschreibung'}),
+            'is_active': forms.CheckboxInput(attrs={'class': TW_CB}),
+            'order': forms.NumberInput(attrs={'class': TW, 'min': 0}),
+        }
+
+
+class MappeKontaktForm(forms.ModelForm):
+    """Formular für Mappe-Kontakte"""
+
+    class Meta:
+        model = MappeKontakt
+        fields = ['name', 'funktion', 'phone', 'email', 'is_active', 'order']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': TW, 'placeholder': 'Name'}),
+            'funktion': forms.TextInput(attrs={'class': TW, 'placeholder': 'Funktion / Rolle'}),
+            'phone': forms.TextInput(attrs={'class': TW, 'placeholder': 'Telefonnummer'}),
+            'email': forms.EmailInput(attrs={'class': TW, 'placeholder': 'E-Mail-Adresse'}),
+            'is_active': forms.CheckboxInput(attrs={'class': TW_CB}),
+            'order': forms.NumberInput(attrs={'class': TW, 'min': 0}),
+        }
+
+
+class MappeAnleitungForm(forms.ModelForm):
+    """Formular für Mappe-Anleitungen"""
+
+    class Meta:
+        model = MappeAnleitung
+        fields = ['title', 'content', 'is_active', 'order']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': TW, 'placeholder': 'Titel der Anleitung'}),
+            'content': forms.Textarea(attrs={'class': TW, 'rows': 6, 'placeholder': 'Inhalt der Anleitung...'}),
+            'is_active': forms.CheckboxInput(attrs={'class': TW_CB}),
+            'order': forms.NumberInput(attrs={'class': TW, 'min': 0}),
+        }
+
+
+class GrossveranstaltungDashboardForm(forms.ModelForm):
+    """Formular für eigenständige Großveranstaltungen-Dashboards"""
+
+    class Meta:
+        from .models import GrossveranstaltungDashboard
+        model = GrossveranstaltungDashboard
+        fields = ['name', 'description', 'dashboard_type', 'pdf_file', 'map_image', 'info_datei', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': TW, 'placeholder': 'Name der Großveranstaltung'}),
+            'description': forms.Textarea(attrs={'class': TW, 'rows': 2, 'placeholder': 'Optionale Beschreibung...'}),
+            'dashboard_type': forms.RadioSelect(attrs={'class': 'mr-2'}),
+            'pdf_file': forms.ClearableFileInput(attrs={'class': TW, 'accept': '.pdf'}),
+            'map_image': forms.ClearableFileInput(attrs={'class': TW, 'accept': 'image/*'}),
+            'info_datei': forms.ClearableFileInput(attrs={'class': TW, 'accept': 'image/*,.pdf'}),
+            'is_active': forms.CheckboxInput(attrs={'class': TW_CB}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        dashboard_type = cleaned_data.get('dashboard_type')
+        pdf_file = cleaned_data.get('pdf_file')
+
+        if dashboard_type == 'pdf' and not pdf_file:
+            # Check if we're editing and already have a file
+            if not (self.instance and self.instance.pk and self.instance.pdf_file):
+                self.add_error('pdf_file', 'Im PDF-Modus muss eine PDF-Datei hochgeladen werden.')
+
+        return cleaned_data
+
+
+class GrossveranstaltungAbschnittForm(forms.ModelForm):
+    """Formular für einen Textabschnitt im dynamischen Dashboard"""
+
+    class Meta:
+        from .models import GrossveranstaltungAbschnitt
+        model = GrossveranstaltungAbschnitt
+        fields = ['title', 'content', 'order']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': TW, 'placeholder': 'Überschrift'}),
+            'content': forms.Textarea(attrs={'class': TW, 'rows': 4, 'placeholder': 'Inhalt...'}),
+            'order': forms.HiddenInput(),
+        }
+
+
+GrossveranstaltungAbschnittFormSet = inlineformset_factory(
+    GrossveranstaltungDashboard,
+    GrossveranstaltungAbschnitt,
+    form=GrossveranstaltungAbschnittForm,
+    extra=1,
+    can_delete=True,
+)

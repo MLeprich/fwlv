@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}Ausleihe bearbeiten{% else %}Neue Ausleihe{% endif %} - FLVS{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bevölkerungsschutz</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:lending_list' %}" class="text-gray-500 hover:text-gray-700">Ausleihen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neu{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6" x-data="{ itemCount: {{ item_formset.total_form_count }} }">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">{% if object %}Ausleihe bearbeiten{% else %}Neue Ausleihe anlegen{% endif %}</h1>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        {% if form.errors or item_formset.errors %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r">
+            <p class="text-sm text-red-700 font-medium">Bitte korrigieren Sie die folgenden Fehler:</p>
+            <ul class="text-sm text-red-600 mt-2 list-disc list-inside">
+                {% for field, errors in form.errors.items %}{% for error in errors %}<li>{{ field }}: {{ error }}</li>{% endfor %}{% endfor %}
+                {% for form_errors in item_formset.errors %}{% for field, errors in form_errors.items %}{% for error in errors %}<li>Position: {{ field }}: {{ error }}</li>{% endfor %}{% endfor %}{% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Ausleihe-Daten -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Ausleihe-Daten</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="{{ form.bereich.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Bereich <span class="text-red-500">*</span></label>
+                    {{ form.bereich }}
+                </div>
+                <div>
+                    <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    {{ form.status }}
+                </div>
+                <div>
+                    <label for="{{ form.lending_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Ausgabedatum <span class="text-red-500">*</span></label>
+                    {{ form.lending_date }}
+                </div>
+                <div>
+                    <label for="{{ form.expected_return_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Geplantes Rückgabedatum <span class="text-red-500">*</span></label>
+                    {{ form.expected_return_date }}
+                </div>
+                <div class="md:col-span-2">
+                    <label for="{{ form.purpose.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Verwendungszweck</label>
+                    {{ form.purpose }}
+                </div>
+                <div class="md:col-span-2">
+                    <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Notizen</label>
+                    {{ form.notes }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Ausleihender -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Ausleihender</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="{{ form.borrower.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Interne Person (optional)</label>
+                    {{ form.borrower }}
+                    <p class="text-xs text-gray-500 mt-1">Wählen Sie eine interne Person oder geben Sie unten einen Freitext-Namen ein.</p>
+                </div>
+                <div>
+                    <label for="{{ form.borrower_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Name (Freitext)</label>
+                    {{ form.borrower_name }}
+                </div>
+                <div>
+                    <label for="{{ form.borrower_organization.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Organisation</label>
+                    {{ form.borrower_organization }}
+                </div>
+                <div>
+                    <label for="{{ form.borrower_phone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                    {{ form.borrower_phone }}
+                </div>
+                <div>
+                    <label for="{{ form.borrower_email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
+                    {{ form.borrower_email }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Positionen (Items) -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Ausgeliehene Artikel</h2>
+
+            {{ item_formset.management_form }}
+
+            <div id="item-formset">
+                {% for item_form in item_formset %}
+                <div class="item-row border border-gray-200 rounded-lg p-4 mb-4 {% if item_form.instance.pk and item_form.DELETE.value %}bg-red-50{% else %}bg-gray-50{% endif %}">
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                        {% if item_form.instance.pk %}{{ item_form.id }}{% endif %}
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Artikelbezeichnung <span class="text-red-500">*</span></label>
+                            {{ item_form.item_name }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">KatS-Ausrüstung</label>
+                            {{ item_form.equipment_master }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Menge <span class="text-red-500">*</span></label>
+                            {{ item_form.quantity }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Zustand bei Ausgabe</label>
+                            {{ item_form.condition_out }}
+                        </div>
+                        <div class="flex items-end">
+                            {% if item_form.instance.pk %}
+                            <label class="flex items-center gap-2 text-sm text-red-600 cursor-pointer">
+                                {{ item_form.DELETE }}
+                                Entfernen
+                            </label>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if item_form.notes %}
+                    <div class="mt-3">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Notizen</label>
+                        {{ item_form.notes }}
+                    </div>
+                    {% endif %}
+                    {% for error in item_form.non_field_errors %}
+                    <p class="text-xs text-red-500 mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="button" onclick="addItemRow()" class="mt-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
+                + Artikel hinzufügen
+            </button>
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <a href="{% url 'civil_protection:lending_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Abbrechen</a>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Speichern</button>
+            <button type="submit" name="save_and_pdf" value="1" class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Speichern &amp; Ausgabe-PDF
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function addItemRow() {
+    const formset = document.getElementById('item-formset');
+    const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+    const count = parseInt(totalForms.value);
+
+    // Clone the first empty row and update indices
+    const template = formset.querySelector('.item-row');
+    const newRow = template.cloneNode(true);
+
+    // Update all input names and ids
+    newRow.querySelectorAll('input, select, textarea').forEach(function(el) {
+        if (el.name) {
+            el.name = el.name.replace(/-\d+-/, '-' + count + '-');
+        }
+        if (el.id) {
+            el.id = el.id.replace(/-\d+-/, '-' + count + '-');
+        }
+        // Clear values for non-hidden inputs
+        if (el.type !== 'hidden') {
+            if (el.tagName === 'SELECT') {
+                el.selectedIndex = 0;
+            } else if (el.type === 'checkbox') {
+                el.checked = false;
+            } else {
+                el.value = '';
+            }
+        }
+    });
+
+    // Reset hidden id field for new rows
+    const idField = newRow.querySelector('input[name$="-id"]');
+    if (idField) idField.value = '';
+
+    newRow.classList.remove('bg-red-50');
+    newRow.classList.add('bg-gray-50');
+    formset.appendChild(newRow);
+    totalForms.value = count + 1;
+}
+</script>
+{% endblock %}

@@ -175,9 +175,11 @@ class ReportTemplate(AuditedModel):
         ]
         permissions = [
             ('view_reporting_dashboard', 'Kann Reports & KPIs Dashboard sehen'),
+            ('view_module_reports', 'Kann Modul-Reports sehen'),
             ('generate_reports', 'Kann Reports generieren'),
             ('schedule_reports', 'Kann Reports planen'),
             ('export_reports', 'Kann Reports exportieren'),
+            ('view_inventory_dashboard', 'Kann Lager-Dashboard sehen'),
         ]
 
     def __str__(self):

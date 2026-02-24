@@ -1,0 +1,664 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Info-Monitor bearbeiten - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:list' %}" class="text-gray-500 hover:text-gray-700">Leitstelle</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'tickets:infomonitor_display' %}" class="text-gray-500 hover:text-gray-700">Info-Monitor</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Bearbeiten</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center mb-6">
+            <svg class="w-8 h-8 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Info-Monitor bearbeiten</h1>
+                <p class="text-sm text-gray-600 mt-1">Bereitschaft, Personal, Fahrzeuge und Sonstiges aktualisieren</p>
+            </div>
+        </div>
+
+        {% if form.errors %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg mb-6">
+            <div class="flex">
+                <span class="text-red-600 font-bold mr-2">Fehler:</span>
+                <div class="text-sm text-red-700">
+                    {% for field, errors in form.errors.items %}
+                        <p>{{ field }}: {{ errors.0 }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- 1. Bereitschaft -->
+            <div x-data="{ open: true }">
+                <button type="button" @click="open = !open" class="w-full flex items-center justify-between bg-amber-50 border border-amber-200 px-4 py-3 rounded-lg">
+                    <h2 class="text-base font-bold text-amber-800 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                        Bereitschaft
+                    </h2>
+                    <svg class="w-5 h-5 text-amber-600 transform transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="open" x-collapse class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 px-2">
+                    <!-- C-Dienst (Person Dropdown) -->
+                    <div x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                        items = Array.from(document.querySelectorAll('#id_bereitschaft_c_dienst option')).map(opt => ({value: opt.value, text: opt.text})).filter(v => v.value);
+                        const cv = document.getElementById('id_bereitschaft_c_dienst').value;
+                        if (cv) selected = items.find(v => v.value === cv);
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.bereitschaft_c_dienst.label }}</label>
+                        <div class="hidden">{{ form.bereitschaft_c_dienst }}</div>
+                        <div class="relative">
+                            <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-left bg-white flex items-center justify-between text-sm">
+                                <span x-text="selected ? selected.text : 'Auswählen...'" class="truncate"></span>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div x-show="open" @click.away="open = false" x-cloak class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                                <div class="p-2 border-b border-gray-200">
+                                    <input type="text" x-model="search" @click.stop placeholder="Person suchen..." class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div class="overflow-y-auto max-h-52">
+                                    <button type="button" @click="selected = null; document.getElementById('id_bereitschaft_c_dienst').value = ''; open = false" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                    <template x-for="item in items.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                        <button type="button" @click="selected = item; document.getElementById('id_bereitschaft_c_dienst').value = item.value; open = false" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm" :class="selected && selected.value === item.value ? 'bg-indigo-100 font-medium' : ''" x-text="item.text"></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LNA (Person Dropdown) -->
+                    <div x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                        items = Array.from(document.querySelectorAll('#id_bereitschaft_lna option')).map(opt => ({value: opt.value, text: opt.text})).filter(v => v.value);
+                        const cv = document.getElementById('id_bereitschaft_lna').value;
+                        if (cv) selected = items.find(v => v.value === cv);
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.bereitschaft_lna.label }}</label>
+                        <div class="hidden">{{ form.bereitschaft_lna }}</div>
+                        <div class="relative">
+                            <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-left bg-white flex items-center justify-between text-sm">
+                                <span x-text="selected ? selected.text : 'Auswählen...'" class="truncate"></span>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div x-show="open" @click.away="open = false" x-cloak class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                                <div class="p-2 border-b border-gray-200">
+                                    <input type="text" x-model="search" @click.stop placeholder="Person suchen..." class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div class="overflow-y-auto max-h-52">
+                                    <button type="button" @click="selected = null; document.getElementById('id_bereitschaft_lna').value = ''; open = false" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                    <template x-for="item in items.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                        <button type="button" @click="selected = item; document.getElementById('id_bereitschaft_lna').value = item.value; open = false" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm" :class="selected && selected.value === item.value ? 'bg-indigo-100 font-medium' : ''" x-text="item.text"></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ordnungsamt (Person Dropdown) -->
+                    <div x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                        items = Array.from(document.querySelectorAll('#id_bereitschaft_o_amt option')).map(opt => ({value: opt.value, text: opt.text})).filter(v => v.value);
+                        const cv = document.getElementById('id_bereitschaft_o_amt').value;
+                        if (cv) selected = items.find(v => v.value === cv);
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.bereitschaft_o_amt.label }}</label>
+                        <div class="hidden">{{ form.bereitschaft_o_amt }}</div>
+                        <div class="relative">
+                            <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-left bg-white flex items-center justify-between text-sm">
+                                <span x-text="selected ? selected.text : 'Auswählen...'" class="truncate"></span>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div x-show="open" @click.away="open = false" x-cloak class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                                <div class="p-2 border-b border-gray-200">
+                                    <input type="text" x-model="search" @click.stop placeholder="Person suchen..." class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div class="overflow-y-auto max-h-52">
+                                    <button type="button" @click="selected = null; document.getElementById('id_bereitschaft_o_amt').value = ''; open = false" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                    <template x-for="item in items.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                        <button type="button" @click="selected = item; document.getElementById('id_bereitschaft_o_amt').value = item.value; open = false" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm" :class="selected && selected.value === item.value ? 'bg-indigo-100 font-medium' : ''" x-text="item.text"></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gesundheitsamt (Person Dropdown) -->
+                    <div x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                        items = Array.from(document.querySelectorAll('#id_bereitschaft_g_amt option')).map(opt => ({value: opt.value, text: opt.text})).filter(v => v.value);
+                        const cv = document.getElementById('id_bereitschaft_g_amt').value;
+                        if (cv) selected = items.find(v => v.value === cv);
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.bereitschaft_g_amt.label }}</label>
+                        <div class="hidden">{{ form.bereitschaft_g_amt }}</div>
+                        <div class="relative">
+                            <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-left bg-white flex items-center justify-between text-sm">
+                                <span x-text="selected ? selected.text : 'Auswählen...'" class="truncate"></span>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div x-show="open" @click.away="open = false" x-cloak class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                                <div class="p-2 border-b border-gray-200">
+                                    <input type="text" x-model="search" @click.stop placeholder="Person suchen..." class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div class="overflow-y-auto max-h-52">
+                                    <button type="button" @click="selected = null; document.getElementById('id_bereitschaft_g_amt').value = ''; open = false" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                    <template x-for="item in items.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                        <button type="button" @click="selected = item; document.getElementById('id_bereitschaft_g_amt').value = item.value; open = false" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm" :class="selected && selected.value === item.value ? 'bg-indigo-100 font-medium' : ''" x-text="item.text"></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Veterinäramt (Person Dropdown) -->
+                    <div x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                        items = Array.from(document.querySelectorAll('#id_bereitschaft_veterinaeramt option')).map(opt => ({value: opt.value, text: opt.text})).filter(v => v.value);
+                        const cv = document.getElementById('id_bereitschaft_veterinaeramt').value;
+                        if (cv) selected = items.find(v => v.value === cv);
+                    ">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.bereitschaft_veterinaeramt.label }}</label>
+                        <div class="hidden">{{ form.bereitschaft_veterinaeramt }}</div>
+                        <div class="relative">
+                            <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-left bg-white flex items-center justify-between text-sm">
+                                <span x-text="selected ? selected.text : 'Auswählen...'" class="truncate"></span>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div x-show="open" @click.away="open = false" x-cloak class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                                <div class="p-2 border-b border-gray-200">
+                                    <input type="text" x-model="search" @click.stop placeholder="Person suchen..." class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div class="overflow-y-auto max-h-52">
+                                    <button type="button" @click="selected = null; document.getElementById('id_bereitschaft_veterinaeramt').value = ''; open = false" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                    <template x-for="item in items.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                        <button type="button" @click="selected = item; document.getElementById('id_bereitschaft_veterinaeramt').value = item.value; open = false" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm" :class="selected && selected.value === item.value ? 'bg-indigo-100 font-medium' : ''" x-text="item.text"></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.bereitschaft_vet_datetime.label }}</label>
+                        {{ form.bereitschaft_vet_datetime }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Personal -->
+            <div x-data="{ open: true }">
+                <button type="button" @click="open = !open" class="w-full flex items-center justify-between bg-green-50 border border-green-200 px-4 py-3 rounded-lg">
+                    <h2 class="text-base font-bold text-green-800 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        Personal
+                    </h2>
+                    <svg class="w-5 h-5 text-green-600 transform transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="open" x-collapse class="mt-4 px-2">
+                    <p class="text-sm font-semibold text-gray-700 mb-2">FW 1</p>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Löschzug</label>
+                            {{ form.personal_fw1_loeschzug }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Ergänzung</label>
+                            {{ form.personal_fw1_ergaenzung }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">RTW</label>
+                            {{ form.personal_fw1_5_rtw }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">KTW</label>
+                            {{ form.personal_fw1_ktw }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Taucher</label>
+                            {{ form.personal_fw1_taucher }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Höhenretter</label>
+                            {{ form.personal_fw1_hoehenretter }}
+                        </div>
+                    </div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">FW 2</p>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Löschzug</label>
+                            {{ form.personal_fw2_loeschzug }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Ergänzung</label>
+                            {{ form.personal_fw2_ergaenzung }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">RTW</label>
+                            {{ form.personal_fw2_5_rtw }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">KTW</label>
+                            {{ form.personal_fw2_ktw }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Taucher</label>
+                            {{ form.personal_fw2_taucher }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Höhenretter</label>
+                            {{ form.personal_fw2_hoehenretter }}
+                        </div>
+                    </div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Sonderfunktionen</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            {{ form.taucher_im_dienst }}
+                            <span class="text-sm font-medium text-gray-700">Taucher im Dienst</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            {{ form.hoehenretter_im_dienst }}
+                            <span class="text-sm font-medium text-gray-700">Höhenretter im Dienst</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Fahrzeuge / Geräte -->
+            <div x-data="{ open: true }">
+                <button type="button" @click="open = !open" class="w-full flex items-center justify-between bg-red-50 border border-red-200 px-4 py-3 rounded-lg">
+                    <h2 class="text-base font-bold text-red-800 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Fahrzeuge / Geräte
+                    </h2>
+                    <svg class="w-5 h-5 text-red-600 transform transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="open" x-collapse class="mt-4 px-2 space-y-4">
+                    {{ vehicle_formset.management_form }}
+
+                    <div id="vehicle-rows">
+                    {% for vform in vehicle_formset %}
+                    <div id="vehicle-row-{{ forloop.counter0 }}" class="vehicle-row bg-gray-50 rounded-lg p-3 mb-3">
+                        <!-- Hidden fields -->
+                        <div class="hidden">
+                            {{ vform.id }}
+                            {{ vform.position }}
+                            {{ vform.DELETE }}
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end">
+                        <!-- Außer Dienst -->
+                        <div x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                            items = Array.from($el.querySelectorAll('.hidden-select option')).map(opt => ({value: opt.value, text: opt.text})).filter(v => v.value);
+                            const sel = $el.querySelector('.hidden-select select');
+                            if (sel && sel.value) selected = items.find(v => v.value === sel.value);
+                        ">
+                            <label class="block text-sm font-medium text-gray-700 mb-1 vehicle-label-ad">Au&szlig;er Dienst {{ forloop.counter }}</label>
+                            <div class="hidden hidden-select">{{ vform.fahrzeug_ad }}</div>
+                            <div class="relative">
+                                <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-left bg-white flex items-center justify-between text-sm">
+                                    <span x-text="selected ? selected.text : 'Fahrzeug auswählen...'" class="truncate"></span>
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open" @click.away="open = false" x-cloak class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                                    <div class="p-2 border-b border-gray-200"><input type="text" x-model="search" @click.stop placeholder="Fahrzeug suchen..." class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></div>
+                                    <div class="overflow-y-auto max-h-52">
+                                        <button type="button" @click="selected = null; $el.closest('[x-data]').querySelector('.hidden-select select').value = ''; open = false" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                        <template x-for="item in items.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                            <button type="button" @click="selected = item; $el.closest('[x-data]').querySelector('.hidden-select select').value = item.value; open = false" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm" :class="selected && selected.value === item.value ? 'bg-indigo-100 font-medium' : ''" x-text="item.text"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Ersetzt mit -->
+                        <div x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                            items = Array.from($el.querySelectorAll('.hidden-select option')).map(opt => ({value: opt.value, text: opt.text})).filter(v => v.value);
+                            const sel = $el.querySelector('.hidden-select select');
+                            if (sel && sel.value) selected = items.find(v => v.value === sel.value);
+                        ">
+                            <label class="block text-sm font-medium text-gray-700 mb-1 vehicle-label-er">Ersetzt mit {{ forloop.counter }}</label>
+                            <div class="hidden hidden-select">{{ vform.ersetzt_mit }}</div>
+                            <div class="relative">
+                                <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-left bg-white flex items-center justify-between text-sm">
+                                    <span x-text="selected ? selected.text : 'Fahrzeug auswählen...'" class="truncate"></span>
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open" @click.away="open = false" x-cloak class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                                    <div class="p-2 border-b border-gray-200"><input type="text" x-model="search" @click.stop placeholder="Fahrzeug suchen..." class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></div>
+                                    <div class="overflow-y-auto max-h-52">
+                                        <button type="button" @click="selected = null; $el.closest('[x-data]').querySelector('.hidden-select select').value = ''; open = false" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                        <template x-for="item in items.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                            <button type="button" @click="selected = item; $el.closest('[x-data]').querySelector('.hidden-select select').value = item.value; open = false" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm" :class="selected && selected.value === item.value ? 'bg-indigo-100 font-medium' : ''" x-text="item.text"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Bemerkung -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Bemerkung</label>
+                            {{ vform.bemerkung }}
+                        </div>
+                        <!-- Remove Button -->
+                        <div>
+                            <button type="button" onclick="removeVehicleRow(this)" class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Entfernen">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    </div>
+
+                    <!-- Add Button -->
+                    <div>
+                        <button type="button" onclick="addVehicleRow()" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Fahrzeug hinzufügen
+                        </button>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.geraete.label }}</label>
+                        {{ form.geraete }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Laufband -->
+            <div x-data="{ open: true }">
+                <button type="button" @click="open = !open" class="w-full flex items-center justify-between bg-purple-50 border border-purple-200 px-4 py-3 rounded-lg">
+                    <h2 class="text-base font-bold text-purple-800 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
+                        Laufband
+                    </h2>
+                    <svg class="w-5 h-5 text-purple-600 transform transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="open" x-collapse class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 px-2">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.laufband_text.label }}</label>
+                        {{ form.laufband_text }}
+                        <p class="text-xs text-gray-500 mt-1">Text, der im Kiosk-Modus als Laufband am unteren Bildschirmrand angezeigt wird. Leer lassen zum Deaktivieren.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.laufband_geschwindigkeit.label }}</label>
+                        {{ form.laufband_geschwindigkeit }}
+                        <p class="text-xs text-gray-500 mt-1">Sekunden pro Durchlauf (5 = schnell, 60 = langsam)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Sonstiges (dynamisch) -->
+            <div x-data="{ open: true }">
+                <button type="button" @click="open = !open" class="w-full flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-3 rounded-lg">
+                    <h2 class="text-base font-bold text-blue-800 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Sonstiges
+                    </h2>
+                    <svg class="w-5 h-5 text-blue-600 transform transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="open" x-collapse class="mt-4 px-2 space-y-3">
+                    {{ sonstiges_formset.management_form }}
+
+                    <div id="sonstiges-rows">
+                    {% for sform in sonstiges_formset %}
+                    <div id="sonstiges-row-{{ forloop.counter0 }}" class="sonstiges-row flex items-start gap-3 bg-gray-50 rounded-lg p-3 mb-3">
+                        <div class="hidden">
+                            {{ sform.id }}
+                            {{ sform.position }}
+                            {{ sform.DELETE }}
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1 sonstiges-label">Sonstiges {{ forloop.counter }}</label>
+                            {{ sform.text }}
+                        </div>
+                        <div class="pt-7">
+                            <button type="button" onclick="removeSonstigesRow(this)" class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Entfernen">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    </div>
+
+                    <!-- Add Button -->
+                    <div>
+                        <button type="button" onclick="addSonstigesRow()" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Eintrag hinzuf&uuml;gen
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% url 'tickets:infomonitor_display' %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+                    Speichern
+                </button>
+            </div>
+        </form>
+        <script>
+        function removeVehicleRow(btn) {
+            const row = btn.closest('.vehicle-row');
+            // If it has an existing DB id, mark for deletion and hide
+            const delField = row.querySelector('input[name$="-DELETE"]');
+            if (delField) {
+                delField.checked = true;
+                row.style.display = 'none';
+            }
+        }
+
+        function addVehicleRow() {
+            const container = document.getElementById('vehicle-rows');
+            const totalField = document.getElementById('id_vehicles-TOTAL_FORMS');
+            const idx = parseInt(totalField.value);
+
+            // Clone the last visible row's options for the select elements
+            const existingSelect = container.querySelector('.hidden-select select');
+            const optionsHTML = existingSelect ? existingSelect.innerHTML : '<option value="">---------</option>';
+
+            const tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
+
+            const rowHTML = `
+            <div id="vehicle-row-${idx}" class="vehicle-row bg-gray-50 rounded-lg p-3 mb-3"
+                 x-data="{}" x-init="Alpine.initTree($el)">
+                <div class="hidden">
+                    <input type="hidden" name="vehicles-${idx}-id" id="id_vehicles-${idx}-id" value="">
+                    <input type="hidden" name="vehicles-${idx}-position" id="id_vehicles-${idx}-position" value="${idx}">
+                    <input type="checkbox" name="vehicles-${idx}-DELETE" id="id_vehicles-${idx}-DELETE">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end">
+                <div x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                    items = Array.from($el.querySelectorAll('.hidden-select option')).map(opt => ({value: opt.value, text: opt.text})).filter(v => v.value);
+                ">
+                    <label class="block text-sm font-medium text-gray-700 mb-1 vehicle-label-ad">Au&szlig;er Dienst</label>
+                    <div class="hidden hidden-select">
+                        <select name="vehicles-${idx}-fahrzeug_ad" id="id_vehicles-${idx}-fahrzeug_ad" class="${tw}">${optionsHTML}</select>
+                    </div>
+                    <div class="relative">
+                        <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-left bg-white flex items-center justify-between text-sm">
+                            <span x-text="selected ? selected.text : 'Fahrzeug auswählen...'" class="truncate"></span>
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                            <div class="p-2 border-b border-gray-200"><input type="text" x-model="search" @click.stop placeholder="Fahrzeug suchen..." class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></div>
+                            <div class="overflow-y-auto max-h-52">
+                                <button type="button" @click="selected = null; $el.closest('[x-data]').querySelector('.hidden-select select').value = ''; open = false" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                <template x-for="item in items.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                    <button type="button" @click="selected = item; $el.closest('[x-data]').querySelector('.hidden-select select').value = item.value; open = false" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm" :class="selected && selected.value === item.value ? 'bg-indigo-100 font-medium' : ''" x-text="item.text"></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div x-data="{ open: false, search: '', selected: null, items: [] }" x-init="
+                    items = Array.from($el.querySelectorAll('.hidden-select option')).map(opt => ({value: opt.value, text: opt.text})).filter(v => v.value);
+                ">
+                    <label class="block text-sm font-medium text-gray-700 mb-1 vehicle-label-er">Ersetzt mit</label>
+                    <div class="hidden hidden-select">
+                        <select name="vehicles-${idx}-ersetzt_mit" id="id_vehicles-${idx}-ersetzt_mit" class="${tw}">${optionsHTML}</select>
+                    </div>
+                    <div class="relative">
+                        <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-left bg-white flex items-center justify-between text-sm">
+                            <span x-text="selected ? selected.text : 'Fahrzeug auswählen...'" class="truncate"></span>
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                            <div class="p-2 border-b border-gray-200"><input type="text" x-model="search" @click.stop placeholder="Fahrzeug suchen..." class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></div>
+                            <div class="overflow-y-auto max-h-52">
+                                <button type="button" @click="selected = null; $el.closest('[x-data]').querySelector('.hidden-select select').value = ''; open = false" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400">-- Keine Auswahl --</button>
+                                <template x-for="item in items.filter(v => v.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
+                                    <button type="button" @click="selected = item; $el.closest('[x-data]').querySelector('.hidden-select select').value = item.value; open = false" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm" :class="selected && selected.value === item.value ? 'bg-indigo-100 font-medium' : ''" x-text="item.text"></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Bemerkung</label>
+                    <input type="text" name="vehicles-${idx}-bemerkung" id="id_vehicles-${idx}-bemerkung" class="${tw}" placeholder="Bemerkung..." maxlength="300">
+                </div>
+                <div>
+                    <button type="button" onclick="removeVehicleRow(this)" class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Entfernen">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+                </div>
+            </div>`;
+
+            container.insertAdjacentHTML('beforeend', rowHTML);
+            totalField.value = idx + 1;
+
+            // Re-init Alpine on the newly added row
+            const newRow = document.getElementById('vehicle-row-' + idx);
+            if (newRow && window.Alpine) {
+                Alpine.initTree(newRow);
+            }
+
+            // Update labels
+            renumberVehicleLabels();
+        }
+
+        function renumberVehicleLabels() {
+            const rows = document.querySelectorAll('#vehicle-rows .vehicle-row');
+            let num = 1;
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+                const del = row.querySelector('input[name$="-DELETE"]');
+                if (del && del.checked) return;
+                const adLabel = row.querySelector('.vehicle-label-ad');
+                const erLabel = row.querySelector('.vehicle-label-er');
+                if (adLabel) adLabel.textContent = 'Außer Dienst ' + num;
+                if (erLabel) erLabel.textContent = 'Ersetzt mit ' + num;
+                num++;
+            });
+        }
+
+        // === Sonstiges dynamisch ===
+        function removeSonstigesRow(btn) {
+            const row = btn.closest('.sonstiges-row');
+            const delField = row.querySelector('input[name$="-DELETE"]');
+            if (delField) {
+                delField.checked = true;
+                row.style.display = 'none';
+            }
+            renumberSonstigesLabels();
+        }
+
+        function addSonstigesRow() {
+            const container = document.getElementById('sonstiges-rows');
+            const totalField = document.getElementById('id_sonstiges-TOTAL_FORMS');
+            const idx = parseInt(totalField.value);
+            const tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
+
+            const rowHTML = `
+            <div id="sonstiges-row-${idx}" class="sonstiges-row flex items-start gap-3 bg-gray-50 rounded-lg p-3 mb-3">
+                <div class="hidden">
+                    <input type="hidden" name="sonstiges-${idx}-id" id="id_sonstiges-${idx}-id" value="">
+                    <input type="hidden" name="sonstiges-${idx}-position" id="id_sonstiges-${idx}-position" value="${idx}">
+                    <input type="checkbox" name="sonstiges-${idx}-DELETE" id="id_sonstiges-${idx}-DELETE">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1 sonstiges-label">Sonstiges</label>
+                    <textarea name="sonstiges-${idx}-text" id="id_sonstiges-${idx}-text" class="${tw}" rows="2" placeholder="Sonstiges..."></textarea>
+                </div>
+                <div class="pt-7">
+                    <button type="button" onclick="removeSonstigesRow(this)" class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Entfernen">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            </div>`;
+
+            container.insertAdjacentHTML('beforeend', rowHTML);
+            totalField.value = idx + 1;
+            renumberSonstigesLabels();
+        }
+
+        function renumberSonstigesLabels() {
+            const rows = document.querySelectorAll('#sonstiges-rows .sonstiges-row');
+            let num = 1;
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+                const del = row.querySelector('input[name$="-DELETE"]');
+                if (del && del.checked) return;
+                const label = row.querySelector('.sonstiges-label');
+                if (label) label.textContent = 'Sonstiges ' + num;
+                num++;
+            });
+        }
+
+        // Renumber positions before submit (vehicles + sonstiges)
+        document.querySelector('form').addEventListener('submit', function() {
+            // Vehicles
+            const vTotalField = document.getElementById('id_vehicles-TOTAL_FORMS');
+            const vTotal = parseInt(vTotalField.value);
+            let vPos = 0;
+            for (let i = 0; i < vTotal; i++) {
+                const posField = document.getElementById('id_vehicles-' + i + '-position');
+                const delField = document.getElementById('id_vehicles-' + i + '-DELETE');
+                const row = document.getElementById('vehicle-row-' + i);
+                if (!posField) continue;
+                const isDeleted = (delField && delField.checked) || (row && row.style.display === 'none');
+                if (!isDeleted) {
+                    posField.value = vPos;
+                    vPos++;
+                }
+            }
+            // Sonstiges
+            const sTotalField = document.getElementById('id_sonstiges-TOTAL_FORMS');
+            const sTotal = parseInt(sTotalField.value);
+            let sPos = 0;
+            for (let i = 0; i < sTotal; i++) {
+                const posField = document.getElementById('id_sonstiges-' + i + '-position');
+                const delField = document.getElementById('id_sonstiges-' + i + '-DELETE');
+                const row = document.getElementById('sonstiges-row-' + i);
+                if (!posField) continue;
+                const isDeleted = (delField && delField.checked) || (row && row.style.display === 'none');
+                if (!isDeleted) {
+                    posField.value = sPos;
+                    sPos++;
+                }
+            }
+        });
+        </script>
+    </div>
+</div>
+{% endblock %}

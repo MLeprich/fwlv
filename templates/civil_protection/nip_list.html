@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Notfallinformationspunkte - FLVS{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bevölkerungsschutz</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Notfallinformationspunkte</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Notfallinformationspunkte (NIPs)</h1>
+        {% if perms.locations.add_location %}
+        <a href="{% url 'locations:create' %}?type=nip" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">+ Neu anlegen</a>
+        {% endif %}
+    </div>
+    <div class="mb-4">
+        <form method="get" class="flex gap-2">
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Suche nach Name oder Stadt..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Suchen</button>
+        </form>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for nip in nip_list %}
+        <a href="{% url 'civil_protection:nip_detail' nip.pk %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-300 transition-all p-6">
+            <div class="flex items-start justify-between mb-3">
+                <h3 class="font-semibold text-gray-900">{{ nip.name }}</h3>
+                <span class="px-2 py-1 rounded-full text-xs font-medium {% if nip.bvs_status == 'aktiv' %}bg-green-100 text-green-700{% elif nip.bvs_status == 'geplant' %}bg-blue-100 text-blue-700{% elif nip.bvs_status == 'inaktiv' %}bg-gray-100 text-gray-600{% else %}bg-yellow-100 text-yellow-700{% endif %}">{{ nip.get_bvs_status_display }}</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">{{ nip.get_address|default:"Keine Adresse" }}</p>
+            {% if nip.capacity_persons %}<p class="text-xs text-gray-500">Kapazität: {{ nip.capacity_persons }} Personen</p>{% endif %}
+            <div class="mt-3 flex gap-2 text-xs text-gray-500">
+                <span>{{ nip.kats_equipment_instances.count }} Geräte</span>
+                <span>&middot;</span>
+                <span>{{ nip.kats_vehicles.count }} Fahrzeuge</span>
+            </div>
+        </a>
+        {% empty %}
+        <div class="col-span-3 text-center py-12 text-gray-500">Keine Notfallinformationspunkte gefunden.</div>
+        {% endfor %}
+    </div>
+    {% if is_paginated %}
+    <div class="mt-4 flex justify-center">
+        <nav class="flex gap-1">
+            {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-white border rounded-lg">&laquo;</a>{% endif %}
+            <span class="px-3 py-2 bg-blue-600 text-white rounded-lg">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-white border rounded-lg">&raquo;</a>{% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

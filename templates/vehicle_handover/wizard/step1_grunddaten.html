@@ -200,76 +200,8 @@
                 {% endif %}
             </div>
 
-            <!-- Personen -->
-            <div class="grid grid-cols-2 gap-4">
-                <!-- Übergeben von -->
-                <div x-data="{ open: false, search: '', selected: null, persons: [] }" x-init="
-                    persons = Array.from(document.querySelectorAll('#id_handover_from option')).map(opt => ({
-                        value: opt.value,
-                        text: opt.text
-                    })).filter(p => p.value);
-                    const currentValue = document.getElementById('id_handover_from').value;
-                    if (currentValue) {
-                        selected = persons.find(p => p.value === currentValue);
-                    }
-                ">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.handover_from.label }}</label>
-
-                    <!-- Hidden Original Select -->
-                    <div class="hidden">{{ form.handover_from }}</div>
-
-                    <!-- Custom Searchable Dropdown -->
-                    <div class="relative">
-                        <button
-                            type="button"
-                            @click="open = !open"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
-                        >
-                            <span x-text="selected ? selected.text : '👤 Übergeben von auswählen...'" class="truncate"></span>
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-
-                        <div
-                            x-show="open"
-                            @click.away="open = false"
-                            x-cloak
-                            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden"
-                        >
-                            <!-- Search Input -->
-                            <div class="p-2 border-b border-gray-200">
-                                <input
-                                    type="text"
-                                    x-model="search"
-                                    @click.stop
-                                    placeholder="Person suchen..."
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                                >
-                            </div>
-
-                            <!-- Options List -->
-                            <div class="overflow-y-auto max-h-64">
-                                <template x-for="person in persons.filter(p => p.text.toLowerCase().includes(search.toLowerCase()))" :key="person.value">
-                                    <button
-                                        type="button"
-                                        @click="selected = person; document.getElementById('id_handover_from').value = person.value; open = false"
-                                        class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
-                                        :class="selected && selected.value === person.value ? 'bg-blue-100 font-medium' : ''"
-                                        x-text="person.text"
-                                    ></button>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if form.handover_from.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ form.handover_from.errors.0 }}</p>
-                    {% endif %}
-                    <p class="mt-1 text-xs text-gray-500">Leer bei erster Inbetriebnahme</p>
-                </div>
-
-                <!-- Übergeben an -->
+            <!-- Übernommen von -->
+            <div>
                 <div x-data="{ open: false, search: '', selected: null, persons: [] }" x-init="
                     persons = Array.from(document.querySelectorAll('#id_handover_to option')).map(opt => ({
                         value: opt.value,
@@ -281,7 +213,7 @@
                     }
                     document.getElementById('id_handover_to').removeAttribute('required');
                 ">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.handover_to.label }} *</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Übernommen von *</label>
 
                     <!-- Hidden Original Select -->
                     <div class="hidden">{{ form.handover_to }}</div>
@@ -293,7 +225,7 @@
                             @click="open = !open"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-left bg-white flex items-center justify-between"
                         >
-                            <span x-text="selected ? selected.text : '👤 Übergeben an auswählen...'" class="truncate"></span>
+                            <span x-text="selected ? selected.text : '👤 Übernehmende Person auswählen...'" class="truncate"></span>
                             <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
@@ -335,6 +267,7 @@
                     <p class="mt-1 text-sm text-red-600">{{ form.handover_to.errors.0 }}</p>
                     {% endif %}
                 </div>
+            </div>
             </div>
 
             <!-- Standort -->
@@ -470,17 +403,10 @@ function validateStep1() {
         return false;
     }
 
-    // Prüfe Übergabe von
-    const handoverFromSelect = document.getElementById('id_handover_from');
-    if (!handoverFromSelect.value) {
-        alert('Bitte wählen Sie aus, von wem das Fahrzeug übergeben wird.');
-        return false;
-    }
-
-    // Prüfe Übergabe an
+    // Prüfe Übernehmende Person
     const handoverToSelect = document.getElementById('id_handover_to');
     if (!handoverToSelect.value) {
-        alert('Bitte wählen Sie aus, an wen das Fahrzeug übergeben wird.');
+        alert('Bitte wählen Sie die übernehmende Person aus.');
         return false;
     }
 

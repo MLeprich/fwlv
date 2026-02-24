@@ -1,0 +1,274 @@
+{% load static %}
+
+{% if page_obj.object_list %}
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    {% with base_url="reporting:inventory_dashboard" %}
+                    <!-- Modul -->
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <a href="#" class="flex items-center gap-1 hover:text-gray-700"
+                           hx-get="{% url base_url %}?sort=module&dir={% if sort == 'module' and dir == 'asc' %}desc{% else %}asc{% endif %}"
+                           hx-target="#inventory-table"
+                           hx-include="[name='search'],[name='module'],[name='location'],[name='status']">
+                            Modul
+                            {% if sort == 'module' %}
+                            <span>{% if dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}</span>
+                            {% endif %}
+                        </a>
+                    </th>
+
+                    <!-- Artikelnr. -->
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <a href="#" class="flex items-center gap-1 hover:text-gray-700"
+                           hx-get="{% url base_url %}?sort=item_number&dir={% if sort == 'item_number' and dir == 'asc' %}desc{% else %}asc{% endif %}"
+                           hx-target="#inventory-table"
+                           hx-include="[name='search'],[name='module'],[name='location'],[name='status']">
+                            Artikelnr.
+                            {% if sort == 'item_number' %}
+                            <span>{% if dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}</span>
+                            {% endif %}
+                        </a>
+                    </th>
+
+                    <!-- Name -->
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <a href="#" class="flex items-center gap-1 hover:text-gray-700"
+                           hx-get="{% url base_url %}?sort=name&dir={% if sort == 'name' and dir == 'asc' %}desc{% else %}asc{% endif %}"
+                           hx-target="#inventory-table"
+                           hx-include="[name='search'],[name='module'],[name='location'],[name='status']">
+                            Name
+                            {% if sort == 'name' %}
+                            <span>{% if dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}</span>
+                            {% endif %}
+                        </a>
+                    </th>
+
+                    <!-- Kategorie -->
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Kategorie
+                    </th>
+
+                    <!-- Standort(e) -->
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Standort(e)
+                    </th>
+
+                    <!-- Bestand -->
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <a href="#" class="flex items-center justify-end gap-1 hover:text-gray-700"
+                           hx-get="{% url base_url %}?sort=total_stock&dir={% if sort == 'total_stock' and dir == 'asc' %}desc{% else %}asc{% endif %}"
+                           hx-target="#inventory-table"
+                           hx-include="[name='search'],[name='module'],[name='location'],[name='status']">
+                            Bestand
+                            {% if sort == 'total_stock' %}
+                            <span>{% if dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}</span>
+                            {% endif %}
+                        </a>
+                    </th>
+
+                    <!-- Mindestbestand -->
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Mindest
+                    </th>
+
+                    <!-- Status -->
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <a href="#" class="flex items-center justify-center gap-1 hover:text-gray-700"
+                           hx-get="{% url base_url %}?sort=stock_status&dir={% if sort == 'stock_status' and dir == 'asc' %}desc{% else %}asc{% endif %}"
+                           hx-target="#inventory-table"
+                           hx-include="[name='search'],[name='module'],[name='location'],[name='status']">
+                            Status
+                            {% if sort == 'stock_status' %}
+                            <span>{% if dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}</span>
+                            {% endif %}
+                        </a>
+                    </th>
+                    {% endwith %}
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in page_obj %}
+                <tr class="hover:bg-gray-50">
+                    <!-- Modul Badge -->
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        {% if item.module_color == 'blue' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ item.module_label }}
+                        </span>
+                        {% elif item.module_color == 'orange' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            {{ item.module_label }}
+                        </span>
+                        {% elif item.module_color == 'green' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {{ item.module_label }}
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Artikelnr. -->
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">
+                        {{ item.item_number }}
+                    </td>
+
+                    <!-- Name -->
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+                        <a href="{{ item.detail_url }}" class="text-teal-600 hover:text-teal-800 font-medium">
+                            {{ item.name }}
+                        </a>
+                    </td>
+
+                    <!-- Kategorie -->
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        {{ item.category }}
+                    </td>
+
+                    <!-- Standort(e) -->
+                    <td class="px-4 py-3 text-sm text-gray-500">
+                        {% for loc in item.locations %}
+                        <span class="inline-block bg-gray-100 rounded px-1.5 py-0.5 text-xs mr-1 mb-0.5">{{ loc }}</span>
+                        {% empty %}
+                        <span class="text-gray-400">-</span>
+                        {% endfor %}
+                    </td>
+
+                    <!-- Bestand -->
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold
+                        {% if item.stock_status == 'low' %}text-orange-600{% elif item.stock_status == 'expired' %}text-red-600{% else %}text-gray-900{% endif %}">
+                        {{ item.total_stock }}
+                    </td>
+
+                    <!-- Mindestbestand -->
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500">
+                        {% if item.min_stock != None %}{{ item.min_stock }}{% else %}-{% endif %}
+                    </td>
+
+                    <!-- Status Badge -->
+                    <td class="px-4 py-3 whitespace-nowrap text-center">
+                        {% if item.stock_status == 'ok' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            OK
+                        </span>
+                        {% elif item.stock_status == 'low' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            Niedrig
+                        </span>
+                        {% elif item.stock_status == 'expiring' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            Ablaufend
+                        </span>
+                        {% elif item.stock_status == 'expired' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Abgelaufen
+                        </span>
+                        {% endif %}
+                        {% if item.expiry_date %}
+                        <div class="text-xs text-gray-400 mt-0.5">{{ item.expiry_date|date:"d.m.Y" }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div class="flex-1 flex justify-between sm:hidden">
+            {% if page_obj.has_previous %}
+            <a href="#"
+               hx-get="{% url 'reporting:inventory_dashboard' %}?page={{ page_obj.previous_page_number }}"
+               hx-target="#inventory-table"
+               hx-include="[name='search'],[name='module'],[name='location'],[name='status'],[name='sort'],[name='dir']"
+               class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Zurück
+            </a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="#"
+               hx-get="{% url 'reporting:inventory_dashboard' %}?page={{ page_obj.next_page_number }}"
+               hx-target="#inventory-table"
+               hx-include="[name='search'],[name='module'],[name='location'],[name='status'],[name='sort'],[name='dir']"
+               class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Weiter
+            </a>
+            {% endif %}
+        </div>
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700">
+                    Zeige
+                    <span class="font-medium">{{ page_obj.start_index }}</span>
+                    bis
+                    <span class="font-medium">{{ page_obj.end_index }}</span>
+                    von
+                    <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                    Artikeln
+                </p>
+            </div>
+            <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    {% if page_obj.has_previous %}
+                    <a href="#"
+                       hx-get="{% url 'reporting:inventory_dashboard' %}?page={{ page_obj.previous_page_number }}"
+                       hx-target="#inventory-table"
+                       hx-include="[name='search'],[name='module'],[name='location'],[name='status'],[name='sort'],[name='dir']"
+                       class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        &laquo;
+                    </a>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <span class="relative inline-flex items-center px-4 py-2 border border-teal-500 bg-teal-50 text-sm font-medium text-teal-600 z-10">
+                            {{ num }}
+                        </span>
+                        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                        <a href="#"
+                           hx-get="{% url 'reporting:inventory_dashboard' %}?page={{ num }}"
+                           hx-target="#inventory-table"
+                           hx-include="[name='search'],[name='module'],[name='location'],[name='status'],[name='sort'],[name='dir']"
+                           class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            {{ num }}
+                        </a>
+                        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                        <a href="#"
+                           hx-get="{% url 'reporting:inventory_dashboard' %}?page={{ num }}"
+                           hx-target="#inventory-table"
+                           hx-include="[name='search'],[name='module'],[name='location'],[name='status'],[name='sort'],[name='dir']"
+                           class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            {{ num }}
+                        </a>
+                        {% elif num == 2 or num == page_obj.paginator.num_pages|add:"-1" %}
+                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                            ...
+                        </span>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <a href="#"
+                       hx-get="{% url 'reporting:inventory_dashboard' %}?page={{ page_obj.next_page_number }}"
+                       hx-target="#inventory-table"
+                       hx-include="[name='search'],[name='module'],[name='location'],[name='status'],[name='sort'],[name='dir']"
+                       class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        &raquo;
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow p-12 text-center">
+    <span class="text-6xl mb-4 block">📭</span>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Artikel gefunden</h3>
+    <p class="text-gray-500">Passen Sie die Filterkriterien an oder erweitern Sie die Suche.</p>
+</div>
+{% endif %}

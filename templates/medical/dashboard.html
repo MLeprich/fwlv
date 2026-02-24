@@ -373,10 +373,13 @@
                 </h3>
                 <div class="space-y-2">
                     {% for batch in expiring_batches|slice:":5" %}
-                    <div class="bg-white rounded p-2 text-sm">
-                        <p class="font-medium text-gray-900">{{ batch.item.name }}</p>
-                        <p class="text-xs text-orange-600 mt-1">{{ batch.expiry_date|date:"d.m.Y" }}</p>
-                    </div>
+                    <a href="{% url 'medical:batch_detail' pk=batch.pk %}" class="block bg-white rounded p-3 text-sm hover:bg-orange-100 transition-colors group">
+                        <p class="font-medium text-gray-900 group-hover:text-indigo-600">{% if batch.master %}{{ batch.master.name }}{% elif batch.item %}{{ batch.item.name }}{% endif %}</p>
+                        <div class="flex items-center justify-between mt-1">
+                            <span class="text-xs text-gray-500">Charge: {{ batch.batch_number }}</span>
+                            <span class="text-xs font-medium text-orange-600">{{ batch.expiry_date|date:"d.m.Y" }}</span>
+                        </div>
+                    </a>
                     {% endfor %}
                 </div>
             </div>

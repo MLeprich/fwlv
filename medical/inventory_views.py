@@ -11,14 +11,17 @@ from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Q
+from django.db.models import Q, Sum, F, DecimalField, Value
+from django.db.models.functions import Coalesce
 from django.template.loader import render_to_string
+from decimal import Decimal
 import csv
 from io import BytesIO
 
 from .models import (
     MedicalInventoryCheck,
     MedicalInventoryCheckItem,
+    MedicalItemMaster,
     MedicalBatch,
     MedicalDeviceInstance
 )
@@ -89,6 +92,57 @@ class MedicalInventoryListView(LoginRequiredMixin, PermissionRequiredMixin, List
                 ).count(),
             }
         })
+
+        # === Finanz-Kennzahlen (Buchwert) ===
+
+        # Buchwert Verbrauchsmaterial: Summe(Restmenge * Einkaufspreis) aller aktiven Chargen
+        batch_value = MedicalBatch.objects.filter(
+            quantity_remaining__gt=0,
+            unit_price__isnull=False,
+            is_recalled=False,
+        ).aggregate(
+            total=Coalesce(
+                Sum(F('quantity_remaining') * F('unit_price'), output_field=DecimalField()),
+                Value(Decimal('0.00'))
+            )
+        )['total']
+
+        # Buchwert Medizintechnik: Summe(Anschaffungspreis) aller aktiven Geraete
+        device_value = MedicalDeviceInstance.objects.filter(
+            is_active=True,
+            purchase_price__isnull=False,
+        ).aggregate(
+            total=Coalesce(
+                Sum('purchase_price'),
+                Value(Decimal('0.00'))
+            )
+        )['total']
+
+        total_value = batch_value + device_value
+
+        # Anzahl Artikel-Stammdaten und Chargen
+        active_masters = MedicalItemMaster.objects.filter(is_active=True).count()
+        active_batches = MedicalBatch.objects.filter(
+            quantity_remaining__gt=0, is_recalled=False
+        ).count()
+        active_devices = MedicalDeviceInstance.objects.filter(is_active=True).count()
+
+        # Chargen ohne Preis (zur Info)
+        batches_without_price = MedicalBatch.objects.filter(
+            quantity_remaining__gt=0,
+            unit_price__isnull=True,
+            is_recalled=False,
+        ).count()
+
+        context['financials'] = {
+            'batch_value': batch_value,
+            'device_value': device_value,
+            'total_value': total_value,
+            'active_masters': active_masters,
+            'active_batches': active_batches,
+            'active_devices': active_devices,
+            'batches_without_price': batches_without_price,
+        }
 
         return context
 

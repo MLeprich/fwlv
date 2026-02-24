@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}{{ leuchtturm.name }} - FLVS{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:dashboard' %}" class="text-gray-500 hover:text-gray-700">Bevölkerungsschutz</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'civil_protection:leuchtturm_list' %}" class="text-gray-500 hover:text-gray-700">Leuchtturm</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ leuchtturm.name }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ leuchtturm.name }}</h1>
+            <span class="px-3 py-1 rounded-full text-sm font-medium {% if leuchtturm.bvs_status == 'aktiv' %}bg-green-100 text-green-700{% elif leuchtturm.bvs_status == 'geplant' %}bg-blue-100 text-blue-700{% else %}bg-gray-100 text-gray-600{% endif %}">{{ leuchtturm.get_bvs_status_display }}</span>
+        </div>
+        <div class="flex gap-2">
+            {% if perms.locations.change_location %}
+            <a href="{% url 'locations:edit' leuchtturm.pk %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Bearbeiten</a>
+            {% endif %}
+            <a href="{% url 'civil_protection:leuchtturm_list' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Zurück</a>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Standort</h2>
+            <dl class="space-y-3">
+                <div><dt class="text-sm text-gray-500">Adresse</dt><dd class="text-sm">{{ leuchtturm.get_address|default:"-" }}</dd></div>
+                <div><dt class="text-sm text-gray-500">Kapazität</dt><dd class="text-sm">{% if leuchtturm.capacity_persons %}{{ leuchtturm.capacity_persons }} Personen{% else %}-{% endif %}</dd></div>
+                <div><dt class="text-sm text-gray-500">GPS</dt><dd class="text-sm">{% if leuchtturm.latitude %}{{ leuchtturm.latitude }}, {{ leuchtturm.longitude }}{% else %}-{% endif %}</dd></div>
+            </dl>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Infrastruktur</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full {% if leuchtturm.power_supply_available %}bg-green-500{% else %}bg-red-400{% endif %}"></span><span class="text-sm">Stromversorgung</span></div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full {% if leuchtturm.heating_available %}bg-green-500{% else %}bg-red-400{% endif %}"></span><span class="text-sm">Heizung</span></div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full {% if leuchtturm.water_supply_available %}bg-green-500{% else %}bg-red-400{% endif %}"></span><span class="text-sm">Wasserversorgung</span></div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full {% if leuchtturm.communication_available %}bg-green-500{% else %}bg-red-400{% endif %}"></span><span class="text-sm">Kommunikation</span></div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Ansprechpartner</h2>
+            <dl class="space-y-3">
+                <div><dt class="text-sm text-gray-500">Name</dt><dd class="text-sm">{{ leuchtturm.contact_name|default:"-" }}</dd></div>
+                <div><dt class="text-sm text-gray-500">Telefon</dt><dd class="text-sm">{{ leuchtturm.contact_phone|default:"-" }}</dd></div>
+                <div><dt class="text-sm text-gray-500">E-Mail</dt><dd class="text-sm">{{ leuchtturm.contact_email|default:"-" }}</dd></div>
+            </dl>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Ressourcen</h2>
+            <h3 class="text-sm font-medium text-gray-700 mb-2">Geräte ({{ leuchtturm.kats_equipment_instances.count }})</h3>
+            <div class="space-y-1 mb-4">
+                {% for eq in leuchtturm.kats_equipment_instances.all %}
+                <div class="p-2 rounded border border-gray-200 text-sm">{{ eq.inventory_number }} - {{ eq.master.name }}</div>
+                {% empty %}
+                <p class="text-xs text-gray-500">Keine Geräte zugewiesen.</p>
+                {% endfor %}
+            </div>
+            <h3 class="text-sm font-medium text-gray-700 mb-2">Fahrzeuge ({{ leuchtturm.kats_vehicles.count }})</h3>
+            <div class="space-y-1">
+                {% for v in leuchtturm.kats_vehicles.all %}
+                <div class="p-2 rounded border border-gray-200 text-sm">{{ v.name }} ({{ v.license_plate }})</div>
+                {% empty %}
+                <p class="text-xs text-gray-500">Keine Fahrzeuge zugewiesen.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

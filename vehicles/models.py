@@ -116,6 +116,14 @@ class VehicleRubrik(models.TextChoices):
     """Fahrzeug-Rubrik (Verwendungszweck)"""
     BS = 'bs', _('Brandschutz (BS)')
     RD = 'rd', _('Rettungsdienst (RD)')
+    KS = 'ks', _('Katastrophenschutz (KS)')
+
+
+class VehicleBereich(models.TextChoices):
+    """Bereich im Katastrophenschutz"""
+    BUND = 'bund', _('Bund')
+    LAND = 'land', _('Land')
+    KOMMUNE = 'kommune', _('Kommune')
 
 
 class VehicleStatus(models.TextChoices):
@@ -155,10 +163,20 @@ class Vehicle(AuditedModel):
     rubrik = models.CharField(
         max_length=10,
         choices=VehicleRubrik.choices,
-        blank=True,
+        blank=False,
+        default='',
         verbose_name=_('Rubrik'),
-        help_text=_('BS = Brandschutz, RD = Rettungsdienst'),
+        help_text=_('BS = Brandschutz, RD = Rettungsdienst, KS = Katastrophenschutz'),
         db_index=True,
+    )
+
+    bereich = models.CharField(
+        max_length=30,
+        choices=VehicleBereich.choices,
+        blank=True,
+        default='',
+        verbose_name=_('Bereich (KatS)'),
+        help_text=_('Nur bei Rubrik Katastrophenschutz: Bund, Land oder Kommune'),
     )
 
     call_sign = models.CharField(

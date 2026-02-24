@@ -32,6 +32,8 @@ class Roles:
     MODUL_INFO_MONITORS = 'Modulverantwortlicher Info Monitors'
     MODUL_KFZ = 'Modulverantwortlicher KFZ'
     MODUL_PROCUREMENT = 'Modulverantwortlicher Procurement'
+    MODUL_DEFECT_MANAGEMENT = 'Modulverantwortlicher Defect Management'
+    MODUL_CIVIL_PROTECTION = 'Modulverantwortlicher Civil Protection'
 
     # Sachbearbeiter pro Modul (view + add)
     SACHBEARBEITER_MEDICAL = 'Sachbearbeiter Medical'
@@ -47,6 +49,16 @@ class Roles:
     SACHBEARBEITER_INFO_MONITORS = 'Sachbearbeiter Info Monitors'
     SACHBEARBEITER_KFZ = 'Sachbearbeiter KFZ'
     SACHBEARBEITER_PROCUREMENT = 'Sachbearbeiter Procurement'
+    SACHBEARBEITER_DEFECT_MANAGEMENT = 'Sachbearbeiter Defect Management'
+    SACHBEARBEITER_CIVIL_PROTECTION = 'Sachbearbeiter Civil Protection'
+
+    # Freigabe-Gruppen (Procurement Approval)
+    FREIGABE_STUFE_1 = 'Freigabe Stufe 1'  # bis 1.000€
+    FREIGABE_STUFE_2 = 'Freigabe Stufe 2'  # bis 5.000€
+    FREIGABE_STUFE_3 = 'Freigabe Stufe 3'  # unbegrenzt
+
+    # Leitstelle
+    LST_INFOMONITOR = 'LST Infomonitor'
 
     # Operative Rollen
     BEREICHSLEITUNG = 'Bereichsleitung'
@@ -75,6 +87,8 @@ class Roles:
             cls.MODUL_INFO_MONITORS,
             cls.MODUL_KFZ,
             cls.MODUL_PROCUREMENT,
+            cls.MODUL_DEFECT_MANAGEMENT,
+            cls.MODUL_CIVIL_PROTECTION,
             cls.SACHBEARBEITER_MEDICAL,
             cls.SACHBEARBEITER_CLOTHING,
             cls.SACHBEARBEITER_MAGAZINE,
@@ -88,6 +102,12 @@ class Roles:
             cls.SACHBEARBEITER_INFO_MONITORS,
             cls.SACHBEARBEITER_KFZ,
             cls.SACHBEARBEITER_PROCUREMENT,
+            cls.SACHBEARBEITER_DEFECT_MANAGEMENT,
+            cls.SACHBEARBEITER_CIVIL_PROTECTION,
+            cls.LST_INFOMONITOR,
+            cls.FREIGABE_STUFE_1,
+            cls.FREIGABE_STUFE_2,
+            cls.FREIGABE_STUFE_3,
             cls.BEREICHSLEITUNG,
             cls.LAGERVERWALTER,
             cls.WACHLEITER,
@@ -112,6 +132,8 @@ class Roles:
             cls.MODUL_INFO_MONITORS,
             cls.MODUL_KFZ,
             cls.MODUL_PROCUREMENT,
+            cls.MODUL_DEFECT_MANAGEMENT,
+            cls.MODUL_CIVIL_PROTECTION,
         ]
 
     @classmethod
@@ -131,6 +153,8 @@ class Roles:
             cls.SACHBEARBEITER_INFO_MONITORS,
             cls.SACHBEARBEITER_KFZ,
             cls.SACHBEARBEITER_PROCUREMENT,
+            cls.SACHBEARBEITER_DEFECT_MANAGEMENT,
+            cls.SACHBEARBEITER_CIVIL_PROTECTION,
         ]
 
     @classmethod
@@ -179,6 +203,12 @@ class Modules:
     WIKI = 'wiki'
     INFO_MONITORS = 'info_monitors'
 
+    # Verwaltungs-Module
+    DEFECT_MANAGEMENT = 'defect_management'
+
+    # Katastrophenschutz
+    CIVIL_PROTECTION = 'civil_protection'
+
     @classmethod
     def get_all_modules(cls):
         """Alle Module"""
@@ -206,6 +236,8 @@ class Modules:
             cls.REPORTING,
             cls.WIKI,
             cls.INFO_MONITORS,
+            cls.DEFECT_MANAGEMENT,
+            cls.CIVIL_PROTECTION,
         ]
 
     @classmethod
@@ -221,6 +253,7 @@ class Modules:
             cls.DIVING,
             cls.EQUIPMENT,
             cls.IT_HARDWARE,
+            cls.CIVIL_PROTECTION,
         ]
 
 
@@ -309,6 +342,7 @@ class CustomPermissions:
     VIEW_MODULE_REPORTS = 'reporting.view_module_reports'
     VIEW_BTM_REPORTS = 'reporting.view_btm_reports'
     EXPORT_REPORTS = 'reporting.export_reports'
+    VIEW_INVENTORY_DASHBOARD = 'reporting.view_inventory_dashboard'
 
     # Wiki
     PUBLISH_WIKI_PAGE = 'wiki.publish_wiki_page'
@@ -431,19 +465,16 @@ class RolePermissions:
         }
     }
 
-    # Lagerverwalter
+    # Lagerverwalter - Nur Standorte & Lagerorte Verwaltung
     LAGERVERWALTER = {
-        'description': 'Verwaltung von Lagerbeständen',
+        'description': 'Verwaltung von Standorten und Lagerorten (modulübergreifend)',
         'custom_permissions': [
-            CustomPermissions.PERFORM_COUNT,
-            CustomPermissions.CREATE_ORDER_REQUEST,
-            CustomPermissions.VIEW_OWN_ORDERS,
+            CustomPermissions.MANAGE_LOCATION,
+            CustomPermissions.VIEW_INVENTORY_DASHBOARD,
         ],
-        'modules': Modules.get_inventory_modules(),
+        'modules': [Modules.LOCATIONS],
         'crud_actions': {
-            # Für alle Lager-Module: View + Add (Update/Delete nur eigene)
-            module: [Actions.VIEW, Actions.ADD]
-            for module in Modules.get_inventory_modules()
+            Modules.LOCATIONS: [Actions.VIEW, Actions.ADD, Actions.CHANGE, Actions.DELETE],
         }
     }
 
@@ -475,6 +506,7 @@ class RolePermissions:
         'description': 'Bereichsleitung mit Leseberechtigung für alle aktiven Module',
         'custom_permissions': [
             CustomPermissions.VIEW_MODULE_REPORTS,
+            CustomPermissions.VIEW_INVENTORY_DASHBOARD,
         ],
         'modules': Modules.get_all_modules(),
         'crud_actions': {
@@ -662,6 +694,8 @@ def get_module_from_role(role_name):
             'Info Monitors': Modules.INFO_MONITORS,
             'KFZ': Modules.VEHICLES,
             'Procurement': Modules.PROCUREMENT,
+            'Defect Management': Modules.DEFECT_MANAGEMENT,
+            'Civil Protection': Modules.CIVIL_PROTECTION,
         }
         return mapping.get(module_display)
     return None

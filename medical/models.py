@@ -1346,6 +1346,15 @@ class MedicalBatch(models.Model):
         verbose_name=_('Rückruf-Grund')
     )
 
+    # Einkaufspreis
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name=_('Einkaufspreis pro Einheit (EUR)')
+    )
+
     notes = models.TextField(
         blank=True,
         verbose_name=_('Notizen')

@@ -73,11 +73,7 @@
                 <h3 class="text-lg font-semibold text-gray-900 mb-3">Übergabe-Details</h3>
                 <div class="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <span class="text-gray-600">Übergabe von:</span>
-                        <span class="ml-2 font-medium text-gray-900">{{ handover.handover_from|default:"Erstinbetriebnahme" }}</span>
-                    </div>
-                    <div>
-                        <span class="text-gray-600">Übergabe an:</span>
+                        <span class="text-gray-600">Übernommen von:</span>
                         <span class="ml-2 font-medium text-gray-900">{{ handover.handover_to }}</span>
                     </div>
                     <div>
@@ -162,85 +158,12 @@
                 <label class="flex items-start cursor-pointer p-3 hover:bg-gray-50 rounded-lg">
                     <input type="checkbox" name="confirm_receiver" class="mt-1 w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500" required>
                     <div class="ml-3">
-                        <span class="font-medium text-gray-900">Bestätigung durch Empfänger</span>
+                        <span class="font-medium text-gray-900">Bestätigung durch Übernehmenden</span>
                         <p class="text-sm text-gray-600 mt-1">
                             Ich bestätige, dass ich das Fahrzeug im angegebenen Zustand übernommen habe.
                         </p>
                     </div>
                 </label>
-
-                {% if handover.handover_from %}
-                <label class="flex items-start cursor-pointer p-3 hover:bg-gray-50 rounded-lg">
-                    <input type="checkbox" name="confirm_giver" class="mt-1 w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500" required>
-                    <div class="ml-3">
-                        <span class="font-medium text-gray-900">Bestätigung durch Übergeber</span>
-                        <p class="text-sm text-gray-600 mt-1">
-                            Ich bestätige, dass die Angaben zum Fahrzeugzustand korrekt sind.
-                        </p>
-                    </div>
-                </label>
-                {% endif %}
-            </div>
-
-            <!-- PIN-Bestätigung -->
-            <div class="border border-gray-200 rounded-lg p-6 space-y-4">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">PIN-Bestätigung</h3>
-                <p class="text-sm text-gray-600 mb-4">
-                    Beide Parteien müssen ihren persönlichen PIN eingeben, um die Übergabe zu bestätigen.
-                </p>
-
-                {% if pin_errors %}
-                <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg mb-4">
-                    <div class="flex">
-                        <span class="text-red-600 text-xl">&#10060;</span>
-                        <div class="ml-3">
-                            {% for error in pin_errors %}
-                            <p class="text-sm text-red-700">{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- PIN Empfänger -->
-                <div>
-                    <label for="pin_receiver" class="block text-sm font-medium text-gray-700 mb-2">
-                        PIN Empfänger ({{ handover.handover_to }})
-                    </label>
-                    <input
-                        type="password"
-                        name="pin_receiver"
-                        id="pin_receiver"
-                        inputmode="numeric"
-                        pattern="[0-9]{4}"
-                        maxlength="4"
-                        autocomplete="off"
-                        placeholder="****"
-                        required
-                        class="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-center text-2xl tracking-widest"
-                    >
-                </div>
-
-                {% if handover.handover_from %}
-                <!-- PIN Übergeber -->
-                <div>
-                    <label for="pin_giver" class="block text-sm font-medium text-gray-700 mb-2">
-                        PIN Übergeber ({{ handover.handover_from }})
-                    </label>
-                    <input
-                        type="password"
-                        name="pin_giver"
-                        id="pin_giver"
-                        inputmode="numeric"
-                        pattern="[0-9]{4}"
-                        maxlength="4"
-                        autocomplete="off"
-                        placeholder="****"
-                        required
-                        class="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-center text-2xl tracking-widest"
-                    >
-                </div>
-                {% endif %}
             </div>
 
             <!-- Info Box -->

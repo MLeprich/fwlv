@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lager Dashboard - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'reporting:dashboard' %}" class="text-gray-500 hover:text-gray-700">Berichte</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Lager Dashboard</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-teal-600 to-emerald-700 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-5xl">📦</span>
+                    <h1 class="text-3xl font-bold">Lager Dashboard</h1>
+                </div>
+                <p class="text-teal-100 text-lg">
+                    Modulübergreifende Bestandsübersicht
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Karten -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Gesamt-Artikel -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Gesamt-Artikel</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ kpis.total }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <span class="text-3xl">📦</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Niedriger Bestand -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Niedriger Bestand</p>
+                    <p class="text-3xl font-bold text-orange-600 mt-2">{{ kpis.low }}</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <span class="text-3xl">⚠️</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ablaufend -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Ablaufend (90 Tage)</p>
+                    <p class="text-3xl font-bold text-amber-600 mt-2">{{ kpis.expiring }}</p>
+                </div>
+                <div class="bg-amber-100 rounded-full p-3">
+                    <span class="text-3xl">⏳</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Abgelaufen -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Abgelaufen</p>
+                    <p class="text-3xl font-bold text-red-600 mt-2">{{ kpis.expired }}</p>
+                </div>
+                <div class="bg-red-100 rounded-full p-3">
+                    <span class="text-3xl">🚫</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter-Bar -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <div class="flex flex-wrap items-center gap-4">
+            <!-- Suchfeld -->
+            <div class="flex-1 min-w-[200px]">
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ search }}"
+                    placeholder="Artikel suchen..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    hx-get="{% url 'reporting:inventory_dashboard' %}"
+                    hx-trigger="keyup changed delay:300ms"
+                    hx-target="#inventory-table"
+                    hx-include="[name='module'],[name='location'],[name='status'],[name='sort'],[name='dir']"
+                >
+            </div>
+
+            <!-- Modul-Dropdown -->
+            <div>
+                <select
+                    name="module"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    hx-get="{% url 'reporting:inventory_dashboard' %}"
+                    hx-trigger="change"
+                    hx-target="#inventory-table"
+                    hx-include="[name='search'],[name='location'],[name='status'],[name='sort'],[name='dir']"
+                >
+                    <option value="">Alle Module</option>
+                    <option value="medical" {% if module_filter == 'medical' %}selected{% endif %}>Rettungsdienst</option>
+                    <option value="equipment" {% if module_filter == 'equipment' %}selected{% endif %}>Ausrüstung</option>
+                    {% if civil_protection_enabled %}
+                    <option value="civil_protection" {% if module_filter == 'civil_protection' %}selected{% endif %}>Bevölkerungsschutz</option>
+                    {% endif %}
+                </select>
+            </div>
+
+            <!-- Lagerort-Dropdown -->
+            <div>
+                <select
+                    name="location"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    hx-get="{% url 'reporting:inventory_dashboard' %}"
+                    hx-trigger="change"
+                    hx-target="#inventory-table"
+                    hx-include="[name='search'],[name='module'],[name='status'],[name='sort'],[name='dir']"
+                >
+                    <option value="">Alle Lagerorte</option>
+                    {% for loc in locations %}
+                    <option value="{{ loc.pk }}" {% if location_filter == loc.pk|stringformat:"d" %}selected{% endif %}>{{ loc.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Status-Dropdown -->
+            <div>
+                <select
+                    name="status"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    hx-get="{% url 'reporting:inventory_dashboard' %}"
+                    hx-trigger="change"
+                    hx-target="#inventory-table"
+                    hx-include="[name='search'],[name='module'],[name='location'],[name='sort'],[name='dir']"
+                >
+                    <option value="">Alle Status</option>
+                    <option value="ok" {% if status_filter == 'ok' %}selected{% endif %}>OK</option>
+                    <option value="low" {% if status_filter == 'low' %}selected{% endif %}>Niedriger Bestand</option>
+                    <option value="expiring" {% if status_filter == 'expiring' %}selected{% endif %}>Ablaufend</option>
+                    <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Abgelaufen</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabellen-Container -->
+    <div id="inventory-table">
+        {% include 'reporting/_inventory_table_partial.html' %}
+    </div>
+</div>
+{% endblock %}

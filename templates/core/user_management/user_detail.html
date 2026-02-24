@@ -88,6 +88,11 @@
                     </div>
 
                     <div>
+                        <dt class="text-sm font-medium text-gray-500">Dienststellung</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user_obj.get_staff_position_display|default:"—" }}</dd>
+                    </div>
+
+                    <div>
                         <dt class="text-sm font-medium text-gray-500">Abteilung</dt>
                         <dd class="mt-1 text-sm text-gray-900">{{ user_obj.department|default:"—" }}</dd>
                     </div>
@@ -277,12 +282,14 @@
                 {% endif %}
             </div>
 
-            <!-- Ticket-Berechtigungen Card -->
+            <!-- Leitstelle-Berechtigungen Card -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Ticket-Berechtigungen</h2>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Leitstelle-Berechtigungen</h2>
                 <form method="post" action="{% url 'core:user_ticket_permissions' user_obj.pk %}">
                     {% csrf_token %}
                     <div class="space-y-4">
+                        <!-- Ticketsystem -->
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ticketsystem</p>
                         <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
                             <input type="checkbox" name="create_ticket" value="1"
                                    {% if has_create_ticket %}checked{% endif %}
@@ -301,10 +308,86 @@
                                 <p class="text-xs text-gray-500">Kann alle Tickets sehen, zuweisen und bearbeiten</p>
                             </div>
                         </label>
+
+                        <!-- Info-Monitor & Mappe -->
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-6">Info-Monitor & Mappe</p>
+                        <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" name="view_infomonitor" value="1"
+                                   {% if has_view_infomonitor %}checked{% endif %}
+                                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">Info-Monitor Betrachter</span>
+                                <p class="text-xs text-gray-500">Kann den Info-Monitor ansehen (Sidebar sichtbar)</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" name="edit_infomonitor" value="1"
+                                   {% if has_edit_infomonitor %}checked{% endif %}
+                                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">Info-Monitor Bearbeiter</span>
+                                <p class="text-xs text-gray-500">Kann Info-Monitor und Bereitschaft bearbeiten (impliziert Betrachter)</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" name="edit_mappe" value="1"
+                                   {% if has_edit_mappe %}checked{% endif %}
+                                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">Digitale Mappe</span>
+                                <p class="text-xs text-gray-500">Kann Digitale Mappe bearbeiten (Links, Kontakte, Anleitungen, GV-Dashboards)</p>
+                            </div>
+                        </label>
                     </div>
                     <div class="mt-4">
                         <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
                             Berechtigungen speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Dienststellung & Freigabe Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Dienststellung & Freigabe</h2>
+                <form method="post" action="{% url 'core:user_staff_position' user_obj.pk %}">
+                    {% csrf_token %}
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Dienststellung</label>
+                            <select name="staff_position"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                <option value="">-- Keine --</option>
+                                {% for value, label in staff_positions %}
+                                    <option value="{{ value }}" {% if user_obj.staff_position == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">
+                                Steuert automatisch die Freigabe-Gruppe:
+                                Mitarbeiter = keine Freigabe,
+                                Stellv. FBL = bis 1.000 EUR,
+                                FBL = bis 5.000 EUR
+                            </p>
+                        </div>
+
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <dt class="text-sm font-medium text-gray-500 mb-1">Aktuelles Freigabelimit</dt>
+                            <dd class="text-lg font-semibold text-gray-900">
+                                {% if permission_summary.approval_limit > 999999999 %}
+                                    ∞ (unbegrenzt)
+                                {% elif permission_summary.approval_limit > 0 %}
+                                    {{ permission_summary.approval_limit|floatformat:0 }} EUR
+                                {% else %}
+                                    Keine Freigabe
+                                {% endif %}
+                            </dd>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+                            Dienststellung speichern
                         </button>
                     </div>
                 </form>

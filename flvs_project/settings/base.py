@@ -99,6 +99,8 @@ LOCAL_APPS = [
     'organization.apps.OrganizationConfig',
     'wiki.apps.WikiConfig',
     'tickets.apps.TicketsConfig',
+    'defect_management.apps.DefectManagementConfig',
+    'civil_protection.apps.CivilProtectionConfig',
     # Weitere Apps werden hier hinzugefuegt
 ]
 
@@ -115,7 +117,6 @@ MIDDLEWARE = [
     'django_otp.middleware.OTPMiddleware',  # 2FA Support
     'core.middleware.QRCodeScannerMiddleware',  # QR-Code/Barcode Scanner Redirect
     'core.middleware.PasswordChangeRequiredMiddleware',  # Force password change for new users
-    'core.middleware.PinSetupRequiredMiddleware',  # Force PIN setup for new users
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',  # Brute-Force Protection
