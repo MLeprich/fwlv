@@ -337,7 +337,10 @@ class VehicleHandover(AuditedModel):
         'personnel.Person',
         on_delete=models.PROTECT,
         related_name='vehicle_handovers_received',
-        verbose_name=_('Übergeben an')
+        verbose_name=_('Übergeben an'),
+        null=True,
+        blank=True,
+        help_text=_('Bei öffentlichen Übergaben leer (Melder-Daten werden stattdessen verwendet)')
     )
 
     # Übergabe-Details
