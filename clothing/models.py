@@ -609,8 +609,16 @@ class ClothingStockMovement(AbstractStockMovement):
         # Bestand aktualisieren
         self.update_item_stock()
 
-        # Bei Ausgabe: Item der Person zuordnen
+        # Lagerort des Items aktualisieren
         from inventory_base.models import StockMovementType
+        if self.movement_type == StockMovementType.TRANSFER and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+        elif self.movement_type == StockMovementType.INCOMING and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+
+        # Bei Ausgabe: Item der Person zuordnen
         if self.movement_type == StockMovementType.OUTGOING and self.person:
             self.item.assigned_to = self.person
             self.item.assignment_date = self.movement_date

@@ -1107,6 +1107,15 @@ class HeightRescueStockMovement(AbstractStockMovement):
         """Automatische Updates bei Sturz oder Prüfung"""
         super().save(*args, **kwargs)
 
+        # Lagerort des Items aktualisieren
+        from inventory_base.models import StockMovementType
+        if self.movement_type == StockMovementType.TRANSFER and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+        elif self.movement_type == StockMovementType.INCOMING and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+
         # Bei Sturz: Ausrüstung aussondern
         if self.fall_arrested:
             self.item.total_falls_arrested += 1

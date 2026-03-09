@@ -521,10 +521,8 @@ class LocationUpdateBarcodeView(LoginRequiredMixin, PermissionRequiredMixin, Vie
         else:
             messages.success(request, 'Individueller Barcode wurde entfernt. Es wird nun der automatisch generierte verwendet.')
 
-        # HTMX: Seite neu laden mit Sprung zum QR-Tab
-        response = HttpResponse()
-        response['HX-Redirect'] = f'{location.get_absolute_url()}#qrcode'
-        return response
+        # Redirect zurück zur Location-Detailseite mit QR-Tab aktiv
+        return redirect(f'{location.get_absolute_url()}#qrcode')
 
 
 class LocationQuickMoveView(LoginRequiredMixin, View):

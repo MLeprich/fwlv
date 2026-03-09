@@ -396,6 +396,17 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.phonebook_enabled = request.POST.get('phonebook_enabled') == 'true'
                 sys_settings.defect_management_enabled = request.POST.get('defect_management_enabled') == 'true'
                 sys_settings.civil_protection_enabled = request.POST.get('civil_protection_enabled') == 'true'
+                sys_settings.person_tab_duty_hours_visible = request.POST.get('person_tab_duty_hours_visible') == 'true'
+                sys_settings.person_tab_qualifications_visible = request.POST.get('person_tab_qualifications_visible') == 'true'
+                sys_settings.person_tab_inspections_visible = request.POST.get('person_tab_inspections_visible') == 'true'
+                sys_settings.person_tab_clothing_visible = request.POST.get('person_tab_clothing_visible') == 'true'
+                sys_settings.person_section_work_contact_visible = request.POST.get('person_section_work_contact_visible') == 'true'
+                sys_settings.person_section_private_contact_visible = request.POST.get('person_section_private_contact_visible') == 'true'
+                sys_settings.person_section_emergency_contact_visible = request.POST.get('person_section_emergency_contact_visible') == 'true'
+                sys_settings.person_section_fire_department_visible = request.POST.get('person_section_fire_department_visible') == 'true'
+                sys_settings.person_section_organization_visible = request.POST.get('person_section_organization_visible') == 'true'
+                sys_settings.person_section_driving_license_visible = request.POST.get('person_section_driving_license_visible') == 'true'
+                sys_settings.person_section_notes_visible = request.POST.get('person_section_notes_visible') == 'true'
                 sys_settings.updated_by = user
                 sys_settings.save()
 
@@ -441,6 +452,7 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.person_section_work_contact_visible = request.POST.get('person_section_work_contact_visible') == 'true'
                 sys_settings.person_section_private_contact_visible = request.POST.get('person_section_private_contact_visible') == 'true'
                 sys_settings.person_section_emergency_contact_visible = request.POST.get('person_section_emergency_contact_visible') == 'true'
+                sys_settings.person_section_fire_department_visible = request.POST.get('person_section_fire_department_visible') == 'true'
                 sys_settings.person_section_organization_visible = request.POST.get('person_section_organization_visible') == 'true'
                 sys_settings.person_section_user_photo_visible = request.POST.get('person_section_user_photo_visible') == 'true'
                 sys_settings.person_section_driving_license_visible = request.POST.get('person_section_driving_license_visible') == 'true'

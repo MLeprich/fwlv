@@ -141,7 +141,7 @@
                                     <template x-for="item in items.filter(i => i.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
                                         <button
                                             type="button"
-                                            @click="selected = item; document.getElementById('{{ form.item.id_for_label }}').value = item.value; document.getElementById('{{ form.item.id_for_label }}').dispatchEvent(new Event('change')); open = false"
+                                            @click="selected = item; document.getElementById('{{ form.item.id_for_label }}').value = item.value; document.getElementById('{{ form.item.id_for_label }}').dispatchEvent(new Event('change')); $dispatch('item-selected', { itemId: item.value }); open = false"
                                             class="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm"
                                             :class="selected && selected.value === item.value ? 'bg-blue-100 font-medium' : ''"
                                             x-text="item.text"
@@ -302,6 +302,12 @@
                         }
                     " @batch-from-location.window="
                         selected = locations.find(loc => loc.value === $event.detail.id) || { value: $event.detail.id, text: $event.detail.name };
+                    " @item-selected.window="
+                        const locId = String(ITEM_LOCATION_MAP[$event.detail.itemId] || '');
+                        if (locId) {
+                            document.getElementById('{{ form.from_location.id_for_label }}').value = locId;
+                            selected = locations.find(loc => loc.value === locId) || null;
+                        }
                     ">
                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.from_location.label }}</label>
 
@@ -469,6 +475,10 @@ function stockMovementForm() {
         }
     };
 }
+</script>
+
+<script>
+var ITEM_LOCATION_MAP = {{ item_location_map|safe }};
 </script>
 
 <style>

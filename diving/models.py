@@ -1367,6 +1367,15 @@ class DivingStockMovement(AbstractStockMovement):
         """Automatische Updates bei Gasfüllung oder Service"""
         super().save(*args, **kwargs)
 
+        # Lagerort des Items aktualisieren
+        from inventory_base.models import StockMovementType
+        if self.movement_type == StockMovementType.TRANSFER and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+        elif self.movement_type == StockMovementType.INCOMING and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+
         # Bei Gasfüllung: Gas-Typ in Item aktualisieren
         if self.gas_filled and self.gas_type:
             self.item.current_gas_type = self.gas_type

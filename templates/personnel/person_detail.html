@@ -128,6 +128,7 @@
                     >
                         📋 Stammdaten
                     </button>
+                    {% if not system_settings or system_settings.person_tab_qualifications_visible %}
                     <button
                         @click="activeTab = 'qualifications'"
                         :class="activeTab === 'qualifications' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
@@ -135,6 +136,8 @@
                     >
                         📜 Qualifikationen ({{ active_qualifications.count }})
                     </button>
+                    {% endif %}
+                    {% if not system_settings or system_settings.person_tab_inspections_visible %}
                     <button
                         @click="activeTab = 'inspections'"
                         :class="activeTab === 'inspections' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
@@ -142,6 +145,8 @@
                     >
                         📅 Prüfungen
                     </button>
+                    {% endif %}
+                    {% if not system_settings or system_settings.person_tab_clothing_visible %}
                     <button
                         @click="activeTab = 'equipment'"
                         :class="activeTab === 'equipment' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
@@ -149,6 +154,8 @@
                     >
                         👕 Kleidung & PSA
                     </button>
+                    {% endif %}
+                    {% if not system_settings or system_settings.person_tab_duty_hours_visible %}
                     <button
                         @click="activeTab = 'dutyhours'"
                         :class="activeTab === 'dutyhours' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
@@ -156,6 +163,7 @@
                     >
                         ⏱️ Pflichtstunden
                     </button>
+                    {% endif %}
                 </nav>
 
                 <!-- Tab Content -->
@@ -171,24 +179,32 @@
                     </div>
 
                     <!-- Tab: Qualifikationen -->
+                    {% if not system_settings or system_settings.person_tab_qualifications_visible %}
                     <div x-show="activeTab === 'qualifications'" x-cloak>
                         {% include 'personnel/tabs/qualifications.html' %}
                     </div>
+                    {% endif %}
 
                     <!-- Tab: Prüfungen -->
+                    {% if not system_settings or system_settings.person_tab_inspections_visible %}
                     <div x-show="activeTab === 'inspections'" x-cloak>
                         {% include 'personnel/tabs/inspections.html' %}
                     </div>
+                    {% endif %}
 
                     <!-- Tab: Kleidung & PSA -->
+                    {% if not system_settings or system_settings.person_tab_clothing_visible %}
                     <div x-show="activeTab === 'equipment'" x-cloak>
                         {% include 'personnel/tabs/equipment.html' %}
                     </div>
+                    {% endif %}
 
                     <!-- Tab: Pflichtstunden -->
+                    {% if not system_settings or system_settings.person_tab_duty_hours_visible %}
                     <div x-show="activeTab === 'dutyhours'" x-cloak>
                         {% include 'personnel/tabs/dutyhours.html' %}
                     </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -201,9 +217,11 @@
             <div class="bg-white rounded-lg shadow p-6 mb-6">
                 <h3 class="font-semibold text-gray-900 mb-4">Aktionen</h3>
                 <div class="space-y-2">
+                    {% if not system_settings or system_settings.person_tab_qualifications_visible %}
                     <a href="{% url 'personnel:qualification_create' person.pk %}" class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium text-center">
                         ➕ Qualifikation hinzufügen
                     </a>
+                    {% endif %}
                     <a href="{% url 'personnel:update' person.pk %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium text-center">
                         ✏️ Bearbeiten
                     </a>
@@ -218,22 +236,27 @@
                 <h3 class="font-semibold text-gray-900 mb-4">Status</h3>
                 <div class="space-y-4">
                     <!-- Prüfungen -->
+                    {% if not system_settings or system_settings.person_tab_inspections_visible %}
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">Prüfungen</span>
                         <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
                             ✅ Aktuell
                         </span>
                     </div>
+                    {% endif %}
 
                     <!-- Qualifikationen -->
+                    {% if not system_settings or system_settings.person_tab_qualifications_visible %}
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">Qualifikationen</span>
                         <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
                             {{ active_qualifications.count }} Aktiv
                         </span>
                     </div>
+                    {% endif %}
 
                     <!-- Pflichtstunden (Placeholder) -->
+                    {% if not system_settings or system_settings.person_tab_duty_hours_visible %}
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-sm text-gray-600">Pflichtstunden</span>
@@ -243,6 +266,7 @@
                             <div class="bg-yellow-500 h-2 rounded-full" style="width: 75%"></div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
 

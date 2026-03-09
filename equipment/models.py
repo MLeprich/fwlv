@@ -969,8 +969,16 @@ class EquipmentStockMovement(AbstractStockMovement):
         # Bestand aktualisieren
         self.update_item_stock()
 
-        # Bei Ausgabe an Fahrzeug: Item dem Fahrzeug zuordnen
+        # Lagerort des Items aktualisieren
         from inventory_base.models import StockMovementType
+        if self.movement_type == StockMovementType.TRANSFER and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+        elif self.movement_type == StockMovementType.INCOMING and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+
+        # Bei Ausgabe an Fahrzeug: Item dem Fahrzeug zuordnen
         if self.movement_type == StockMovementType.OUTGOING and self.vehicle:
             self.item.assigned_vehicle = self.vehicle
             self.item.save(update_fields=['assigned_vehicle'])

@@ -794,6 +794,16 @@ class StockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
 
         return response
 
+    def get_context_data(self, **kwargs):
+        import json
+        context = super().get_context_data(**kwargs)
+        item_locations = dict(
+            MedicalItemMaster.objects.filter(location__isnull=False)
+            .values_list('pk', 'location_id')
+        )
+        context['item_location_map'] = json.dumps(item_locations)
+        return context
+
 
 class StockMovementDetailView(LoginRequiredMixin, DetailView):
     """Detail-Ansicht einer Lagerbewegung"""

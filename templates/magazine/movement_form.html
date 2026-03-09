@@ -223,9 +223,15 @@
                         if (currentValue) {
                             selected = locations.find(loc => loc.value === currentValue);
                         }
-                    
+
                         // Remove required attribute from hidden select
                         document.getElementById('id_from_location').removeAttribute('required');
+                    " @item-selected.window="
+                        const locId = String(ITEM_LOCATION_MAP[$event.detail.itemId] || '');
+                        if (locId) {
+                            document.getElementById('id_from_location').value = locId;
+                            selected = locations.find(loc => loc.value === locId) || null;
+                        }
                     ">
                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.from_location.label }}</label>
 
@@ -396,11 +402,20 @@
 </div>
 
 <script>
+var ITEM_LOCATION_MAP = {{ item_location_map|safe }};
 function movementForm() {
     return {
         movementType: ''
     };
 }
+document.addEventListener('DOMContentLoaded', function() {
+    var itemSelect = document.getElementById('id_item');
+    if (itemSelect) {
+        itemSelect.addEventListener('change', function() {
+            window.dispatchEvent(new CustomEvent('item-selected', { detail: { itemId: this.value } }));
+        });
+    }
+});
 </script>
 
 <style>

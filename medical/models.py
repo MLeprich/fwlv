@@ -1164,6 +1164,14 @@ class MedicalStockMovement(AbstractStockMovement):
         if not self.requires_approval or self.approval_status == BTMApprovalStatus.APPROVED:
             self.update_item_stock()
 
+        # Lagerort des Items aktualisieren
+        if self.movement_type == StockMovementType.TRANSFER and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+        elif self.movement_type == StockMovementType.INCOMING and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+
     def update_item_stock(self):
         """
         Aktualisiert den Chargen-Bestand basierend auf der Bewegung.

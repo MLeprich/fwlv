@@ -134,7 +134,7 @@
                                     <template x-for="item in items.filter(i => i.text.toLowerCase().includes(search.toLowerCase()))" :key="item.value">
                                         <button
                                             type="button"
-                                            @click="selected = item; document.getElementById('id_item').value = item.value; open = false"
+                                            @click="selected = item; document.getElementById('id_item').value = item.value; $dispatch('item-selected', { itemId: item.value }); open = false"
                                             class="w-full text-left px-4 py-2 hover:bg-amber-50 text-sm"
                                             :class="selected && selected.value === item.value ? 'bg-amber-100 font-medium' : ''"
                                             x-text="item.text"
@@ -268,9 +268,15 @@
                         if (currentValue) {
                             selected = locations.find(loc => loc.value === currentValue);
                         }
-                    
+
                         // Remove required attribute from hidden select
                         document.getElementById('id_from_location').removeAttribute('required');
+                    " @item-selected.window="
+                        const locId = String(ITEM_LOCATION_MAP[$event.detail.itemId] || '');
+                        if (locId) {
+                            document.getElementById('id_from_location').value = locId;
+                            selected = locations.find(loc => loc.value === locId) || null;
+                        }
                     ">
                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.from_location.label }}</label>
 
@@ -441,6 +447,7 @@
 </div>
 
 <script>
+var ITEM_LOCATION_MAP = {{ item_location_map|safe }};
 function movementForm() {
     return {
         movementType: ''

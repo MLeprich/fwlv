@@ -735,6 +735,14 @@ class MagazineStockMovement(AbstractStockMovement):
         # Bestand aktualisieren
         self.update_item_stock()
 
+        # Lagerort des Items aktualisieren
+        if self.movement_type == StockMovementType.TRANSFER and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+        elif self.movement_type == StockMovementType.INCOMING and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+
     def update_item_stock(self):
         """
         Aktualisiert den Bestand des Items basierend auf der Bewegung

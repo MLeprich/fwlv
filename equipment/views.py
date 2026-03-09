@@ -840,6 +840,13 @@ class EquipmentStockMovementCreateView(LoginRequiredMixin, PermissionRequiredMix
         context = super().get_context_data(**kwargs)
         context['title'] = 'Neue Lagerbewegung'
         context['submit_text'] = 'Bewegung speichern'
+        # Item-ID → Location-ID Mapping für automatische Von-Lagerort-Auswahl
+        import json
+        item_locations = dict(
+            EquipmentItem.objects.filter(location__isnull=False)
+            .values_list('pk', 'location_id')
+        )
+        context['item_location_map'] = json.dumps(item_locations)
         return context
 
 

@@ -794,9 +794,16 @@ class HeightRescueMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin
         return reverse_lazy('height_rescue:movement_detail', kwargs={'pk': self.object.pk})
 
     def get_context_data(self, **kwargs):
+        import json
         context = super().get_context_data(**kwargs)
         context['title'] = 'Neue Lagerbewegung'
         context['submit_text'] = 'Bewegung speichern'
+        from .models import HeightRescueItem
+        item_locations = dict(
+            HeightRescueItem.objects.filter(location__isnull=False)
+            .values_list('pk', 'location_id')
+        )
+        context['item_location_map'] = json.dumps(item_locations)
         return context
 
 

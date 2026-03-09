@@ -112,6 +112,34 @@ class SystemSettings(models.Model):
     )
 
     # ============================================================================
+    # PERSONAL - TAB VISIBILITY
+    # ============================================================================
+
+    person_tab_duty_hours_visible = models.BooleanField(
+        default=True,
+        verbose_name="Pflichtstunden-Tab",
+        help_text="Pflichtstunden-Tab auf der Personaldetailseite anzeigen"
+    )
+
+    person_tab_qualifications_visible = models.BooleanField(
+        default=True,
+        verbose_name="Qualifikationen-Tab",
+        help_text="Qualifikationen-Tab auf der Personaldetailseite anzeigen"
+    )
+
+    person_tab_inspections_visible = models.BooleanField(
+        default=True,
+        verbose_name="Prüfungen-Tab",
+        help_text="Prüfungen-Tab auf der Personaldetailseite anzeigen"
+    )
+
+    person_tab_clothing_visible = models.BooleanField(
+        default=True,
+        verbose_name="Kleidung & PSA-Tab",
+        help_text="Kleidung & PSA-Tab auf der Personaldetailseite anzeigen"
+    )
+
+    # ============================================================================
     # SECURITY
     # ============================================================================
 
@@ -191,6 +219,12 @@ class SystemSettings(models.Model):
         default=True,
         verbose_name="Führerscheindaten",
         help_text="Führerscheinklassen im Personalformular anzeigen"
+    )
+
+    person_section_fire_department_visible = models.BooleanField(
+        default=True,
+        verbose_name="Feuerwehr-Daten",
+        help_text="Feuerwehr-Daten (Abteilung, Dienstgrad, Funktion) im Personalformular anzeigen"
     )
 
     person_section_notes_visible = models.BooleanField(

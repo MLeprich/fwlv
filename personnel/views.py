@@ -593,9 +593,17 @@ class PersonDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        # Tab-Sichtbarkeit aus SystemSettings laden
+        from core.models import SystemSettings
+        sys_settings = SystemSettings.load()
+
         # Qualifikationen aufgeteilt nach Status
-        context['active_qualifications'] = self.object.get_qualifications()
-        context['expired_qualifications'] = self.object.get_expired_qualifications()
+        if not sys_settings or sys_settings.person_tab_qualifications_visible:
+            context['active_qualifications'] = self.object.get_qualifications()
+            context['expired_qualifications'] = self.object.get_expired_qualifications()
+        else:
+            context['active_qualifications'] = Qualification.objects.none()
+            context['expired_qualifications'] = Qualification.objects.none()
 
         # Führerscheindaten laden
         try:
@@ -606,43 +614,53 @@ class PersonDetailView(LoginRequiredMixin, DetailView):
             # driving_license app nicht installiert
             context['driving_license_check'] = None
 
-        # Kleiderkammer-Daten laden (wenn clothing app existiert)
-        try:
-            from clothing.models import ClothingItem, ClothingSizeAssignment
+        # Kleiderkammer-Daten laden (wenn clothing app existiert und Tab sichtbar)
+        if not sys_settings or sys_settings.person_tab_clothing_visible:
+            try:
+                from clothing.models import ClothingItem, ClothingSizeAssignment
+                from decimal import Decimal
+
+                # Aktuell ausgegebene Kleidung
+                assigned_clothing = ClothingItem.objects.filter(
+                    assigned_to=self.object,
+                    is_personal_issue=True
+                ).select_related('category').order_by('clothing_type', 'size')
+
+                # Größenzuordnungen
+                clothing_sizes = ClothingSizeAssignment.objects.filter(
+                    person=self.object
+                ).order_by('clothing_type')
+
+                # Statistiken berechnen
+                total_items = assigned_clothing.count()
+                total_value = Decimal('0.00')
+
+                # Gesamtwert berechnen (wenn unit_price gesetzt ist)
+                for item in assigned_clothing:
+                    if hasattr(item, 'unit_price') and item.unit_price:
+                        total_value += item.unit_price
+
+                # Prüfpflichtige Items
+                inspection_due_count = sum(1 for item in assigned_clothing if item.is_inspection_due())
+
+                context['assigned_clothing'] = assigned_clothing
+                context['clothing_sizes'] = clothing_sizes
+                context['clothing_stats'] = {
+                    'total_items': total_items,
+                    'total_value': total_value,
+                    'inspection_due': inspection_due_count,
+                }
+            except ImportError:
+                # clothing app nicht installiert
+                context['assigned_clothing'] = []
+                context['clothing_sizes'] = []
+                context['clothing_stats'] = {
+                    'total_items': 0,
+                    'total_value': Decimal('0.00'),
+                    'inspection_due': 0,
+                }
+        else:
             from decimal import Decimal
-
-            # Aktuell ausgegebene Kleidung
-            assigned_clothing = ClothingItem.objects.filter(
-                assigned_to=self.object,
-                is_personal_issue=True
-            ).select_related('category').order_by('clothing_type', 'size')
-
-            # Größenzuordnungen
-            clothing_sizes = ClothingSizeAssignment.objects.filter(
-                person=self.object
-            ).order_by('clothing_type')
-
-            # Statistiken berechnen
-            total_items = assigned_clothing.count()
-            total_value = Decimal('0.00')
-
-            # Gesamtwert berechnen (wenn unit_price gesetzt ist)
-            for item in assigned_clothing:
-                if hasattr(item, 'unit_price') and item.unit_price:
-                    total_value += item.unit_price
-
-            # Prüfpflichtige Items
-            inspection_due_count = sum(1 for item in assigned_clothing if item.is_inspection_due())
-
-            context['assigned_clothing'] = assigned_clothing
-            context['clothing_sizes'] = clothing_sizes
-            context['clothing_stats'] = {
-                'total_items': total_items,
-                'total_value': total_value,
-                'inspection_due': inspection_due_count,
-            }
-        except ImportError:
-            # clothing app nicht installiert
             context['assigned_clothing'] = []
             context['clothing_sizes'] = []
             context['clothing_stats'] = {
@@ -652,116 +670,135 @@ class PersonDetailView(LoginRequiredMixin, DetailView):
             }
 
         # Inspections-Daten laden
-        now = timezone.now().date()
+        if not sys_settings or sys_settings.person_tab_inspections_visible:
+            now = timezone.now().date()
 
-        # Anstehende Prüfungen (nicht abgeschlossen) - mit select_related für created_by
-        upcoming_inspections = Inspection.objects.filter(
-            person=self.object,
-            status__in=['pending', 'due_soon', 'overdue']
-        ).select_related('created_by', 'updated_by').order_by('scheduled_date')
+            # Anstehende Prüfungen (nicht abgeschlossen) - mit select_related für created_by
+            upcoming_inspections = Inspection.objects.filter(
+                person=self.object,
+                status__in=['pending', 'due_soon', 'overdue']
+            ).select_related('created_by', 'updated_by').order_by('scheduled_date')
 
-        # Abgeschlossene Prüfungen - mit select_related
-        completed_inspections = Inspection.objects.filter(
-            person=self.object,
-            status='completed'
-        ).select_related('created_by', 'updated_by').order_by('-completed_date')[:20]  # Letzte 20
+            # Abgeschlossene Prüfungen - mit select_related
+            completed_inspections = Inspection.objects.filter(
+                person=self.object,
+                status='completed'
+            ).select_related('created_by', 'updated_by').order_by('-completed_date')[:20]  # Letzte 20
 
-        # Statistiken berechnen - effizienter mit einer Query und conditional aggregation
-        inspection_stats_query = Inspection.objects.filter(person=self.object).aggregate(
-            overdue=Count(Case(When(status='overdue', then=1), output_field=IntegerField())),
-            due_soon=Count(Case(When(status='due_soon', then=1), output_field=IntegerField())),
-            pending=Count(Case(When(status='pending', then=1), output_field=IntegerField())),
-            completed=Count(Case(When(status='completed', then=1), output_field=IntegerField())),
-        )
-        inspection_stats = inspection_stats_query
+            # Statistiken berechnen - effizienter mit einer Query und conditional aggregation
+            inspection_stats_query = Inspection.objects.filter(person=self.object).aggregate(
+                overdue=Count(Case(When(status='overdue', then=1), output_field=IntegerField())),
+                due_soon=Count(Case(When(status='due_soon', then=1), output_field=IntegerField())),
+                pending=Count(Case(When(status='pending', then=1), output_field=IntegerField())),
+                completed=Count(Case(When(status='completed', then=1), output_field=IntegerField())),
+            )
+            inspection_stats = inspection_stats_query
 
-        context['upcoming_inspections'] = upcoming_inspections
-        context['completed_inspections'] = completed_inspections
-        context['inspection_stats'] = inspection_stats
+            context['upcoming_inspections'] = upcoming_inspections
+            context['completed_inspections'] = completed_inspections
+            context['inspection_stats'] = inspection_stats
+        else:
+            context['upcoming_inspections'] = []
+            context['completed_inspections'] = []
+            context['inspection_stats'] = {'overdue': 0, 'due_soon': 0, 'pending': 0, 'completed': 0}
 
         # Duty Hours-Daten laden
-        from django.db.models import Sum
-        from decimal import Decimal
+        if not sys_settings or sys_settings.person_tab_duty_hours_visible:
+            from django.db.models import Sum
+            from decimal import Decimal
 
-        # Jahr aus Query-Parameter oder aktuelles Jahr
-        current_year = timezone.now().year
-        dutyhours_year = int(self.request.GET.get('year', current_year))
+            # Jahr aus Query-Parameter oder aktuelles Jahr
+            current_year = timezone.now().year
+            dutyhours_year = int(self.request.GET.get('year', current_year))
 
-        # Alle Einträge für die Person im ausgewählten Jahr
-        dutyhours_entries = DutyHoursEntry.objects.filter(
-            person=self.object,
-            year=dutyhours_year
-        ).select_related('created_by').order_by('-date')
+            # Alle Einträge für die Person im ausgewählten Jahr
+            dutyhours_entries = DutyHoursEntry.objects.filter(
+                person=self.object,
+                year=dutyhours_year
+            ).select_related('created_by').order_by('-date')
 
-        # Anforderungen für das Jahr
-        requirements = DutyHoursRequirement.objects.filter(
-            year=dutyhours_year,
-            is_active=True
-        )
+            # Anforderungen für das Jahr
+            requirements = DutyHoursRequirement.objects.filter(
+                year=dutyhours_year,
+                is_active=True
+            )
 
-        # Statistiken pro Kategorie berechnen
-        category_stats = []
-        for req in requirements:
-            # Geleistete Stunden (nur bestätigte)
-            completed_hours = dutyhours_entries.filter(
-                category=req.category,
-                confirmed=True
-            ).aggregate(total=Sum('hours'))['total'] or Decimal('0.00')
+            # Statistiken pro Kategorie berechnen
+            category_stats = []
+            for req in requirements:
+                # Geleistete Stunden (nur bestätigte)
+                completed_hours = dutyhours_entries.filter(
+                    category=req.category,
+                    confirmed=True
+                ).aggregate(total=Sum('hours'))['total'] or Decimal('0.00')
 
-            # Prozentsatz berechnen
-            percentage = (completed_hours / req.required_hours * 100) if req.required_hours > 0 else 0
+                # Prozentsatz berechnen
+                percentage = (completed_hours / req.required_hours * 100) if req.required_hours > 0 else 0
 
-            # Status ermitteln
-            if percentage >= 100:
-                status = 'completed'
-            elif percentage >= 75:
-                status = 'on_track'
-            elif percentage >= 50:
-                status = 'warning'
-            else:
-                status = 'critical'
+                # Status ermitteln
+                if percentage >= 100:
+                    status = 'completed'
+                elif percentage >= 75:
+                    status = 'on_track'
+                elif percentage >= 50:
+                    status = 'warning'
+                else:
+                    status = 'critical'
 
-            category_stats.append({
-                'category': req.category,
-                'category_display': req.category.name,
-                'required_hours': req.required_hours,
-                'completed_hours': completed_hours,
-                'remaining_hours': req.required_hours - completed_hours,
-                'percentage': round(percentage, 1),
-                'status': status,
-            })
+                category_stats.append({
+                    'category': req.category,
+                    'category_display': req.category.name,
+                    'required_hours': req.required_hours,
+                    'completed_hours': completed_hours,
+                    'remaining_hours': req.required_hours - completed_hours,
+                    'percentage': round(percentage, 1),
+                    'status': status,
+                })
 
-        # Jahre mit Einträgen für Dropdown
-        available_years = DutyHoursEntry.objects.filter(
-            person=self.object
-        ).values_list('year', flat=True).distinct().order_by('-year')
+            # Jahre mit Einträgen für Dropdown
+            available_years = DutyHoursEntry.objects.filter(
+                person=self.object
+            ).values_list('year', flat=True).distinct().order_by('-year')
 
-        # Falls keine Jahre vorhanden, aktuelles Jahr anzeigen
-        if not available_years:
-            available_years = [current_year]
+            # Falls keine Jahre vorhanden, aktuelles Jahr anzeigen
+            if not available_years:
+                available_years = [current_year]
 
-        # Gesamtstatistik
-        total_required = sum(stat['required_hours'] for stat in category_stats)
-        total_completed = sum(stat['completed_hours'] for stat in category_stats)
-        overall_percentage = (total_completed / total_required * 100) if total_required > 0 else 0
+            # Gesamtstatistik
+            total_required = sum(stat['required_hours'] for stat in category_stats)
+            total_completed = sum(stat['completed_hours'] for stat in category_stats)
+            overall_percentage = (total_completed / total_required * 100) if total_required > 0 else 0
 
-        # Zusätzliche Statistiken
-        confirmed_count = dutyhours_entries.filter(confirmed=True).count()
-        unconfirmed_count = dutyhours_entries.filter(confirmed=False).count()
-        total_hours = dutyhours_entries.aggregate(total=Sum('hours'))['total'] or Decimal('0.00')
-        categories_fulfilled = sum(1 for stat in category_stats if stat['percentage'] >= 100)
+            # Zusätzliche Statistiken
+            confirmed_count = dutyhours_entries.filter(confirmed=True).count()
+            unconfirmed_count = dutyhours_entries.filter(confirmed=False).count()
+            total_hours = dutyhours_entries.aggregate(total=Sum('hours'))['total'] or Decimal('0.00')
+            categories_fulfilled = sum(1 for stat in category_stats if stat['percentage'] >= 100)
 
-        context['dutyhours_year'] = dutyhours_year
-        context['dutyhours_available_years'] = available_years
-        context['dutyhours_entries'] = dutyhours_entries
-        context['dutyhours_category_stats'] = category_stats
-        context['dutyhours_total_required'] = total_required
-        context['dutyhours_total_completed'] = total_completed
-        context['dutyhours_total_percentage'] = round(overall_percentage, 1)
-        context['dutyhours_confirmed_count'] = confirmed_count
-        context['dutyhours_unconfirmed_count'] = unconfirmed_count
-        context['dutyhours_total_hours'] = total_hours
-        context['dutyhours_categories_fulfilled'] = categories_fulfilled
+            context['dutyhours_year'] = dutyhours_year
+            context['dutyhours_available_years'] = available_years
+            context['dutyhours_entries'] = dutyhours_entries
+            context['dutyhours_category_stats'] = category_stats
+            context['dutyhours_total_required'] = total_required
+            context['dutyhours_total_completed'] = total_completed
+            context['dutyhours_total_percentage'] = round(overall_percentage, 1)
+            context['dutyhours_confirmed_count'] = confirmed_count
+            context['dutyhours_unconfirmed_count'] = unconfirmed_count
+            context['dutyhours_total_hours'] = total_hours
+            context['dutyhours_categories_fulfilled'] = categories_fulfilled
+        else:
+            from decimal import Decimal
+            context['dutyhours_year'] = timezone.now().year
+            context['dutyhours_available_years'] = [timezone.now().year]
+            context['dutyhours_entries'] = []
+            context['dutyhours_category_stats'] = []
+            context['dutyhours_total_required'] = 0
+            context['dutyhours_total_completed'] = 0
+            context['dutyhours_total_percentage'] = 0
+            context['dutyhours_confirmed_count'] = 0
+            context['dutyhours_unconfirmed_count'] = 0
+            context['dutyhours_total_hours'] = Decimal('0.00')
+            context['dutyhours_categories_fulfilled'] = 0
 
         return context
 

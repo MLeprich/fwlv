@@ -514,6 +514,16 @@ class WorkshopStockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixi
     def get_success_url(self):
         return reverse_lazy('workshop:movement_detail', kwargs={'pk': self.object.pk})
 
+    def get_context_data(self, **kwargs):
+        import json
+        context = super().get_context_data(**kwargs)
+        item_locations = dict(
+            WorkshopItem.objects.filter(location__isnull=False)
+            .values_list('pk', 'location_id')
+        )
+        context['item_location_map'] = json.dumps(item_locations)
+        return context
+
 
 # ============================================================================
 # VEHICLE SERVICE RECORD VIEWS

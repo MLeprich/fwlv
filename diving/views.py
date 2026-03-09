@@ -659,9 +659,15 @@ class DivingMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, Crea
         return reverse_lazy('diving:movement_detail', kwargs={'pk': self.object.pk})
 
     def get_context_data(self, **kwargs):
+        import json
         context = super().get_context_data(**kwargs)
         context['title'] = 'Neue Lagerbewegung'
         context['submit_text'] = 'Bewegung speichern'
+        item_locations = dict(
+            DivingItem.objects.filter(location__isnull=False)
+            .values_list('pk', 'location_id')
+        )
+        context['item_location_map'] = json.dumps(item_locations)
         return context
 
 

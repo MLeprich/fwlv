@@ -1165,10 +1165,38 @@ class WorkshopStockMovement(AbstractStockMovement):
         if self.unit_cost and not self.total_cost:
             self.total_cost = self.unit_cost * self.quantity
 
+        # Unit von Item übernehmen
+        if not self.unit and self.item:
+            self.unit = self.item.unit
+
         super().save(*args, **kwargs)
 
         # Bestand aktualisieren
         self.update_item_stock()
+
+        # Lagerort des Items aktualisieren
+        from inventory_base.models import StockMovementType
+        if self.movement_type == StockMovementType.TRANSFER and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+        elif self.movement_type == StockMovementType.INCOMING and self.to_location:
+            self.item.location = self.to_location
+            self.item.save(update_fields=['location'])
+
+    def update_item_stock(self):
+        """Aktualisiert den Bestand des Items basierend auf der Bewegung"""
+        from inventory_base.models import StockMovementType
+
+        if self.movement_type == StockMovementType.INCOMING:
+            self.item.quantity += self.quantity
+        elif self.movement_type in [StockMovementType.OUTGOING, StockMovementType.DAMAGE, StockMovementType.DISPOSAL]:
+            self.item.quantity -= self.quantity
+        elif self.movement_type == StockMovementType.RETURN:
+            self.item.quantity += self.quantity
+        elif self.movement_type == StockMovementType.INVENTORY:
+            self.item.quantity = self.quantity
+
+        self.item.save(update_fields=['quantity'])
 
 
 # ============================================================================

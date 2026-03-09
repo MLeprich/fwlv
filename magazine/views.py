@@ -557,6 +557,16 @@ class StockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
     def get_success_url(self):
         return reverse_lazy('magazine:movement_detail', kwargs={'pk': self.object.pk})
 
+    def get_context_data(self, **kwargs):
+        import json
+        context = super().get_context_data(**kwargs)
+        item_locations = dict(
+            MagazineItem.objects.filter(location__isnull=False)
+            .values_list('pk', 'location_id')
+        )
+        context['item_location_map'] = json.dumps(item_locations)
+        return context
+
 
 # ============================================================================
 # BATCH VIEWS

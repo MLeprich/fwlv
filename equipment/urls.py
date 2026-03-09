@@ -40,12 +40,13 @@ urlpatterns = [
     path('devices/batch-qrcodes/', views.device_batch_qrcodes, name='device_batch_qrcodes'),
     path('devices/batch-barcodes/', views.device_batch_barcodes, name='device_batch_barcodes'),
 
-    # Legacy-Aliase (redirecten zu Device-Views)
-    path('items/', views.EquipmentDeviceListView.as_view(), name='item_list'),
-    path('item/<int:pk>/', views.EquipmentDeviceDetailView.as_view(), name='item_detail'),
-    path('item/create/', views.EquipmentDeviceCreateView.as_view(), name='item_create'),
-    path('item/<int:pk>/update/', views.EquipmentDeviceUpdateView.as_view(), name='item_update'),
-    path('item/<int:pk>/edit/', views.EquipmentDeviceUpdateView.as_view(), name='item_edit'),
+    # EquipmentItem Views (Artikel/Bestand)
+    path('items/', views.EquipmentItemListView.as_view(), name='item_list'),
+    path('item/<int:pk>/', views.EquipmentItemDetailView.as_view(), name='item_detail'),
+    path('item/create/', views.EquipmentItemCreateView.as_view(), name='item_create'),
+    path('item/<int:pk>/update/', views.EquipmentItemUpdateView.as_view(), name='item_update'),
+    path('item/<int:pk>/edit/', views.EquipmentItemUpdateView.as_view(), name='item_edit'),
+    path('item/<int:pk>/delete/', views.EquipmentItemDeleteView.as_view(), name='item_delete'),
 
     # Lagerbewegungen
     path('movement/', views.EquipmentStockMovementListView.as_view(), name='movement_list'),
