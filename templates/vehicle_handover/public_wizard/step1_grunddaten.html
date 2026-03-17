@@ -73,7 +73,8 @@
             {% endif %}
 
             <!-- Meldende Person -->
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <input type="hidden" id="person_confirmed" name="person_confirmed" value="0">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4" x-data="personCheck()">
                 <h3 class="text-sm font-semibold text-blue-800 mb-3">Ihre Kontaktdaten</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -90,6 +91,62 @@
                         <p class="mt-1 text-sm text-red-600">{{ form.reporter_last_name.errors.0 }}</p>
                         {% endif %}
                     </div>
+                </div>
+
+                <!-- Person-Abgleich Ergebnis -->
+                <div x-show="checked" x-cloak class="mt-3">
+                    <!-- Treffer gefunden -->
+                    <template x-if="found">
+                        <div class="bg-green-50 border border-green-300 rounded-lg p-3 flex items-start gap-3">
+                            <span class="text-green-600 text-lg flex-shrink-0 mt-0.5">&#x2705;</span>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-green-800">
+                                    Person gefunden: <span class="font-bold" x-text="matchName"></span>
+                                </p>
+                                <p class="text-xs text-green-700 mt-1">Sind Sie diese Person?</p>
+                                <div class="flex gap-2 mt-2">
+                                    <button type="button" @click="confirmed = true; document.getElementById('person_confirmed').value = '1'" class="px-3 py-1 text-xs font-medium rounded-lg transition-colors"
+                                            :class="confirmed ? 'bg-green-600 text-white' : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'">
+                                        Ja, das bin ich
+                                    </button>
+                                    <button type="button" @click="confirmed = false; found = false; notFound = true; document.getElementById('person_confirmed').value = '0'" class="px-3 py-1 text-xs font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
+                                        Nein, das bin ich nicht
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Kein Treffer -->
+                    <template x-if="notFound">
+                        <div class="bg-yellow-50 border border-yellow-300 rounded-lg p-3 flex items-start gap-3">
+                            <span class="text-yellow-600 text-lg flex-shrink-0 mt-0.5">&#x26A0;&#xFE0F;</span>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-yellow-800">
+                                    Der Name <span class="font-bold" x-text="checkedName"></span> wurde nicht in der Personaldatenbank gefunden.
+                                </p>
+                                <template x-if="similarMatches.length > 0">
+                                    <div class="mt-2">
+                                        <p class="text-xs text-yellow-700 mb-1">Meinten Sie vielleicht:</p>
+                                        <div class="flex flex-wrap gap-2">
+                                            <template x-for="s in similarMatches" :key="s.first_name + s.last_name">
+                                                <button type="button"
+                                                        @click="useSuggestion(s)"
+                                                        class="px-2 py-1 text-xs font-medium bg-white text-yellow-800 border border-yellow-300 rounded-lg hover:bg-yellow-100 transition-colors"
+                                                        x-text="s.first_name + ' ' + s.last_name">
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                                <p class="text-xs text-yellow-700 mt-2">Bitte &uuml;berpr&uuml;fen Sie die Schreibweise. Wenn der Name korrekt ist, best&auml;tigen Sie dies:</p>
+                                <button type="button" @click="confirmed = true; document.getElementById('person_confirmed').value = '1'" class="mt-2 px-3 py-1 text-xs font-medium rounded-lg transition-colors"
+                                        :class="confirmed ? 'bg-yellow-600 text-white' : 'bg-white text-yellow-700 border border-yellow-300 hover:bg-yellow-100'">
+                                    <span x-text="confirmed ? 'Name best\u00e4tigt' : 'Name ist korrekt, fortfahren'"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
 
@@ -295,6 +352,79 @@
 </div>
 
 <script>
+function personCheck() {
+    return {
+        checked: false,
+        found: false,
+        notFound: false,
+        confirmed: false,
+        matchName: '',
+        checkedName: '',
+        similarMatches: [],
+        debounceTimer: null,
+
+        init() {
+            const fnInput = document.getElementById('id_reporter_first_name');
+            const lnInput = document.getElementById('id_reporter_last_name');
+            const handler = () => {
+                clearTimeout(this.debounceTimer);
+                this.debounceTimer = setTimeout(() => this.checkPerson(), 500);
+            };
+            fnInput.addEventListener('blur', () => this.checkPerson());
+            lnInput.addEventListener('blur', () => this.checkPerson());
+            fnInput.addEventListener('input', () => { this.resetState(); handler(); });
+            lnInput.addEventListener('input', () => { this.resetState(); handler(); });
+        },
+
+        resetState() {
+            this.checked = false;
+            this.found = false;
+            this.notFound = false;
+            this.confirmed = false;
+            this.matchName = '';
+            this.similarMatches = [];
+            document.getElementById('person_confirmed').value = '0';
+        },
+
+        checkPerson() {
+            const firstName = document.getElementById('id_reporter_first_name').value.trim();
+            const lastName = document.getElementById('id_reporter_last_name').value.trim();
+            if (!firstName || !lastName) { this.resetState(); return; }
+
+            this.checkedName = firstName + ' ' + lastName;
+
+            fetch(`/vehicle_handover/public/api/check-person/?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}`)
+                .then(r => r.json())
+                .then(data => {
+                    this.checked = true;
+                    if (data.found && data.matches.length > 0) {
+                        this.found = true;
+                        this.notFound = false;
+                        this.matchName = data.matches[0].first_name + ' ' + data.matches[0].last_name;
+                        this.confirmed = false;
+                    } else {
+                        this.found = false;
+                        this.notFound = true;
+                        this.similarMatches = data.matches || [];
+                        this.confirmed = false;
+                    }
+                })
+                .catch(() => {});
+        },
+
+        useSuggestion(s) {
+            document.getElementById('id_reporter_first_name').value = s.first_name;
+            document.getElementById('id_reporter_last_name').value = s.last_name;
+            this.checked = true;
+            this.found = true;
+            this.notFound = false;
+            this.matchName = s.first_name + ' ' + s.last_name;
+            this.confirmed = false;
+            this.similarMatches = [];
+        }
+    };
+}
+
 function fetchTemplatesForVehicle(vehiclePk) {
     const select = document.getElementById('id_checklist_template');
     const hint = document.getElementById('template-auto-hint');
@@ -336,6 +466,26 @@ function fetchTemplatesForVehicle(vehiclePk) {
 }
 
 function validateStep1() {
+    // Prüfe Melder-Vorname und Nachname
+    const reporterFirstNameInput = document.getElementById('id_reporter_first_name');
+    if (reporterFirstNameInput && !reporterFirstNameInput.value.trim()) {
+        alert('Bitte geben Sie Ihren Vornamen ein.');
+        return false;
+    }
+    const reporterLastNameInput = document.getElementById('id_reporter_last_name');
+    if (reporterLastNameInput && !reporterLastNameInput.value.trim()) {
+        alert('Bitte geben Sie Ihren Nachnamen ein.');
+        return false;
+    }
+
+    // Prüfe Person-Bestätigung
+    const personConfirmed = document.getElementById('person_confirmed');
+    if (personConfirmed && personConfirmed.value !== '1') {
+        alert('Bitte best\u00e4tigen Sie Ihren Namen, bevor Sie fortfahren.');
+        document.getElementById('id_reporter_last_name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+
     // Prüfe Fahrzeug
     const vehicleSelect = document.getElementById('id_vehicle');
     if (!vehicleSelect.value) {
@@ -347,18 +497,6 @@ function validateStep1() {
     const handoverDateInput = document.getElementById('id_handover_date');
     if (!handoverDateInput.value) {
         alert('Bitte geben Sie ein Übergabe-Datum ein.');
-        return false;
-    }
-
-    // Prüfe Melder-Vorname und Nachname
-    const reporterFirstNameInput = document.getElementById('id_reporter_first_name');
-    if (reporterFirstNameInput && !reporterFirstNameInput.value.trim()) {
-        alert('Bitte geben Sie Ihren Vornamen ein.');
-        return false;
-    }
-    const reporterLastNameInput = document.getElementById('id_reporter_last_name');
-    if (reporterLastNameInput && !reporterLastNameInput.value.trim()) {
-        alert('Bitte geben Sie Ihren Nachnamen ein.');
         return false;
     }
 

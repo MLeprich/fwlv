@@ -467,6 +467,12 @@ class MappeAnleitung(models.Model):
         return self.title
 
 
+class FFZugStatus(models.TextChoices):
+    EINSATZBEREIT = 'einsatzbereit', _('Einsatzbereit')
+    IM_ANMARSCH = 'im_anmarsch', _('Im Anmarsch')
+    NICHT_EINSATZBEREIT = 'nicht_einsatzbereit', _('Nicht Einsatzbereit')
+
+
 class InfoMonitor(models.Model):
     """
     Info-Monitor für die Leitstelle (Singleton, pk=1)
@@ -544,6 +550,34 @@ class InfoMonitor(models.Model):
     # Sonderfunktionen im Dienst
     taucher_im_dienst = models.BooleanField(default=False, verbose_name=_('Taucher im Dienst'))
     hoehenretter_im_dienst = models.BooleanField(default=False, verbose_name=_('Höhenretter im Dienst'))
+
+    # =========================================================================
+    # FF ZÜGE (Freiwillige Feuerwehr)
+    # =========================================================================
+    ff_sterkrade_status = models.CharField(
+        max_length=25,
+        choices=FFZugStatus.choices,
+        default=FFZugStatus.EINSATZBEREIT,
+        verbose_name=_('FF Sterkrade')
+    )
+    ff_mitte_status = models.CharField(
+        max_length=25,
+        choices=FFZugStatus.choices,
+        default=FFZugStatus.EINSATZBEREIT,
+        verbose_name=_('FF Mitte')
+    )
+    ff_sued_status = models.CharField(
+        max_length=25,
+        choices=FFZugStatus.choices,
+        default=FFZugStatus.EINSATZBEREIT,
+        verbose_name=_('FF Süd')
+    )
+    ff_koe_status = models.CharField(
+        max_length=25,
+        choices=FFZugStatus.choices,
+        default=FFZugStatus.EINSATZBEREIT,
+        verbose_name=_('FF KÖ')
+    )
 
     # =========================================================================
     # GERÄTE

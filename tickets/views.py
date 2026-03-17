@@ -605,6 +605,13 @@ class InfoMonitorDisplayView(LoginRequiredMixin, UserPassesTestMixin, DetailView
             'fahrzeug_ad', 'ersetzt_mit'
         ).order_by('position')
         context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
+        # FF Züge
+        context['ff_zuege'] = [
+            {'name': 'FF Sterkrade', 'status': self.object.ff_sterkrade_status, 'label': self.object.get_ff_sterkrade_status_display()},
+            {'name': 'FF Mitte', 'status': self.object.ff_mitte_status, 'label': self.object.get_ff_mitte_status_display()},
+            {'name': 'FF S\u00fcd', 'status': self.object.ff_sued_status, 'label': self.object.get_ff_sued_status_display()},
+            {'name': 'FF K\u00d6', 'status': self.object.ff_koe_status, 'label': self.object.get_ff_koe_status_display()},
+        ]
         return context
 
 
@@ -637,6 +644,14 @@ class InfoMonitorEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
             context['sonstiges_formset'] = InfoMonitorSonstigesFormSet(
                 instance=self.object, prefix='sonstiges'
             )
+        # FF Züge Felder für Template
+        form = context.get('form') or self.get_form()
+        context['ff_zug_fields'] = [
+            {'label': 'FF Sterkrade', 'field': form['ff_sterkrade_status']},
+            {'label': 'FF Mitte', 'field': form['ff_mitte_status']},
+            {'label': 'FF S\u00fcd', 'field': form['ff_sued_status']},
+            {'label': 'FF K\u00d6', 'field': form['ff_koe_status']},
+        ]
         return context
 
     def form_valid(self, form):
@@ -684,6 +699,15 @@ class InfoMonitorKioskView(DetailView):
         ).order_by('position')
         context['vehicle_count'] = context['monitor_vehicles'].count()
         context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
+        # FF Züge für Kiosk-Ansicht
+        from .models import FFZugStatus
+        context['ff_zuege'] = [
+            {'name': 'FF Sterkrade', 'status': self.object.ff_sterkrade_status, 'label': self.object.get_ff_sterkrade_status_display()},
+            {'name': 'FF Mitte', 'status': self.object.ff_mitte_status, 'label': self.object.get_ff_mitte_status_display()},
+            {'name': 'FF S\u00fcd', 'status': self.object.ff_sued_status, 'label': self.object.get_ff_sued_status_display()},
+            {'name': 'FF K\u00d6', 'status': self.object.ff_koe_status, 'label': self.object.get_ff_koe_status_display()},
+        ]
+        context['FFZugStatus'] = FFZugStatus
         return context
 
 

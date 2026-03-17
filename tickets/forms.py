@@ -215,6 +215,11 @@ class InfoMonitorForm(forms.ModelForm):
         for name in textarea_fields:
             self.fields[name].widget = forms.Textarea(attrs={'class': tw, 'rows': 2})
 
+        # FF Züge als Radio-Buttons
+        from .models import FFZugStatus
+        for ff_field in ['ff_sterkrade_status', 'ff_mitte_status', 'ff_sued_status', 'ff_koe_status']:
+            self.fields[ff_field].widget = forms.RadioSelect(choices=FFZugStatus.choices)
+
         # Laufband
         self.fields['laufband_text'].widget = forms.Textarea(attrs={'class': tw, 'rows': 2, 'placeholder': 'Text für das Laufband...'})
         self.fields['laufband_geschwindigkeit'].widget = forms.NumberInput(attrs={'class': tw, 'min': '5', 'max': '60'})

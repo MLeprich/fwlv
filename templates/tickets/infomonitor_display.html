@@ -155,7 +155,36 @@
         </div>
     </div>
 
-    <!-- 3. Fahrzeuge / Geräte -->
+    <!-- 3. FF Züge -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="bg-orange-50 border-b border-orange-200 px-6 py-3 rounded-t-lg">
+            <h2 class="text-lg font-bold text-orange-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                FF Z&uuml;ge (Freiwillige Feuerwehr)
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {% for ff in ff_zuege %}
+                <div class="flex items-center gap-3">
+                    {% if ff.status == 'einsatzbereit' %}
+                    <span class="inline-block w-4 h-4 rounded-full bg-green-500 flex-shrink-0"></span>
+                    {% elif ff.status == 'im_anmarsch' %}
+                    <span class="inline-block w-4 h-4 rounded-full bg-yellow-400 flex-shrink-0"></span>
+                    {% else %}
+                    <span class="inline-block w-4 h-4 rounded-full bg-red-500 flex-shrink-0"></span>
+                    {% endif %}
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900">{{ ff.name }}</p>
+                        <p class="text-xs {% if ff.status == 'einsatzbereit' %}text-green-600{% elif ff.status == 'im_anmarsch' %}text-yellow-600{% else %}text-red-600{% endif %}">{{ ff.label }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Fahrzeuge / Geräte -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div class="bg-red-50 border-b border-red-200 px-6 py-3 rounded-t-lg">
             <h2 class="text-lg font-bold text-red-800 flex items-center gap-2">

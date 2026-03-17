@@ -40,6 +40,10 @@
             --blue-bg: rgba(37,99,235,0.2);
             --blue-border: rgba(59,130,246,0.3);
             --blue-heading: #93c5fd;
+            /* FF Züge */
+            --orange-bg: rgba(234,88,12,0.2);
+            --orange-border: rgba(251,146,60,0.3);
+            --orange-heading: #fdba74;
             /* Header */
             --header-accent: #818cf8;
             --btn-hover: #ffffff;
@@ -80,6 +84,10 @@
             --blue-bg: #dbeafe;
             --blue-border: #93c5fd;
             --blue-heading: #1e40af;
+            /* FF Züge */
+            --orange-bg: #fff7ed;
+            --orange-border: #fdba74;
+            --orange-heading: #9a3412;
             /* Header */
             --header-accent: #4f46e5;
             --btn-hover: #0f172a;
@@ -104,6 +112,8 @@
         .section-heading-red { color: var(--red-heading); }
         .section-header-blue { background: var(--blue-bg); border-color: var(--blue-border); }
         .section-heading-blue { color: var(--blue-heading); }
+        .section-header-orange { background: var(--orange-bg); border-color: var(--orange-border); }
+        .section-heading-orange { color: var(--orange-heading); }
         .section-header-teal { background: var(--teal-bg); border-color: var(--teal-border); }
         .section-heading-teal { color: var(--teal-heading); }
 
@@ -236,7 +246,7 @@
 
     <!-- ==================== DASHBOARD VIEW ==================== -->
     <template x-if="view === 'dashboard'">
-        <div class="flex-1 grid grid-rows-2 gap-4 min-h-0">
+        <div class="flex-1 grid grid-rows-[1fr_auto_1fr] gap-4 min-h-0">
 
             <!-- ZEILE 1: Bereitschaft + Personal -->
             <div class="grid grid-cols-2 gap-4 min-h-0">
@@ -334,6 +344,35 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FF Z&Uuml;GE -->
+            <div class="card rounded-xl overflow-hidden flex-shrink-0">
+                <div class="section-header-orange border-b px-6 py-1.5 flex items-center gap-2">
+                    <svg class="w-5 h-5 section-heading-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    <h2 class="text-lg font-bold section-heading-orange tracking-wide uppercase">FF Z&uuml;ge</h2>
+                </div>
+                <div class="px-6 py-3">
+                    <div class="grid grid-cols-4 gap-6">
+                        {% for ff in ff_zuege %}
+                        <div class="flex items-center gap-4">
+                            <div class="flex-shrink-0">
+                                {% if ff.status == 'einsatzbereit' %}
+                                <span class="inline-block w-6 h-6 rounded-full shadow-lg" style="background: #22c55e; box-shadow: 0 0 12px rgba(34,197,94,0.6);"></span>
+                                {% elif ff.status == 'im_anmarsch' %}
+                                <span class="inline-block w-6 h-6 rounded-full shadow-lg" style="background: #eab308; box-shadow: 0 0 12px rgba(234,179,8,0.6);"></span>
+                                {% else %}
+                                <span class="inline-block w-6 h-6 rounded-full shadow-lg" style="background: #ef4444; box-shadow: 0 0 12px rgba(239,68,68,0.6);"></span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <p class="text-lg font-bold val-primary">{{ ff.name }}</p>
+                                <p class="text-sm font-medium {% if ff.status == 'einsatzbereit' %}val-green{% elif ff.status == 'im_anmarsch' %}val-accent{% else %}val-red{% endif %}">{{ ff.label }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>

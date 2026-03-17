@@ -12,6 +12,7 @@ urlpatterns = [
     path('public/create/', views.PublicHandoverCreateView.as_view(), name='public_create'),
     path('public/success/', views.PublicHandoverSuccessView.as_view(), name='public_success'),
     path('public/api/vehicle/<int:vehicle_pk>/templates/', views.public_get_templates_for_vehicle, name='public_api_vehicle_templates'),
+    path('public/api/check-person/', views.public_check_person, name='public_api_check_person'),
 
     # Dashboard
     path('', views.HandoverDashboardView.as_view(), name='dashboard'),

@@ -1235,6 +1235,40 @@ def public_get_templates_for_vehicle(request, vehicle_pk):
     return JsonResponse({'templates': data, 'location': location_data})
 
 
+def public_check_person(request):
+    """Prüft ob Vor-/Nachname einer hinterlegten Person entspricht (public, no login)"""
+    first_name = request.GET.get('first_name', '').strip()
+    last_name = request.GET.get('last_name', '').strip()
+
+    if not first_name or not last_name:
+        return JsonResponse({'found': False, 'matches': []})
+
+    from personnel.models import Person
+    # Exakter Match (case-insensitive)
+    matches = Person.objects.filter(
+        first_name__iexact=first_name,
+        last_name__iexact=last_name,
+        is_active=True,
+    ).values_list('first_name', 'last_name', named=True)[:5]
+
+    if matches:
+        return JsonResponse({
+            'found': True,
+            'matches': [{'first_name': m.first_name, 'last_name': m.last_name} for m in matches],
+        })
+
+    # Ähnliche Treffer (Nachname-Match)
+    similar = Person.objects.filter(
+        last_name__iexact=last_name,
+        is_active=True,
+    ).values_list('first_name', 'last_name', named=True)[:5]
+
+    return JsonResponse({
+        'found': False,
+        'matches': [{'first_name': s.first_name, 'last_name': s.last_name} for s in similar],
+    })
+
+
 # ===== 360° Fahrzeuginnenraum-Verwaltung =====
 
 from .models import Vehicle360Photo, Vehicle360Hotspot, HotspotImage

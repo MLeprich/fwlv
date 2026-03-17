@@ -464,26 +464,6 @@
                 </span>
             </a>
 
-            <!-- Leitstelle -->
-            {% if modules.tickets_enabled %}
-            {% if perms.tickets.create_ticket or perms.tickets.process_ticket or perms.tickets.view_infomonitor or perms.tickets.edit_infomonitor or perms.tickets.edit_mappe %}
-            <a
-                href="{% if perms.tickets.create_ticket or perms.tickets.process_ticket %}{% url 'tickets:list' %}{% else %}{% url 'tickets:infomonitor_display' %}{% endif %}"
-                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
-                       {% if current_module == 'tickets' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
-                x-tooltip="'Leitstelle'"
-            >
-                <span class="text-xl flex-shrink-0">🎫</span>
-                <span
-                    class="text-sm truncate"
-                    x-show="$store.sidebar.expanded"
-                >
-                    Leitstelle
-                </span>
-            </a>
-            {% endif %}
-            {% endif %}
-
             <!-- Mängelwesen -->
             {% if modules.defect_management_enabled %}
             {% if perms.defect_management.view_defect %}
@@ -565,6 +545,28 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Leitstelle (eigenständiger Menüpunkt) -->
+    {% if modules.tickets_enabled %}
+    {% if perms.tickets.create_ticket or perms.tickets.process_ticket or perms.tickets.view_infomonitor or perms.tickets.edit_infomonitor or perms.tickets.edit_mappe %}
+    <a
+        href="{% if perms.tickets.create_ticket or perms.tickets.process_ticket %}{% url 'tickets:list' %}{% else %}{% url 'tickets:infomonitor_display' %}{% endif %}"
+        class="flex items-center py-2 mx-2 rounded-lg transition-colors mt-4
+               {% if current_module == 'tickets' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+        :class="$store.sidebar.expanded ? 'gap-3 px-3' : 'justify-center'"
+        x-tooltip="'Leitstelle'"
+    >
+        <span class="text-xl flex-shrink-0">🎫</span>
+        <span
+            class="text-sm font-medium truncate transition-all duration-200"
+            x-show="$store.sidebar.expanded"
+            x-transition
+        >
+            Leitstelle
+        </span>
+    </a>
+    {% endif %}
+    {% endif %}
 
     <!-- Kategorie 4: Information -->
     {% if modules.wiki_enabled or modules.info_monitors_enabled %}
