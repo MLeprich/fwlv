@@ -443,13 +443,17 @@ docker system prune -a
 | `EMAIL_HOST_USER` | Nein | - | SMTP-Benutzer |
 | `EMAIL_HOST_PASSWORD` | Nein | - | SMTP-Passwort |
 | `EMAIL_USE_TLS` | Nein | `True` | TLS verwenden |
+| `DEFAULT_FROM_EMAIL` | Nein | `noreply@flvs.local` | Absender-Adresse für E-Mails |
+| `REDIS_URL` | Nein | `redis://redis:6379/1` | Redis-Verbindung (Cache) |
+| `CELERY_BROKER_URL` | Nein | `redis://redis:6379/0` | Celery Broker (Task Queue) |
+| `CELERY_RESULT_BACKEND` | Nein | `redis://redis:6379/0` | Celery Result Backend |
 | `BACKUP_RETENTION_DAYS` | Nein | `30` | Backup-Aufbewahrung (Tage) |
 
 ### Docker Compose Profile
 
 | Profil | Beschreibung | Aktivierung |
 |--------|--------------|-------------|
-| (Standard) | Web, DB, Redis, Nginx, Celery | `docker compose up -d` |
+| (Standard) | Web, DB, Redis, Nginx, Celery Worker, Celery Beat | `docker compose up -d` |
 | `ssl` | + Certbot für SSL | `docker compose --profile ssl up -d` |
 | `backup` | + Automatische Backups | `docker compose --profile backup up -d` |
 
@@ -473,13 +477,14 @@ docker system prune -a
         │          │ │          │ │ Gunicorn)│
         └──────────┘ └──────────┘ └────┬─────┘
                                        │
-                    ┌──────────────────┼──────────────────┐
-                    │                  │                  │
-                    ▼                  ▼                  ▼
-              ┌──────────┐      ┌──────────┐      ┌──────────┐
-              │PostgreSQL│      │  Redis   │      │  Celery  │
-              │   (DB)   │      │ (Cache)  │      │ (Worker) │
-              └──────────┘      └──────────┘      └──────────┘
+              ┌────────────────────┬────┴───────┬──────────────┐
+              │                    │            │              │
+              ▼                    ▼            ▼              ▼
+        ┌──────────┐        ┌──────────┐ ┌──────────┐  ┌──────────┐
+        │PostgreSQL│        │  Redis   │ │  Celery  │  │  Celery  │
+        │   (DB)   │        │ (Cache/  │ │ (Worker) │  │  (Beat)  │
+        └──────────┘        │  Broker) │ └──────────┘  └──────────┘
+                            └──────────┘
 ```
 
 ---
@@ -552,4 +557,4 @@ Bei Problemen:
 
 ---
 
-*Letzte Aktualisierung: Februar 2026*
+*Letzte Aktualisierung: März 2026*

@@ -196,6 +196,9 @@ CELERY_RESULT_BACKEND=redis://redis:6379/0
 HTTP_PORT=80
 HTTPS_PORT=443
 
+# SSL (false für Erstinstallation ohne Zertifikat, nach SSL-Einrichtung auf true setzen)
+USE_SSL=false
+
 # Superuser (wird beim ersten Start erstellt)
 CREATE_SUPERUSER=true
 SUPERUSER_USERNAME=admin
@@ -261,7 +264,9 @@ init_database() {
     docker compose exec -T web python manage.py setup_permissions || true
 
     # Weitere Setup-Commands (falls vorhanden)
-    for cmd in setup_medical_permissions setup_clothing_permissions setup_equipment_permissions; do
+    for cmd in setup_medical_permissions setup_clothing_permissions setup_equipment_permissions \
+                setup_magazine_permissions setup_height_rescue_permissions setup_diving_permissions \
+                setup_workshop_permissions setup_it_hardware_permissions; do
         docker compose exec -T web python manage.py $cmd 2>/dev/null || true
     done
 
