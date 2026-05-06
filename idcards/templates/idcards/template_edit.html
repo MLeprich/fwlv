@@ -124,20 +124,55 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.3rem 0.5rem;
+    gap: 0.3rem;
+    padding: 0.25rem 0.4rem;
     margin-bottom: 0.15rem;
     font-size: 0.75rem;
     border: 1px solid #e2e8f0;
     border-radius: 0.25rem;
-    cursor: pointer;
     background: #ffffff;
 }
 .idc-layer.selected {
     border-color: #f59e0b;
     background: #fef3c7;
 }
+.idc-layer-label {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0.1rem 0;
+}
 .idc-layer:hover { background: #f1f5f9; }
 .idc-layer.selected:hover { background: #fde68a; }
+.idc-layer-ctrls {
+    display: flex;
+    gap: 0.1rem;
+    flex-shrink: 0;
+}
+.idc-layer-ctrls button {
+    padding: 0;
+    width: 1.3rem;
+    height: 1.3rem;
+    font-size: 0.6rem;
+    line-height: 1;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.2rem;
+    cursor: pointer;
+    color: #475569;
+}
+.idc-layer-ctrls button:hover {
+    background: #fef3c7;
+    color: #b91c1c;
+    border-color: #f59e0b;
+}
+.idc-layer-ctrls button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
 .idc-toolbar {
     padding: 0.5rem 1rem;
     background: #ffffff;
@@ -649,13 +684,72 @@
         const list = document.getElementById('idc-layer-list');
         list.innerHTML = '';
         const items = contentLayer.getChildren().filter(n => n !== selectionRect);
-        items.forEach((node) => {
+        // Vorderste Ebene zuerst — wie in Photoshop: oben in der Liste = oben im Bild
+        const reversed = items.slice().reverse();
+        const lastIdx = reversed.length - 1;
+
+        reversed.forEach((node, idx) => {
             const div = document.createElement('div');
             div.className = 'idc-layer' + (node === selectedNode ? ' selected' : '');
-            div.textContent = nodeLabel(node);
-            div.addEventListener('click', () => selectNode(node));
+
+            const label = document.createElement('span');
+            label.className = 'idc-layer-label';
+            label.textContent = nodeLabel(node);
+            label.title = nodeLabel(node);
+            label.addEventListener('click', () => selectNode(node));
+            div.appendChild(label);
+
+            if (!IS_SYSTEM) {
+                const ctrls = document.createElement('span');
+                ctrls.className = 'idc-layer-ctrls';
+
+                const up = document.createElement('button');
+                up.type = 'button';
+                up.textContent = '▲';
+                up.title = 'Eine Ebene nach vorne';
+                up.disabled = (idx === 0);
+                up.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    moveLayerUp(node);
+                });
+
+                const down = document.createElement('button');
+                down.type = 'button';
+                down.textContent = '▼';
+                down.title = 'Eine Ebene nach hinten';
+                down.disabled = (idx === lastIdx);
+                down.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    moveLayerDown(node);
+                });
+
+                ctrls.appendChild(up);
+                ctrls.appendChild(down);
+                div.appendChild(ctrls);
+            }
+
             list.appendChild(div);
         });
+    }
+
+    function moveLayerUp(node) {
+        if (IS_SYSTEM) return;
+        node.moveUp();
+        selectionRect.moveToTop();
+        contentLayer.draw();
+        syncDataToLayout();
+        pushSnapshot();
+        renderLayerList();
+    }
+
+    function moveLayerDown(node) {
+        if (IS_SYSTEM) return;
+        node.moveDown();
+        selectionRect.moveToTop();
+        contentLayer.draw();
+        syncDataToLayout();
+        pushSnapshot();
+        renderLayerList();
     }
 
     function nodeLabel(node) {

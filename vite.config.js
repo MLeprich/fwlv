@@ -6,8 +6,10 @@ export default defineConfig({
     tailwindcss(),
   ],
   build: {
-    // Output zu Django static directory
-    outDir: 'staticfiles/dist',
+    // Output landet in static/dist/ — collectstatic propagiert das danach
+    // mit Hash + Manifest-Eintrag in staticfiles/.
+    outDir: 'static/dist',
+    emptyOutDir: true,
     rollupOptions: {
       input: {
         styles: 'static/.tailwind/input.css',
