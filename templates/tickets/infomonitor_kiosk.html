@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Info-Monitor &mdash; Kiosk</title>
-    <script src="{% static 'js/tailwind.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'dist/css/styles.css' %}">
     <script src="{% static 'js/alpine-collapse.min.js' %}" defer></script>
     <script src="{% static 'js/alpine.min.js' %}" defer></script>
     <style>
@@ -196,7 +196,7 @@
             <button @click="view = 'gv'; search = ''; gvSelected = null" class="nav-pill val-secondary" :class="{ 'active': view === 'gv' }">
                 <span class="flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    Gro&szlig;veranstaltungen
+                    Informationen
                 </span>
             </button>
             {% endif %}
@@ -259,35 +259,60 @@
                             Bereitschaft
                         </h2>
                     </div>
-                    <div class="p-6 flex-1 grid grid-cols-3 grid-rows-2 gap-x-6 gap-y-4 content-center">
+                    <div class="p-6 flex-1 grid grid-cols-3 grid-rows-3 gap-x-6 gap-y-4 content-center">
+                        <div>
+                            <p class="text-sm uppercase tracking-wider val-muted mb-1 font-medium">A1-Dienst</p>
+                            <p class="text-xl font-bold val-primary leading-snug">{{ monitor.bereitschaft_a1_dienst|default:"&mdash;" }}</p>
+                            {% if monitor.bereitschaft_a1_dienst_note %}<p class="text-sm val-accent italic mt-0.5 truncate" title="{{ monitor.bereitschaft_a1_dienst_note }}">{{ monitor.bereitschaft_a1_dienst_note }}</p>{% endif %}
+                            {% if monitor.bereitschaft_a1_dienst_changed_at %}<p class="text-xs val-muted mt-1" title="Zuletzt ge&auml;ndert">&#x1F552; {{ monitor.bereitschaft_a1_dienst_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <p class="text-sm uppercase tracking-wider val-muted mb-1 font-medium">A2-Dienst</p>
+                            <p class="text-xl font-bold val-primary leading-snug">{{ monitor.bereitschaft_a2_dienst|default:"&mdash;" }}</p>
+                            {% if monitor.bereitschaft_a2_dienst_note %}<p class="text-sm val-accent italic mt-0.5 truncate" title="{{ monitor.bereitschaft_a2_dienst_note }}">{{ monitor.bereitschaft_a2_dienst_note }}</p>{% endif %}
+                            {% if monitor.bereitschaft_a2_dienst_changed_at %}<p class="text-xs val-muted mt-1" title="Zuletzt ge&auml;ndert">&#x1F552; {{ monitor.bereitschaft_a2_dienst_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <p class="text-sm uppercase tracking-wider val-muted mb-1 font-medium">B-Dienst</p>
+                            <p class="text-xl font-bold val-primary leading-snug">{{ monitor.bereitschaft_b_dienst|default:"&mdash;" }}</p>
+                            {% if monitor.bereitschaft_b_dienst_note %}<p class="text-sm val-accent italic mt-0.5 truncate" title="{{ monitor.bereitschaft_b_dienst_note }}">{{ monitor.bereitschaft_b_dienst_note }}</p>{% endif %}
+                            {% if monitor.bereitschaft_b_dienst_changed_at %}<p class="text-xs val-muted mt-1" title="Zuletzt ge&auml;ndert">&#x1F552; {{ monitor.bereitschaft_b_dienst_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
+                        </div>
                         <div>
                             <p class="text-sm uppercase tracking-wider val-muted mb-1 font-medium">C-Dienst</p>
                             <p class="text-xl font-bold val-primary leading-snug">{{ monitor.bereitschaft_c_dienst|default:"&mdash;" }}</p>
+                            {% if monitor.bereitschaft_c_dienst_note %}<p class="text-sm val-accent italic mt-0.5 truncate" title="{{ monitor.bereitschaft_c_dienst_note }}">{{ monitor.bereitschaft_c_dienst_note }}</p>{% endif %}
                             {% if monitor.bereitschaft_c_dienst_changed_at %}<p class="text-xs val-muted mt-1" title="Zuletzt ge&auml;ndert">&#x1F552; {{ monitor.bereitschaft_c_dienst_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <p class="text-sm uppercase tracking-wider val-muted mb-1 font-medium">Lagedienst</p>
+                            <p class="text-xl font-bold val-primary leading-snug">{{ monitor.bereitschaft_lagedienst|default:"&mdash;" }}</p>
+                            {% if monitor.bereitschaft_lagedienst_note %}<p class="text-sm val-accent italic mt-0.5 truncate" title="{{ monitor.bereitschaft_lagedienst_note }}">{{ monitor.bereitschaft_lagedienst_note }}</p>{% endif %}
+                            {% if monitor.bereitschaft_lagedienst_changed_at %}<p class="text-xs val-muted mt-1" title="Zuletzt ge&auml;ndert">&#x1F552; {{ monitor.bereitschaft_lagedienst_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
                         </div>
                         <div>
                             <p class="text-sm uppercase tracking-wider val-muted mb-1 font-medium">LNA</p>
                             <p class="text-xl font-bold val-primary leading-snug">{{ monitor.bereitschaft_lna|default:"&mdash;" }}</p>
+                            {% if monitor.bereitschaft_lna_note %}<p class="text-sm val-accent italic mt-0.5 truncate" title="{{ monitor.bereitschaft_lna_note }}">{{ monitor.bereitschaft_lna_note }}</p>{% endif %}
                             {% if monitor.bereitschaft_lna_changed_at %}<p class="text-xs val-muted mt-1" title="Zuletzt ge&auml;ndert">&#x1F552; {{ monitor.bereitschaft_lna_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
                         </div>
                         <div>
                             <p class="text-sm uppercase tracking-wider val-muted mb-1 font-medium">Ordnungsamt</p>
                             <p class="text-xl font-bold val-primary leading-snug">{{ monitor.bereitschaft_o_amt|default:"&mdash;" }}</p>
+                            {% if monitor.bereitschaft_o_amt_note %}<p class="text-sm val-accent italic mt-0.5 truncate" title="{{ monitor.bereitschaft_o_amt_note }}">{{ monitor.bereitschaft_o_amt_note }}</p>{% endif %}
                             {% if monitor.bereitschaft_o_amt_changed_at %}<p class="text-xs val-muted mt-1" title="Zuletzt ge&auml;ndert">&#x1F552; {{ monitor.bereitschaft_o_amt_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
                         </div>
                         <div>
                             <p class="text-sm uppercase tracking-wider val-muted mb-1 font-medium">Gesundheitsamt</p>
                             <p class="text-xl font-bold val-primary leading-snug">{{ monitor.bereitschaft_g_amt|default:"&mdash;" }}</p>
+                            {% if monitor.bereitschaft_g_amt_note %}<p class="text-sm val-accent italic mt-0.5 truncate" title="{{ monitor.bereitschaft_g_amt_note }}">{{ monitor.bereitschaft_g_amt_note }}</p>{% endif %}
                             {% if monitor.bereitschaft_g_amt_changed_at %}<p class="text-xs val-muted mt-1" title="Zuletzt ge&auml;ndert">&#x1F552; {{ monitor.bereitschaft_g_amt_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
                         </div>
                         <div>
                             <p class="text-sm uppercase tracking-wider val-muted mb-1 font-medium">Veterin&auml;ramt</p>
                             <p class="text-xl font-bold val-primary leading-snug">{{ monitor.bereitschaft_veterinaeramt|default:"&mdash;" }}</p>
+                            {% if monitor.bereitschaft_veterinaeramt_note %}<p class="text-sm val-accent italic mt-0.5 truncate" title="{{ monitor.bereitschaft_veterinaeramt_note }}">{{ monitor.bereitschaft_veterinaeramt_note }}</p>{% endif %}
                             {% if monitor.bereitschaft_veterinaeramt_changed_at %}<p class="text-xs val-muted mt-1" title="Zuletzt ge&auml;ndert">&#x1F552; {{ monitor.bereitschaft_veterinaeramt_changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
-                        </div>
-                        <div>
-                            <p class="text-sm uppercase tracking-wider val-muted mb-1 font-medium">Vet. Datum/Uhrzeit</p>
-                            <p class="text-xl font-bold val-primary leading-snug">{% if monitor.bereitschaft_vet_datetime %}{{ monitor.bereitschaft_vet_datetime|date:"d.m.Y H:i" }}{% else %}&mdash;{% endif %}</p>
                         </div>
                     </div>
                 </div>
@@ -307,8 +332,7 @@
                                     <th class="text-left py-2 pr-4 val-muted font-semibold text-sm w-20"></th>
                                     <th class="text-center py-2 px-3 val-secondary font-semibold text-sm">L&ouml;schzug</th>
                                     <th class="text-center py-2 px-3 val-secondary font-semibold text-sm">Erg&auml;nzung</th>
-                                    <th class="text-center py-2 px-3 val-secondary font-semibold text-sm">RTW</th>
-                                    <th class="text-center py-2 px-3 val-secondary font-semibold text-sm">KTW</th>
+                                    <th class="text-center py-2 px-3 val-secondary font-semibold text-sm">LZ RTW</th>
                                     <th class="text-center py-2 px-3 val-secondary font-semibold text-sm">
                                         Taucher
                                         {% if monitor.taucher_im_dienst %}
@@ -326,19 +350,21 @@
                             <tbody>
                                 <tr class="border-b border-table-light">
                                     <td class="py-3 pr-4 font-bold val-primary text-xl">FW 1</td>
-                                    <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw1_loeschzug|default:"&mdash;" }}</td>
+                                    <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">
+                                        {{ monitor.personal_fw1_loeschzug|default:"&mdash;" }}{% if monitor.personal_fw1_gal_hlf %} <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-sm font-semibold bg-amber-100 text-amber-800 align-middle font-sans">+ GAL-HLF</span>{% endif %}
+                                    </td>
                                     <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw1_ergaenzung|default:"&mdash;" }}</td>
                                     <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw1_5_rtw|default:"&mdash;" }}</td>
-                                    <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw1_ktw|default:"&mdash;" }}</td>
                                     <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw1_taucher|default:"&mdash;" }}</td>
                                     <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw1_hoehenretter|default:"&mdash;" }}</td>
                                 </tr>
                                 <tr>
                                     <td class="py-3 pr-4 font-bold val-primary text-xl">FW 2</td>
-                                    <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw2_loeschzug|default:"&mdash;" }}</td>
+                                    <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">
+                                        {{ monitor.personal_fw2_loeschzug|default:"&mdash;" }}{% if monitor.personal_fw2_gal_hlf %} <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-sm font-semibold bg-amber-100 text-amber-800 align-middle font-sans">+ GAL-HLF</span>{% endif %}
+                                    </td>
                                     <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw2_ergaenzung|default:"&mdash;" }}</td>
                                     <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw2_5_rtw|default:"&mdash;" }}</td>
-                                    <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw2_ktw|default:"&mdash;" }}</td>
                                     <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw2_taucher|default:"&mdash;" }}</td>
                                     <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw2_hoehenretter|default:"&mdash;" }}</td>
                                 </tr>
@@ -357,8 +383,8 @@
                 <div class="px-6 py-3">
                     <div class="grid grid-cols-4 gap-6">
                         {% for ff in ff_zuege %}
-                        <div class="flex items-center gap-4">
-                            <div class="flex-shrink-0">
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0 mt-1">
                                 {% if ff.status == 'einsatzbereit' %}
                                 <span class="inline-block w-6 h-6 rounded-full shadow-lg" style="background: #22c55e; box-shadow: 0 0 12px rgba(34,197,94,0.6);"></span>
                                 {% elif ff.status == 'im_anmarsch' %}
@@ -367,9 +393,10 @@
                                 <span class="inline-block w-6 h-6 rounded-full shadow-lg" style="background: #ef4444; box-shadow: 0 0 12px rgba(239,68,68,0.6);"></span>
                                 {% endif %}
                             </div>
-                            <div>
-                                <p class="text-lg font-bold val-primary">{{ ff.name }}</p>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-lg font-bold val-primary leading-tight">{{ ff.name }}</p>
                                 <p class="text-sm font-medium {% if ff.status == 'einsatzbereit' %}val-green{% elif ff.status == 'im_anmarsch' %}val-accent{% else %}val-red{% endif %}">{{ ff.label }}</p>
+                                {% if ff.fahrzeuge %}<p class="text-sm val-secondary mt-0.5 truncate" title="{{ ff.fahrzeuge }}">&#x1F69B; {{ ff.fahrzeuge }}</p>{% endif %}
                             </div>
                         </div>
                         {% endfor %}
@@ -400,7 +427,7 @@
                                     <tr class="border-b-2 border-table">
                                         <th class="text-left py-2 pr-3 val-muted font-semibold text-xs uppercase tracking-wider w-8">#</th>
                                         <th class="text-left py-2 px-3 val-secondary font-semibold text-xs uppercase tracking-wider">Au&szlig;er Dienst</th>
-                                        <th class="text-left py-2 px-3 val-secondary font-semibold text-xs uppercase tracking-wider">Ersetzt mit</th>
+                                        <th class="text-left py-2 px-3 val-secondary font-semibold text-xs uppercase tracking-wider">Ersatz</th>
                                         <th class="text-left py-2 pl-3 val-secondary font-semibold text-xs uppercase tracking-wider">Bemerkung</th>
                                     </tr>
                                 </thead>
@@ -443,10 +470,20 @@
                         <div id="sonstiges-scroll-container" class="flex-1 overflow-y-auto min-h-0 p-6 pb-2">
                             <div class="space-y-4">
                                 {% for s in monitor_sonstiges %}
+                                {% if s.highlighted %}
+                                <div class="rounded-xl p-4 border-4 border-amber-500 bg-amber-500/10" style="box-shadow: 0 0 18px rgba(245,158,11,0.55), inset 0 0 0 1px rgba(245,158,11,0.4);">
+                                    <p class="text-xs uppercase tracking-wider mb-2 font-bold flex items-center gap-2" style="color: #f59e0b;">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+                                        Wichtig &middot; {{ forloop.counter }}
+                                    </p>
+                                    <p class="text-base val-primary whitespace-pre-wrap leading-relaxed font-semibold">{{ s.text|default:"&mdash;" }}</p>
+                                </div>
+                                {% else %}
                                 <div class="card-inner rounded-xl p-4">
                                     <p class="text-xs uppercase tracking-wider val-muted mb-2 font-semibold">{{ forloop.counter }}</p>
                                     <p class="text-base val-primary whitespace-pre-wrap leading-relaxed">{{ s.text|default:"&mdash;" }}</p>
                                 </div>
+                                {% endif %}
                                 {% endfor %}
                             </div>
                         </div>
@@ -594,7 +631,7 @@
                     <div class="section-header-red border-b px-6 py-3">
                         <h2 class="text-lg font-bold section-heading-red tracking-wide uppercase flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            Gro&szlig;veranstaltungen
+                            Informationen
                         </h2>
                     </div>
                     <div class="p-6">

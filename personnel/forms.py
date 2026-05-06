@@ -946,3 +946,180 @@ class RankForm(forms.ModelForm):
                 'class': 'w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500',
             }),
         }
+
+
+class FFPersonCreateForm(forms.ModelForm):
+    """
+    Formular für FF-Einheitsführer zum Anlegen neuer Personen
+    Stammdaten + Kontaktdaten, Einheit wird automatisch gesetzt
+    """
+
+    class Meta:
+        model = Person
+        fields = [
+            'first_name', 'last_name', 'personnel_number',
+            'date_of_birth',
+            'email', 'phone', 'mobile',
+            'street', 'house_number', 'postal_code', 'city',
+            'emergency_contact_name',
+            'emergency_contact_relationship',
+            'emergency_contact_phone',
+            'emergency_contact_mobile',
+            'emergency_contact_address',
+            'notes',
+        ]
+
+        _input = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500'
+
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('Vorname'),
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('Nachname'),
+            }),
+            'personnel_number': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('z.B. FF-001'),
+            }),
+            'date_of_birth': forms.DateInput(format='%Y-%m-%d', attrs={
+                'type': 'date',
+                'class': _input,
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': _input,
+                'placeholder': _('E-Mail-Adresse'),
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('z.B. 0123 456789'),
+            }),
+            'mobile': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('z.B. 0170 1234567'),
+            }),
+            'street': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('Straße'),
+            }),
+            'house_number': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('Nr.'),
+            }),
+            'postal_code': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('PLZ'),
+            }),
+            'city': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('Stadt'),
+            }),
+            'emergency_contact_name': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('Name des Notfallkontakts'),
+            }),
+            'emergency_contact_relationship': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('z.B. Ehepartner, Eltern'),
+            }),
+            'emergency_contact_phone': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('Telefon'),
+            }),
+            'emergency_contact_mobile': forms.TextInput(attrs={
+                'class': _input,
+                'placeholder': _('Mobil'),
+            }),
+            'emergency_contact_address': forms.Textarea(attrs={
+                'class': _input,
+                'rows': 2,
+                'placeholder': _('Adresse des Notfallkontakts'),
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': _input,
+                'rows': 3,
+                'placeholder': _('Interne Notizen...'),
+            }),
+        }
+
+
+class FFPersonForm(forms.ModelForm):
+    """
+    Eingeschränktes Formular für FF-Einheitsführer
+    Nur Kontaktdaten, Notfallkontakt und Notizen bearbeitbar
+    """
+
+    class Meta:
+        model = Person
+        fields = [
+            # Kontaktdaten
+            'email', 'phone', 'mobile',
+            'street', 'house_number', 'postal_code', 'city',
+            # Notfallkontakt
+            'emergency_contact_name',
+            'emergency_contact_relationship',
+            'emergency_contact_phone',
+            'emergency_contact_mobile',
+            'emergency_contact_address',
+            # Notizen
+            'notes',
+        ]
+
+        widgets = {
+            'email': forms.EmailInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('E-Mail-Adresse'),
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('z.B. 0123 456789'),
+            }),
+            'mobile': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('z.B. 0170 1234567'),
+            }),
+            'street': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('Straße'),
+            }),
+            'house_number': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('Nr.'),
+            }),
+            'postal_code': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('PLZ'),
+            }),
+            'city': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('Stadt'),
+            }),
+            'emergency_contact_name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('Name des Notfallkontakts'),
+            }),
+            'emergency_contact_relationship': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('z.B. Ehepartner, Eltern'),
+            }),
+            'emergency_contact_phone': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('Telefon'),
+            }),
+            'emergency_contact_mobile': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'placeholder': _('Mobil'),
+            }),
+            'emergency_contact_address': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'rows': 2,
+                'placeholder': _('Adresse des Notfallkontakts'),
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'rows': 3,
+                'placeholder': _('Interne Notizen...'),
+            }),
+        }

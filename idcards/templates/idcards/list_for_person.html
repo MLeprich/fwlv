@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Dienstausweise — {{ person.get_full_name }} — FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'personnel:list' %}" class="text-gray-500 hover:text-gray-700">Personal</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'personnel:detail' person.pk %}" class="text-gray-500 hover:text-gray-700">{{ person.get_full_name }}</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Dienstausweise</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Dienstausweise — {{ person.get_full_name }}</h1>
+        {% if can_manage %}
+        <a href="{% url 'idcards:card_create' person.pk %}" class="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700">
+            Neuen Ausweis anlegen
+        </a>
+        {% endif %}
+    </div>
+
+    {% if messages %}
+    <div class="mb-4 space-y-2">
+        {% for message in messages %}
+        <div class="rounded-md border-l-4 {% if message.tags == 'success' %}bg-green-50 border-green-400 text-green-800{% elif message.tags == 'error' %}bg-red-50 border-red-400 text-red-800{% else %}bg-blue-50 border-blue-400 text-blue-800{% endif %} px-4 py-3 text-sm">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nummer</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vorlage</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ausgestellt</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gültig bis</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for card in cards %}
+                <tr>
+                    <td class="px-4 py-3 text-sm text-gray-900 font-mono">{{ card.card_number }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ card.template.name }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ card.get_type_display }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ card.issued_at|date:"d.m.Y" }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ card.valid_until|date:"d.m.Y" }}</td>
+                    <td class="px-4 py-3 text-sm">
+                        {% if card.status == 'active' %}
+                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Aktiv</span>
+                        {% elif card.status == 'expired' %}
+                            <span class="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">Abgelaufen</span>
+                        {% elif card.status == 'revoked' %}
+                            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Gesperrt</span>
+                        {% elif card.status == 'replaced' %}
+                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">Ersetzt</span>
+                        {% else %}
+                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">{{ card.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <a href="{% url 'idcards:card_detail' card.pk %}" class="text-sm font-medium text-red-600 hover:text-red-700">Details</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500">Noch kein Dienstausweis ausgestellt.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

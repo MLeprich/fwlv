@@ -172,6 +172,29 @@ class UserDetailView(RoleRequiredMixin, DetailView):
         # Dienststellung-Optionen
         context['staff_positions'] = StaffPosition.choices
 
+        # FF-Einheiten für FF-Einstellungen
+        from organization.models import VolunteerUnit
+        context['ff_units'] = VolunteerUnit.objects.filter(is_active=True).order_by('sort_order', 'name')
+
+        # Aktuelle FF-Zuweisung ermitteln
+        context['ff_current_role'] = ''
+        context['ff_current_unit'] = None
+        context['ff_has_person'] = False
+        try:
+            person = user_obj.person
+        except Exception:
+            person = None
+        if person:
+            context['ff_has_person'] = True
+            led_unit = VolunteerUnit.objects.filter(leader=person).first()
+            deputy_unit = VolunteerUnit.objects.filter(deputy_leader=person).first()
+            if led_unit:
+                context['ff_current_role'] = 'leader'
+                context['ff_current_unit'] = led_unit
+            elif deputy_unit:
+                context['ff_current_role'] = 'deputy'
+                context['ff_current_unit'] = deputy_unit
+
         return context
 
 
@@ -382,6 +405,122 @@ class UserStaffPositionView(RoleRequiredMixin, View):
             request,
             f'Dienststellung für {user_obj.get_full_name()} wurde aktualisiert.'
         )
+        return redirect('core:user_detail', pk=user_obj.pk)
+
+
+class UserCreatePersonView(RoleRequiredMixin, View):
+    """Automatisch Personendatensatz aus Benutzerdaten erstellen"""
+    required_roles = [Roles.ADMINISTRATOR]
+
+    def post(self, request, pk):
+        from personnel.models import Person
+
+        user_obj = get_object_or_404(User, pk=pk)
+
+        # Prüfen ob bereits eine Person verknüpft ist
+        try:
+            if user_obj.person:
+                messages.info(request, f'{user_obj.get_full_name()} hat bereits einen Personendatensatz.')
+                return redirect('core:user_detail', pk=user_obj.pk)
+        except Exception:
+            pass
+
+        # Personalnummer generieren falls nötig
+        personnel_number = user_obj.personnel_number
+        if not personnel_number:
+            # Auto-generieren: FF-<user_id>
+            personnel_number = f'FF-{user_obj.pk:04d}'
+            # Sicherstellen, dass eindeutig
+            counter = 1
+            base_number = personnel_number
+            while Person.objects.filter(personnel_number=personnel_number).exists():
+                personnel_number = f'{base_number}-{counter}'
+                counter += 1
+
+        person = Person(
+            first_name=user_obj.first_name or user_obj.username,
+            last_name=user_obj.last_name or '',
+            personnel_number=personnel_number,
+            email=user_obj.email or '',
+            phone=user_obj.phone or '',
+            user=user_obj,
+            is_active=True,
+            created_by=request.user,
+            updated_by=request.user,
+        )
+        person.save()
+
+        messages.success(
+            request,
+            f'Personendatensatz für {user_obj.get_full_name()} wurde erstellt '
+            f'(Personalnummer: {personnel_number}).'
+        )
+        return redirect('core:user_detail', pk=user_obj.pk)
+
+
+class UserFFSettingsView(RoleRequiredMixin, View):
+    """FF-Einheitsführer/Vertreter Einstellungen für einen Benutzer verwalten"""
+    required_roles = [Roles.ADMINISTRATOR]
+
+    def post(self, request, pk):
+        from organization.models import VolunteerUnit
+
+        user_obj = get_object_or_404(User, pk=pk)
+
+        # Person muss verknüpft sein
+        try:
+            person = user_obj.person
+        except Exception:
+            person = None
+
+        if not person:
+            messages.error(
+                request,
+                f'{user_obj.get_full_name()} hat keinen verknüpften Personendatensatz. '
+                f'Bitte zuerst einen Personendatensatz erstellen.'
+            )
+            return redirect('core:user_detail', pk=user_obj.pk)
+
+        ff_role = request.POST.get('ff_role', '')  # 'leader', 'deputy', or ''
+        ff_unit_id = request.POST.get('ff_unit')
+
+        # Alte Zuweisungen entfernen
+        VolunteerUnit.objects.filter(leader=person).update(leader=None)
+        VolunteerUnit.objects.filter(deputy_leader=person).update(deputy_leader=None)
+
+        # Alte FF-Gruppen entfernen
+        PermissionHelper.remove_role(user_obj, Roles.FF_EINHEITSFUEHRER, removed_by=request.user)
+        PermissionHelper.remove_role(user_obj, Roles.FF_VERTRETER, removed_by=request.user)
+
+        if ff_role and ff_unit_id:
+            try:
+                unit = VolunteerUnit.objects.get(pk=ff_unit_id, is_active=True)
+            except VolunteerUnit.DoesNotExist:
+                messages.error(request, 'Ungültige FF-Einheit ausgewählt.')
+                return redirect('core:user_detail', pk=user_obj.pk)
+
+            if ff_role == 'leader':
+                unit.leader = person
+                unit.save(update_fields=['leader'])
+                PermissionHelper.assign_role(user_obj, Roles.FF_EINHEITSFUEHRER, assigned_by=request.user)
+                messages.success(
+                    request,
+                    f'{user_obj.get_full_name()} ist jetzt Einheitsführer von {unit.name}.'
+                )
+            elif ff_role == 'deputy':
+                unit.deputy_leader = person
+                unit.save(update_fields=['deputy_leader'])
+                PermissionHelper.assign_role(user_obj, Roles.FF_VERTRETER, assigned_by=request.user)
+                messages.success(
+                    request,
+                    f'{user_obj.get_full_name()} ist jetzt Stellv. Einheitsführer von {unit.name}.'
+                )
+        else:
+            messages.success(
+                request,
+                f'FF-Zuweisung für {user_obj.get_full_name()} wurde entfernt.'
+            )
+
         return redirect('core:user_detail', pk=user_obj.pk)
 
 

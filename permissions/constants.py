@@ -67,6 +67,10 @@ class Roles:
     SACHBEARBEITER = 'Sachbearbeiter'
     STANDARD_USER = 'Standard-Nutzer'
 
+    # FF-Rollen (Freiwillige Feuerwehr)
+    FF_EINHEITSFUEHRER = 'FF Einheitsführer'
+    FF_VERTRETER = 'FF Vertreter'
+
     @classmethod
     def get_all_roles(cls):
         """Gibt alle definierten Rollen zurück"""
@@ -113,6 +117,8 @@ class Roles:
             cls.WACHLEITER,
             cls.SACHBEARBEITER,
             cls.STANDARD_USER,
+            cls.FF_EINHEITSFUEHRER,
+            cls.FF_VERTRETER,
         ]
 
     @classmethod
@@ -209,6 +215,9 @@ class Modules:
     # Katastrophenschutz
     CIVIL_PROTECTION = 'civil_protection'
 
+    # Dienstausweise
+    IDCARDS = 'idcards'
+
     @classmethod
     def get_all_modules(cls):
         """Alle Module"""
@@ -238,6 +247,7 @@ class Modules:
             cls.INFO_MONITORS,
             cls.DEFECT_MANAGEMENT,
             cls.CIVIL_PROTECTION,
+            cls.IDCARDS,
         ]
 
     @classmethod
@@ -329,6 +339,10 @@ class CustomPermissions:
     # Personnel
     VIEW_OWN_PROFILE = 'personnel.view_own_profile'
     VIEW_OWN_QUALIFICATIONS = 'personnel.view_own_qualifications'
+
+    # ID Cards (Dienstausweise)
+    VIEW_IDCARD = 'idcards.view_idcard'
+    MANAGE_IDCARDS = 'idcards.manage_idcards'
 
     # Clothing
     VIEW_OWN_ASSIGNMENTS = 'clothing.view_own_assignments'

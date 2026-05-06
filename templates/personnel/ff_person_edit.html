@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}{{ person.get_full_name }} - FF-Verwaltung - {{ block.super }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li>
+                <a href="{% url 'personnel:ff_dashboard' %}{% if person.volunteer_unit %}?unit={{ person.volunteer_unit_id }}{% endif %}" class="text-gray-500 hover:text-gray-700">FF-Verwaltung</a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li>
+                <span class="text-gray-900 font-semibold">{{ person.get_full_name }}</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'personnel:ff_dashboard' %}{% if person.volunteer_unit %}?unit={{ person.volunteer_unit_id }}{% endif %}"
+               class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
+                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Zurueck
+            </a>
+            <div class="flex items-center gap-3">
+                <div class="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-lg">
+                    {{ person.first_name|first }}{{ person.last_name|first }}
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">{{ person.get_full_name }}</h1>
+                    <div class="flex items-center gap-3 text-sm text-gray-500">
+                        {% if person.personnel_number %}
+                        <span>{{ person.personnel_number }}</span>
+                        {% endif %}
+                        {% if current_rank %}
+                        <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium">{{ current_rank.rank.name }}</span>
+                        {% endif %}
+                        {% if person.volunteer_unit %}
+                        <span>{{ person.volunteer_unit.name }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Linke Spalte: Formular -->
+        <div class="lg:col-span-2 space-y-6" x-data="{ tab: 'contact' }">
+            <!-- Tab-Navigation -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="border-b border-gray-200">
+                    <nav class="flex -mb-px">
+                        <button @click="tab = 'contact'"
+                                :class="tab === 'contact' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                class="px-6 py-3 border-b-2 font-medium text-sm transition-colors">
+                            Kontaktdaten
+                        </button>
+                        <button @click="tab = 'qualifications'"
+                                :class="tab === 'qualifications' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                class="px-6 py-3 border-b-2 font-medium text-sm transition-colors">
+                            Qualifikationen
+                            <span class="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ qualifications|length }}</span>
+                        </button>
+                        <button @click="tab = 'dutyhours'"
+                                :class="tab === 'dutyhours' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                class="px-6 py-3 border-b-2 font-medium text-sm transition-colors">
+                            Pflichtstunden
+                            <span class="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ duty_hours|length }}</span>
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab: Kontaktdaten -->
+                <div x-show="tab === 'contact'" class="p-6">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Private Kontaktdaten -->
+                        <div class="mb-6">
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Private Kontaktdaten</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.email.label }}</label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}<p class="mt-1 text-xs text-red-600">{{ form.email.errors.0 }}</p>{% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.phone.label }}</label>
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}<p class="mt-1 text-xs text-red-600">{{ form.phone.errors.0 }}</p>{% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.mobile.label }}</label>
+                                    {{ form.mobile }}
+                                    {% if form.mobile.errors %}<p class="mt-1 text-xs text-red-600">{{ form.mobile.errors.0 }}</p>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Adresse -->
+                        <div class="mb-6">
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Adresse</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="md:col-span-3">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.street.label }}</label>
+                                    {{ form.street }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.house_number.label }}</label>
+                                    {{ form.house_number }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.postal_code.label }}</label>
+                                    {{ form.postal_code }}
+                                </div>
+                                <div class="md:col-span-3">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.city.label }}</label>
+                                    {{ form.city }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notfallkontakt -->
+                        <div class="mb-6">
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Notfallkontakt</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.emergency_contact_name.label }}</label>
+                                    {{ form.emergency_contact_name }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.emergency_contact_relationship.label }}</label>
+                                    {{ form.emergency_contact_relationship }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.emergency_contact_phone.label }}</label>
+                                    {{ form.emergency_contact_phone }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.emergency_contact_mobile.label }}</label>
+                                    {{ form.emergency_contact_mobile }}
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.emergency_contact_address.label }}</label>
+                                    {{ form.emergency_contact_address }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notizen -->
+                        <div class="mb-6">
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Notizen</h3>
+                            <div>
+                                {{ form.notes }}
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                            <a href="{% url 'personnel:ff_dashboard' %}{% if person.volunteer_unit %}?unit={{ person.volunteer_unit_id }}{% endif %}"
+                               class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                                Abbrechen
+                            </a>
+                            <button type="submit"
+                                    class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                                Speichern
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab: Qualifikationen -->
+                <div x-show="tab === 'qualifications'" class="p-6">
+                    <div class="space-y-3">
+                        {% for qual in qualifications %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">
+                                    {% if qual.template %}{{ qual.template.name }}{% else %}{{ qual.name }}{% endif %}
+                                </p>
+                                <p class="text-xs text-gray-500">
+                                    {% if qual.issue_date %}Erworben: {{ qual.issue_date|date:"d.m.Y" }}{% endif %}
+                                    {% if qual.expiry_date %} | Gueltig bis: {{ qual.expiry_date|date:"d.m.Y" }}{% endif %}
+                                </p>
+                            </div>
+                            <div>
+                                {% if qual.expiry_date %}
+                                    {% if qual.is_expired %}
+                                    <span class="px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs font-medium">Abgelaufen</span>
+                                    {% elif qual.is_expiring_soon %}
+                                    <span class="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Laeuft bald ab</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs font-medium">Gueltig</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-8 text-gray-500">
+                            <p>Keine Qualifikationen vorhanden</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'personnel:qualification_create' person.pk %}"
+                           class="inline-flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                            </svg>
+                            Qualifikation hinzufuegen
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Tab: Pflichtstunden -->
+                <div x-show="tab === 'dutyhours'" class="p-6">
+                    <div class="space-y-3">
+                        {% for entry in duty_hours %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">
+                                    {% if entry.category %}{{ entry.category.name }}{% else %}Allgemein{% endif %}
+                                </p>
+                                <p class="text-xs text-gray-500">
+                                    {{ entry.date|date:"d.m.Y" }}
+                                    {% if entry.description %} - {{ entry.description|truncatewords:10 }}{% endif %}
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-sm font-semibold text-gray-900">{{ entry.hours|floatformat:1 }}h</span>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-8 text-gray-500">
+                            <p>Keine Pflichtstunden erfasst</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'personnel:dutyhours_create' person.pk %}"
+                           class="inline-flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                            </svg>
+                            Pflichtstunden erfassen
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rechte Spalte: Info-Cards -->
+        <div class="space-y-6">
+            <!-- Persoenliche Daten (Read-Only) -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Stammdaten</h3>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500">Name</dt>
+                        <dd class="text-sm text-gray-900">{{ person.get_full_name }}</dd>
+                    </div>
+                    {% if person.personnel_number %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500">Personalnummer</dt>
+                        <dd class="text-sm text-gray-900">{{ person.personnel_number }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if person.date_of_birth %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500">Geburtsdatum</dt>
+                        <dd class="text-sm text-gray-900">{{ person.date_of_birth|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if current_rank %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500">Dienstgrad</dt>
+                        <dd class="text-sm text-gray-900">
+                            <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium">{{ current_rank.rank.name }}</span>
+                            {% if current_rank.since_date %}
+                            <span class="text-xs text-gray-500 ml-1">seit {{ current_rank.since_date|date:"d.m.Y" }}</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    {% endif %}
+                    {% if person.volunteer_unit %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500">FF-Einheit</dt>
+                        <dd class="text-sm text-gray-900">{{ person.volunteer_unit.name }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if person.volunteer_entry_date %}
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500">FF-Eintritt</dt>
+                        <dd class="text-sm text-gray-900">{{ person.volunteer_entry_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+
+            <!-- Funktionen -->
+            {% if person.functions.exists %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Funktionen</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for func in person.functions.all %}
+                    <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">{{ func.name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

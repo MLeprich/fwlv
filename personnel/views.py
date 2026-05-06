@@ -31,8 +31,11 @@ from .models import (
 )
 from .forms import (
     PersonForm, QualificationForm, QualificationTemplateForm, InspectionForm,
-    DutyHoursEntryForm, ServiceInterruptionFormSet, RankForm
+    DutyHoursEntryForm, ServiceInterruptionFormSet, RankForm,
+    FFPersonForm, FFPersonCreateForm
 )
+from organization.models import VolunteerUnit
+from permissions.constants import Roles
 from driving_license.forms import DrivingLicenseSimpleForm, DrivingLicenseInlineForm
 from driving_license.models import DrivingLicenseCheck
 
@@ -524,6 +527,15 @@ class PersonListView(LoginRequiredMixin, ListView):
     context_object_name = 'persons'
     paginate_by = 50
 
+    def dispatch(self, request, *args, **kwargs):
+        # FF-only-User dürfen nicht auf die allgemeine Personalliste zugreifen
+        if not request.user.has_perm('personnel.view_person'):
+            messages.error(request, 'Sie haben keinen Zugriff auf die allgemeine Personalverwaltung.')
+            if _is_ff_leader(request.user):
+                return redirect('personnel:ff_dashboard')
+            return redirect('core:dashboard')
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = Person.objects.select_related('user').annotate(
             qualification_count=Count('qualifications', filter=Q(qualifications__is_active=True))
@@ -572,6 +584,18 @@ class PersonDetailView(LoginRequiredMixin, DetailView):
     model = Person
     template_name = 'personnel/person_detail.html'
     context_object_name = 'person'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm('personnel.view_person'):
+            # FF-Leader dürfen Personen ihrer Einheit sehen
+            if _is_ff_leader(request.user):
+                person = self.get_object()
+                accessible_units = _get_ff_accessible_units(request.user)
+                if person.volunteer_unit and person.volunteer_unit in accessible_units:
+                    return super().dispatch(request, *args, **kwargs)
+                return redirect('personnel:ff_dashboard')
+            return redirect('core:dashboard')
+        return super().dispatch(request, *args, **kwargs)
 
     def get_template_names(self):
         """Return tab-specific template for HTMX tab requests"""
@@ -970,6 +994,15 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     form_class = PersonForm
     permission_required = 'personnel.change_person'
     template_name = 'personnel/person_form.html'
+
+    def handle_no_permission(self):
+        # FF-Leader zur FF-Bearbeitungsseite weiterleiten
+        if _is_ff_leader(self.request.user):
+            person = self.get_object()
+            accessible_units = _get_ff_accessible_units(self.request.user)
+            if person.volunteer_unit and person.volunteer_unit in accessible_units:
+                return redirect('personnel:ff_person_edit', pk=person.pk)
+        return super().handle_no_permission()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -3129,28 +3162,85 @@ class PhonebookView(LoginRequiredMixin, ListView):
 # FF-VERWALTUNG (Dienstgrade, Jubilaeen, Befoerderungen)
 # ============================================================================
 
+def _get_ff_accessible_units(user):
+    """
+    Gibt die FF-Einheiten zurück, auf die der Benutzer Zugriff hat.
+    Admins: alle Einheiten. FF-Einheitsführer/Vertreter: nur ihre Einheit(en).
+    """
+    if user.is_superuser or user.has_role(Roles.ADMINISTRATOR):
+        return VolunteerUnit.objects.filter(is_active=True).order_by('sort_order', 'name')
+
+    if not hasattr(user, 'person') or not user.person:
+        return VolunteerUnit.objects.none()
+
+    person = user.person
+    return VolunteerUnit.objects.filter(
+        Q(leader=person) | Q(deputy_leader=person),
+        is_active=True
+    ).order_by('sort_order', 'name')
+
+
+def _is_ff_leader(user):
+    """Prüft ob der Benutzer FF-Einheitsführer oder Vertreter ist"""
+    return (
+        user.is_superuser or
+        user.has_role(Roles.ADMINISTRATOR) or
+        user.has_role(Roles.FF_EINHEITSFUEHRER) or
+        user.has_role(Roles.FF_VERTRETER)
+    )
+
+
 @login_required
 def ff_dashboard(request):
     """
     FF-Dashboard mit Jubilaeen, Befoerderungsvorschlaegen, Dienstgrad-Statistiken
+    und Personalverwaltung pro Einheit
     """
     from django.db.models import Count
     from datetime import date, timedelta
     from dateutil.relativedelta import relativedelta
 
+    if not _is_ff_leader(request.user):
+        messages.error(request, 'Sie haben keinen Zugriff auf die FF-Verwaltung.')
+        return redirect('core:dashboard')
+
     today = date.today()
-    current_year = today.year
+
+    # ===== EINHEITENAUSWAHL =====
+    accessible_units = _get_ff_accessible_units(request.user)
+    all_units = VolunteerUnit.objects.filter(is_active=True).order_by('sort_order', 'name')
+
+    selected_unit_pk = request.GET.get('unit')
+    selected_unit = None
+    if selected_unit_pk:
+        try:
+            selected_unit = VolunteerUnit.objects.get(pk=selected_unit_pk, is_active=True)
+            # Zugriffsprüfung: Admin darf alle, FF-Leader nur ihre
+            if not (request.user.is_superuser or request.user.has_role(Roles.ADMINISTRATOR)):
+                if selected_unit not in accessible_units:
+                    selected_unit = accessible_units.first()
+        except VolunteerUnit.DoesNotExist:
+            selected_unit = accessible_units.first()
+    else:
+        selected_unit = accessible_units.first()
+
+    # ===== PERSONAL DER GEWÄHLTEN EINHEIT =====
+    unit_personnel = []
+    if selected_unit:
+        unit_personnel = Person.objects.filter(
+            volunteer_unit=selected_unit,
+            is_active=True
+        ).order_by('last_name', 'first_name')
 
     # ===== 1. JUBILAEEN =====
-    # Personen mit anstehenden Jubilaeen (naechste 90 Tage)
     jubilee_years = [10, 25, 40, 50]
     upcoming_jubilees = []
 
-    personnel_with_ff = Person.objects.filter(
-        is_volunteer_fire_brigade=True,
-        is_active=True,
-        volunteer_entry_date__isnull=False
-    )
+    # Filter nach Einheit wenn gewählt, sonst alle FF-Mitglieder
+    personnel_filter = {'is_volunteer_fire_brigade': True, 'is_active': True, 'volunteer_entry_date__isnull': False}
+    if selected_unit:
+        personnel_filter['volunteer_unit'] = selected_unit
+    personnel_with_ff = Person.objects.filter(**personnel_filter)
 
     for person in personnel_with_ff:
         entry_date = person.volunteer_entry_date
@@ -3194,7 +3284,6 @@ def ff_dashboard(request):
     )[:20]  # Max 20
 
     # ===== 3. DIENSTGRAD-STATISTIKEN =====
-    # FF-Dienstgrade
     ff_rank_stats = Rank.objects.filter(
         organization_type='volunteer',
         is_active=True
@@ -3202,7 +3291,6 @@ def ff_dashboard(request):
         person_count=Count('person_ranks', filter=Q(person_ranks__is_current=True))
     ).order_by('sort_order')
 
-    # JF-Dienstgrade
     jf_rank_stats = Rank.objects.filter(
         organization_type='youth',
         is_active=True
@@ -3211,19 +3299,11 @@ def ff_dashboard(request):
     ).order_by('sort_order')
 
     # Gesamtstatistiken
-    total_ff_members = personnel_with_ff.count()
+    total_ff_members = Person.objects.filter(
+        is_volunteer_fire_brigade=True, is_active=True
+    ).count()
     total_jf_members = Person.objects.filter(
-        is_youth_fire_brigade=True,
-        is_active=True,
-        youth_exit_date__isnull=True
-    ).count()
-    total_with_ff_rank = PersonRank.objects.filter(
-        rank__organization_type='volunteer',
-        is_current=True
-    ).count()
-    total_with_jf_rank = PersonRank.objects.filter(
-        rank__organization_type='youth',
-        is_current=True
+        is_youth_fire_brigade=True, is_active=True, youth_exit_date__isnull=True
     ).count()
 
     context = {
@@ -3234,14 +3314,107 @@ def ff_dashboard(request):
         'stats': {
             'total_ff_members': total_ff_members,
             'total_jf_members': total_jf_members,
-            'total_with_ff_rank': total_with_ff_rank,
-            'total_with_jf_rank': total_with_jf_rank,
             'upcoming_jubilees_count': len(upcoming_jubilees),
             'promotion_suggestions_count': len(promotion_suggestions),
-        }
+        },
+        # Einheiten-Verwaltung
+        'accessible_units': accessible_units,
+        'all_units': all_units,
+        'selected_unit': selected_unit,
+        'unit_personnel': unit_personnel,
+        'is_admin': request.user.is_superuser or request.user.has_role(Roles.ADMINISTRATOR),
     }
 
     return render(request, 'personnel/ff_dashboard.html', context)
+
+
+@login_required
+def ff_person_edit(request, pk):
+    """
+    Person bearbeiten - eingeschränkt für FF-Einheitsführer
+    Nur Kontaktdaten, Notfallkontakt und Notizen bearbeitbar
+    """
+    if not _is_ff_leader(request.user):
+        messages.error(request, 'Sie haben keinen Zugriff auf diese Funktion.')
+        return redirect('core:dashboard')
+
+    person = get_object_or_404(Person, pk=pk)
+
+    # Zugriffsprüfung: Person muss in einer zugänglichen Einheit sein
+    accessible_units = _get_ff_accessible_units(request.user)
+    if person.volunteer_unit and person.volunteer_unit not in accessible_units:
+        if not (request.user.is_superuser or request.user.has_role(Roles.ADMINISTRATOR)):
+            messages.error(request, 'Sie haben keinen Zugriff auf diese Person.')
+            return redirect('personnel:ff_dashboard')
+
+    if request.method == 'POST':
+        form = FFPersonForm(request.POST, instance=person)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Daten von {person.get_full_name()} wurden aktualisiert.')
+            return redirect(f"{reverse('personnel:ff_dashboard')}?unit={person.volunteer_unit_id}")
+    else:
+        form = FFPersonForm(instance=person)
+
+    # Qualifikationen und Pflichtstunden laden
+    qualifications = person.qualifications.all().order_by('-expiry_date')
+    duty_hours = DutyHoursEntry.objects.filter(person=person).order_by('-date')[:20]
+
+    context = {
+        'person': person,
+        'form': form,
+        'qualifications': qualifications,
+        'duty_hours': duty_hours,
+        'current_rank': person.get_current_rank('volunteer'),
+    }
+
+    return render(request, 'personnel/ff_person_edit.html', context)
+
+
+@login_required
+def ff_person_create(request):
+    """
+    Neue Person anlegen - für FF-Einheitsführer
+    Person wird automatisch der Einheit des Leaders zugewiesen
+    """
+    if not _is_ff_leader(request.user):
+        messages.error(request, 'Sie haben keinen Zugriff auf diese Funktion.')
+        return redirect('core:dashboard')
+
+    accessible_units = _get_ff_accessible_units(request.user)
+    if not accessible_units.exists():
+        messages.error(request, 'Keine FF-Einheit zugewiesen.')
+        return redirect('personnel:ff_dashboard')
+
+    # Einheit aus GET-Parameter oder erste zugängliche
+    unit_pk = request.GET.get('unit') or request.POST.get('unit')
+    if unit_pk:
+        selected_unit = accessible_units.filter(pk=unit_pk).first() or accessible_units.first()
+    else:
+        selected_unit = accessible_units.first()
+
+    if request.method == 'POST':
+        form = FFPersonCreateForm(request.POST)
+        if form.is_valid():
+            person = form.save(commit=False)
+            person.volunteer_unit = selected_unit
+            person.is_volunteer_fire_brigade = True
+            person.is_active = True
+            person.created_by = request.user
+            person.updated_by = request.user
+            person.save()
+            messages.success(request, f'{person.get_full_name()} wurde erfolgreich angelegt und {selected_unit.name} zugewiesen.')
+            return redirect(f"{reverse('personnel:ff_dashboard')}?unit={selected_unit.pk}")
+    else:
+        form = FFPersonCreateForm()
+
+    context = {
+        'form': form,
+        'selected_unit': selected_unit,
+        'accessible_units': accessible_units,
+    }
+
+    return render(request, 'personnel/ff_person_create.html', context)
 
 
 class RankListView(LoginRequiredMixin, ListView):

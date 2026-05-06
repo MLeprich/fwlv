@@ -448,6 +448,96 @@
                 </form>
             </div>
 
+            <!-- FF-Einstellungen Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">FF-Einheitsführer</h2>
+                {% if not ff_has_person %}
+                <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.27 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-yellow-800">Kein Personendatensatz verknüpft</p>
+                            <p class="text-xs text-yellow-700 mt-1">
+                                Um FF-Funktionen zuzuweisen, wird ein Personendatensatz benötigt. Dieser kann automatisch aus den Benutzerdaten erstellt werden.
+                            </p>
+                            <form method="post" action="{% url 'core:user_create_person' user_obj.pk %}" class="mt-3">
+                                {% csrf_token %}
+                                <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-xs font-medium">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                    Personendatensatz erstellen
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <form method="post" action="{% url 'core:user_ff_settings' user_obj.pk %}" x-data="{ ffRole: '{{ ff_current_role }}' }">
+                    {% csrf_token %}
+                    <div class="space-y-4">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Rolle in der Freiwilligen Feuerwehr</p>
+
+                        <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <input type="radio" name="ff_role" value=""
+                                   {% if not ff_current_role %}checked{% endif %}
+                                   x-model="ffRole"
+                                   class="border-gray-300 text-red-600 focus:ring-red-500">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">Keine FF-Funktion</span>
+                                <p class="text-xs text-gray-500">Benutzer hat keine Führungsrolle in der FF</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <input type="radio" name="ff_role" value="leader"
+                                   {% if ff_current_role == 'leader' %}checked{% endif %}
+                                   x-model="ffRole"
+                                   class="border-gray-300 text-red-600 focus:ring-red-500">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">Einheitsführer</span>
+                                <p class="text-xs text-gray-500">Leiter/in einer FF-Einheit, kann Personal der Einheit verwalten</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <input type="radio" name="ff_role" value="deputy"
+                                   {% if ff_current_role == 'deputy' %}checked{% endif %}
+                                   x-model="ffRole"
+                                   class="border-gray-300 text-red-600 focus:ring-red-500">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">Stellv. Einheitsführer</span>
+                                <p class="text-xs text-gray-500">Stellvertreter/in, gleiche Berechtigungen wie Einheitsführer</p>
+                            </div>
+                        </label>
+
+                        <div x-show="ffRole === 'leader' || ffRole === 'deputy'" x-collapse class="space-y-4 pl-4 border-l-4 border-red-200">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">FF-Einheit</label>
+                                <select name="ff_unit"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                    <option value="">-- Bitte wählen --</option>
+                                    {% for unit in ff_units %}
+                                        <option value="{{ unit.pk }}" {% if ff_current_unit and ff_current_unit.pk == unit.pk %}selected{% endif %}>
+                                            {{ unit.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <p class="mt-1 text-xs text-gray-500">Für welche FF-Einheit ist dieser Benutzer zuständig?</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                            FF-Einstellungen speichern
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+
             <!-- Delegationen Card -->
             {% if active_delegations or delegations_as_delegate %}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

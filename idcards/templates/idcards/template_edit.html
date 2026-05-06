@@ -1,0 +1,986 @@
+{% extends "base.html" %}
+{% load l10n static %}
+
+{% block title %}Layout-Editor — {{ template.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.idc-shell {
+    display: grid;
+    grid-template-columns: 220px 1fr 280px;
+    gap: 0;
+    height: calc(100vh - 9rem);
+    min-height: 600px;
+    background: #f8fafc;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.idc-col {
+    background: #ffffff;
+    overflow-y: auto;
+    border-right: 1px solid #e5e7eb;
+}
+.idc-col:last-child {
+    border-right: 0;
+    border-left: 1px solid #e5e7eb;
+}
+.idc-canvas-col {
+    background: #f1f5f9;
+    display: flex;
+    flex-direction: column;
+}
+.idc-tabbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+}
+.idc-tab {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.8rem;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: #475569;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+.idc-tab.active {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+.idc-canvas-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    padding: 2rem;
+}
+.idc-status {
+    padding: 0.5rem 1rem;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.75rem;
+    color: #64748b;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.idc-status.dirty { color: #b91c1c; font-weight: 500; }
+.idc-section {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+.idc-section h3 {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+}
+.idc-btn {
+    display: block;
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.8rem;
+    text-align: left;
+    color: #1f2937;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+.idc-btn:hover { background: #e2e8f0; }
+.idc-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.idc-prop {
+    margin-bottom: 0.5rem;
+}
+.idc-prop label {
+    display: block;
+    font-size: 0.7rem;
+    color: #475569;
+    margin-bottom: 0.2rem;
+}
+.idc-prop input, .idc-prop select, .idc-prop textarea {
+    width: 100%;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.25rem;
+    background: #ffffff;
+}
+.idc-prop-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+}
+.idc-layer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.3rem 0.5rem;
+    margin-bottom: 0.15rem;
+    font-size: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    background: #ffffff;
+}
+.idc-layer.selected {
+    border-color: #f59e0b;
+    background: #fef3c7;
+}
+.idc-layer:hover { background: #f1f5f9; }
+.idc-layer.selected:hover { background: #fde68a; }
+.idc-toolbar {
+    padding: 0.5rem 1rem;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.idc-toolbar button {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.25rem;
+    background: #ffffff;
+    color: #1f2937;
+    cursor: pointer;
+}
+.idc-toolbar button:hover { background: #f1f5f9; }
+.idc-toolbar button.primary {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #ffffff;
+}
+.idc-toolbar button.primary:hover { background: #b91c1c; }
+.idc-toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
+.idc-cheats {
+    font-size: 0.7rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+.idc-cheats code {
+    font-family: ui-monospace, monospace;
+    background: #f1f5f9;
+    padding: 0 0.2rem;
+    border-radius: 0.2rem;
+}
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'idcards:template_list' %}" class="text-gray-500 hover:text-gray-700">Ausweis-Vorlagen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ template.name }}</span></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Layout-Editor</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="px-6 py-4">
+    {% if template.is_system %}
+    <div class="rounded-md bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 mb-4 text-sm text-yellow-900">
+        Diese Vorlage ist eine <strong>System-Vorlage</strong> und kann nicht überschrieben werden.
+        Bitte zuerst <a href="{% url 'idcards:template_list' %}" class="underline font-medium">duplizieren</a>,
+        um Anpassungen vornehmen zu können.
+    </div>
+    {% endif %}
+
+    <div class="idc-toolbar">
+        <strong class="text-sm">{{ template.name }}</strong>
+        <span class="text-xs text-gray-500">· {% if template.is_portrait %}Hochformat{% else %}Querformat{% endif %} {{ card_w|floatformat:1 }}×{{ card_h|floatformat:1 }} mm</span>
+        <button type="button" id="idc-undo" title="Rückgängig (Strg+Z)">↶ Undo</button>
+        <button type="button" id="idc-redo" title="Wiederholen (Strg+Y)">↷ Redo</button>
+        <button type="button" id="idc-grid-toggle">Raster</button>
+        <button type="button" id="idc-delete" disabled>Element löschen</button>
+        <div class="ml-auto flex gap-2 items-center">
+            <a href="{% url 'idcards:template_list' %}" class="text-sm text-gray-600 hover:text-gray-900">Schließen</a>
+            <button type="button" id="idc-save" class="primary" {% if template.is_system %}disabled{% endif %}>Speichern</button>
+        </div>
+    </div>
+
+    <div class="idc-shell">
+
+        <!-- Linke Spalte: Element-Palette -->
+        <div class="idc-col">
+            <div class="idc-section">
+                <h3>Elemente</h3>
+                <button class="idc-btn" data-add="text-static">Statischer Text</button>
+                <button class="idc-btn" data-add="text-placeholder">Platzhalter-Text</button>
+                <button class="idc-btn" data-add="rect">Rechteck</button>
+                <button class="idc-btn" data-add="photo">Foto-Platzhalter</button>
+                <button class="idc-btn" data-add="image">Bild / Logo …</button>
+            </div>
+            <div class="idc-section">
+                <h3>Platzhalter</h3>
+                <div class="idc-cheats">
+                    <code>{% templatetag openvariable %}name{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}vorname{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}nachname{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}dienstgrad{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}dienstnummer{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}ausweisnummer{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}gueltig_bis{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}ausgestellt_am{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}organisation{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}funktion{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}ausweis_typ{% templatetag closevariable %}</code>
+                </div>
+            </div>
+            <div class="idc-section">
+                <h3>Layer</h3>
+                <div id="idc-layer-list"></div>
+            </div>
+        </div>
+
+        <!-- Mitte: Canvas -->
+        <div class="idc-canvas-col">
+            <div class="idc-tabbar">
+                <button class="idc-tab active" data-side="front">Vorderseite</button>
+                <button class="idc-tab" data-side="back">Rückseite</button>
+            </div>
+            <div class="idc-canvas-wrap">
+                <div id="idc-stage"></div>
+            </div>
+            <div class="idc-status">
+                <span id="idc-status-msg">Geladen.</span>
+                <span id="idc-status-info">—</span>
+            </div>
+        </div>
+
+        <!-- Rechte Spalte: Properties -->
+        <div class="idc-col">
+            <div class="idc-section" id="idc-prop-empty">
+                <p class="text-xs text-gray-500">Klicke ein Element auf der Karte oder in der Layer-Liste an, um seine Eigenschaften zu bearbeiten.</p>
+            </div>
+            <div class="idc-section" id="idc-prop-form" style="display:none">
+                <h3 id="idc-prop-title">Eigenschaften</h3>
+                <div class="idc-prop-row">
+                    <div class="idc-prop"><label>X (mm)</label><input type="number" step="0.1" id="prop-x"></div>
+                    <div class="idc-prop"><label>Y (mm)</label><input type="number" step="0.1" id="prop-y"></div>
+                    <div class="idc-prop"><label>Breite (mm)</label><input type="number" step="0.1" id="prop-w"></div>
+                    <div class="idc-prop"><label>Höhe (mm)</label><input type="number" step="0.1" id="prop-h"></div>
+                </div>
+
+                <!-- Text-Properties -->
+                <div data-prop-group="text">
+                    <div class="idc-prop"><label>Text / Platzhalter</label><textarea id="prop-value" rows="2"></textarea></div>
+                    <div class="idc-prop-row">
+                        <div class="idc-prop"><label>Schriftgröße (pt)</label><input type="number" step="0.5" id="prop-font_size"></div>
+                        <div class="idc-prop"><label>Gewicht</label>
+                            <select id="prop-weight">
+                                <option value="normal">Normal</option>
+                                <option value="bold">Fett</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="idc-prop-row">
+                        <div class="idc-prop"><label>Farbe</label><input type="color" id="prop-color"></div>
+                        <div class="idc-prop"><label>Ausrichtung</label>
+                            <select id="prop-align">
+                                <option value="left">Links</option>
+                                <option value="center">Mitte</option>
+                                <option value="right">Rechts</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rect-Properties -->
+                <div data-prop-group="rect">
+                    <div class="idc-prop"><label>Füllfarbe</label><input type="color" id="prop-fill"></div>
+                    <div class="idc-prop">
+                        <label>
+                            <input type="checkbox" id="prop-type_color"> Farbe folgt Ausweis-Typ
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Photo-Properties -->
+                <div data-prop-group="photo">
+                    <div class="idc-prop-row">
+                        <div class="idc-prop"><label>Rahmenfarbe</label><input type="color" id="prop-border_color"></div>
+                        <div class="idc-prop"><label>Rahmenbreite (mm)</label><input type="number" step="0.1" id="prop-border_width"></div>
+                    </div>
+                </div>
+
+                <!-- Image-Properties -->
+                <div data-prop-group="image">
+                    <div class="idc-prop">
+                        <label>Bilddatei</label>
+                        <button type="button" class="idc-btn" id="idc-image-replace" {% if template.is_system %}disabled{% endif %}>Bild austauschen …</button>
+                        <p id="idc-image-name" class="text-xs text-gray-500 mt-1"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="idc-file-input" accept="image/*" style="display:none">
+</div>
+
+{{ front_layout|json_script:"idc-front-data" }}
+{{ back_layout|json_script:"idc-back-data" }}
+
+<script src="{% static 'js/konva.min.js' %}"></script>
+<script>
+(function() {
+    'use strict';
+
+    // ---- Konstanten / Endpoints --------------------------------------------
+    const TEMPLATE_PK = {{ template.pk }};
+    const IS_SYSTEM = {{ template.is_system|yesno:"true,false" }};
+    const SAVE_URL = "{% url 'idcards:template_save_layout' template.pk %}";
+    const UPLOAD_URL = "{% url 'idcards:template_image_upload' template.pk %}";
+    const MEDIA_URL = "{{ MEDIA_URL|default:'/media/' }}";
+
+    const CARD_W_MM = {{ card_w|unlocalize }};
+    const CARD_H_MM = {{ card_h|unlocalize }};
+    const PX_PER_MM = 5.5;
+    const SNAP_MM = 0.5;
+    const PT_TO_PX = 1.333;
+
+    const W_PX = CARD_W_MM * PX_PER_MM;
+    const H_PX = CARD_H_MM * PX_PER_MM;
+
+    // CSRF
+    function csrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    // ---- State -------------------------------------------------------------
+    let layouts = {
+        front: JSON.parse(document.getElementById('idc-front-data').textContent || '[]'),
+        back: JSON.parse(document.getElementById('idc-back-data').textContent || '[]'),
+    };
+    let activeSide = 'front';
+    let selectedNode = null;
+    let dirty = false;
+    let restoring = false;
+    let history = [];
+    let historyPos = -1;
+    let showGrid = true;
+
+    function snapshot() {
+        return JSON.parse(JSON.stringify(layouts));
+    }
+
+    function pushSnapshot() {
+        if (restoring) return;
+        // Trim Redo-Tail
+        history = history.slice(0, historyPos + 1);
+        history.push(snapshot());
+        if (history.length > 50) history.shift();
+        historyPos = history.length - 1;
+        setDirty(true);
+    }
+
+    function applySnapshot(snap) {
+        restoring = true;
+        layouts = JSON.parse(JSON.stringify(snap));
+        rebuildSide();
+        restoring = false;
+    }
+
+    function setDirty(v) {
+        dirty = v;
+        const status = document.getElementById('idc-status-msg');
+        const wrap = status.parentElement;
+        if (v) {
+            status.textContent = 'Ungespeicherte Änderungen';
+            wrap.classList.add('dirty');
+        } else {
+            status.textContent = 'Gespeichert';
+            wrap.classList.remove('dirty');
+        }
+    }
+
+    // ---- Konva-Setup -------------------------------------------------------
+    const stage = new Konva.Stage({
+        container: 'idc-stage',
+        width: W_PX,
+        height: H_PX,
+    });
+    const gridLayer = new Konva.Layer({ listening: false });
+    const contentLayer = new Konva.Layer();
+    stage.add(gridLayer);
+    stage.add(contentLayer);
+
+    // Karten-Hintergrund
+    const cardBg = new Konva.Rect({
+        x: 0, y: 0, width: W_PX, height: H_PX,
+        fill: '#ffffff', stroke: '#d1d5db', strokeWidth: 1,
+        listening: true,
+    });
+    gridLayer.add(cardBg);
+
+    function buildGrid() {
+        gridLayer.find('.gridline').forEach(n => n.destroy());
+        if (!showGrid) { gridLayer.draw(); return; }
+        const stepPx = 5 * PX_PER_MM; // 5mm Raster
+        for (let x = stepPx; x < W_PX; x += stepPx) {
+            gridLayer.add(new Konva.Line({
+                name: 'gridline',
+                points: [x, 0, x, H_PX],
+                stroke: '#f1f5f9', strokeWidth: 1, listening: false,
+            }));
+        }
+        for (let y = stepPx; y < H_PX; y += stepPx) {
+            gridLayer.add(new Konva.Line({
+                name: 'gridline',
+                points: [0, y, W_PX, y],
+                stroke: '#f1f5f9', strokeWidth: 1, listening: false,
+            }));
+        }
+        gridLayer.draw();
+    }
+
+    // Selection-Indicator (orange dashed Border) — eigener Replace für
+    // Konva.Transformer, das in v9 mit Groups + dragmove einen Crash auslöst.
+    const selectionRect = new Konva.Rect({
+        x: 0, y: 0, width: 0, height: 0,
+        fill: 'transparent',
+        stroke: '#f59e0b',
+        strokeWidth: 2,
+        dash: [4, 4],
+        listening: false,
+        visible: false,
+    });
+    contentLayer.add(selectionRect);
+
+    function showSelection(node) {
+        selectionRect.position({ x: node.x(), y: node.y() });
+        const w = mmToPx(node._data.w);
+        const h = mmToPx(node._data.h);
+        selectionRect.size({ width: w, height: h });
+        selectionRect.visible(true);
+        selectionRect.moveToTop();
+    }
+    function hideSelection() {
+        selectionRect.visible(false);
+    }
+
+    // Klick auf Background → Auswahl löschen
+    cardBg.on('click', clearSelection);
+    stage.on('click', (e) => {
+        if (e.target === stage || e.target === cardBg) clearSelection();
+    });
+
+    // ---- Element-Erzeugung -------------------------------------------------
+    function snap(value) {
+        return Math.round(value / SNAP_MM) * SNAP_MM;
+    }
+    function mmToPx(mm) { return mm * PX_PER_MM; }
+    function pxToMm(px) { return px / PX_PER_MM; }
+
+    function createNode(data) {
+        const x = mmToPx(data.x || 0);
+        const y = mmToPx(data.y || 0);
+        const w = mmToPx(data.w || 10);
+        const h = mmToPx(data.h || 10);
+
+        let node;
+        if (data.type === 'rect') {
+            node = new Konva.Rect({
+                x, y, width: w, height: h,
+                fill: data.fill || '#cccccc',
+                draggable: !IS_SYSTEM,
+            });
+        } else if (data.type === 'text') {
+            const group = new Konva.Group({ x, y, width: w, height: h, draggable: !IS_SYSTEM });
+            const txt = new Konva.Text({
+                x: 0, y: 0, width: w, height: h,
+                text: data.value || '',
+                fontSize: (data.font_size || 8) * PT_TO_PX,
+                fontStyle: data.weight === 'bold' ? 'bold' : 'normal',
+                fill: data.color || '#0f172a',
+                align: data.align || 'left',
+                verticalAlign: 'top',
+                wrap: 'word',
+            });
+            group.add(txt);
+            node = group;
+            node._txt = txt;
+        } else if (data.type === 'photo') {
+            const group = new Konva.Group({ x, y, width: w, height: h, draggable: !IS_SYSTEM });
+            const bg = new Konva.Rect({
+                x: 0, y: 0, width: w, height: h,
+                fill: '#e2e8f0',
+                stroke: data.border_color || '#1a2744',
+                strokeWidth: (data.border_width || 0) * PX_PER_MM,
+            });
+            const lbl = new Konva.Text({
+                x: 0, y: h / 2 - 8, width: w, height: 16,
+                text: '👤 FOTO', fontSize: 12, align: 'center',
+                fill: '#475569',
+            });
+            group.add(bg, lbl);
+            node = group;
+            node._bg = bg;
+        } else if (data.type === 'image') {
+            const group = new Konva.Group({ x, y, width: w, height: h, draggable: !IS_SYSTEM });
+            const bg = new Konva.Rect({
+                x: 0, y: 0, width: w, height: h,
+                fill: '#f1f5f9',
+                stroke: '#cbd5e1', strokeWidth: 1, dash: [4, 4],
+            });
+            const lbl = new Konva.Text({
+                x: 0, y: h / 2 - 8, width: w, height: 16,
+                text: '🖼 BILD', fontSize: 12, align: 'center',
+                fill: '#475569',
+            });
+            group.add(bg, lbl);
+            node = group;
+            node._bg = bg;
+            node._lbl = lbl;
+            if (data.src) loadImageSrc(node, data.src);
+        } else {
+            console.warn('Unbekannter Element-Typ, übersprungen:', data && data.type);
+            return null;
+        }
+
+        node._data = Object.assign({}, data);
+        node._data.x = pxToMm(x);
+        node._data.y = pxToMm(y);
+        node._data.w = pxToMm(w);
+        node._data.h = pxToMm(h);
+
+        if (!IS_SYSTEM) {
+            node.on('dragmove', () => {
+                node.x(mmToPx(snap(pxToMm(node.x()))));
+                node.y(mmToPx(snap(pxToMm(node.y()))));
+                if (selectedNode === node) showSelection(node);
+            });
+            node.on('dragend', () => {
+                node._data.x = snap(pxToMm(node.x()));
+                node._data.y = snap(pxToMm(node.y()));
+                syncDataToLayout();
+                pushSnapshot();
+                refreshPropertiesFromNode(node);
+            });
+            node.on('click', (e) => {
+                e.cancelBubble = true;
+                selectNode(node);
+            });
+        }
+        return node;
+    }
+
+    function loadImageSrc(node, src) {
+        if (!src) return;
+        let url = src;
+        if (src.startsWith('media:')) {
+            url = MEDIA_URL + src.slice('media:'.length);
+        }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function() {
+            const w = node._data.w * PX_PER_MM;
+            const h = node._data.h * PX_PER_MM;
+            const kImg = new Konva.Image({
+                x: 0, y: 0, image: img, width: w, height: h,
+            });
+            // Rect-Hintergrund + Label entfernen
+            if (node._bg) node._bg.destroy();
+            if (node._lbl) node._lbl.destroy();
+            node.add(kImg);
+            node._kImg = kImg;
+            contentLayer.draw();
+        };
+        img.onerror = function() {
+            console.warn('Image load failed:', url);
+        };
+        img.src = url;
+    }
+
+    function rebuildSide() {
+        contentLayer.destroyChildren();
+        contentLayer.add(selectionRect);
+        hideSelection();
+        selectedNode = null;
+        for (const data of (layouts[activeSide] || [])) {
+            const node = createNode(data);
+            if (node) contentLayer.add(node);
+        }
+        contentLayer.draw();
+        renderLayerList();
+        renderPropertiesPanel();
+    }
+
+    // ---- Auswahl + Properties ----------------------------------------------
+    function selectNode(node) {
+        selectedNode = node;
+        showSelection(node);
+        contentLayer.draw();
+        renderLayerList();
+        renderPropertiesPanel();
+        document.getElementById('idc-delete').disabled = IS_SYSTEM || !node;
+    }
+
+    function clearSelection() {
+        selectedNode = null;
+        hideSelection();
+        contentLayer.draw();
+        renderLayerList();
+        renderPropertiesPanel();
+        document.getElementById('idc-delete').disabled = true;
+    }
+
+    function renderLayerList() {
+        const list = document.getElementById('idc-layer-list');
+        list.innerHTML = '';
+        const items = contentLayer.getChildren().filter(n => n !== selectionRect);
+        items.forEach((node) => {
+            const div = document.createElement('div');
+            div.className = 'idc-layer' + (node === selectedNode ? ' selected' : '');
+            div.textContent = nodeLabel(node);
+            div.addEventListener('click', () => selectNode(node));
+            list.appendChild(div);
+        });
+    }
+
+    function nodeLabel(node) {
+        const d = node._data || {};
+        if (d.type === 'text') {
+            const v = (d.value || '').slice(0, 20);
+            return `T: ${v || '—'}`;
+        }
+        if (d.type === 'rect') return `Rechteck${d.type_color ? ' (Typ-Farbe)' : ''}`;
+        if (d.type === 'photo') return 'Foto-Platzhalter';
+        if (d.type === 'image') return 'Bild';
+        return d.type || 'Element';
+    }
+
+    function renderPropertiesPanel() {
+        const empty = document.getElementById('idc-prop-empty');
+        const form = document.getElementById('idc-prop-form');
+        if (!selectedNode) {
+            empty.style.display = '';
+            form.style.display = 'none';
+            return;
+        }
+        empty.style.display = 'none';
+        form.style.display = '';
+        const d = selectedNode._data || {};
+        document.getElementById('idc-prop-title').textContent =
+            'Eigenschaften — ' + (d.type || '—');
+
+        document.querySelectorAll('[data-prop-group]').forEach(el => {
+            el.style.display = (el.getAttribute('data-prop-group') === d.type) ? '' : 'none';
+        });
+
+        document.getElementById('prop-x').value = (d.x || 0).toFixed(2);
+        document.getElementById('prop-y').value = (d.y || 0).toFixed(2);
+        document.getElementById('prop-w').value = (d.w || 0).toFixed(2);
+        document.getElementById('prop-h').value = (d.h || 0).toFixed(2);
+
+        if (d.type === 'text') {
+            document.getElementById('prop-value').value = d.value || '';
+            document.getElementById('prop-font_size').value = d.font_size || 8;
+            document.getElementById('prop-weight').value = d.weight || 'normal';
+            document.getElementById('prop-color').value = d.color || '#0f172a';
+            document.getElementById('prop-align').value = d.align || 'left';
+        } else if (d.type === 'rect') {
+            document.getElementById('prop-fill').value = d.fill || '#cccccc';
+            document.getElementById('prop-type_color').checked = !!d.type_color;
+        } else if (d.type === 'photo') {
+            document.getElementById('prop-border_color').value = d.border_color || '#1a2744';
+            document.getElementById('prop-border_width').value = d.border_width || 0;
+        } else if (d.type === 'image') {
+            document.getElementById('idc-image-name').textContent = d.src ? d.src : '— kein Bild gewählt —';
+        }
+    }
+
+    function refreshPropertiesFromNode(node) {
+        if (selectedNode === node) renderPropertiesPanel();
+    }
+
+    function applyDataToNode(node) {
+        const d = node._data;
+        node.x(mmToPx(d.x));
+        node.y(mmToPx(d.y));
+        const w = mmToPx(d.w);
+        const h = mmToPx(d.h);
+        if (d.type === 'rect') {
+            node.width(w); node.height(h);
+            node.fill(d.fill || '#cccccc');
+        } else if (d.type === 'text') {
+            const txt = node._txt;
+            txt.width(w); txt.height(h);
+            txt.text(d.value || '');
+            txt.fontSize((d.font_size || 8) * PT_TO_PX);
+            txt.fontStyle(d.weight === 'bold' ? 'bold' : 'normal');
+            txt.fill(d.color || '#0f172a');
+            txt.align(d.align || 'left');
+        } else if (d.type === 'photo') {
+            const bg = node._bg;
+            bg.width(w); bg.height(h);
+            bg.stroke(d.border_color || '#1a2744');
+            bg.strokeWidth((d.border_width || 0) * PX_PER_MM);
+            // Label-Position aktualisieren
+            const lbl = node.getChildren()[1];
+            if (lbl) { lbl.width(w); lbl.y(h / 2 - 8); }
+        } else if (d.type === 'image') {
+            if (node._bg) { node._bg.width(w); node._bg.height(h); }
+            if (node._lbl) { node._lbl.width(w); node._lbl.y(h / 2 - 8); }
+            if (node._kImg) { node._kImg.width(w); node._kImg.height(h); }
+        }
+        contentLayer.draw();
+    }
+
+    function syncDataToLayout() {
+        const items = contentLayer.getChildren()
+            .filter(n => n !== selectionRect && n._data)
+            .map(n => Object.assign({}, n._data));
+        layouts[activeSide] = items;
+    }
+
+    function bindProp(id, key, parser) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', () => {
+            if (!selectedNode) return;
+            let val = el.value;
+            if (parser) val = parser(val);
+            else if (el.type === 'number') val = parseFloat(val) || 0;
+            else if (el.type === 'checkbox') val = el.checked;
+            selectedNode._data[key] = val;
+            applyDataToNode(selectedNode);
+            showSelection(selectedNode);
+            syncDataToLayout();
+            pushSnapshot();
+            renderLayerList();
+        });
+    }
+
+    bindProp('prop-x', 'x');
+    bindProp('prop-y', 'y');
+    bindProp('prop-w', 'w');
+    bindProp('prop-h', 'h');
+    bindProp('prop-value', 'value');
+    bindProp('prop-font_size', 'font_size');
+    bindProp('prop-weight', 'weight');
+    bindProp('prop-color', 'color');
+    bindProp('prop-align', 'align');
+    bindProp('prop-fill', 'fill');
+    bindProp('prop-type_color', 'type_color');
+    bindProp('prop-border_color', 'border_color');
+    bindProp('prop-border_width', 'border_width');
+
+    // ---- Hinzufügen --------------------------------------------------------
+    function addElement(kind) {
+        if (IS_SYSTEM) return;
+        let data;
+        if (kind === 'text-static') {
+            data = { type: 'text', x: 4, y: 4, w: 40, h: 8, value: 'Text', font_size: 8, color: '#0f172a', weight: 'normal', align: 'left' };
+        } else if (kind === 'text-placeholder') {
+            data = { type: 'text', x: 4, y: 4, w: 40, h: 8, value: '{{name}}', font_size: 8, color: '#0f172a', weight: 'normal', align: 'left' };
+        } else if (kind === 'rect') {
+            data = { type: 'rect', x: 4, y: 4, w: 30, h: 6, fill: '#cc2222', type_color: false };
+        } else if (kind === 'photo') {
+            data = { type: 'photo', x: 4, y: 4, w: 22, h: 30, border_color: '#1a2744', border_width: 0.4 };
+        } else if (kind === 'image') {
+            // Erst Datei wählen, dann Element erzeugen
+            triggerImageUpload(true);
+            return;
+        }
+        const node = createNode(data);
+        contentLayer.add(node);
+        contentLayer.draw();
+        syncDataToLayout();
+        pushSnapshot();
+        selectNode(node);
+    }
+
+    document.querySelectorAll('[data-add]').forEach(btn => {
+        btn.addEventListener('click', () => addElement(btn.getAttribute('data-add')));
+    });
+
+    // ---- Bild-Upload -------------------------------------------------------
+    let uploadCreatesElement = false;
+    const fileInput = document.getElementById('idc-file-input');
+
+    function triggerImageUpload(createElement) {
+        uploadCreatesElement = !!createElement;
+        fileInput.value = '';
+        fileInput.click();
+    }
+
+    fileInput.addEventListener('change', async () => {
+        const f = fileInput.files[0];
+        if (!f) return;
+        const fd = new FormData();
+        fd.append('file', f);
+        try {
+            const r = await fetch(UPLOAD_URL, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken() },
+                body: fd,
+            });
+            const json = await r.json();
+            if (!json.ok) {
+                alert('Upload fehlgeschlagen: ' + (json.message || json.error || 'unbekannt'));
+                return;
+            }
+            if (uploadCreatesElement) {
+                const data = { type: 'image', x: 4, y: 4, w: 18, h: 18, src: json.src };
+                const node = createNode(data);
+                contentLayer.add(node);
+                contentLayer.draw();
+                syncDataToLayout();
+                pushSnapshot();
+                selectNode(node);
+            } else if (selectedNode && selectedNode._data.type === 'image') {
+                selectedNode._data.src = json.src;
+                // Existing-Image entfernen, neu laden
+                if (selectedNode._kImg) {
+                    selectedNode._kImg.destroy();
+                    selectedNode._kImg = null;
+                }
+                if (!selectedNode._bg) {
+                    const w = selectedNode._data.w * PX_PER_MM;
+                    const h = selectedNode._data.h * PX_PER_MM;
+                    selectedNode._bg = new Konva.Rect({
+                        x: 0, y: 0, width: w, height: h,
+                        fill: '#f1f5f9', stroke: '#cbd5e1', strokeWidth: 1, dash: [4, 4],
+                    });
+                    selectedNode.add(selectedNode._bg);
+                }
+                loadImageSrc(selectedNode, json.src);
+                syncDataToLayout();
+                pushSnapshot();
+                renderPropertiesPanel();
+            }
+        } catch (e) {
+            alert('Upload-Fehler: ' + e.message);
+        }
+    });
+
+    document.getElementById('idc-image-replace').addEventListener('click', () => {
+        if (selectedNode && selectedNode._data.type === 'image') triggerImageUpload(false);
+    });
+
+    // ---- Tabs --------------------------------------------------------------
+    document.querySelectorAll('.idc-tab').forEach(t => {
+        t.addEventListener('click', () => {
+            const side = t.getAttribute('data-side');
+            if (side === activeSide) return;
+            syncDataToLayout();
+            activeSide = side;
+            document.querySelectorAll('.idc-tab').forEach(x => x.classList.toggle('active', x === t));
+            rebuildSide();
+        });
+    });
+
+    // ---- Toolbar -----------------------------------------------------------
+    document.getElementById('idc-grid-toggle').addEventListener('click', () => {
+        showGrid = !showGrid;
+        buildGrid();
+    });
+
+    document.getElementById('idc-delete').addEventListener('click', () => {
+        if (!selectedNode || IS_SYSTEM) return;
+        selectedNode.destroy();
+        selectedNode = null;
+        hideSelection();
+        contentLayer.draw();
+        syncDataToLayout();
+        pushSnapshot();
+        renderLayerList();
+        renderPropertiesPanel();
+        document.getElementById('idc-delete').disabled = true;
+    });
+
+    document.getElementById('idc-undo').addEventListener('click', () => {
+        if (historyPos > 0) {
+            historyPos--;
+            applySnapshot(history[historyPos]);
+        }
+    });
+    document.getElementById('idc-redo').addEventListener('click', () => {
+        if (historyPos < history.length - 1) {
+            historyPos++;
+            applySnapshot(history[historyPos]);
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (IS_SYSTEM) return;
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            document.getElementById('idc-undo').click();
+        } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' ||
+            (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+            e.preventDefault();
+            document.getElementById('idc-redo').click();
+        } else if (e.key === 'Delete' && selectedNode &&
+            !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
+            e.preventDefault();
+            document.getElementById('idc-delete').click();
+        }
+    });
+
+    // ---- Speichern ---------------------------------------------------------
+    document.getElementById('idc-save').addEventListener('click', async () => {
+        syncDataToLayout();
+        try {
+            const r = await fetch(SAVE_URL, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken(),
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    front_layout: layouts.front,
+                    back_layout: layouts.back,
+                }),
+            });
+            const json = await r.json();
+            if (json.ok) {
+                setDirty(false);
+                document.getElementById('idc-status-info').textContent = 'Gespeichert um ' + new Date().toLocaleTimeString();
+            } else {
+                alert('Speichern fehlgeschlagen: ' + (json.message || json.error || 'unbekannt'));
+            }
+        } catch (e) {
+            alert('Speichern-Fehler: ' + e.message);
+        }
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+        if (dirty && !IS_SYSTEM) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // ---- Init --------------------------------------------------------------
+    buildGrid();
+    rebuildSide();
+    history = [snapshot()];
+    historyPos = 0;
+    setDirty(false);
+    document.getElementById('idc-status-info').textContent =
+        layouts.front.length + ' / ' + layouts.back.length + ' Elemente';
+})();
+</script>
+{% endblock %}

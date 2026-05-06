@@ -370,29 +370,35 @@ class TicketImage(TimeStampedModel):
         super().save(*args, **kwargs)
 
 
-class BereitschaftKategorie(models.TextChoices):
-    """Kategorien für Bereitschaftspersonen"""
-    C_DIENST = 'c_dienst', _('C-Dienst')
-    LNA = 'lna', _('LNA')
-    ORDNUNGSAMT = 'ordnungsamt', _('Ordnungsamt')
-    GESUNDHEITSAMT = 'gesundheitsamt', _('Gesundheitsamt')
-    VETERINAERAMT = 'veterinaeramt', _('Veterinäramt')
+class BereitschaftPool(models.TextChoices):
+    """Pool-Zuordnung für Bereitschaftspersonen.
+
+    Slots im InfoMonitor mappen auf einen dieser Pools:
+      - Führungsdienst: A1, A2, B, C, Lagedienst (Hierarchie, Vertretung möglich)
+      - Ärztliche Leitung: LNA
+      - Stadt: Ordnungsamt, Gesundheitsamt, Veterinäramt
+    """
+    FUEHRUNGSDIENST = 'fuehrungsdienst', _('Führungsdienst')
+    AERZTLICHE_LEITUNG = 'aerztliche_leitung', _('Ärztliche Leitung')
+    STADT = 'stadt', _('Stadt')
 
 
 class BereitschaftPerson(models.Model):
     """
     Personen, die für Bereitschaftsdienste im Info-Monitor auswählbar sind.
+    Eine Person kann in mehreren Pools sein → dafür mehrere Datensätze.
     """
     name = models.CharField(
         max_length=200,
         verbose_name=_('Name')
     )
-    kategorie = models.CharField(
-        max_length=20,
-        choices=BereitschaftKategorie.choices,
-        default=BereitschaftKategorie.C_DIENST,
-        verbose_name=_('Kategorie')
+    pool = models.CharField(
+        max_length=30,
+        choices=BereitschaftPool.choices,
+        default=BereitschaftPool.FUEHRUNGSDIENST,
+        verbose_name=_('Pool')
     )
+    # Wird in Migration 0028 aus 'kategorie' migriert und das Altfeld entfernt.
     phone = models.CharField(
         max_length=100,
         blank=True,
@@ -482,12 +488,40 @@ class InfoMonitor(models.Model):
     # =========================================================================
     # BEREITSCHAFT
     # =========================================================================
+    bereitschaft_a1_dienst = models.ForeignKey(
+        BereitschaftPerson,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('A1-Dienst')
+    )
+    bereitschaft_a2_dienst = models.ForeignKey(
+        BereitschaftPerson,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('A2-Dienst')
+    )
+    bereitschaft_b_dienst = models.ForeignKey(
+        BereitschaftPerson,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('B-Dienst')
+    )
     bereitschaft_c_dienst = models.ForeignKey(
         BereitschaftPerson,
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='+',
         verbose_name=_('C-Dienst')
+    )
+    bereitschaft_lagedienst = models.ForeignKey(
+        BereitschaftPerson,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('Lagedienst')
     )
     bereitschaft_lna = models.ForeignKey(
         BereitschaftPerson,
@@ -517,33 +551,44 @@ class InfoMonitor(models.Model):
         related_name='+',
         verbose_name=_('Veterinäramt')
     )
-    bereitschaft_vet_datetime = models.DateTimeField(
-        null=True, blank=True,
-        verbose_name=_('Veterinäramt Datum/Uhrzeit')
-    )
 
     # Änderungs-Zeitstempel pro Bereitschafts-Slot
+    bereitschaft_a1_dienst_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('A1-Dienst geändert am'))
+    bereitschaft_a2_dienst_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('A2-Dienst geändert am'))
+    bereitschaft_b_dienst_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('B-Dienst geändert am'))
     bereitschaft_c_dienst_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('C-Dienst geändert am'))
+    bereitschaft_lagedienst_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Lagedienst geändert am'))
     bereitschaft_lna_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('LNA geändert am'))
     bereitschaft_o_amt_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Ordnungsamt geändert am'))
     bereitschaft_g_amt_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Gesundheitsamt geändert am'))
     bereitschaft_veterinaeramt_changed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Veterinäramt geändert am'))
 
+    # Freitext-Notiz pro Bereitschafts-Slot (z.B. temporäre Vertretung)
+    bereitschaft_a1_dienst_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('A1-Dienst Notiz'))
+    bereitschaft_a2_dienst_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('A2-Dienst Notiz'))
+    bereitschaft_b_dienst_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('B-Dienst Notiz'))
+    bereitschaft_c_dienst_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('C-Dienst Notiz'))
+    bereitschaft_lagedienst_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('Lagedienst Notiz'))
+    bereitschaft_lna_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('LNA Notiz'))
+    bereitschaft_o_amt_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('Ordnungsamt Notiz'))
+    bereitschaft_g_amt_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('Gesundheitsamt Notiz'))
+    bereitschaft_veterinaeramt_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('Veterinäramt Notiz'))
+
     # =========================================================================
     # PERSONAL – FW1
     # =========================================================================
     personal_fw1_loeschzug = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Löschzug'))
+    personal_fw1_gal_hlf = models.BooleanField(default=False, verbose_name=_('FW1 GAL-HLF'))
     personal_fw1_ergaenzung = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Ergänzung'))
     personal_fw1_5_rtw = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 RTW'))
-    personal_fw1_ktw = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 KTW'))
     personal_fw1_taucher = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Taucher'))
     personal_fw1_hoehenretter = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Höhenretter'))
 
     # PERSONAL – FW2
     personal_fw2_loeschzug = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Löschzug'))
+    personal_fw2_gal_hlf = models.BooleanField(default=False, verbose_name=_('FW2 GAL-HLF'))
     personal_fw2_ergaenzung = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Ergänzung'))
     personal_fw2_5_rtw = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 RTW'))
-    personal_fw2_ktw = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 KTW'))
     personal_fw2_taucher = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Taucher'))
     personal_fw2_hoehenretter = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Höhenretter'))
 
@@ -560,11 +605,19 @@ class InfoMonitor(models.Model):
         default=FFZugStatus.EINSATZBEREIT,
         verbose_name=_('FF Sterkrade')
     )
+    ff_sterkrade_fahrzeuge = models.CharField(
+        max_length=200, blank=True, default='',
+        verbose_name=_('FF Sterkrade Fahrzeuge')
+    )
     ff_mitte_status = models.CharField(
         max_length=25,
         choices=FFZugStatus.choices,
         default=FFZugStatus.EINSATZBEREIT,
         verbose_name=_('FF Mitte')
+    )
+    ff_mitte_fahrzeuge = models.CharField(
+        max_length=200, blank=True, default='',
+        verbose_name=_('FF Mitte Fahrzeuge')
     )
     ff_sued_status = models.CharField(
         max_length=25,
@@ -572,11 +625,19 @@ class InfoMonitor(models.Model):
         default=FFZugStatus.EINSATZBEREIT,
         verbose_name=_('FF Süd')
     )
+    ff_sued_fahrzeuge = models.CharField(
+        max_length=200, blank=True, default='',
+        verbose_name=_('FF Süd Fahrzeuge')
+    )
     ff_koe_status = models.CharField(
         max_length=25,
         choices=FFZugStatus.choices,
         default=FFZugStatus.EINSATZBEREIT,
         verbose_name=_('FF KÖ')
+    )
+    ff_koe_fahrzeuge = models.CharField(
+        max_length=200, blank=True, default='',
+        verbose_name=_('FF KÖ Fahrzeuge')
     )
 
     # =========================================================================
@@ -642,7 +703,11 @@ class InfoMonitor(models.Model):
                 from django.utils import timezone as _tz
                 now = _tz.now()
                 _slots = [
+                    ('bereitschaft_a1_dienst_id', 'bereitschaft_a1_dienst_changed_at'),
+                    ('bereitschaft_a2_dienst_id', 'bereitschaft_a2_dienst_changed_at'),
+                    ('bereitschaft_b_dienst_id', 'bereitschaft_b_dienst_changed_at'),
                     ('bereitschaft_c_dienst_id', 'bereitschaft_c_dienst_changed_at'),
+                    ('bereitschaft_lagedienst_id', 'bereitschaft_lagedienst_changed_at'),
                     ('bereitschaft_lna_id', 'bereitschaft_lna_changed_at'),
                     ('bereitschaft_o_amt_id', 'bereitschaft_o_amt_changed_at'),
                     ('bereitschaft_g_amt_id', 'bereitschaft_g_amt_changed_at'),
@@ -689,7 +754,7 @@ class InfoMonitorVehicle(models.Model):
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='+',
-        verbose_name=_('Ersetzt mit')
+        verbose_name=_('Ersatz')
     )
     bemerkung = models.CharField(
         max_length=300,
@@ -737,6 +802,10 @@ class InfoMonitorSonstiges(models.Model):
     position = models.PositiveIntegerField(
         default=0,
         verbose_name=_('Position')
+    )
+    highlighted = models.BooleanField(
+        default=False,
+        verbose_name=_('Hervorgehoben')
     )
 
     class Meta:

@@ -467,6 +467,11 @@ class Person(AuditedModel):
             is_current=True
         ).select_related('rank').first()
 
+    @property
+    def get_current_rank_volunteer(self):
+        """Aktueller FF-Dienstgrad (für Template-Zugriff ohne Parameter)"""
+        return self.get_current_rank('volunteer')
+
     def get_rank_history(self, org_type):
         """Gibt die Dienstgrad-Historie für eine Organisation zurück"""
         return self.ranks.filter(

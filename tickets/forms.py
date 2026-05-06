@@ -9,7 +9,7 @@ from django.forms import ClearableFileInput, inlineformset_factory
 
 from .models import (Ticket, TicketComment, TicketImage, CommentImage, TicketStatus, TicketPriority,
                       TicketCategory, InfoMonitor, InfoMonitorVehicle, InfoMonitorSonstiges,
-                      BereitschaftPerson, BereitschaftKategorie, MappeLink, MappeKontakt,
+                      BereitschaftPerson, BereitschaftPool, MappeLink, MappeKontakt,
                       MappeAnleitung, GrossveranstaltungDashboard, GrossveranstaltungAbschnitt)
 
 User = get_user_model()
@@ -178,7 +178,9 @@ class InfoMonitorForm(forms.ModelForm):
     class Meta:
         model = InfoMonitor
         exclude = ['updated_at', 'updated_by',
-                   'bereitschaft_c_dienst_changed_at', 'bereitschaft_lna_changed_at',
+                   'bereitschaft_a1_dienst_changed_at', 'bereitschaft_a2_dienst_changed_at',
+                   'bereitschaft_b_dienst_changed_at', 'bereitschaft_c_dienst_changed_at',
+                   'bereitschaft_lagedienst_changed_at', 'bereitschaft_lna_changed_at',
                    'bereitschaft_o_amt_changed_at', 'bereitschaft_g_amt_changed_at',
                    'bereitschaft_veterinaeramt_changed_at',
                    'sonstiges_1', 'sonstiges_2', 'sonstiges_3', 'sonstiges_4', 'sonstiges_5']
@@ -188,19 +190,24 @@ class InfoMonitorForm(forms.ModelForm):
 
         tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
 
-        # Bereitschaftsfelder nach Kategorie filtern
-        bereitschaft_field_kategorie = {
-            'bereitschaft_c_dienst': BereitschaftKategorie.C_DIENST,
-            'bereitschaft_lna': BereitschaftKategorie.LNA,
-            'bereitschaft_o_amt': BereitschaftKategorie.ORDNUNGSAMT,
-            'bereitschaft_g_amt': BereitschaftKategorie.GESUNDHEITSAMT,
-            'bereitschaft_veterinaeramt': BereitschaftKategorie.VETERINAERAMT,
+        # Bereitschafts-Slots auf Pools mappen. Innerhalb eines Pools darf jede
+        # Person jeden Slot übernehmen (Vertretungs-Hierarchie).
+        bereitschaft_field_pool = {
+            'bereitschaft_a1_dienst': BereitschaftPool.FUEHRUNGSDIENST,
+            'bereitschaft_a2_dienst': BereitschaftPool.FUEHRUNGSDIENST,
+            'bereitschaft_b_dienst': BereitschaftPool.FUEHRUNGSDIENST,
+            'bereitschaft_c_dienst': BereitschaftPool.FUEHRUNGSDIENST,
+            'bereitschaft_lagedienst': BereitschaftPool.FUEHRUNGSDIENST,
+            'bereitschaft_lna': BereitschaftPool.AERZTLICHE_LEITUNG,
+            'bereitschaft_o_amt': BereitschaftPool.STADT,
+            'bereitschaft_g_amt': BereitschaftPool.STADT,
+            'bereitschaft_veterinaeramt': BereitschaftPool.STADT,
         }
 
-        for field_name, kat in bereitschaft_field_kategorie.items():
+        for field_name, pool in bereitschaft_field_pool.items():
             self.fields[field_name].queryset = BereitschaftPerson.objects.filter(
-                is_active=True, kategorie=kat
-            )
+                is_active=True, pool=pool
+            ).order_by('order', 'name')
             self.fields[field_name].widget.attrs.update({'class': tw})
 
         for name, field in self.fields.items():
@@ -262,7 +269,7 @@ class InfoMonitorSonstigesForm(forms.ModelForm):
     class Meta:
         from .models import InfoMonitorSonstiges
         model = InfoMonitorSonstiges
-        fields = ['text', 'position']
+        fields = ['text', 'position', 'highlighted']
         widgets = {
             'position': forms.HiddenInput(),
         }
@@ -271,6 +278,7 @@ class InfoMonitorSonstigesForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
         self.fields['text'].widget = forms.Textarea(attrs={'class': tw, 'rows': 2, 'placeholder': 'Sonstiges...'})
+        self.fields['highlighted'].widget.attrs.update({'class': 'w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer'})
 
 
 InfoMonitorSonstigesFormSet = inlineformset_factory(
@@ -287,13 +295,13 @@ class BereitschaftPersonForm(forms.ModelForm):
 
     class Meta:
         model = BereitschaftPerson
-        fields = ['name', 'kategorie', 'phone', 'is_active', 'order']
+        fields = ['name', 'pool', 'phone', 'is_active', 'order']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
                 'placeholder': 'Name der Person'
             }),
-            'kategorie': forms.Select(attrs={
+            'pool': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
             }),
             'phone': forms.TextInput(attrs={

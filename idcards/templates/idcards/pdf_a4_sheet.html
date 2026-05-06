@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Dienstausweis-Bogen</title>
+<style>
+@page {
+    size: A4 portrait;
+    margin: 0;
+}
+* { box-sizing: border-box; }
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Helvetica", "Arial", sans-serif;
+    color: #0f172a;
+}
+.sheet {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    background: #ffffff;
+}
+.sheet:last-child { page-break-after: auto; }
+.tile {
+    position: absolute;
+    overflow: hidden;
+    background: #ffffff;
+}
+.cut-line {
+    position: absolute;
+    pointer-events: none;
+    border-top: 0.2mm dashed #94a3b8;
+    border-left: 0.2mm dashed #94a3b8;
+}
+.cut-line--vertical {
+    width: 0;
+    border-top: 0;
+}
+.cut-line--horizontal {
+    height: 0;
+    border-left: 0;
+}
+img { display: block; }
+</style>
+</head>
+<body>
+
+{% for page in pages %}
+<div class="sheet">
+    {% for tile in page.front_tiles %}
+    <div class="tile" style="left:{{ tile.left_mm }}mm; top:{{ tile.top_mm }}mm; width:{{ tile.width_mm }}mm; height:{{ tile.height_mm }}mm;">
+        {% for cell in tile.cells %}{% include "idcards/_card_element.html" %}{% endfor %}
+    </div>
+    {% endfor %}
+    {% for line in page.cut_lines %}
+        {% if line.orient == "vertical" %}
+        <div class="cut-line cut-line--vertical" style="left:{{ line.left_mm }}mm; top:{{ line.top_mm }}mm; height:{{ line.length_mm }}mm;"></div>
+        {% else %}
+        <div class="cut-line cut-line--horizontal" style="left:{{ line.left_mm }}mm; top:{{ line.top_mm }}mm; width:{{ line.length_mm }}mm;"></div>
+        {% endif %}
+    {% endfor %}
+</div>
+<div class="sheet">
+    {% for tile in page.back_tiles %}
+    <div class="tile" style="left:{{ tile.left_mm }}mm; top:{{ tile.top_mm }}mm; width:{{ tile.width_mm }}mm; height:{{ tile.height_mm }}mm;">
+        {% for cell in tile.cells %}{% include "idcards/_card_element.html" %}{% endfor %}
+    </div>
+    {% endfor %}
+    {% for line in page.cut_lines %}
+        {% if line.orient == "vertical" %}
+        <div class="cut-line cut-line--vertical" style="left:{{ line.left_mm }}mm; top:{{ line.top_mm }}mm; height:{{ line.length_mm }}mm;"></div>
+        {% else %}
+        <div class="cut-line cut-line--horizontal" style="left:{{ line.left_mm }}mm; top:{{ line.top_mm }}mm; width:{{ line.length_mm }}mm;"></div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endfor %}
+
+</body>
+</html>

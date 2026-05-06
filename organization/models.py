@@ -132,6 +132,27 @@ class VolunteerUnit(models.Model):
         blank=True,
         verbose_name=_('Beschreibung')
     )
+
+    # Führung
+    leader = models.ForeignKey(
+        'personnel.Person',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='led_volunteer_units',
+        verbose_name=_('Einheitsführer'),
+        help_text=_('Leiter/in dieser FF-Einheit')
+    )
+    deputy_leader = models.ForeignKey(
+        'personnel.Person',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deputy_led_volunteer_units',
+        verbose_name=_('Stellv. Einheitsführer'),
+        help_text=_('Stellvertretende/r Leiter/in dieser FF-Einheit')
+    )
+
     is_active = models.BooleanField(
         default=True,
         verbose_name=_('Aktiv')

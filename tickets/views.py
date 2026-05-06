@@ -607,10 +607,10 @@ class InfoMonitorDisplayView(LoginRequiredMixin, UserPassesTestMixin, DetailView
         context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
         # FF Züge
         context['ff_zuege'] = [
-            {'name': 'FF Sterkrade', 'status': self.object.ff_sterkrade_status, 'label': self.object.get_ff_sterkrade_status_display()},
-            {'name': 'FF Mitte', 'status': self.object.ff_mitte_status, 'label': self.object.get_ff_mitte_status_display()},
-            {'name': 'FF S\u00fcd', 'status': self.object.ff_sued_status, 'label': self.object.get_ff_sued_status_display()},
-            {'name': 'FF K\u00d6', 'status': self.object.ff_koe_status, 'label': self.object.get_ff_koe_status_display()},
+            {'name': 'FF Sterkrade', 'status': self.object.ff_sterkrade_status, 'label': self.object.get_ff_sterkrade_status_display(), 'fahrzeuge': self.object.ff_sterkrade_fahrzeuge},
+            {'name': 'FF Mitte', 'status': self.object.ff_mitte_status, 'label': self.object.get_ff_mitte_status_display(), 'fahrzeuge': self.object.ff_mitte_fahrzeuge},
+            {'name': 'FF S\u00fcd', 'status': self.object.ff_sued_status, 'label': self.object.get_ff_sued_status_display(), 'fahrzeuge': self.object.ff_sued_fahrzeuge},
+            {'name': 'FF K\u00d6', 'status': self.object.ff_koe_status, 'label': self.object.get_ff_koe_status_display(), 'fahrzeuge': self.object.ff_koe_fahrzeuge},
         ]
         return context
 
@@ -647,10 +647,10 @@ class InfoMonitorEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         # FF Züge Felder für Template
         form = context.get('form') or self.get_form()
         context['ff_zug_fields'] = [
-            {'label': 'FF Sterkrade', 'field': form['ff_sterkrade_status']},
-            {'label': 'FF Mitte', 'field': form['ff_mitte_status']},
-            {'label': 'FF S\u00fcd', 'field': form['ff_sued_status']},
-            {'label': 'FF K\u00d6', 'field': form['ff_koe_status']},
+            {'label': 'FF Sterkrade', 'field': form['ff_sterkrade_status'], 'fahrzeuge_field': form['ff_sterkrade_fahrzeuge']},
+            {'label': 'FF Mitte', 'field': form['ff_mitte_status'], 'fahrzeuge_field': form['ff_mitte_fahrzeuge']},
+            {'label': 'FF S\u00fcd', 'field': form['ff_sued_status'], 'fahrzeuge_field': form['ff_sued_fahrzeuge']},
+            {'label': 'FF K\u00d6', 'field': form['ff_koe_status'], 'fahrzeuge_field': form['ff_koe_fahrzeuge']},
         ]
         return context
 
@@ -702,10 +702,10 @@ class InfoMonitorKioskView(DetailView):
         # FF Züge für Kiosk-Ansicht
         from .models import FFZugStatus
         context['ff_zuege'] = [
-            {'name': 'FF Sterkrade', 'status': self.object.ff_sterkrade_status, 'label': self.object.get_ff_sterkrade_status_display()},
-            {'name': 'FF Mitte', 'status': self.object.ff_mitte_status, 'label': self.object.get_ff_mitte_status_display()},
-            {'name': 'FF S\u00fcd', 'status': self.object.ff_sued_status, 'label': self.object.get_ff_sued_status_display()},
-            {'name': 'FF K\u00d6', 'status': self.object.ff_koe_status, 'label': self.object.get_ff_koe_status_display()},
+            {'name': 'FF Sterkrade', 'status': self.object.ff_sterkrade_status, 'label': self.object.get_ff_sterkrade_status_display(), 'fahrzeuge': self.object.ff_sterkrade_fahrzeuge},
+            {'name': 'FF Mitte', 'status': self.object.ff_mitte_status, 'label': self.object.get_ff_mitte_status_display(), 'fahrzeuge': self.object.ff_mitte_fahrzeuge},
+            {'name': 'FF S\u00fcd', 'status': self.object.ff_sued_status, 'label': self.object.get_ff_sued_status_display(), 'fahrzeuge': self.object.ff_sued_fahrzeuge},
+            {'name': 'FF K\u00d6', 'status': self.object.ff_koe_status, 'label': self.object.get_ff_koe_status_display(), 'fahrzeuge': self.object.ff_koe_fahrzeuge},
         ]
         context['FFZugStatus'] = FFZugStatus
         return context
@@ -779,6 +779,206 @@ def bereitschaft_person_delete(request, pk):
         name = person.name
         person.delete()
         messages.success(request, f'"{name}" wurde gelöscht.')
+
+    return redirect('tickets:bereitschaft_person_list')
+
+
+# Mapping: Eingabe-Begriff (lowercase) -> Pool-Wert.
+# Akzeptiert sowohl Pool-Namen direkt als auch alle bekannten Dienst-Begriffe
+# (A1-Dienst, LNA, Ordnungsamt, …) und normalisiert sie auf den passenden Pool.
+_POOL_ALIASES = {
+    # Direkter Pool-Name
+    'fuehrungsdienst':   'fuehrungsdienst',
+    'führungsdienst':    'fuehrungsdienst',
+    'fuehrung':          'fuehrungsdienst',
+    'führung':           'fuehrungsdienst',
+    'aerztliche leitung': 'aerztliche_leitung',
+    'ärztliche leitung':  'aerztliche_leitung',
+    'aerztl. leitung':    'aerztliche_leitung',
+    'ärztl. leitung':     'aerztliche_leitung',
+    'stadt':              'stadt',
+    # Führungsdienst-Hierarchie
+    'a-dienst': 'fuehrungsdienst',
+    'a dienst': 'fuehrungsdienst',
+    'adienst':  'fuehrungsdienst',
+    'a':        'fuehrungsdienst',
+    'a1-dienst': 'fuehrungsdienst',
+    'a1':        'fuehrungsdienst',
+    'a2-dienst': 'fuehrungsdienst',
+    'a2':        'fuehrungsdienst',
+    'b-dienst':  'fuehrungsdienst',
+    'b':         'fuehrungsdienst',
+    'c-dienst':  'fuehrungsdienst',
+    'c':         'fuehrungsdienst',
+    'lagedienst':'fuehrungsdienst',
+    'lage':      'fuehrungsdienst',
+    # Ärztliche Leitung
+    'lna':       'aerztliche_leitung',
+    # Stadt
+    'ordnungsamt':    'stadt',
+    'o-amt':          'stadt',
+    'oa':             'stadt',
+    'gesundheitsamt': 'stadt',
+    'g-amt':          'stadt',
+    'ga':             'stadt',
+    'veterinäramt':  'stadt',
+    'veterinaeramt':  'stadt',
+    'veterinär':     'stadt',
+    'veterinaer':     'stadt',
+    'vet':            'stadt',
+}
+
+
+def _resolve_pools(raw):
+    """'A-Dienst, LNA' -> ['fuehrungsdienst', 'aerztliche_leitung'].
+    'Stadt' -> ['stadt']. Unbekannte Tokens werden separat gemeldet."""
+    resolved, unknown = [], []
+    if not raw:
+        return resolved, unknown
+    for token in raw.replace(';', ',').replace('|', ',').replace('/', ',').split(','):
+        key = token.strip().lower()
+        if not key:
+            continue
+        pool = _POOL_ALIASES.get(key)
+        if pool:
+            if pool not in resolved:
+                resolved.append(pool)
+        else:
+            unknown.append(token.strip())
+    return resolved, unknown
+
+
+def bereitschaft_person_import_template(request):
+    """Stellt eine CSV-Vorlage zum Download bereit."""
+    if not request.user.has_perm('tickets.edit_infomonitor'):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:bereitschaft_person_list')
+
+    from django.http import HttpResponse
+    import csv, io
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=';')
+    w.writerow(['Name', 'Telefon', 'Pools'])
+    w.writerow(['Max Mustermann', '0208-1234567', 'Führungsdienst'])
+    w.writerow(['Dr. Erika Beispiel', '0208-2345678', 'Ärztliche Leitung'])
+    w.writerow(['Hans Schmidt', '0208-3456789', 'Stadt'])
+    w.writerow(['Doppel Qualifiziert', '0208-4567890', 'Führungsdienst, Stadt'])
+    response = HttpResponse(
+        '﻿' + buf.getvalue(),  # BOM für Excel
+        content_type='text/csv; charset=utf-8'
+    )
+    response['Content-Disposition'] = 'attachment; filename="bereitschaftspersonen_vorlage.csv"'
+    return response
+
+
+def bereitschaft_person_import(request):
+    """CSV-Upload: erstellt BereitschaftPerson-Einträge je Person × Dienst."""
+    if not request.user.has_perm('tickets.edit_infomonitor'):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:bereitschaft_person_list')
+
+    if request.method != 'POST' or 'csv_file' not in request.FILES:
+        return redirect('tickets:bereitschaft_person_list')
+
+    import csv, io
+    upload = request.FILES['csv_file']
+    try:
+        raw = upload.read()
+    except Exception as e:
+        messages.error(request, f'Datei konnte nicht gelesen werden: {e}')
+        return redirect('tickets:bereitschaft_person_list')
+
+    # Encoding-Erkennung: UTF-8 (mit/ohne BOM), sonst cp1252 (Excel DE)
+    text = None
+    for enc in ('utf-8-sig', 'utf-8', 'cp1252', 'latin-1'):
+        try:
+            text = raw.decode(enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    if text is None:
+        messages.error(request, 'Datei-Encoding konnte nicht erkannt werden (UTF-8 oder Windows-1252 erwartet).')
+        return redirect('tickets:bereitschaft_person_list')
+
+    # Trennzeichen erraten: bevorzugt ';', sonst ','
+    sample = text[:2048]
+    delimiter = ';' if sample.count(';') >= sample.count(',') else ','
+
+    reader = csv.reader(io.StringIO(text), delimiter=delimiter)
+    try:
+        header = next(reader)
+    except StopIteration:
+        messages.error(request, 'CSV ist leer.')
+        return redirect('tickets:bereitschaft_person_list')
+
+    # Spaltenzuordnung (case-insensitive, Umlaute toleriert)
+    def normkey(s):
+        return s.strip().lower().replace('ä','ae').replace('ö','oe').replace('ü','ue').replace('ß','ss')
+    col_map = {normkey(c): i for i, c in enumerate(header)}
+
+    name_idx = next((col_map[k] for k in ('name', 'vorname nachname', 'person') if k in col_map), None)
+    phone_idx = next((col_map[k] for k in ('telefon', 'phone', 'rufnummer', 'tel') if k in col_map), None)
+    pools_idx = next((col_map[k] for k in ('pools', 'pool', 'bereich', 'bereiche', 'dienste', 'dienst', 'kategorie', 'kategorien') if k in col_map), None)
+
+    if name_idx is None or pools_idx is None:
+        messages.error(request, 'CSV muss mindestens die Spalten "Name" und "Pools" (oder "Dienste") enthalten.')
+        return redirect('tickets:bereitschaft_person_list')
+
+    created = 0
+    skipped = 0
+    unknown_tokens = set()
+    rows_with_errors = []
+
+    for line_no, row in enumerate(reader, start=2):
+        if not row or not any(c.strip() for c in row):
+            continue
+        try:
+            name = row[name_idx].strip()
+        except IndexError:
+            rows_with_errors.append(f'Zeile {line_no}: zu wenige Spalten')
+            continue
+        if not name:
+            continue
+
+        phone = row[phone_idx].strip() if phone_idx is not None and phone_idx < len(row) else ''
+        pools_raw = row[pools_idx].strip() if pools_idx < len(row) else ''
+        pools, unknown = _resolve_pools(pools_raw)
+        unknown_tokens.update(unknown)
+
+        if not pools:
+            rows_with_errors.append(f'Zeile {line_no} ({name}): keine gültigen Pools erkannt')
+            continue
+
+        for pool in pools:
+            obj, was_created = BereitschaftPerson.objects.get_or_create(
+                name=name,
+                pool=pool,
+                defaults={'phone': phone, 'is_active': True},
+            )
+            if was_created:
+                created += 1
+            else:
+                # Telefonnummer ggf. aktualisieren, wenn vorher leer war
+                if phone and not obj.phone:
+                    obj.phone = phone
+                    obj.save(update_fields=['phone'])
+                skipped += 1
+
+    msg_parts = [f'{created} Einträge angelegt']
+    if skipped:
+        msg_parts.append(f'{skipped} bereits vorhanden (übersprungen)')
+    if unknown_tokens:
+        msg_parts.append(f'unbekannte Bezeichnungen: {", ".join(sorted(unknown_tokens))}')
+    if rows_with_errors:
+        msg_parts.append(f'{len(rows_with_errors)} fehlerhafte Zeilen')
+
+    if created:
+        messages.success(request, ' • '.join(msg_parts))
+    else:
+        messages.warning(request, ' • '.join(msg_parts) if msg_parts else 'Keine Einträge importiert.')
+
+    for err in rows_with_errors[:10]:
+        messages.warning(request, err)
 
     return redirect('tickets:bereitschaft_person_list')
 

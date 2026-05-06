@@ -101,6 +101,7 @@ LOCAL_APPS = [
     'tickets.apps.TicketsConfig',
     'defect_management.apps.DefectManagementConfig',
     'civil_protection.apps.CivilProtectionConfig',
+    'idcards.apps.IdcardsConfig',
     # Weitere Apps werden hier hinzugefuegt
 ]
 

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Dienstausweis {{ card.card_number }} — FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'personnel:detail' card.person.pk %}" class="text-gray-500 hover:text-gray-700">{{ card.person.get_full_name }}</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'idcards:card_list_for_person' card.person.pk %}" class="text-gray-500 hover:text-gray-700">Dienstausweise</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium font-mono">{{ card.card_number }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-6">
+
+    {% if messages %}
+    <div class="mb-4 space-y-2">
+        {% for message in messages %}
+        <div class="rounded-md border-l-4 {% if message.tags == 'success' %}bg-green-50 border-green-400 text-green-800{% elif message.tags == 'error' %}bg-red-50 border-red-400 text-red-800{% else %}bg-blue-50 border-blue-400 text-blue-800{% endif %} px-4 py-3 text-sm">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Linke Spalte: Vorschau -->
+        <div class="lg:col-span-2 space-y-4">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-sm font-semibold text-gray-700 mb-4">Vorderseite</h2>
+                <div class="relative bg-gray-100 rounded shadow-inner mx-auto" style="width:{{ display.width_px }}px; height:{{ display.height_px }}px;">
+                    {% for cell in display.front_cells %}{% include "idcards/_card_element.html" %}{% endfor %}
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-sm font-semibold text-gray-700 mb-4">Rückseite</h2>
+                <div class="relative bg-gray-100 rounded shadow-inner mx-auto" style="width:{{ display.width_px }}px; height:{{ display.height_px }}px;">
+                    {% for cell in display.back_cells %}{% include "idcards/_card_element.html" %}{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Rechte Spalte: Metadaten + Aktionen -->
+        <div class="space-y-4">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-500">Ausweisnummer</p>
+                        <p class="text-lg font-mono font-semibold text-gray-900">{{ card.card_number }}</p>
+                    </div>
+                    {% if card.status == 'active' %}
+                    <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Aktiv</span>
+                    {% elif card.status == 'expired' %}
+                    <span class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">Abgelaufen</span>
+                    {% elif card.status == 'revoked' %}
+                    <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Gesperrt</span>
+                    {% elif card.status == 'replaced' %}
+                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">Ersetzt</span>
+                    {% endif %}
+                </div>
+
+                <dl class="mt-4 space-y-2 text-sm">
+                    <div class="flex justify-between"><dt class="text-gray-500">Person</dt><dd class="text-gray-900 font-medium">{{ card.person.get_full_name }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500">Pers.-Nr.</dt><dd class="text-gray-900">{{ card.person.personnel_number }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500">Vorlage</dt><dd class="text-gray-900">{{ card.template.name }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500">Typ</dt><dd class="text-gray-900">{{ card.get_type_display }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500">Ausgestellt</dt><dd class="text-gray-900">{{ card.issued_at|date:"d.m.Y" }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500">Gültig bis</dt><dd class="text-gray-900">{{ card.valid_until|date:"d.m.Y" }}</dd></div>
+                    {% if card.function_label %}<div class="flex justify-between"><dt class="text-gray-500">Funktion</dt><dd class="text-gray-900">{{ card.function_label }}</dd></div>{% endif %}
+                    {% if card.replaced_by_id %}
+                    <div class="flex justify-between"><dt class="text-gray-500">Ersetzt durch</dt><dd><a href="{% url 'idcards:card_detail' card.replaced_by_id %}" class="text-red-600 hover:text-red-700 font-mono">{{ card.replaced_by.card_number }}</a></dd></div>
+                    {% endif %}
+                    {% if card.status == 'revoked' %}
+                    <div class="flex justify-between"><dt class="text-gray-500">Sperrgrund</dt><dd class="text-gray-900">{{ card.get_revoke_reason_display }}</dd></div>
+                    {% if card.revoke_note %}<div class="text-xs text-gray-600 mt-1">{{ card.revoke_note }}</div>{% endif %}
+                    {% endif %}
+                </dl>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 space-y-2">
+                <a href="{% url 'idcards:card_pdf' card.pk %}" target="_blank" class="block w-full text-center rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700">PDF anzeigen</a>
+                {% if can_manage %}
+                <a href="{% url 'idcards:card_a4' card.pk %}?copies=8" target="_blank" class="block w-full text-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">A4-Bogen ({% if card.template.is_portrait %}6{% else %}8{% endif %} Stück)</a>
+
+                {% if card.status == 'active' %}
+                <a href="{% url 'idcards:card_revoke' card.pk %}" class="block w-full text-center rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100">Karte sperren</a>
+                <form method="post" action="{% url 'idcards:card_replace' card.pk %}" class="space-y-2 pt-2 border-t border-gray-100" onsubmit="return confirm('Diese Karte wird auf REPLACED gesetzt und eine neue Karte angelegt. Fortfahren?');">
+                    {% csrf_token %}
+                    <label class="block text-xs font-medium text-gray-600">Ersatzkarte mit Gültigkeit (Jahre)</label>
+                    <input type="number" name="valid_years" min="1" max="10" value="5" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+                    <input type="text" name="function_label" placeholder="Funktionsbezeichnung (optional)" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+                    <button type="submit" class="block w-full text-center rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-900">Karte ersetzen</button>
+                </form>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Audit-Log</h3>
+                <ol class="space-y-2 text-xs">
+                    {% for entry in audit %}
+                    <li class="flex items-start gap-2">
+                        <span class="text-gray-400 font-mono shrink-0">{{ entry.created_at|date:"d.m.Y H:i" }}</span>
+                        <span class="font-medium text-gray-700">{{ entry.get_action_display }}</span>
+                        <span class="text-gray-500">— {{ entry.actor|default:"System" }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="text-gray-400">Keine Einträge.</li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% load static %}{% spaceless %}
+{% if cell.type == "rect" %}
+<div style="{{ cell.style }}"></div>
+{% elif cell.type == "text" %}
+<div style="{{ cell.style }}"><span style="{{ cell.text_style }}">{{ cell.text }}</span></div>
+{% elif cell.type == "photo" %}
+<div style="{{ cell.style }}">{% if cell.image_src %}<img src="{{ cell.image_src }}" style="width:100%;height:100%;object-fit:cover;display:block;">{% endif %}</div>
+{% elif cell.type == "image" %}
+<div style="{{ cell.style }}">{% if cell.image_src %}<img src="{{ cell.image_src }}" style="width:100%;height:100%;object-fit:contain;display:block;">{% endif %}</div>
+{% endif %}
+{% endspaceless %}

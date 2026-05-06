@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Dienstausweis {{ card.card_number }}</title>
+<style>
+@page {
+    size: {{ card_width_mm }}mm {{ card_height_mm }}mm;
+    margin: 0;
+}
+* { box-sizing: border-box; }
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Helvetica", "Arial", sans-serif;
+    color: #0f172a;
+}
+.card-side {
+    position: relative;
+    width: {{ card_width_mm }}mm;
+    height: {{ card_height_mm }}mm;
+    overflow: hidden;
+    page-break-after: always;
+    background: #ffffff;
+}
+.card-side:last-child { page-break-after: auto; }
+img { display: block; }
+</style>
+</head>
+<body>
+
+<div class="card-side">
+    {% for cell in front_cells %}{% include "idcards/_card_element.html" %}{% endfor %}
+</div>
+
+<div class="card-side">
+    {% for cell in back_cells %}{% include "idcards/_card_element.html" %}{% endfor %}
+</div>
+
+</body>
+</html>

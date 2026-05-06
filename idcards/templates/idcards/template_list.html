@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ausweis-Vorlagen — FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Dienstausweise — Vorlagen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Ausweis-Vorlagen</h1>
+            <p class="text-sm text-gray-600 mt-1">Layouts für Dienstausweise. System-Vorlagen sind schreibgeschützt — bitte duplizieren, um sie anzupassen.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'idcards:cards_a4_batch' %}" class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Sammeldruck
+            </a>
+            {% if can_manage %}
+            <a href="{% url 'idcards:cards_batch_create' %}" class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Bulk-Erzeugung
+            </a>
+            <a href="{% url 'idcards:template_create' %}" class="inline-flex items-center gap-2 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700">
+                Neue Vorlage
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="mb-4 space-y-2">
+        {% for message in messages %}
+        <div class="rounded-md border-l-4 {% if message.tags == 'success' %}bg-green-50 border-green-400 text-green-800{% elif message.tags == 'error' %}bg-red-50 border-red-400 text-red-800{% else %}bg-blue-50 border-blue-400 text-blue-800{% endif %} px-4 py-3 text-sm">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for tpl in templates %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h2 class="font-semibold text-gray-900 truncate">{{ tpl.name }}</h2>
+                    <p class="text-xs text-gray-500 mt-1">
+                        {% if tpl.is_portrait %}Hochformat 54 × 85,6 mm{% else %}Querformat 85,6 × 54 mm{% endif %}
+                    </p>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                    {% if tpl.is_default %}
+                    <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Standard</span>
+                    {% endif %}
+                    {% if tpl.is_system %}
+                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">System</span>
+                    {% endif %}
+                    {% if not tpl.is_active %}
+                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">inaktiv</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="px-5 py-3 text-xs text-gray-600 flex-1">
+                {% if tpl.description %}{{ tpl.description }}{% else %}<span class="text-gray-400">Keine Beschreibung.</span>{% endif %}
+                <div class="mt-3 text-gray-500">
+                    Vorder­seite: <span class="font-medium text-gray-700">{{ tpl.front_layout|length }} Element{{ tpl.front_layout|length|pluralize:"e" }}</span>
+                    · Rück­seite: <span class="font-medium text-gray-700">{{ tpl.back_layout|length }} Element{{ tpl.back_layout|length|pluralize:"e" }}</span>
+                </div>
+            </div>
+            {% if can_manage %}
+            <div class="px-5 py-3 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center gap-2">
+                <a href="{% url 'idcards:template_edit' tpl.pk %}" class="text-xs font-medium text-red-600 hover:text-red-700">{% if tpl.is_system %}Layout ansehen{% else %}Layout-Editor{% endif %}</a>
+                {% if not tpl.is_system %}
+                <a href="{% url 'idcards:template_meta_edit' tpl.pk %}" class="text-xs font-medium text-gray-700 hover:text-red-600">Stammdaten</a>
+                {% endif %}
+                <form method="post" action="{% url 'idcards:template_duplicate' tpl.pk %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs font-medium text-gray-700 hover:text-red-600">Duplizieren</button>
+                </form>
+                {% if not tpl.is_default and tpl.is_active %}
+                <form method="post" action="{% url 'idcards:template_set_default' tpl.pk %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs font-medium text-gray-700 hover:text-red-600">Als Standard setzen</button>
+                </form>
+                {% endif %}
+                {% if not tpl.is_system %}
+                <form method="post" action="{% url 'idcards:template_delete' tpl.pk %}" class="inline ml-auto" onsubmit="return confirm('Vorlage wirklich löschen?');">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs font-medium text-red-600 hover:text-red-700">Löschen</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="col-span-full bg-white rounded-lg p-8 text-center text-gray-500 border border-dashed border-gray-300">
+            Noch keine Vorlagen vorhanden.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

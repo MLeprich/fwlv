@@ -31,6 +31,8 @@ urlpatterns = [
     # Bereitschaftspersonen-Verwaltung
     path('infomonitor/bereitschaft/', views.BereitschaftPersonListView.as_view(), name='bereitschaft_person_list'),
     path('infomonitor/bereitschaft/create/', views.BereitschaftPersonCreateView.as_view(), name='bereitschaft_person_create'),
+    path('infomonitor/bereitschaft/import/', views.bereitschaft_person_import, name='bereitschaft_person_import'),
+    path('infomonitor/bereitschaft/import/template/', views.bereitschaft_person_import_template, name='bereitschaft_person_import_template'),
     path('infomonitor/bereitschaft/<int:pk>/edit/', views.BereitschaftPersonUpdateView.as_view(), name='bereitschaft_person_edit'),
     path('infomonitor/bereitschaft/<int:pk>/delete/', views.bereitschaft_person_delete, name='bereitschaft_person_delete'),
 

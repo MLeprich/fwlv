@@ -111,6 +111,9 @@ urlpatterns = [
     # Civil Protection App (Katastrophenschutz)
     path('civil_protection/', include('civil_protection.urls')),
 
+    # ID Cards App (Dienstausweise)
+    path('idcards/', include('idcards.urls')),
+
     # Placeholder für zukünftige Apps
     # path('workshop/', include('workshop.urls')),
     # path('notifications/', include('notifications.urls')),

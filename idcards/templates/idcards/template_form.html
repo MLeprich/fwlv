@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == 'create' %}Neue Vorlage{% else %}Vorlage bearbeiten{% endif %} — FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'idcards:template_list' %}" class="text-gray-500 hover:text-gray-700">Ausweis-Vorlagen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{% if mode == 'create' %}Neu{% else %}{{ template.name }}{% endif %}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">
+            {% if mode == 'create' %}Neue Ausweis-Vorlage{% else %}Vorlage bearbeiten{% endif %}
+        </h1>
+
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="rounded-md bg-red-50 border-l-4 border-red-400 px-4 py-3 text-sm text-red-800">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div>
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.name.label }}</label>
+                <div class="mt-1">{{ form.name }}</div>
+                {% if form.name.errors %}<p class="mt-1 text-xs text-red-600">{{ form.name.errors|join:", " }}</p>{% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.description.label }}</label>
+                <div class="mt-1">{{ form.description }}</div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                {{ form.is_portrait }}
+                <label for="{{ form.is_portrait.id_for_label }}" class="text-sm text-gray-700">{{ form.is_portrait.label }} — sonst Querformat</label>
+            </div>
+
+            <div class="flex items-center gap-3">
+                {{ form.is_default }}
+                <label for="{{ form.is_default.id_for_label }}" class="text-sm text-gray-700">{{ form.is_default.label }} — wird für neue Karten vorausgewählt</label>
+            </div>
+
+            <div class="flex items-center gap-3">
+                {{ form.is_active }}
+                <label for="{{ form.is_active.id_for_label }}" class="text-sm text-gray-700">{{ form.is_active.label }}</label>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                <a href="{% url 'idcards:template_list' %}" class="text-sm text-gray-600 hover:text-gray-900">Abbrechen</a>
+                <button type="submit" class="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+                    Speichern
+                </button>
+            </div>
+        </form>
+
+        {% if mode == 'edit' %}
+        <p class="mt-6 text-xs text-gray-500">
+            Hinweis: Das Layout (Vorder- und Rückseite) wird in einer späteren Version per grafischem Editor bearbeitet.
+            Aktuell können Vorlagen über „Duplizieren" abgeleitet werden.
+        </p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

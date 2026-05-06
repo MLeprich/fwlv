@@ -8,8 +8,8 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}FLVS - Feuerwehr Lagerverwaltung{% endblock %}</title>
 
-    <!-- Tailwind CSS (local) -->
-    <script src="{% static 'js/tailwind.min.js' %}"></script>
+    <!-- Tailwind CSS (kompiliert, lokal) -->
+    <link rel="stylesheet" href="{% static 'dist/css/styles.css' %}">
 
     <!-- Alpine.js Collapse Plugin (local) -->
     <script defer src="{% static 'js/alpine-collapse.min.js' %}"></script>

@@ -9,15 +9,55 @@
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">FF-Verwaltung</h1>
-            <p class="mt-1 text-sm text-gray-500">Dienstgrade, Jubilaeen und Befoerderungen</p>
+            <p class="mt-1 text-sm text-gray-500">Personalverwaltung, Dienstgrade, Jubilaeen und Befoerderungen</p>
         </div>
-        <a href="{% url 'personnel:rank_list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            </svg>
-            Dienstgrade verwalten
-        </a>
+        <div class="flex gap-2">
+            {% if is_admin %}
+            <a href="{% url 'personnel:rank_list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                Dienstgrade verwalten
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Einheitenauswahl -->
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex flex-wrap items-center gap-3">
+            <span class="text-sm font-medium text-gray-700">Einheit:</span>
+            {% for unit in accessible_units %}
+            <a href="?unit={{ unit.pk }}"
+               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                      {% if selected_unit and selected_unit.pk == unit.pk %}
+                      bg-red-600 text-white
+                      {% else %}
+                      bg-gray-100 text-gray-700 hover:bg-gray-200
+                      {% endif %}">
+                {{ unit.name }}
+                {% if unit.leader or unit.deputy_leader %}
+                <span class="ml-1 text-xs opacity-75">
+                    {% if unit.leader %}F: {{ unit.leader.last_name }}{% endif %}
+                    {% if unit.leader and unit.deputy_leader %} / {% endif %}
+                    {% if unit.deputy_leader %}V: {{ unit.deputy_leader.last_name }}{% endif %}
+                </span>
+                {% endif %}
+            </a>
+            {% endfor %}
+            {% if is_admin %}
+            <a href="?unit="
+               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                      {% if not selected_unit %}
+                      bg-red-600 text-white
+                      {% else %}
+                      bg-gray-100 text-gray-700 hover:bg-gray-200
+                      {% endif %}">
+                Alle
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Statistik-Karten -->
@@ -67,6 +107,103 @@
             </div>
         </div>
     </div>
+
+    <!-- Personalverwaltung -->
+    {% if selected_unit %}
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Personal: {{ selected_unit.name }}</h2>
+                <p class="text-sm text-gray-500">{{ unit_personnel|length }} Mitglieder</p>
+            </div>
+            <a href="{% url 'personnel:ff_person_create' %}?unit={{ selected_unit.pk }}"
+               class="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                Person anlegen
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dienstgrad</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefon</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mobil</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-Mail</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Eintritt</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for person in unit_personnel %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-semibold text-sm">
+                                    {{ person.first_name|first }}{{ person.last_name|first }}
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900">{{ person.get_full_name }}</p>
+                                    {% if person.personnel_number %}
+                                    <p class="text-xs text-gray-500">{{ person.personnel_number }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {% with current_rank=person.get_current_rank_volunteer %}
+                                {% if current_rank %}
+                                    {{ current_rank.rank.name }}
+                                {% else %}
+                                    <span class="text-gray-400">-</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if person.phone %}
+                            <a href="tel:{{ person.phone }}" class="hover:text-red-600">{{ person.phone }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if person.mobile %}
+                            <a href="tel:{{ person.mobile }}" class="hover:text-red-600">{{ person.mobile }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if person.email %}
+                            <a href="mailto:{{ person.email }}" class="hover:text-red-600">{{ person.email }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if person.volunteer_entry_date %}
+                            {{ person.volunteer_entry_date|date:"d.m.Y" }}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <a href="{% url 'personnel:ff_person_edit' person.pk %}"
+                               class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                                Bearbeiten
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                            Keine Mitglieder in dieser Einheit
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Anstehende Jubilaeen -->

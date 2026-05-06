@@ -10,7 +10,7 @@ export default defineConfig({
     outDir: 'staticfiles/dist',
     rollupOptions: {
       input: {
-        styles: 'static/css/main.css',
+        styles: 'static/.tailwind/input.css',
         main: 'static/js/main.js'
       },
       output: {

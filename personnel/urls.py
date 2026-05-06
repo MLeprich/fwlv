@@ -70,8 +70,10 @@ urlpatterns = [
     # Phonebook (Telefonbuch)
     path('phonebook/', views.PhonebookView.as_view(), name='phonebook'),
 
-    # FF-Verwaltung (Dienstgrade, Jubilaeen, Befoerderungen)
+    # FF-Verwaltung (Dienstgrade, Jubilaeen, Befoerderungen, Personalverwaltung)
     path('ff/', views.ff_dashboard, name='ff_dashboard'),
+    path('ff/person/create/', views.ff_person_create, name='ff_person_create'),
+    path('ff/person/<int:pk>/edit/', views.ff_person_edit, name='ff_person_edit'),
     path('ff/ranks/', views.RankListView.as_view(), name='rank_list'),
     path('ff/ranks/create/', views.RankCreateView.as_view(), name='rank_create'),
     path('ff/ranks/<int:pk>/edit/', views.RankUpdateView.as_view(), name='rank_update'),

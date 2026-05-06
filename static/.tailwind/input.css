@@ -1,0 +1,67 @@
+/*
+ * FLVS — Tailwind 4 Input
+ *
+ * Diese Datei liegt unter static/.tailwind/ — der führende Punkt verhindert,
+ * dass collectstatic sie als CSS-Asset behandelt. @source-Pfade gehen
+ * relativ zu hier:
+ *   ..        = static/
+ *   ../..     = Projektroot
+ * Wir scannen alle Templates und HTMX-Snippets.
+ */
+@import "tailwindcss";
+
+/* Templates des Projekts: zentral und app-lokal */
+@source "../../templates/**/*.html";
+@source "../../**/templates/**/*.html";
+
+/* Klassen, die in Python-Strings (Forms, View-Klassen) auftauchen */
+@source "../../**/forms.py";
+@source "../../**/views.py";
+@source "../../**/views/**/*.py";
+@source "../../**/templatetags/**/*.py";
+
+/* Inline-JS in Templates (z.B. Toast-Hinweise) */
+@source "../js/**/*.js";
+
+/* ============================================================ *
+ * Theme — Feuerwehr-Rot als Primärfarbe (Tailwind-4 CSS-First)  *
+ * ============================================================ */
+@theme {
+    --color-primary-50:  #fef2f2;
+    --color-primary-100: #fee2e2;
+    --color-primary-200: #fecaca;
+    --color-primary-300: #fca5a5;
+    --color-primary-400: #f87171;
+    --color-primary-500: #ef4444;
+    --color-primary-600: #dc2626;
+    --color-primary-700: #b91c1c;
+    --color-primary-800: #991b1b;
+    --color-primary-900: #7f1d1d;
+}
+
+/* ============================================================ *
+ * Custom Utilities                                              *
+ * ============================================================ */
+.scroll-smooth { scroll-behavior: smooth; }
+
+/* Layout-Helfer aus dem alten custom.css übernommen */
+@media (min-width: 1024px) {
+    .settings-layout,
+    .profile-layout {
+        display: flex;
+        flex-direction: row;
+        gap: 1.5rem;
+    }
+    .settings-layout .sidebar-nav { width: 280px; flex-shrink: 0; }
+    .settings-layout .content-area { flex: 1; min-width: 0; }
+    .profile-layout .sidebar-profile { width: 320px; flex-shrink: 0; }
+    .profile-layout .content-main { flex: 1; min-width: 0; }
+}
+@media (max-width: 1023px) {
+    .settings-layout,
+    .profile-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+}

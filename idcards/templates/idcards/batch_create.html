@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk-Erzeugung Dienstausweise — FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'idcards:template_list' %}" class="text-gray-500 hover:text-gray-700">Dienstausweise</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Bulk-Erzeugung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-6">
+
+    {% if messages %}
+    <div class="mb-4 space-y-2">
+        {% for message in messages %}
+        <div class="rounded-md border-l-4 {% if message.tags == 'success' %}bg-green-50 border-green-400 text-green-800{% elif message.tags == 'error' %}bg-red-50 border-red-400 text-red-800{% else %}bg-blue-50 border-blue-400 text-blue-800{% endif %} px-4 py-3 text-sm">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Bulk-Erzeugung</h1>
+        <p class="text-sm text-gray-600 mb-6">Legt Karten für eine ganze Einheit/Wache/Abteilung an. Personen mit aktiver Karte oder fehlenden Pflichtfeldern werden übersprungen.</p>
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Vorlage</label>
+                <select name="template" class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+                    {% for t in templates %}<option value="{{ t.pk }}" {% if template and template.pk == t.pk %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">FF-Einheit</label>
+                    <select name="unit" class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+                        <option value="">—</option>
+                        {% for u in units %}<option value="{{ u.pk }}">{{ u.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Wachmannschaft</label>
+                    <select name="crew" class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+                        <option value="">—</option>
+                        {% for c in crews %}<option value="{{ c.pk }}">{{ c.name }} ({{ c.station.name }})</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Abteilung</label>
+                    <select name="department" class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+                        <option value="">—</option>
+                        {% for d in departments %}<option value="{{ d.pk }}">{{ d.name }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Gültig (Jahre)</label>
+                <input type="number" name="valid_years" min="1" max="10" value="5" class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+            </div>
+
+            <div class="flex items-center justify-end pt-4 border-t border-gray-100">
+                <button type="submit" class="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+                    Karten anlegen
+                </button>
+            </div>
+        </form>
+
+        {% if skipped_persons %}
+        <div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 text-sm">
+            <h2 class="font-semibold text-yellow-900 mb-2">Übersprungene Personen</h2>
+            <ul class="list-disc list-inside text-yellow-900 space-y-1">
+                {% for person, fields in skipped_persons %}
+                <li><strong>{{ person.get_full_name }}</strong> — fehlt: {{ fields|join:", " }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

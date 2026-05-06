@@ -48,10 +48,15 @@ def user_permissions(request):
         return {}
 
     # Überprüfe ob Benutzer bestimmte Rollen hat
+    from permissions.constants import Roles
     permissions = {
         'is_admin': request.user.is_superuser or request.user.has_role('Administrator'),
         'is_btm_authorized': request.user.is_btm_authorized() if hasattr(request.user, 'is_btm_authorized') else False,
         'requires_2fa': request.user.requires_2fa() if hasattr(request.user, 'requires_2fa') else False,
+        'is_ff_leader': (
+            request.user.has_role(Roles.FF_EINHEITSFUEHRER) or
+            request.user.has_role(Roles.FF_VERTRETER)
+        ),
     }
 
     return permissions

@@ -59,6 +59,7 @@ class Command(BaseCommand):
                 self._setup_standard_user()
                 self._setup_approval_groups()
                 self._setup_lst_infomonitor()
+                self._setup_ff_roles()
                 self._cleanup_legacy_groups()
 
                 if options['dry_run']:
@@ -537,6 +538,37 @@ class Command(BaseCommand):
                 f'  ✓ {status} ({perms_added} Permissions)'
             )
         )
+
+    def _setup_ff_roles(self):
+        """FF Einheitsführer und FF Vertreter Gruppen"""
+        self.stdout.write('\n11. FF-Rollen...')
+
+        for role_name in [Roles.FF_EINHEITSFUEHRER, Roles.FF_VERTRETER]:
+            group, created = Group.objects.get_or_create(name=role_name)
+            group.permissions.clear()
+
+            perms_added = 0
+
+            # Nur Qualifikationen, Pflichtstunden und Ränge - KEIN view_person/change_person
+            # (Zugriff auf Personen wird in den FF-Views per Rollen-Check gesteuert)
+            personnel_perms = Permission.objects.filter(
+                content_type__app_label=Modules.PERSONNEL,
+                codename__in=[
+                    'view_qualification', 'add_qualification', 'change_qualification',
+                    'view_dutyhoursentry', 'add_dutyhoursentry', 'change_dutyhoursentry',
+                    'view_rank', 'view_personrank',
+                ]
+            )
+            for perm in personnel_perms:
+                group.permissions.add(perm)
+                perms_added += 1
+
+            status = 'erstellt' if created else 'aktualisiert'
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'  ✓ {role_name}: {status} ({perms_added} Permissions)'
+                )
+            )
 
     def _cleanup_legacy_groups(self):
         """Entfernt veraltete Gruppen die nicht mehr verwendet werden"""

@@ -376,7 +376,7 @@
             x-collapse
             class="space-y-1 mt-1"
         >
-            <!-- Personal -->
+            <!-- Personal (nicht für FF-only-User) -->
             {% if perms.personnel.view_person %}
             <a
                 href="{% url 'personnel:list' %}"
@@ -394,8 +394,8 @@
             </a>
             {% endif %}
 
-            <!-- FF-Verwaltung (Dienstgrade, Jubilaeen, Befoerderungen) -->
-            {% if perms.personnel.view_person and modules.ff_dashboard_enabled %}
+            <!-- FF-Verwaltung (Personalverwaltung, Dienstgrade, Jubilaeen, Befoerderungen) -->
+            {% if modules.ff_dashboard_enabled and is_ff_leader or is_admin %}
             <a
                 href="{% url 'personnel:ff_dashboard' %}"
                 class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
@@ -426,6 +426,24 @@
                     x-show="$store.sidebar.expanded"
                 >
                     Telefonbuch
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Dienstausweise -->
+            {% if perms.idcards.view_idcard or perms.idcards.manage_idcards %}
+            <a
+                href="{% url 'idcards:template_list' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'idcards' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Dienstausweise'"
+            >
+                <span class="text-xl flex-shrink-0">🪪</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Dienstausweise
                 </span>
             </a>
             {% endif %}

@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}Neue Person anlegen - FF-Verwaltung - {{ block.super }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li>
+                <a href="{% url 'personnel:ff_dashboard' %}?unit={{ selected_unit.pk }}" class="text-gray-500 hover:text-gray-700">FF-Verwaltung</a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li>
+                <span class="text-gray-900 font-semibold">Neue Person</span>
+            </li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center gap-4">
+        <a href="{% url 'personnel:ff_dashboard' %}?unit={{ selected_unit.pk }}"
+           class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Zurueck
+        </a>
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Neue Person anlegen</h1>
+            <p class="text-sm text-gray-500">Einheit: {{ selected_unit.name }}</p>
+        </div>
+    </div>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <input type="hidden" name="unit" value="{{ selected_unit.pk }}">
+
+        {% if form.errors %}
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-sm font-medium text-red-800">Bitte korrigieren Sie die folgenden Fehler:</p>
+            <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                    <li>{{ field }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Stammdaten -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Stammdaten</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.first_name.label }} *</label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}<p class="mt-1 text-xs text-red-600">{{ form.first_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.last_name.label }} *</label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}<p class="mt-1 text-xs text-red-600">{{ form.last_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.personnel_number.label }} *</label>
+                        {{ form.personnel_number }}
+                        {% if form.personnel_number.errors %}<p class="mt-1 text-xs text-red-600">{{ form.personnel_number.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.date_of_birth.label }}</label>
+                        {{ form.date_of_birth }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kontaktdaten -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Kontaktdaten</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.email.label }}</label>
+                        {{ form.email }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.phone.label }}</label>
+                        {{ form.phone }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.mobile.label }}</label>
+                        {{ form.mobile }}
+                    </div>
+                </div>
+
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4 mt-6">Adresse</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.street.label }}</label>
+                        {{ form.street }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.house_number.label }}</label>
+                        {{ form.house_number }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.postal_code.label }}</label>
+                        {{ form.postal_code }}
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.city.label }}</label>
+                        {{ form.city }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notfallkontakt -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Notfallkontakt</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.emergency_contact_name.label }}</label>
+                        {{ form.emergency_contact_name }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.emergency_contact_relationship.label }}</label>
+                        {{ form.emergency_contact_relationship }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.emergency_contact_phone.label }}</label>
+                        {{ form.emergency_contact_phone }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.emergency_contact_mobile.label }}</label>
+                        {{ form.emergency_contact_mobile }}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.emergency_contact_address.label }}</label>
+                        {{ form.emergency_contact_address }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notizen -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Notizen</h3>
+                {{ form.notes }}
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <a href="{% url 'personnel:ff_dashboard' %}?unit={{ selected_unit.pk }}"
+               class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                Abbrechen
+            </a>
+            <button type="submit"
+                    class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                Person anlegen
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

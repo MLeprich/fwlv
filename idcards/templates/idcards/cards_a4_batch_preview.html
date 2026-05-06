@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Sammeldruck — Bestätigung{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'idcards:cards_a4_batch' %}" class="text-gray-500 hover:text-gray-700">Sammeldruck</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Bestätigung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6 space-y-6">
+
+    <h1 class="text-2xl font-bold text-gray-900">Sammeldruck — Bestätigung</h1>
+    <p class="text-sm text-gray-600">Vorlage: <strong>{{ template.name }}</strong> · Gültigkeit: {{ valid_years }} Jahre</p>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+        <h2 class="text-sm font-semibold text-gray-700 mb-3">Bereits Karte vorhanden — werden direkt gedruckt ({{ with_card|length }})</h2>
+        {% if with_card %}
+        <ul class="text-sm text-gray-700 list-disc list-inside space-y-0.5">
+            {% for person, card in with_card %}<li>{{ person.get_full_name }} — <span class="font-mono">{{ card.card_number }}</span></li>{% endfor %}
+        </ul>
+        {% else %}<p class="text-xs text-gray-400">Keine.</p>{% endif %}
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+        <h2 class="text-sm font-semibold text-gray-700 mb-3">Neue Karten werden angelegt ({{ will_create|length }})</h2>
+        {% if will_create %}
+        <ul class="text-sm text-gray-700 list-disc list-inside space-y-0.5">
+            {% for person in will_create %}<li>{{ person.get_full_name }} ({{ person.personnel_number }})</li>{% endfor %}
+        </ul>
+        {% else %}<p class="text-xs text-gray-400">Keine.</p>{% endif %}
+    </div>
+
+    {% if skipped %}
+    <div class="bg-yellow-50 rounded-lg shadow-sm border border-yellow-200 p-5">
+        <h2 class="text-sm font-semibold text-yellow-900 mb-3">Übersprungen — Pflichtfelder fehlen ({{ skipped|length }})</h2>
+        <ul class="text-sm text-yellow-900 space-y-1">
+            {% for person, fields in skipped %}
+            <li><strong>{{ person.get_full_name }}</strong> — fehlt: {{ fields|join:", " }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="post" class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+        {% csrf_token %}
+        <input type="hidden" name="template" value="{{ template.pk }}">
+        <input type="hidden" name="valid_years" value="{{ valid_years }}">
+        {% for mid in member_ids %}<input type="hidden" name="member_ids" value="{{ mid }}">{% endfor %}
+        <div class="flex items-center justify-between">
+            <a href="{% url 'idcards:cards_a4_batch' %}" class="text-sm text-gray-600 hover:text-gray-900">Zurück</a>
+            <button type="submit" name="action" value="confirm" class="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+                Bestätigen — neue Karten anlegen und PDF drucken
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
