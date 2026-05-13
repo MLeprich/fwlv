@@ -92,6 +92,10 @@ def resolve_placeholders(text: str, card: IdCard) -> str:
 
     issued = formats.date_format(card.issued_at, 'd.m.Y') if card.issued_at else ''
     valid_until = formats.date_format(card.valid_until, 'd.m.Y') if card.valid_until else ''
+    dob = (
+        formats.date_format(person.date_of_birth, 'd.m.Y')
+        if getattr(person, 'date_of_birth', None) else ''
+    )
 
     rank = card.function_label or getattr(person, 'rank', '') or ''
     function = (
@@ -106,9 +110,12 @@ def resolve_placeholders(text: str, card: IdCard) -> str:
         'nachname': person.last_name or '',
         'dienstgrad': rank,
         'dienstnummer': person.personnel_number or '',
+        'personalnummer': person.personnel_number or '',
         'ausweisnummer': card.card_number or '',
         'gueltig_bis': valid_until,
         'ausgestellt_am': issued,
+        'geburtstag': dob,
+        'geburtsdatum': dob,
         'organisation': org_name,
         'funktion': function,
         'ausweis_typ': card.get_type_display(),

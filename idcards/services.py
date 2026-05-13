@@ -259,7 +259,10 @@ _PLACEHOLDER_PERSON_ATTRS: dict[str, tuple[str, ...]] = {
     'nachname': ('last_name',),
     'dienstgrad': ('rank',),
     'dienstnummer': ('personnel_number',),
+    'personalnummer': ('personnel_number',),
     'funktion': ('function',),
+    'geburtstag': ('date_of_birth',),
+    'geburtsdatum': ('date_of_birth',),
     # ausweisnummer/gueltig_bis/ausgestellt_am/organisation/ausweis_typ:
     # werden von der Karte/dem System beigesteuert und brauchen keine
     # Person-Felder; daher hier absichtlich nicht gelistet.
@@ -272,6 +275,7 @@ _FIELD_LABELS: dict[str, str] = {
     'rank': 'Dienstgrad',
     'personnel_number': 'Personalnummer',
     'function': 'Funktion',
+    'date_of_birth': 'Geburtsdatum',
     'photo': 'Foto',
     'id_card_photo': 'Dienstausweis-Foto',
 }

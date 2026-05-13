@@ -15,6 +15,14 @@ DATABASES = {
     }
 }
 
+# Static-Files unhashed im Test — sonst müsste collectstatic vor jedem
+# pytest-Run laufen, und {% static %}-URLs würden nicht zu den Asset-Namen
+# matchen, gegen die Tests prüfen.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
 # Schnellere Tests
 PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 

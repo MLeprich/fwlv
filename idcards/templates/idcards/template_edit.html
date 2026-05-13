@@ -115,6 +115,26 @@
     border-radius: 0.25rem;
     background: #ffffff;
 }
+.idc-prop input[type="checkbox"] {
+    width: auto;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.idc-prop label.idc-prop-check {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: #1f2937;
+    user-select: none;
+}
+.idc-prop label.idc-prop-check:hover {
+    color: #b91c1c;
+}
 .idc-prop-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -135,6 +155,10 @@
 .idc-layer.selected {
     border-color: #f59e0b;
     background: #fef3c7;
+}
+.idc-layer.selected-secondary {
+    border-color: #fdba74;
+    background: #fff7ed;
 }
 .idc-layer-label {
     flex: 1;
@@ -173,6 +197,11 @@
     opacity: 0.3;
     cursor: not-allowed;
 }
+.idc-layer-ctrls button.danger:hover {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #ef4444;
+}
 .idc-toolbar {
     padding: 0.5rem 1rem;
     background: #ffffff;
@@ -192,6 +221,25 @@
     cursor: pointer;
 }
 .idc-toolbar button:hover { background: #f1f5f9; }
+.idc-toolbar-sep {
+    display: inline-block;
+    width: 1px;
+    height: 1.5rem;
+    background: #e2e8f0;
+    margin: 0 0.2rem;
+}
+.idc-toolbar-label {
+    font-size: 0.7rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.idc-toolbar button.idc-align {
+    min-width: 1.9rem;
+    font-size: 0.95rem;
+    line-height: 1;
+    padding: 0.3rem 0.45rem;
+}
 .idc-toolbar button.primary {
     background: #dc2626;
     border-color: #dc2626;
@@ -246,6 +294,16 @@
         <button type="button" id="idc-redo" title="Wiederholen (Strg+Y)">↷ Redo</button>
         <button type="button" id="idc-grid-toggle">Raster</button>
         <button type="button" id="idc-delete" disabled>Element löschen</button>
+
+        <span class="idc-toolbar-sep"></span>
+        <span class="idc-toolbar-label">Ausrichten:</span>
+        <button type="button" class="idc-align" data-align="left"    title="Linksbündig">⫷</button>
+        <button type="button" class="idc-align" data-align="center-h" title="Horizontal zentrieren">⇔</button>
+        <button type="button" class="idc-align" data-align="right"   title="Rechtsbündig">⫸</button>
+        <button type="button" class="idc-align" data-align="top"     title="Oben ausrichten">⫯</button>
+        <button type="button" class="idc-align" data-align="center-v" title="Vertikal zentrieren">⇕</button>
+        <button type="button" class="idc-align" data-align="bottom"  title="Unten ausrichten">⫰</button>
+
         <div class="ml-auto flex gap-2 items-center">
             <a href="{% url 'idcards:template_list' %}" class="text-sm text-gray-600 hover:text-gray-900">Schließen</a>
             <button type="button" id="idc-save" class="primary" {% if template.is_system %}disabled{% endif %}>Speichern</button>
@@ -272,11 +330,13 @@
                     <code>{% templatetag openvariable %}nachname{% templatetag closevariable %}</code>,
                     <code>{% templatetag openvariable %}dienstgrad{% templatetag closevariable %}</code>,
                     <code>{% templatetag openvariable %}dienstnummer{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}personalnummer{% templatetag closevariable %}</code>,
                     <code>{% templatetag openvariable %}ausweisnummer{% templatetag closevariable %}</code>,
                     <code>{% templatetag openvariable %}gueltig_bis{% templatetag closevariable %}</code>,
                     <code>{% templatetag openvariable %}ausgestellt_am{% templatetag closevariable %}</code>,
                     <code>{% templatetag openvariable %}organisation{% templatetag closevariable %}</code>,
                     <code>{% templatetag openvariable %}funktion{% templatetag closevariable %}</code>,
+                    <code>{% templatetag openvariable %}geburtstag{% templatetag closevariable %}</code>,
                     <code>{% templatetag openvariable %}ausweis_typ{% templatetag closevariable %}</code>
                 </div>
             </div>
@@ -314,6 +374,12 @@
                     <div class="idc-prop"><label>Breite (mm)</label><input type="number" step="0.1" id="prop-w"></div>
                     <div class="idc-prop"><label>Höhe (mm)</label><input type="number" step="0.1" id="prop-h"></div>
                 </div>
+                <div class="idc-prop">
+                    <label class="idc-prop-check">
+                        <input type="checkbox" id="prop-lock-aspect">
+                        <span>Seitenverhältnis beibehalten</span>
+                    </label>
+                </div>
 
                 <!-- Text-Properties -->
                 <div data-prop-group="text">
@@ -337,14 +403,18 @@
                             </select>
                         </div>
                     </div>
+                    <div class="idc-prop">
+                        <button type="button" class="idc-btn" id="idc-fit-text">Größe an Text anpassen</button>
+                    </div>
                 </div>
 
                 <!-- Rect-Properties -->
                 <div data-prop-group="rect">
                     <div class="idc-prop"><label>Füllfarbe</label><input type="color" id="prop-fill"></div>
                     <div class="idc-prop">
-                        <label>
-                            <input type="checkbox" id="prop-type_color"> Farbe folgt Ausweis-Typ
+                        <label class="idc-prop-check">
+                            <input type="checkbox" id="prop-type_color">
+                            <span>Farbe folgt Ausweis-Typ</span>
                         </label>
                     </div>
                 </div>
@@ -408,12 +478,17 @@
         back: JSON.parse(document.getElementById('idc-back-data').textContent || '[]'),
     };
     let activeSide = 'front';
-    let selectedNode = null;
+    let selectedNodes = [];        // Multi-Selection (Array)
+    let selectedNode = null;       // Primary (für Properties-Panel)
     let dirty = false;
     let restoring = false;
     let history = [];
     let historyPos = -1;
     let showGrid = true;
+
+    // Multi-Drag-Bookkeeping
+    let dragRefPos = null;
+    let dragOtherPositions = null;
 
     function snapshot() {
         return JSON.parse(JSON.stringify(layouts));
@@ -491,27 +566,46 @@
 
     // Selection-Indicator (orange dashed Border) — eigener Replace für
     // Konva.Transformer, das in v9 mit Groups + dragmove einen Crash auslöst.
-    const selectionRect = new Konva.Rect({
-        x: 0, y: 0, width: 0, height: 0,
-        fill: 'transparent',
-        stroke: '#f59e0b',
-        strokeWidth: 2,
-        dash: [4, 4],
-        listening: false,
-        visible: false,
-    });
-    contentLayer.add(selectionRect);
+    // Ein Rect je ausgewähltem Element; primary wird durchgehend, secondary
+    // gepunktet dargestellt.
+    let selectionRects = [];
 
+    function _makeSelectionRect(node, isPrimary) {
+        return new Konva.Rect({
+            x: node.x(),
+            y: node.y(),
+            width: mmToPx(node._data.w),
+            height: mmToPx(node._data.h),
+            fill: 'transparent',
+            stroke: isPrimary ? '#f59e0b' : '#fb923c',
+            strokeWidth: 2,
+            dash: isPrimary ? [4, 4] : [2, 3],
+            listening: false,
+            visible: true,
+        });
+    }
+
+    function refreshSelectionRects() {
+        selectionRects.forEach(r => r.destroy());
+        selectionRects = [];
+        selectedNodes.forEach(node => {
+            const r = _makeSelectionRect(node, node === selectedNode);
+            contentLayer.add(r);
+            selectionRects.push(r);
+            r.moveToTop();
+        });
+    }
     function showSelection(node) {
-        selectionRect.position({ x: node.x(), y: node.y() });
-        const w = mmToPx(node._data.w);
-        const h = mmToPx(node._data.h);
-        selectionRect.size({ width: w, height: h });
-        selectionRect.visible(true);
-        selectionRect.moveToTop();
+        // Beibehalten der API: stellt Rect für genau diesen Knoten sicher.
+        refreshSelectionRects();
     }
     function hideSelection() {
-        selectionRect.visible(false);
+        selectionRects.forEach(r => r.destroy());
+        selectionRects = [];
+    }
+
+    function isSelectionRect(n) {
+        return selectionRects.includes(n);
     }
 
     // Klick auf Background → Auswahl löschen
@@ -551,6 +645,27 @@
                 align: data.align || 'left',
                 verticalAlign: 'top',
                 wrap: 'word',
+            });
+            // Hit-Region nur auf das tatsächliche Text-Glyph beschränken,
+            // sonst kollidiert die volle Bounding-Box mit benachbarten
+            // Elementen beim Drag.
+            txt.hitFunc(function(ctx, shape) {
+                const tw = Math.max(shape.getTextWidth(), 4);
+                const fs = shape.fontSize();
+                const lh = shape.lineHeight() || 1;
+                const th = fs * lh;
+                const wAttr = shape.width();
+                let x0 = 0;
+                if (shape.align() === 'center') {
+                    x0 = Math.max(0, (wAttr - tw) / 2);
+                } else if (shape.align() === 'right') {
+                    x0 = Math.max(0, wAttr - tw);
+                }
+                const pad = 3;
+                ctx.beginPath();
+                ctx.rect(x0 - pad, -pad, tw + pad * 2, th + pad * 2);
+                ctx.closePath();
+                ctx.fillStrokeShape(shape);
             });
             group.add(txt);
             node = group;
@@ -600,21 +715,51 @@
         node._data.h = pxToMm(h);
 
         if (!IS_SYSTEM) {
+            node.on('dragstart', () => {
+                // Wenn dieser Node Teil einer Multi-Selection ist, andere
+                // Ausgangs-Positionen merken — beim Drag ziehen sie mit.
+                if (selectedNodes.length > 1 && selectedNodes.includes(node)) {
+                    dragRefPos = { x: node.x(), y: node.y() };
+                    dragOtherPositions = selectedNodes
+                        .filter(n => n !== node)
+                        .map(n => ({ n, x: n.x(), y: n.y() }));
+                } else {
+                    dragRefPos = null;
+                    dragOtherPositions = null;
+                }
+            });
             node.on('dragmove', () => {
                 node.x(mmToPx(snap(pxToMm(node.x()))));
                 node.y(mmToPx(snap(pxToMm(node.y()))));
-                if (selectedNode === node) showSelection(node);
+                if (dragRefPos && dragOtherPositions) {
+                    const dx = node.x() - dragRefPos.x;
+                    const dy = node.y() - dragRefPos.y;
+                    dragOtherPositions.forEach(({ n, x, y }) => {
+                        n.x(mmToPx(snap(pxToMm(x + dx))));
+                        n.y(mmToPx(snap(pxToMm(y + dy))));
+                    });
+                }
+                refreshSelectionRects();
             });
             node.on('dragend', () => {
                 node._data.x = snap(pxToMm(node.x()));
                 node._data.y = snap(pxToMm(node.y()));
+                if (dragOtherPositions) {
+                    dragOtherPositions.forEach(({ n }) => {
+                        n._data.x = snap(pxToMm(n.x()));
+                        n._data.y = snap(pxToMm(n.y()));
+                    });
+                }
+                dragRefPos = null;
+                dragOtherPositions = null;
                 syncDataToLayout();
                 pushSnapshot();
                 refreshPropertiesFromNode(node);
             });
             node.on('click', (e) => {
                 e.cancelBubble = true;
-                selectNode(node);
+                const additive = e.evt && (e.evt.ctrlKey || e.evt.metaKey || e.evt.shiftKey);
+                selectNode(node, additive);
             });
         }
         return node;
@@ -649,8 +794,8 @@
 
     function rebuildSide() {
         contentLayer.destroyChildren();
-        contentLayer.add(selectionRect);
-        hideSelection();
+        selectionRects = [];
+        selectedNodes = [];
         selectedNode = null;
         for (const data of (layouts[activeSide] || [])) {
             const node = createNode(data);
@@ -662,41 +807,71 @@
     }
 
     // ---- Auswahl + Properties ----------------------------------------------
-    function selectNode(node) {
-        selectedNode = node;
-        showSelection(node);
+    function selectNode(node, additive) {
+        if (!node) {
+            clearSelection();
+            return;
+        }
+        if (additive) {
+            const idx = selectedNodes.indexOf(node);
+            if (idx >= 0) {
+                // Toggle aus der Auswahl raus
+                selectedNodes.splice(idx, 1);
+                if (selectedNode === node) {
+                    selectedNode = selectedNodes[selectedNodes.length - 1] || null;
+                }
+            } else {
+                selectedNodes.push(node);
+                selectedNode = node;
+            }
+        } else {
+            selectedNodes = [node];
+            selectedNode = node;
+        }
+        refreshSelectionRects();
         contentLayer.draw();
         renderLayerList();
         renderPropertiesPanel();
-        document.getElementById('idc-delete').disabled = IS_SYSTEM || !node;
+        updateAlignButtons();
+        document.getElementById('idc-delete').disabled = IS_SYSTEM || selectedNodes.length === 0;
     }
 
     function clearSelection() {
+        selectedNodes = [];
         selectedNode = null;
         hideSelection();
         contentLayer.draw();
         renderLayerList();
         renderPropertiesPanel();
+        updateAlignButtons();
         document.getElementById('idc-delete').disabled = true;
     }
 
     function renderLayerList() {
         const list = document.getElementById('idc-layer-list');
         list.innerHTML = '';
-        const items = contentLayer.getChildren().filter(n => n !== selectionRect);
+        const items = contentLayer.getChildren().filter(n => !isSelectionRect(n));
         // Vorderste Ebene zuerst — wie in Photoshop: oben in der Liste = oben im Bild
         const reversed = items.slice().reverse();
         const lastIdx = reversed.length - 1;
 
         reversed.forEach((node, idx) => {
+            const isSelected = selectedNodes.includes(node);
+            const isPrimary = (node === selectedNode);
+            let cls = 'idc-layer';
+            if (isPrimary) cls += ' selected';
+            else if (isSelected) cls += ' selected-secondary';
             const div = document.createElement('div');
-            div.className = 'idc-layer' + (node === selectedNode ? ' selected' : '');
+            div.className = cls;
 
             const label = document.createElement('span');
             label.className = 'idc-layer-label';
             label.textContent = nodeLabel(node);
             label.title = nodeLabel(node);
-            label.addEventListener('click', () => selectNode(node));
+            label.addEventListener('click', (e) => {
+                const additive = e.ctrlKey || e.metaKey || e.shiftKey;
+                selectNode(node, additive);
+            });
             div.appendChild(label);
 
             if (!IS_SYSTEM) {
@@ -723,8 +898,19 @@
                     moveLayerDown(node);
                 });
 
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.textContent = '✕';
+                del.title = 'Element löschen';
+                del.className = 'danger';
+                del.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteLayer(node);
+                });
+
                 ctrls.appendChild(up);
                 ctrls.appendChild(down);
+                ctrls.appendChild(del);
                 div.appendChild(ctrls);
             }
 
@@ -735,7 +921,7 @@
     function moveLayerUp(node) {
         if (IS_SYSTEM) return;
         node.moveUp();
-        selectionRect.moveToTop();
+        refreshSelectionRects();
         contentLayer.draw();
         syncDataToLayout();
         pushSnapshot();
@@ -745,11 +931,27 @@
     function moveLayerDown(node) {
         if (IS_SYSTEM) return;
         node.moveDown();
-        selectionRect.moveToTop();
+        refreshSelectionRects();
         contentLayer.draw();
         syncDataToLayout();
         pushSnapshot();
         renderLayerList();
+    }
+
+    function deleteLayer(node) {
+        if (IS_SYSTEM) return;
+        selectedNodes = selectedNodes.filter(n => n !== node);
+        if (selectedNode === node) {
+            selectedNode = selectedNodes[selectedNodes.length - 1] || null;
+        }
+        refreshSelectionRects();
+        document.getElementById('idc-delete').disabled = (selectedNodes.length === 0);
+        node.destroy();
+        contentLayer.draw();
+        syncDataToLayout();
+        pushSnapshot();
+        renderLayerList();
+        renderPropertiesPanel();
     }
 
     function nodeLabel(node) {
@@ -775,8 +977,11 @@
         empty.style.display = 'none';
         form.style.display = '';
         const d = selectedNode._data || {};
+        const suffix = selectedNodes.length > 1
+            ? ` — ${selectedNodes.length} ausgewählt (Werte zeigen primary)`
+            : '';
         document.getElementById('idc-prop-title').textContent =
-            'Eigenschaften — ' + (d.type || '—');
+            'Eigenschaften — ' + (d.type || '—') + suffix;
 
         document.querySelectorAll('[data-prop-group]').forEach(el => {
             el.style.display = (el.getAttribute('data-prop-group') === d.type) ? '' : 'none';
@@ -786,6 +991,7 @@
         document.getElementById('prop-y').value = (d.y || 0).toFixed(2);
         document.getElementById('prop-w').value = (d.w || 0).toFixed(2);
         document.getElementById('prop-h').value = (d.h || 0).toFixed(2);
+        document.getElementById('prop-lock-aspect').checked = !!selectedNode._lockAspect;
 
         if (d.type === 'text') {
             document.getElementById('prop-value').value = d.value || '';
@@ -843,7 +1049,7 @@
 
     function syncDataToLayout() {
         const items = contentLayer.getChildren()
-            .filter(n => n !== selectionRect && n._data)
+            .filter(n => !isSelectionRect(n) && n._data)
             .map(n => Object.assign({}, n._data));
         layouts[activeSide] = items;
     }
@@ -858,13 +1064,44 @@
             else if (el.type === 'number') val = parseFloat(val) || 0;
             else if (el.type === 'checkbox') val = el.checked;
             selectedNode._data[key] = val;
+
+            // Aspect-Lock: bei W- oder H-Änderung die andere Dimension
+            // proportional anpassen.
+            if (selectedNode._lockAspect && selectedNode._lockRatio &&
+                (key === 'w' || key === 'h')) {
+                if (key === 'w') {
+                    const newH = Math.max(0.1, val / selectedNode._lockRatio);
+                    selectedNode._data.h = +newH.toFixed(2);
+                    document.getElementById('prop-h').value = newH.toFixed(2);
+                } else {
+                    const newW = Math.max(0.1, val * selectedNode._lockRatio);
+                    selectedNode._data.w = +newW.toFixed(2);
+                    document.getElementById('prop-w').value = newW.toFixed(2);
+                }
+            }
+
             applyDataToNode(selectedNode);
-            showSelection(selectedNode);
+            refreshSelectionRects();
             syncDataToLayout();
             pushSnapshot();
             renderLayerList();
         });
     }
+
+    // Aspect-Lock-Checkbox: speichert das aktuelle w/h-Verhältnis beim
+    // Aktivieren. Nicht persistent — wird nicht ins Layout-JSON geschrieben.
+    document.getElementById('prop-lock-aspect').addEventListener('change', () => {
+        if (!selectedNode) return;
+        const cb = document.getElementById('prop-lock-aspect');
+        selectedNode._lockAspect = cb.checked;
+        if (cb.checked) {
+            const w = selectedNode._data.w || 0.1;
+            const h = selectedNode._data.h || 0.1;
+            selectedNode._lockRatio = w / h;
+        } else {
+            selectedNode._lockRatio = null;
+        }
+    });
 
     bindProp('prop-x', 'x');
     bindProp('prop-y', 'y');
@@ -880,14 +1117,54 @@
     bindProp('prop-border_color', 'border_color');
     bindProp('prop-border_width', 'border_width');
 
+    // "Größe an Text anpassen": misst Konva.Text und passt data.w/h an.
+    document.getElementById('idc-fit-text').addEventListener('click', () => {
+        if (!selectedNode || !selectedNode._txt || IS_SYSTEM) return;
+        const txt = selectedNode._txt;
+
+        // Sicherstellen, dass der Text die aktuellen Daten widerspiegelt
+        // (z.B. wenn der User noch im prop-value-Feld stand und nicht den
+        // Fokus gewechselt hat).
+        txt.text(selectedNode._data.value || '');
+
+        // Wrap-Constraint vorübergehend entfernen, damit Konva die echte
+        // natürliche Text-Größe zurückgibt (sonst liefert getTextWidth()
+        // nur die Breite einer einzelnen umgebrochenen Zeile).
+        const origWrap = txt.wrap();
+        const origWidth = txt.width();
+        txt.wrap('none');
+        txt.width('auto');
+
+        // .width() / .height() liefern jetzt die berechneten Natural-Werte
+        // — Multi-Line via \n inklusive.
+        const naturalW = Math.max(txt.width(), 4);
+        const naturalH = Math.max(txt.height(), txt.fontSize() * (txt.lineHeight() || 1));
+
+        const pad = 0.5; // mm Polster
+        selectedNode._data.w = +(pxToMm(naturalW) + pad * 2).toFixed(2);
+        selectedNode._data.h = +(pxToMm(naturalH) + pad * 2).toFixed(2);
+
+        // Wrap-Mode wiederherstellen — applyDataToNode setzt width/height
+        // gleich auf die neuen Werte.
+        txt.wrap(origWrap);
+        applyDataToNode(selectedNode);
+
+        refreshSelectionRects();
+        contentLayer.draw();
+        syncDataToLayout();
+        pushSnapshot();
+        renderPropertiesPanel();
+        renderLayerList();
+    });
+
     // ---- Hinzufügen --------------------------------------------------------
     function addElement(kind) {
         if (IS_SYSTEM) return;
         let data;
         if (kind === 'text-static') {
-            data = { type: 'text', x: 4, y: 4, w: 40, h: 8, value: 'Text', font_size: 8, color: '#0f172a', weight: 'normal', align: 'left' };
+            data = { type: 'text', x: 4, y: 4, w: 25, h: 5, value: 'Text', font_size: 8, color: '#0f172a', weight: 'normal', align: 'left' };
         } else if (kind === 'text-placeholder') {
-            data = { type: 'text', x: 4, y: 4, w: 40, h: 8, value: '{{name}}', font_size: 8, color: '#0f172a', weight: 'normal', align: 'left' };
+            data = { type: 'text', x: 4, y: 4, w: 30, h: 5, value: '{{name}}', font_size: 8, color: '#0f172a', weight: 'normal', align: 'left' };
         } else if (kind === 'rect') {
             data = { type: 'rect', x: 4, y: 4, w: 30, h: 6, fill: '#cc2222', type_color: false };
         } else if (kind === 'photo') {
@@ -919,6 +1196,24 @@
         fileInput.click();
     }
 
+    function preloadImageNaturalRatio(src, callback) {
+        if (!src) { callback(null); return; }
+        let url = src;
+        if (src.startsWith('media:')) {
+            url = MEDIA_URL + src.slice('media:'.length);
+        }
+        const img = new Image();
+        img.onload = function() {
+            if (img.naturalHeight > 0) {
+                callback(img.naturalWidth / img.naturalHeight);
+            } else {
+                callback(null);
+            }
+        };
+        img.onerror = function() { callback(null); };
+        img.src = url;
+    }
+
     fileInput.addEventListener('change', async () => {
         const f = fileInput.files[0];
         if (!f) return;
@@ -935,35 +1230,57 @@
                 alert('Upload fehlgeschlagen: ' + (json.message || json.error || 'unbekannt'));
                 return;
             }
-            if (uploadCreatesElement) {
-                const data = { type: 'image', x: 4, y: 4, w: 18, h: 18, src: json.src };
-                const node = createNode(data);
-                contentLayer.add(node);
-                contentLayer.draw();
-                syncDataToLayout();
-                pushSnapshot();
-                selectNode(node);
-            } else if (selectedNode && selectedNode._data.type === 'image') {
-                selectedNode._data.src = json.src;
-                // Existing-Image entfernen, neu laden
-                if (selectedNode._kImg) {
-                    selectedNode._kImg.destroy();
-                    selectedNode._kImg = null;
+            // Natürliches Seitenverhältnis des Bildes ermitteln, dann
+            // Element-Maße entsprechend setzen.
+            preloadImageNaturalRatio(json.src, (ratio) => {
+                if (uploadCreatesElement) {
+                    // Neu eingefügtes Element: Standardgröße ~30 mm an der
+                    // längeren Seite, kürzere Seite vom Ratio abgeleitet.
+                    const DEFAULT_DIM = 30;
+                    let w = DEFAULT_DIM, h = DEFAULT_DIM;
+                    if (ratio && ratio > 0) {
+                        if (ratio >= 1) {
+                            w = DEFAULT_DIM;
+                            h = +(DEFAULT_DIM / ratio).toFixed(2);
+                        } else {
+                            h = DEFAULT_DIM;
+                            w = +(DEFAULT_DIM * ratio).toFixed(2);
+                        }
+                    }
+                    const data = { type: 'image', x: 4, y: 4, w, h, src: json.src };
+                    const node = createNode(data);
+                    contentLayer.add(node);
+                    contentLayer.draw();
+                    syncDataToLayout();
+                    pushSnapshot();
+                    selectNode(node);
+                } else if (selectedNode && selectedNode._data.type === 'image') {
+                    // Austausch: Breite behalten, Höhe aus neuem Ratio ableiten.
+                    selectedNode._data.src = json.src;
+                    if (ratio && ratio > 0) {
+                        selectedNode._data.h = +(selectedNode._data.w / ratio).toFixed(2);
+                    }
+                    if (selectedNode._kImg) {
+                        selectedNode._kImg.destroy();
+                        selectedNode._kImg = null;
+                    }
+                    if (!selectedNode._bg) {
+                        const w = selectedNode._data.w * PX_PER_MM;
+                        const h = selectedNode._data.h * PX_PER_MM;
+                        selectedNode._bg = new Konva.Rect({
+                            x: 0, y: 0, width: w, height: h,
+                            fill: '#f1f5f9', stroke: '#cbd5e1', strokeWidth: 1, dash: [4, 4],
+                        });
+                        selectedNode.add(selectedNode._bg);
+                    }
+                    applyDataToNode(selectedNode);
+                    loadImageSrc(selectedNode, json.src);
+                    refreshSelectionRects();
+                    syncDataToLayout();
+                    pushSnapshot();
+                    renderPropertiesPanel();
                 }
-                if (!selectedNode._bg) {
-                    const w = selectedNode._data.w * PX_PER_MM;
-                    const h = selectedNode._data.h * PX_PER_MM;
-                    selectedNode._bg = new Konva.Rect({
-                        x: 0, y: 0, width: w, height: h,
-                        fill: '#f1f5f9', stroke: '#cbd5e1', strokeWidth: 1, dash: [4, 4],
-                    });
-                    selectedNode.add(selectedNode._bg);
-                }
-                loadImageSrc(selectedNode, json.src);
-                syncDataToLayout();
-                pushSnapshot();
-                renderPropertiesPanel();
-            }
+            });
         } catch (e) {
             alert('Upload-Fehler: ' + e.message);
         }
@@ -1017,8 +1334,83 @@
         }
     });
 
+    // ---- Ausrichten + Pfeiltasten ------------------------------------------
+    function alignSelection(mode) {
+        if (IS_SYSTEM || selectedNodes.length < 2) return;
+        const xs = selectedNodes.map(n => n._data.x);
+        const ys = selectedNodes.map(n => n._data.y);
+        const xMaxR = selectedNodes.map(n => n._data.x + n._data.w);
+        const yMaxB = selectedNodes.map(n => n._data.y + n._data.h);
+
+        let ref;
+        switch (mode) {
+            case 'left':
+                ref = Math.min(...xs);
+                selectedNodes.forEach(n => n._data.x = ref);
+                break;
+            case 'right':
+                ref = Math.max(...xMaxR);
+                selectedNodes.forEach(n => n._data.x = ref - n._data.w);
+                break;
+            case 'top':
+                ref = Math.min(...ys);
+                selectedNodes.forEach(n => n._data.y = ref);
+                break;
+            case 'bottom':
+                ref = Math.max(...yMaxB);
+                selectedNodes.forEach(n => n._data.y = ref - n._data.h);
+                break;
+            case 'center-h':
+                ref = (Math.min(...xs) + Math.max(...xMaxR)) / 2;
+                selectedNodes.forEach(n => n._data.x = ref - n._data.w / 2);
+                break;
+            case 'center-v':
+                ref = (Math.min(...ys) + Math.max(...yMaxB)) / 2;
+                selectedNodes.forEach(n => n._data.y = ref - n._data.h / 2);
+                break;
+        }
+        selectedNodes.forEach(n => {
+            n._data.x = snap(n._data.x);
+            n._data.y = snap(n._data.y);
+            applyDataToNode(n);
+        });
+        refreshSelectionRects();
+        contentLayer.draw();
+        syncDataToLayout();
+        pushSnapshot();
+        renderPropertiesPanel();
+        renderLayerList();
+    }
+
+    document.querySelectorAll('.idc-align').forEach(btn => {
+        btn.addEventListener('click', () => alignSelection(btn.dataset.align));
+    });
+
+    function updateAlignButtons() {
+        const enabled = !IS_SYSTEM && selectedNodes.length >= 2;
+        document.querySelectorAll('.idc-align').forEach(btn => {
+            btn.disabled = !enabled;
+        });
+    }
+
+    function nudgeSelection(dx, dy) {
+        if (IS_SYSTEM || selectedNodes.length === 0) return;
+        selectedNodes.forEach(n => {
+            n._data.x = snap(n._data.x + dx);
+            n._data.y = snap(n._data.y + dy);
+            n.x(mmToPx(n._data.x));
+            n.y(mmToPx(n._data.y));
+        });
+        refreshSelectionRects();
+        contentLayer.draw();
+        syncDataToLayout();
+        pushSnapshot();
+        refreshPropertiesFromNode(selectedNode);
+    }
+
     document.addEventListener('keydown', (e) => {
         if (IS_SYSTEM) return;
+        const inField = ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
             e.preventDefault();
             document.getElementById('idc-undo').click();
@@ -1026,10 +1418,16 @@
             (e.shiftKey && e.key.toLowerCase() === 'z'))) {
             e.preventDefault();
             document.getElementById('idc-redo').click();
-        } else if (e.key === 'Delete' && selectedNode &&
-            !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
+        } else if (e.key === 'Delete' && selectedNode && !inField) {
             e.preventDefault();
             document.getElementById('idc-delete').click();
+        } else if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)
+                && selectedNodes.length > 0 && !inField) {
+            e.preventDefault();
+            const step = e.shiftKey ? 1.0 : 0.5;
+            const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+            const dy = e.key === 'ArrowUp'   ? -step : e.key === 'ArrowDown'  ? step : 0;
+            nudgeSelection(dx, dy);
         }
     });
 
@@ -1073,6 +1471,7 @@
     history = [snapshot()];
     historyPos = 0;
     setDirty(false);
+    updateAlignButtons();
     document.getElementById('idc-status-info').textContent =
         layouts.front.length + ' / ' + layouts.back.length + ' Elemente';
 })();
