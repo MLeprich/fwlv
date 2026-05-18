@@ -49,7 +49,7 @@ def _navy_landscape_front() -> list[dict]:
         # Personendaten
         {"type": "text", "x": 4, "y": 19, "w": 54,
          "value": "{{vorname}} {{nachname}}", "font_size": 11, "weight": "bold",
-         "color": "#0f172a", "align": "left"},
+         "color": "#000000", "align": "left"},
 
         {"type": "text", "x": 4, "y": 27, "w": 54,
          "value": "{{dienstgrad}}", "font_size": 8, "weight": "normal",
@@ -60,14 +60,14 @@ def _navy_landscape_front() -> list[dict]:
          "color": "#64748b", "align": "left"},
         {"type": "text", "x": 4, "y": 38, "w": 30,
          "value": "{{dienstnummer}}", "font_size": 8, "weight": "bold",
-         "color": "#0f172a", "align": "left"},
+         "color": "#000000", "align": "left"},
 
         {"type": "text", "x": 32, "y": 35, "w": 28,
          "value": "Gültig bis", "font_size": 5, "weight": "normal",
          "color": "#64748b", "align": "left"},
         {"type": "text", "x": 32, "y": 38, "w": 28,
          "value": "{{gueltig_bis}}", "font_size": 8, "weight": "bold",
-         "color": "#0f172a", "align": "left"},
+         "color": "#000000", "align": "left"},
 
         # Footer-Streifen mit Ausweisnummer
         {"type": "rect", "x": 0, "y": 49, "w": 85.6, "h": 5,
@@ -88,7 +88,7 @@ def _navy_landscape_back() -> list[dict]:
 
         {"type": "text", "x": 4, "y": 10, "w": 77.6,
          "value": "Dieser Dienstausweis ist Eigentum der ausstellenden Stelle.",
-         "font_size": 6, "weight": "bold", "color": "#0f172a", "align": "left"},
+         "font_size": 6, "weight": "bold", "color": "#000000", "align": "left"},
 
         {"type": "text", "x": 4, "y": 16, "w": 77.6,
          "value": "Bei Verlust oder Beschädigung umgehend melden. Mit Beendigung des Dienstes ist der Ausweis zurückzugeben.",
@@ -107,9 +107,9 @@ def _light_landscape_front() -> list[dict]:
     return [
         # Heller Hintergrund mit dünnem Border-Effekt (oben/unten)
         {"type": "rect", "x": 0, "y": 0, "w": 85.6, "h": 0.6,
-         "fill": "#0f172a", "type_color": False},
+         "fill": "#000000", "type_color": False},
         {"type": "rect", "x": 0, "y": 53.4, "w": 85.6, "h": 0.6,
-         "fill": "#0f172a", "type_color": False},
+         "fill": "#000000", "type_color": False},
 
         # Akzentbalken links (Ausweis-Typ-Farbe)
         {"type": "rect", "x": 0, "y": 0.6, "w": 2.5, "h": 52.8,
@@ -118,7 +118,7 @@ def _light_landscape_front() -> list[dict]:
         # Header
         {"type": "text", "x": 6, "y": 4, "w": 60,
          "value": "{{organisation}}", "font_size": 9, "weight": "bold",
-         "color": "#0f172a", "align": "left"},
+         "color": "#000000", "align": "left"},
         {"type": "text", "x": 6, "y": 9, "w": 60,
          "value": "Dienstausweis", "font_size": 6, "weight": "normal",
          "color": "#64748b", "align": "left"},
@@ -130,7 +130,7 @@ def _light_landscape_front() -> list[dict]:
         # Daten
         {"type": "text", "x": 6, "y": 17, "w": 52,
          "value": "{{vorname}} {{nachname}}", "font_size": 11, "weight": "bold",
-         "color": "#0f172a", "align": "left"},
+         "color": "#000000", "align": "left"},
         {"type": "text", "x": 6, "y": 25, "w": 52,
          "value": "{{dienstgrad}}", "font_size": 8, "weight": "normal",
          "color": "#475569", "align": "left"},
@@ -140,14 +140,14 @@ def _light_landscape_front() -> list[dict]:
          "color": "#94a3b8", "align": "left"},
         {"type": "text", "x": 6, "y": 37, "w": 24,
          "value": "{{dienstnummer}}", "font_size": 8, "weight": "bold",
-         "color": "#0f172a", "align": "left"},
+         "color": "#000000", "align": "left"},
 
         {"type": "text", "x": 32, "y": 34, "w": 26,
          "value": "Gültig bis", "font_size": 5, "weight": "normal",
          "color": "#94a3b8", "align": "left"},
         {"type": "text", "x": 32, "y": 37, "w": 26,
          "value": "{{gueltig_bis}}", "font_size": 8, "weight": "bold",
-         "color": "#0f172a", "align": "left"},
+         "color": "#000000", "align": "left"},
 
         {"type": "text", "x": 6, "y": 47, "w": 76,
          "value": "Ausweis-Nr.: {{ausweisnummer}}", "font_size": 5,
@@ -158,15 +158,15 @@ def _light_landscape_front() -> list[dict]:
 def _light_landscape_back() -> list[dict]:
     return [
         {"type": "rect", "x": 0, "y": 0, "w": 85.6, "h": 0.6,
-         "fill": "#0f172a", "type_color": False},
+         "fill": "#000000", "type_color": False},
 
         {"type": "text", "x": 4, "y": 6, "w": 77.6,
          "value": "{{organisation}}", "font_size": 7, "weight": "bold",
-         "color": "#0f172a", "align": "left"},
+         "color": "#000000", "align": "left"},
 
         {"type": "text", "x": 4, "y": 14, "w": 77.6,
          "value": "Dieser Dienstausweis ist Eigentum der ausstellenden Stelle.",
-         "font_size": 5.5, "weight": "bold", "color": "#0f172a", "align": "left"},
+         "font_size": 5.5, "weight": "bold", "color": "#000000", "align": "left"},
         {"type": "text", "x": 4, "y": 19, "w": 77.6,
          "value": "Bei Verlust oder Beschädigung umgehend melden. Mit Beendigung des Dienstes ist der Ausweis zurückzugeben.",
          "font_size": 5, "weight": "normal", "color": "#334155", "align": "left"},
@@ -179,7 +179,7 @@ def _light_landscape_back() -> list[dict]:
          "weight": "normal", "color": "#475569", "align": "left"},
 
         {"type": "rect", "x": 0, "y": 53.4, "w": 85.6, "h": 0.6,
-         "fill": "#0f172a", "type_color": False},
+         "fill": "#000000", "type_color": False},
     ]
 
 
@@ -204,7 +204,7 @@ def _portrait_front() -> list[dict]:
         # Daten unten
         {"type": "text", "x": 3, "y": 55, "w": 48,
          "value": "{{vorname}} {{nachname}}", "font_size": 10, "weight": "bold",
-         "color": "#0f172a", "align": "center"},
+         "color": "#000000", "align": "center"},
         {"type": "text", "x": 3, "y": 62, "w": 48,
          "value": "{{dienstgrad}}", "font_size": 7, "weight": "normal",
          "color": "#475569", "align": "center"},
@@ -214,14 +214,14 @@ def _portrait_front() -> list[dict]:
          "color": "#64748b", "align": "left"},
         {"type": "text", "x": 3, "y": 73, "w": 24,
          "value": "{{dienstnummer}}", "font_size": 7, "weight": "bold",
-         "color": "#0f172a", "align": "left"},
+         "color": "#000000", "align": "left"},
 
         {"type": "text", "x": 27, "y": 70, "w": 24,
          "value": "Gültig bis", "font_size": 4.5, "weight": "normal",
          "color": "#64748b", "align": "left"},
         {"type": "text", "x": 27, "y": 73, "w": 24,
          "value": "{{gueltig_bis}}", "font_size": 7, "weight": "bold",
-         "color": "#0f172a", "align": "left"},
+         "color": "#000000", "align": "left"},
 
         {"type": "rect", "x": 0, "y": 80.6, "w": 54, "h": 5,
          "fill": "#1a2744", "type_color": False},
@@ -241,7 +241,7 @@ def _portrait_back() -> list[dict]:
 
         {"type": "text", "x": 3, "y": 11, "w": 48,
          "value": "Dieser Dienstausweis ist Eigentum der ausstellenden Stelle.",
-         "font_size": 5, "weight": "bold", "color": "#0f172a", "align": "left"},
+         "font_size": 5, "weight": "bold", "color": "#000000", "align": "left"},
         {"type": "text", "x": 3, "y": 19, "w": 48,
          "value": "Bei Verlust oder Beschädigung umgehend melden. Mit Beendigung des Dienstes ist der Ausweis zurückzugeben.",
          "font_size": 4.5, "weight": "normal", "color": "#334155", "align": "left"},

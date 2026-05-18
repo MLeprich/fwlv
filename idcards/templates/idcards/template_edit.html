@@ -645,7 +645,7 @@
                 text: data.value || '',
                 fontSize: (data.font_size || 8) * PT_TO_PX,
                 fontStyle: data.weight === 'bold' ? 'bold' : 'normal',
-                fill: data.color || '#0f172a',
+                fill: data.color || '#000000',
                 align: data.align || 'left',
                 verticalAlign: 'top',
                 wrap: 'word',
@@ -1002,7 +1002,7 @@
             document.getElementById('prop-value').value = d.value || '';
             document.getElementById('prop-font_size').value = d.font_size || 8;
             document.getElementById('prop-weight').value = d.weight || 'normal';
-            document.getElementById('prop-color').value = d.color || '#0f172a';
+            document.getElementById('prop-color').value = d.color || '#000000';
             document.getElementById('prop-align').value = d.align || 'left';
         } else if (d.type === 'rect') {
             document.getElementById('prop-fill').value = d.fill || '#cccccc';
@@ -1037,7 +1037,7 @@
             txt.text(d.value || '');
             txt.fontSize((d.font_size || 8) * PT_TO_PX);
             txt.fontStyle(d.weight === 'bold' ? 'bold' : 'normal');
-            txt.fill(d.color || '#0f172a');
+            txt.fill(d.color || '#000000');
             txt.align(d.align || 'left');
         } else if (d.type === 'photo') {
             const bg = node._bg;
@@ -1176,9 +1176,9 @@
         if (IS_SYSTEM) return;
         let data;
         if (kind === 'text-static') {
-            data = { type: 'text', x: 4, y: 4, w: 25, h: 5, value: 'Text', font_size: 8, color: '#0f172a', weight: 'normal', align: 'left' };
+            data = { type: 'text', x: 4, y: 4, w: 25, h: 5, value: 'Text', font_size: 8, color: '#000000', weight: 'normal', align: 'left' };
         } else if (kind === 'text-placeholder') {
-            data = { type: 'text', x: 4, y: 4, w: 30, h: 5, value: '{{name}}', font_size: 8, color: '#0f172a', weight: 'normal', align: 'left' };
+            data = { type: 'text', x: 4, y: 4, w: 30, h: 5, value: '{{name}}', font_size: 8, color: '#000000', weight: 'normal', align: 'left' };
         } else if (kind === 'rect') {
             data = { type: 'rect', x: 4, y: 4, w: 30, h: 6, fill: '#cc2222', type_color: false };
         } else if (kind === 'photo') {

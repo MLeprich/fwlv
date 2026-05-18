@@ -132,6 +132,51 @@ def resolve_placeholders(text: str, card: IdCard) -> str:
 # ============================================================================
 
 
+# Farben, deren *alle* RGB-Kanäle <= diesem Wert sind, gelten als
+# "soll reinschwarz sein" und werden auf #000000 gesnappt. Damit druckt
+# Text/Balken sauber im K-Kanal statt als CMYK-Composite (unscharf,
+# Registrierungsprobleme). Tailwind text-gray-900 (#111827) und der alte
+# Editor-Default slate-900 (#0f172a) fallen darunter; bewusste Grautöne
+# (#334155, #475569 …) und Navy (#1a2744) bleiben erhalten.
+_PURE_BLACK_THRESHOLD = 50
+
+
+def _parse_rgb(value: str):
+    """'#rgb' / '#rrggbb' / 'rgb(r,g,b)' / 'rgba(...)' → (r,g,b) oder None."""
+    if not value or not isinstance(value, str):
+        return None
+    v = value.strip().lower()
+    if v.startswith('#'):
+        h = v[1:]
+        if len(h) == 3:
+            h = ''.join(c * 2 for c in h)
+        if len(h) == 6:
+            try:
+                return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+            except ValueError:
+                return None
+        return None
+    if v.startswith('rgb'):
+        nums = re.findall(r'[\d.]+', v)
+        if len(nums) >= 3:
+            try:
+                return int(float(nums[0])), int(float(nums[1])), int(float(nums[2]))
+            except ValueError:
+                return None
+    return None
+
+
+def _print_color(value: str) -> str:
+    """
+    Snappt Fast-Schwarz auf reines #000000 (für sauberen K-Kanal-Druck).
+    Alle anderen Farben bleiben unverändert.
+    """
+    rgb = _parse_rgb(value)
+    if rgb and max(rgb) <= _PURE_BLACK_THRESHOLD:
+        return '#000000'
+    return value
+
+
 def resolve_color(element: dict, card: IdCard) -> str:
     """
     Wenn element.type_color == True, nimm Farbe aus TYPE_COLORS für card.type.
@@ -139,7 +184,7 @@ def resolve_color(element: dict, card: IdCard) -> str:
     """
     if element.get('type_color'):
         return TYPE_COLORS.get(card.type, element.get('fill') or '#cc2222')
-    return element.get('fill') or element.get('color') or '#000000'
+    return _print_color(element.get('fill') or element.get('color') or '#000000')
 
 
 # ============================================================================
@@ -346,7 +391,7 @@ def _text_style(el: dict, color_override: str | None = None) -> str:
     """Schrift-Inline-Style (font-size, color, weight, align)."""
     parts = [
         f"font-size:{float(el.get('font_size', 8)):.2f}pt",
-        f"color:{color_override or el.get('color') or '#000'}",
+        f"color:{_print_color(color_override or el.get('color') or '#000000')}",
         f"font-weight:{el.get('weight') or 'normal'}",
         f"text-align:{el.get('align') or 'left'}",
         # Als Block rendern, damit line-height/font-size dieses Elements
