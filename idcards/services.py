@@ -9,6 +9,7 @@ Lifecycle-Services für Dienstausweise:
 from __future__ import annotations
 
 import re
+import secrets
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Iterable
@@ -34,69 +35,28 @@ from .models import (
 # ============================================================================
 
 
-_PREFIX_SLUG_RE = re.compile(r'[^A-Z0-9]+')
+CARD_NUMBER_MIN = 100000
+CARD_NUMBER_MAX = 999999
+_CARD_NUMBER_MAX_TRIES = 50
 
 
-def _person_station_prefix(person) -> str:
+def generate_card_number(person=None) -> str:
     """
-    Liefert ein kurzes Stations-Prefix (Großbuchstaben/Ziffern, max 8 Zeichen).
-    Strategie:
-        1. volunteer_unit.abbreviation oder .name
-        2. watch_crew.station.name (kein station_short_name am Modell)
-        3. department.abbreviation oder .name
-        4. Fallback: SystemSettings.organization_name (gekürzt)
+    Liefert eine global eindeutige, zufällige 6-stellige Ausweisnummer
+    (100000–999999). Bei Kollision wird neu gewürfelt.
+
+    `person` wird nicht mehr ausgewertet (Signatur bleibt aus
+    Kompatibilitätsgründen erhalten).
     """
-    candidates = []
-
-    unit = getattr(person, 'volunteer_unit', None)
-    if unit:
-        candidates.append(unit.abbreviation or unit.name)
-
-    crew = getattr(person, 'watch_crew', None)
-    if crew and getattr(crew, 'station', None):
-        candidates.append(crew.station.name)
-
-    dept = getattr(person, 'department', None)
-    if dept:
-        candidates.append(dept.abbreviation or dept.name)
-
-    if not candidates:
-        try:
-            from core.models import SystemSettings
-            candidates.append(SystemSettings.load().organization_name)
-        except Exception:
-            candidates.append('FW')
-
-    raw = (candidates[0] or 'FW').upper()
-    cleaned = _PREFIX_SLUG_RE.sub('', raw) or 'FW'
-    return cleaned[:8]
-
-
-def generate_card_number(person) -> str:
-    """
-    Format: <STATION>-<JAHR>-<LFD-4stellig>.
-    Laufnummer wird pro Jahr global hochgezählt (Single-Tenant).
-    """
-    prefix = _person_station_prefix(person)
-    year = timezone.now().year
-    pattern_prefix = f"{prefix}-{year}-"
-
-    last = (
-        IdCard.objects
-        .filter(card_number__startswith=pattern_prefix)
-        .order_by('-card_number')
-        .values_list('card_number', flat=True)
-        .first()
+    span = CARD_NUMBER_MAX - CARD_NUMBER_MIN + 1
+    for _ in range(_CARD_NUMBER_MAX_TRIES):
+        candidate = str(CARD_NUMBER_MIN + secrets.randbelow(span))
+        if not IdCard.objects.filter(card_number=candidate).exists():
+            return candidate
+    raise RuntimeError(
+        'Keine freie Ausweisnummer gefunden — der 6-stellige '
+        'Nummernkreis ist nahezu erschöpft.'
     )
-
-    seq = 1
-    if last:
-        try:
-            seq = int(last.rsplit('-', 1)[-1]) + 1
-        except (ValueError, IndexError):
-            seq = 1
-
-    return f"{prefix}-{year}-{seq:04d}"
 
 
 # ============================================================================
@@ -213,6 +173,47 @@ def replace_card(
         metadata={'new_card_id': new_card.pk, 'new_card_number': new_card.card_number},
     )
     return new_card
+
+
+@transaction.atomic
+def renew_card(
+    card: IdCard,
+    *,
+    actor,
+    valid_years: int = 5,
+) -> IdCard:
+    """
+    Verlängert eine bestehende Karte: gleiche Ausweisnummer, neues
+    Ausstellungs- und Ablaufdatum. Setzt EXPIRED-Karten zurück auf ACTIVE.
+    Schreibt Audit EDIT. Der Ausweis wird danach typischerweise neu gedruckt.
+    """
+    issued = timezone.now().date()
+    try:
+        valid_until = issued.replace(year=issued.year + int(valid_years))
+    except ValueError:
+        valid_until = issued + relativedelta(years=int(valid_years))
+
+    old_valid_until = card.valid_until
+    card.issued_at = issued
+    card.valid_until = valid_until
+    if card.status in (IdCardStatus.EXPIRED, IdCardStatus.ACTIVE):
+        card.status = IdCardStatus.ACTIVE
+    card.updated_by = actor
+    card.save(update_fields=[
+        'issued_at', 'valid_until', 'status', 'updated_by', 'updated_at',
+    ])
+    IdCardAuditLog.objects.create(
+        card=card,
+        action=AuditAction.EDIT,
+        actor=actor,
+        metadata={
+            'renewed': True,
+            'valid_years': int(valid_years),
+            'old_valid_until': old_valid_until.isoformat() if old_valid_until else None,
+            'new_valid_until': valid_until.isoformat(),
+        },
+    )
+    return card
 
 
 def expire_due_cards(today: date | None = None) -> int:

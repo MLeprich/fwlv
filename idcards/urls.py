@@ -16,6 +16,10 @@ urlpatterns = [
     path('vorlagen/<int:pk>/standard/', views.template_set_default, name='template_set_default'),
     path('vorlagen/<int:pk>/loeschen/', views.template_delete, name='template_delete'),
 
+    # Ablauf-Übersicht & Verlängerung
+    path('ablauf/', views.card_renewal_list, name='card_renewal_list'),
+    path('<int:pk>/verlaengern/', views.card_renew, name='card_renew'),
+
     # Sammeldruck / Bulk
     path('stapel/', views.cards_a4_batch, name='cards_a4_batch'),
     path('batch/', views.cards_batch_create, name='cards_batch_create'),

@@ -23,6 +23,9 @@
             <p class="text-sm text-gray-600 mt-1">Layouts für Dienstausweise. System-Vorlagen sind schreibgeschützt — bitte duplizieren, um sie anzupassen.</p>
         </div>
         <div class="flex items-center gap-2">
+            <a href="{% url 'idcards:card_renewal_list' %}" class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Ablauf-Übersicht
+            </a>
             <a href="{% url 'idcards:cards_a4_batch' %}" class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Sammeldruck
             </a>

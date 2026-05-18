@@ -26,26 +26,28 @@ pytestmark = pytest.mark.django_db
 # ============================================================================
 
 
-def test_generate_card_number_includes_year_and_sequence(person, template_minimal, admin_user):
-    n1 = services.generate_card_number(person)
-    year = timezone.now().year
-    assert f'-{year}-' in n1
-    assert n1.endswith('-0001')
-
-
-def test_generate_card_number_uses_volunteer_unit_prefix(person_volunteer):
-    n = services.generate_card_number(person_volunteer)
-    # abbreviation 'LZT' wird zu 'LZT' gecleant
-    assert n.startswith('LZT-')
-
-
-def test_generate_card_number_uses_department_prefix_when_no_unit(person):
+def test_generate_card_number_is_six_digits(person):
     n = services.generate_card_number(person)
-    # department abbreviation 'EA-T' → 'EAT'
-    assert n.startswith('EAT-')
+    assert n.isdigit()
+    assert len(n) == 6
+    assert services.CARD_NUMBER_MIN <= int(n) <= services.CARD_NUMBER_MAX
 
 
-def test_card_numbers_increment_sequentially(person, template_minimal, admin_user):
+def test_generate_card_number_works_without_person():
+    n = services.generate_card_number()
+    assert n.isdigit() and len(n) == 6
+
+
+def test_generate_card_number_is_unique_against_existing(person, template_minimal, admin_user):
+    existing = services.create_card(
+        person=person, template=template_minimal, actor=admin_user, valid_years=5,
+    )
+    for _ in range(20):
+        n = services.generate_card_number(person)
+        assert n != existing.card_number
+
+
+def test_card_numbers_are_distinct(person, template_minimal, admin_user):
     c1 = services.create_card(
         person=person, template=template_minimal, actor=admin_user, valid_years=5,
     )
@@ -53,9 +55,8 @@ def test_card_numbers_increment_sequentially(person, template_minimal, admin_use
         person=person, template=template_minimal, actor=admin_user, valid_years=5,
     )
     assert c1.card_number != c2.card_number
-    seq1 = int(c1.card_number.rsplit('-', 1)[-1])
-    seq2 = int(c2.card_number.rsplit('-', 1)[-1])
-    assert seq2 == seq1 + 1
+    assert c1.card_number.isdigit() and len(c1.card_number) == 6
+    assert c2.card_number.isdigit() and len(c2.card_number) == 6
 
 
 # ============================================================================
@@ -172,6 +173,49 @@ def test_replace_card_overrides_function_label_when_provided(person, template_mi
     )
     new = services.replace_card(old, actor=admin_user, valid_years=5, function_label='neu')
     assert new.function_label == 'neu'
+
+
+# ============================================================================
+# renew_card
+# ============================================================================
+
+
+def test_renew_card_keeps_number_and_extends_validity(person, template_minimal, admin_user):
+    from datetime import date, timedelta
+    card = services.create_card(
+        person=person, template=template_minimal, actor=admin_user, valid_years=1,
+    )
+    old_number = card.card_number
+    old_valid = card.valid_until
+
+    services.renew_card(card, actor=admin_user, valid_years=5)
+    card.refresh_from_db()
+
+    assert card.card_number == old_number          # gleiche Nummer
+    assert card.status == IdCardStatus.ACTIVE
+    assert card.valid_until > old_valid
+    today = date.today()
+    assert card.issued_at == today
+    assert abs((card.valid_until - today).days - 365 * 5) <= 3
+
+    audit = card.audit_logs.filter(action=AuditAction.EDIT).first()
+    assert audit is not None
+    assert audit.metadata.get('renewed') is True
+
+
+def test_renew_card_reactivates_expired(person, template_minimal, admin_user):
+    from datetime import timedelta
+    card = services.create_card(
+        person=person, template=template_minimal, actor=admin_user, valid_years=1,
+    )
+    card.status = IdCardStatus.EXPIRED
+    card.valid_until = card.issued_at - timedelta(days=1)
+    card.save(update_fields=['status', 'valid_until'])
+
+    services.renew_card(card, actor=admin_user, valid_years=3)
+    card.refresh_from_db()
+    assert card.status == IdCardStatus.ACTIVE
+    assert card.is_active is True
 
 
 # ============================================================================

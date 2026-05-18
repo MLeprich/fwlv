@@ -162,25 +162,127 @@ def _file_to_data_url(path: str) -> str | None:
     return f"data:{mime};base64,{encoded}"
 
 
-def _resolve_media_ref(src: str) -> str | None:
-    """
-    "media:idcards/assets/logo.png" → MEDIA_ROOT/idcards/assets/logo.png → Data-URL.
-    """
+def _media_ref_path(src: str) -> str | None:
+    """media:<rel> → absoluter Dateipfad unter MEDIA_ROOT (oder None)."""
     if not src or not src.startswith(_MEDIA_REF_PREFIX):
         return None
-
     relative = src[len(_MEDIA_REF_PREFIX):].lstrip('/')
     media_root = str(getattr(settings, 'MEDIA_ROOT', ''))
     if not media_root:
         return None
+    return f"{media_root.rstrip('/')}/{relative}"
 
-    full_path = f"{media_root.rstrip('/')}/{relative}"
+
+def _resolve_media_ref(src: str) -> str | None:
+    """
+    "media:idcards/assets/logo.png" → MEDIA_ROOT/idcards/assets/logo.png → Data-URL.
+    """
+    full_path = _media_ref_path(src)
+    if not full_path:
+        return None
     return _file_to_data_url(full_path)
 
 
-def _photo_data_url(card: IdCard) -> str | None:
-    """Lädt das Personenfoto (id_card_photo, Fallback photo) als Data-URL."""
+_MIN_PRINT_DPI = 300
+
+
+def _warn_if_low_logo_dpi(src: str, w_mm, h_mm, *, card=None) -> None:
+    """
+    Loggt eine Warnung, wenn ein eingebettetes Bild bei seiner Layout-Größe
+    unter PRINT_DPI liegt. SVG (Vektor) wird übersprungen.
+    """
+    path = _media_ref_path(src)
+    if not path or not w_mm or not h_mm:
+        return
+    if path.lower().endswith('.svg'):
+        return
+    try:
+        from PIL import Image
+        with Image.open(path) as im:
+            px_w, px_h = im.size
+    except Exception:
+        return
+
+    try:
+        dpi_w = px_w / (float(w_mm) / 25.4)
+        dpi_h = px_h / (float(h_mm) / 25.4)
+    except (ZeroDivisionError, TypeError, ValueError):
+        return
+
+    eff = min(dpi_w, dpi_h)
+    if eff < _MIN_PRINT_DPI:
+        logger.warning(
+            'Dienstausweis-Logo unterschreitet Druckauflösung: %s — '
+            '%dx%d px bei %.1fx%.1f mm ≈ %d DPI (empfohlen ≥ %d DPI). '
+            'Bitte ein höher aufgelöstes Bild oder eine SVG-Datei verwenden.%s',
+            src, px_w, px_h, float(w_mm), float(h_mm), int(eff), _MIN_PRINT_DPI,
+            f' [Karte {card.card_number}]' if card is not None else '',
+        )
+
+
+PRINT_DPI = 300          # Ziel-Druckauflösung
+_PHOTO_OVERSAMPLE = 2    # 2x Reserve gegen Resampling-/Druck-Weichzeichnung
+
+
+def _photo_target_px(w_mm: float | None, h_mm: float | None) -> int | None:
+    """
+    Längste Foto-Kante in Pixeln für PRINT_DPI inkl. Oversampling.
+    None, wenn keine Element-Maße bekannt sind (dann kein Resize).
+    """
+    dims = [d for d in (w_mm, h_mm) if d]
+    if not dims:
+        return None
+    longest_mm = max(float(d) for d in dims)
+    return int(round(longest_mm / 25.4 * PRINT_DPI)) * _PHOTO_OVERSAMPLE
+
+
+def _photo_file_to_data_url(path: str, target_px: int | None = None) -> str | None:
+    """
+    Lädt ein Personenfoto, korrigiert die EXIF-Orientierung, skaliert auf
+    Zielauflösung herunter, schärft leicht nach und bettet es **verlustfrei
+    als PNG** ein.
+
+    - EXIF: Smartphone-Fotos sind oft physisch im Querformat mit
+      Orientation-Tag; WeasyPrint respektiert das Tag nicht → hier drehen.
+    - Resize: nur verkleinern (thumbnail), nie hochrechnen.
+    - UnsharpMask: kompensiert das Weichwerden durch Resampling und Druck.
+    - PNG: kein JPEG-Generationsverlust im PDF.
+    """
+    try:
+        import io as _io
+        from PIL import Image, ImageFilter, ImageOps
+
+        with Image.open(path) as im:
+            im = ImageOps.exif_transpose(im)   # korrekte Rotation, Tag entfernt
+            im = im.convert('RGB')
+
+            if target_px and target_px > 0:
+                im.thumbnail((target_px, target_px), Image.LANCZOS)
+                im = im.filter(ImageFilter.UnsharpMask(
+                    radius=0.8, percent=120, threshold=2,
+                ))
+
+            buf = _io.BytesIO()
+            im.save(buf, format='PNG', optimize=True)
+            encoded = base64.b64encode(buf.getvalue()).decode('ascii')
+            return f"data:image/png;base64,{encoded}"
+    except Exception as e:
+        logger.warning('Could not process photo %s: %s', path, e)
+        return _file_to_data_url(path)  # Fallback: roh einbetten
+
+
+def _photo_data_url(
+    card: IdCard,
+    w_mm: float | None = None,
+    h_mm: float | None = None,
+) -> str | None:
+    """
+    Lädt das Personenfoto (id_card_photo, Fallback photo) als PNG-Data-URL.
+    w_mm/h_mm = Maße des Foto-Elements auf der Karte → bestimmen die
+    Zielauflösung für den 300-DPI-Druck.
+    """
     person = card.person
+    target_px = _photo_target_px(w_mm, h_mm)
     for field in ('id_card_photo', 'photo'):
         img = getattr(person, field, None)
         if img and getattr(img, 'name', ''):
@@ -189,7 +291,7 @@ def _photo_data_url(card: IdCard) -> str | None:
             except (ValueError, NotImplementedError):
                 path = None
             if path:
-                url = _file_to_data_url(path)
+                url = _photo_file_to_data_url(path, target_px)
                 if url:
                     return url
     return None
@@ -247,7 +349,15 @@ def _text_style(el: dict, color_override: str | None = None) -> str:
         f"color:{color_override or el.get('color') or '#000'}",
         f"font-weight:{el.get('weight') or 'normal'}",
         f"text-align:{el.get('align') or 'left'}",
-        "line-height:1.15",
+        # Als Block rendern, damit line-height/font-size dieses Elements
+        # die Zeilenhöhe bestimmen (nicht die line-height:normal des
+        # umschließenden Blocks). Konva nutzt im Editor lineHeight=1.0.
+        "display:block",
+        "line-height:1.0",
+        "margin:0",
+        # Manuelle Umbrüche (\n via Shift+Enter) als echte Zeilenumbrüche
+        "white-space:pre-line",
+        "overflow-wrap:break-word",
     ]
     return ';'.join(parts) + ';'
 
@@ -287,7 +397,7 @@ def build_side_elements(layout: list, card: IdCard) -> list[RenderCell]:
                 f"border:{border_width:.2f}mm solid {border_color};"
                 if border_width > 0 else ''
             )
-            photo_url = _photo_data_url(card)
+            photo_url = _photo_data_url(card, el.get('w'), el.get('h'))
             cells.append(RenderCell(
                 type='photo',
                 style=(
@@ -300,7 +410,9 @@ def build_side_elements(layout: list, card: IdCard) -> list[RenderCell]:
             ))
 
         elif etype == 'image':
-            url = _resolve_media_ref(el.get('src', '')) or ''
+            src = el.get('src', '')
+            url = _resolve_media_ref(src) or ''
+            _warn_if_low_logo_dpi(src, el.get('w'), el.get('h'), card=card)
             cells.append(RenderCell(
                 type='image',
                 style=_pos_style(el) + 'overflow:hidden;' + _opacity_css(el),
@@ -342,7 +454,11 @@ def _display_text_style(el: dict, color_override: str | None = None) -> str:
         f"color:{color_override or el.get('color') or '#000'}",
         f"font-weight:{el.get('weight') or 'normal'}",
         f"text-align:{el.get('align') or 'left'}",
-        'line-height:1.15',
+        'display:block',
+        'line-height:1.0',
+        'margin:0',
+        'white-space:pre-line',
+        'overflow-wrap:break-word',
     ]
     return ';'.join(parts) + ';'
 
@@ -386,7 +502,7 @@ def build_card_display(card: IdCard) -> dict:
                     f"border:{border_px:.1f}px solid {border_color};"
                     if border_px > 0 else ''
                 )
-                photo_url = _photo_data_url(card)
+                photo_url = _photo_data_url(card, el.get('w'), el.get('h'))
                 cells.append(RenderCell(
                     type='photo',
                     style=(

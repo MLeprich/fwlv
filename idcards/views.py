@@ -518,6 +518,83 @@ def card_a4(request, pk):
 
 
 # ============================================================================
+# Ablauf-Übersicht & Verlängerung
+# ============================================================================
+
+
+_RENEWAL_WINDOWS = ['30', '60', '90', '180', '365']
+
+
+@_require_view
+def card_renewal_list(request):
+    """
+    Tabelle der bald ablaufenden (und bereits abgelaufenen) Ausweise.
+    Filter: Zeitfenster in Tagen oder 'expired'.
+    """
+    today = timezone.now().date()
+    window = request.GET.get('window', '90')
+
+    base = IdCard.objects.select_related('person', 'template')
+
+    if window == 'expired':
+        cards = base.filter(
+            Q(status=IdCardStatus.EXPIRED)
+            | Q(status=IdCardStatus.ACTIVE, valid_until__lt=today)
+        ).order_by('valid_until')
+    else:
+        try:
+            days = int(window)
+        except (TypeError, ValueError):
+            days = 90
+            window = '90'
+        cutoff = today + relativedelta(days=days)
+        cards = base.filter(
+            status=IdCardStatus.ACTIVE,
+            valid_until__gte=today,
+            valid_until__lte=cutoff,
+        ).order_by('valid_until')
+
+    rows = []
+    for card in cards:
+        delta = (card.valid_until - today).days
+        rows.append({'card': card, 'days_left': delta})
+
+    return render(request, 'idcards/renewal_list.html', {
+        'rows': rows,
+        'window': window,
+        'windows': _RENEWAL_WINDOWS,
+        'today': today,
+        'can_manage': _has_manage(request.user),
+    })
+
+
+@_require_manage
+@require_POST
+def card_renew(request, pk):
+    """Verlängert eine Karte (gleiche Nummer, neues Ausstell-/Ablaufdatum)."""
+    card = get_object_or_404(IdCard, pk=pk)
+    try:
+        valid_years = int(request.POST.get('valid_years') or 5)
+    except (TypeError, ValueError):
+        valid_years = 5
+    valid_years = max(1, min(valid_years, 10))
+
+    services.renew_card(card, actor=request.user, valid_years=valid_years)
+    messages.success(
+        request,
+        f'Ausweis {card.card_number} verlängert — neu gültig bis '
+        f'{card.valid_until:%d.%m.%Y}.',
+    )
+
+    nxt = request.POST.get('next')
+    if nxt == 'detail':
+        return redirect('idcards:card_detail', pk=card.pk)
+    return redirect(
+        f"{reverse('idcards:card_renewal_list')}?window={request.POST.get('window', '90')}"
+    )
+
+
+# ============================================================================
 # Sammeldruck — mitgliederzentriert
 # ============================================================================
 
