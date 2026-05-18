@@ -228,6 +228,18 @@ def _pos_style(el: dict) -> str:
     return ';'.join(parts) + ';'
 
 
+def _opacity_css(el: dict) -> str:
+    """CSS-Snippet für Deckkraft (0..1). Locale-sicher via f-string."""
+    try:
+        op = float(el.get('opacity', 1))
+    except (TypeError, ValueError):
+        op = 1.0
+    op = max(0.0, min(1.0, op))
+    if op >= 1.0:
+        return ''
+    return f"opacity:{op:.3f};"
+
+
 def _text_style(el: dict, color_override: str | None = None) -> str:
     """Schrift-Inline-Style (font-size, color, weight, align)."""
     parts = [
@@ -291,7 +303,7 @@ def build_side_elements(layout: list, card: IdCard) -> list[RenderCell]:
             url = _resolve_media_ref(el.get('src', '')) or ''
             cells.append(RenderCell(
                 type='image',
-                style=_pos_style(el) + 'overflow:hidden;',
+                style=_pos_style(el) + 'overflow:hidden;' + _opacity_css(el),
                 image_src=url,
             ))
 
@@ -389,7 +401,7 @@ def build_card_display(card: IdCard) -> dict:
                 url = _resolve_media_ref(el.get('src', '')) or ''
                 cells.append(RenderCell(
                     type='image',
-                    style=_display_pos_style(el) + 'overflow:hidden;',
+                    style=_display_pos_style(el) + 'overflow:hidden;' + _opacity_css(el),
                     image_src=url,
                 ))
         return cells

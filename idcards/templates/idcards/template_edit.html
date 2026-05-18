@@ -434,6 +434,10 @@
                         <button type="button" class="idc-btn" id="idc-image-replace" {% if template.is_system %}disabled{% endif %}>Bild austauschen …</button>
                         <p id="idc-image-name" class="text-xs text-gray-500 mt-1"></p>
                     </div>
+                    <div class="idc-prop">
+                        <label>Deckkraft: <span id="prop-opacity-val">100</span> %</label>
+                        <input type="range" id="prop-opacity" min="0" max="100" step="1" value="100">
+                    </div>
                 </div>
             </div>
         </div>
@@ -702,6 +706,7 @@
             node = group;
             node._bg = bg;
             node._lbl = lbl;
+            group.opacity(data.opacity != null ? data.opacity : 1);
             if (data.src) loadImageSrc(node, data.src);
         } else {
             console.warn('Unbekannter Element-Typ, übersprungen:', data && data.type);
@@ -1007,6 +1012,9 @@
             document.getElementById('prop-border_width').value = d.border_width || 0;
         } else if (d.type === 'image') {
             document.getElementById('idc-image-name').textContent = d.src ? d.src : '— kein Bild gewählt —';
+            const opPct = Math.round((d.opacity != null ? d.opacity : 1) * 100);
+            document.getElementById('prop-opacity').value = opPct;
+            document.getElementById('prop-opacity-val').textContent = opPct;
         }
     }
 
@@ -1043,6 +1051,7 @@
             if (node._bg) { node._bg.width(w); node._bg.height(h); }
             if (node._lbl) { node._lbl.width(w); node._lbl.y(h / 2 - 8); }
             if (node._kImg) { node._kImg.width(w); node._kImg.height(h); }
+            node.opacity(d.opacity != null ? d.opacity : 1);
         }
         contentLayer.draw();
     }
@@ -1116,6 +1125,11 @@
     bindProp('prop-type_color', 'type_color');
     bindProp('prop-border_color', 'border_color');
     bindProp('prop-border_width', 'border_width');
+    bindProp('prop-opacity', 'opacity', (v) => {
+        const pct = Math.max(0, Math.min(100, parseFloat(v) || 0));
+        document.getElementById('prop-opacity-val').textContent = Math.round(pct);
+        return pct / 100;
+    });
 
     // "Größe an Text anpassen": misst Konva.Text und passt data.w/h an.
     document.getElementById('idc-fit-text').addEventListener('click', () => {
