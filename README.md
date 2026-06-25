@@ -49,16 +49,12 @@ python manage.py createsuperuser
 python manage.py runserver 0.0.0.0:8000
 ```
 
-Ausführliche Anleitung: [INSTALL_DOCKER.md](INSTALL_DOCKER.md)
-
 ## Dokumentation
 
 | Datei | Beschreibung |
 |-------|--------------|
 | [docs/DOCKER_INSTALLATION.md](docs/DOCKER_INSTALLATION.md) | Docker Compose Installation |
-| [INSTALL_DOCKER.md](INSTALL_DOCKER.md) | Manuelle Container-Installation |
 | [SBOM.md](SBOM.md) | Software Bill of Materials |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Server-Konfiguration |
 
 ## Lizenz
 

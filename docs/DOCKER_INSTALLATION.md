@@ -78,6 +78,34 @@ docker compose version
 
 ---
 
+## Betrieb ohne Internet (Stadt-VM mit Internet-Kappung)
+
+Typisches Szenario: Die VM hat **während der Installation Internet**, danach wird der
+Zugang **gekappt**. Installation und Build (`install.sh` / `docker compose build`) laufen
+dann normal — sie brauchen Internet nur einmalig zur Build-Zeit.
+
+**Zur Laufzeit ist das System offline-fähig:** Frontend (Tailwind, Alpine.js, HTMX),
+Datenbank, Cache und alle Anwendungs-Abhängigkeiten sind lokal eingebunden. Es gibt jedoch
+**zwei Dinge, die nach dem Kappen kein Internet mehr haben**:
+
+| Funktion | Auswirkung nach Kappung | Empfehlung |
+|----------|-------------------------|------------|
+| **Let's Encrypt SSL** | Auto-Renewal (certbot, alle 12 h) schlägt fehl → Zertifikat läuft nach max. 90 Tagen ab | **Eigenes/internes Zertifikat** verwenden (siehe SSL → Option B), nicht Let's Encrypt |
+| **E-Mail-Versand** | Nur möglich, wenn der SMTP-Server intern erreichbar ist | Internen Mailserver/Relay eintragen oder E-Mail deaktiviert lassen |
+| Docker Image-Updates | `docker compose pull`/`build` nicht möglich | Updates in einem Wartungsfenster mit temporärem Internet |
+
+> **Wichtigste Empfehlung:** Auf einer dauerhaft offline betriebenen VM **kein Let's Encrypt**
+> verwenden, da die automatische Verlängerung Internet benötigt. Stattdessen ein eigenes
+> (ggf. von der internen PKI/Stadt-CA ausgestelltes) Zertifikat über **Option B** einbinden.
+> Dieses sollte eine ausreichend lange Laufzeit haben und vor Ablauf manuell in einem
+> Wartungsfenster erneuert werden.
+
+> **Hinweis Wiki-Modul:** Eingebettete externe Inhalte (YouTube/Vimeo/Twitter-Embeds) laden
+> erst beim Anzeigen aus dem Internet und bleiben offline leer. Das betrifft nur optional vom
+> Nutzer eingebettete Medien, keine Kernfunktion.
+
+---
+
 ## Schnellstart
 
 ### 1. Repository klonen
