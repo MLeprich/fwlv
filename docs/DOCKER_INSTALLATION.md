@@ -78,21 +78,65 @@ docker compose version
 
 ---
 
-## Betrieb ohne Internet (Stadt-VM mit Internet-Kappung)
+## Installation ohne Internet (Air-Gap / Stadt-VM)
 
-Typisches Szenario: Die VM hat **während der Installation Internet**, danach wird der
-Zugang **gekappt**. Installation und Build (`install.sh` / `docker compose build`) laufen
-dann normal — sie brauchen Internet nur einmalig zur Build-Zeit.
+Auf einer VM **ohne Internetzugang** (bzw. ohne Zugriff auf Docker Hub) schlägt
+`docker compose build` fehl, weil die Basis-Images (`python:3.12-slim`, `postgres`,
+`redis`, `nginx`) nicht von Docker Hub geladen werden können — typische Fehlermeldung:
+
+```
+failed to fetch anonymous token: Get "https://auth.docker.io/token?...": i/o timeout
+```
+
+Lösung: Die Images **vorab auf einer Maschine MIT Internet** bauen und als Bundle
+übertragen. Das Frontend (Tailwind, Alpine.js, HTMX) ist vollständig lokal eingebunden,
+d. h. **zur Laufzeit** wird kein Internet benötigt.
+
+### 1. Auf einer Maschine MIT Internet: Image-Bundle erstellen
+
+```bash
+git clone https://github.com/MLeprich/fwlv.git
+cd fwlv
+
+# Baut alle Images und exportiert sie nach flvs-images.tar
+./docker/scripts/build-offline-bundle.sh
+```
+
+### 2. Auf die Ziel-VM übertragen
+
+Das **Repository** und die Datei **`flvs-images.tar`** auf die VM kopieren
+(z. B. per USB/`scp`), etwa nach `/opt/flvs/` und `/opt/flvs/flvs-images.tar`.
+
+### 3. Auf der VM offline installieren
+
+```bash
+cd /opt/flvs
+./install.sh --offline
+```
+
+Der `--offline`-Modus:
+- verwendet das bereits vorhandene Repository (kein GitHub-Klon),
+- lädt die Images aus `flvs-images.tar` (`docker load`) statt sie zu bauen,
+- startet die Container mit `docker compose up -d --no-build` (kein Docker-Hub-Zugriff).
+
+> Liegt das Bundle woanders: `./install.sh --offline --image-bundle /pfad/zu/flvs-images.tar`
+
+**Updates** laufen genauso: neues Bundle extern bauen, auf die VM kopieren, dann
+`docker load -i flvs-images.tar && docker compose up -d --no-build`.
+
+---
+
+## Betrieb nach der Installation (was offline NICHT geht)
 
 **Zur Laufzeit ist das System offline-fähig:** Frontend (Tailwind, Alpine.js, HTMX),
 Datenbank, Cache und alle Anwendungs-Abhängigkeiten sind lokal eingebunden. Es gibt jedoch
-**zwei Dinge, die nach dem Kappen kein Internet mehr haben**:
+**zwei Dinge, die kein Internet mehr haben**:
 
-| Funktion | Auswirkung nach Kappung | Empfehlung |
-|----------|-------------------------|------------|
+| Funktion | Auswirkung offline | Empfehlung |
+|----------|--------------------|------------|
 | **Let's Encrypt SSL** | Auto-Renewal (certbot, alle 12 h) schlägt fehl → Zertifikat läuft nach max. 90 Tagen ab | **Eigenes/internes Zertifikat** verwenden (siehe SSL → Option B), nicht Let's Encrypt |
 | **E-Mail-Versand** | Nur möglich, wenn der SMTP-Server intern erreichbar ist | Internen Mailserver/Relay eintragen oder E-Mail deaktiviert lassen |
-| Docker Image-Updates | `docker compose pull`/`build` nicht möglich | Updates in einem Wartungsfenster mit temporärem Internet |
+| Docker Image-Updates | `docker compose pull`/`build` nicht möglich | Neues Bundle extern bauen und per `docker load` einspielen (siehe oben) |
 
 > **Wichtigste Empfehlung:** Auf einer dauerhaft offline betriebenen VM **kein Let's Encrypt**
 > verwenden, da die automatische Verlängerung Internet benötigt. Stattdessen ein eigenes

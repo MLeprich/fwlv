@@ -24,6 +24,8 @@ DOMAIN=""
 ADMIN_EMAIL=""
 ADMIN_PASSWORD=""
 SKIP_DOCKER_INSTALL=false
+OFFLINE=false
+IMAGE_BUNDLE=""
 
 # =============================================================================
 # Funktionen
@@ -66,18 +68,24 @@ check_system() {
         log_info "Betriebssystem: $NAME $VERSION_ID"
     fi
 
-    # RAM prüfen
-    total_ram=$(free -m | awk '/^Mem:/{print $2}')
-    if [[ $total_ram -lt 3500 ]]; then
-        log_warn "Weniger als 4GB RAM erkannt ($total_ram MB). Mindestens 4GB empfohlen."
+    # RAM prüfen (locale-unabhängig über /proc/meminfo statt `free`,
+    # dessen Spaltenlabel bei z.B. deutscher Locale "Speicher:" statt "Mem:" heißt)
+    total_ram=$(awk '/^MemTotal:/ {print int($2/1024)}' /proc/meminfo 2>/dev/null)
+    if [[ -z "$total_ram" ]]; then
+        log_warn "RAM konnte nicht ermittelt werden."
+    elif [[ $total_ram -lt 3500 ]]; then
+        log_warn "Weniger als 4GB RAM erkannt (${total_ram} MB). Mindestens 4GB empfohlen."
     else
         log_info "RAM: ${total_ram}MB - OK"
     fi
 
-    # Speicherplatz prüfen
-    free_space=$(df -BG / | awk 'NR==2 {print $4}' | tr -d 'G')
-    if [[ $free_space -lt 15 ]]; then
-        log_warn "Weniger als 15GB freier Speicher ($free_space GB). Mindestens 20GB empfohlen."
+    # Speicherplatz prüfen (LC_ALL=C + -P verhindern lokalisierte/umgebrochene
+    # df-Ausgabe, die sonst die falsche Spalte liest)
+    free_space=$(LC_ALL=C df -P -BG / 2>/dev/null | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+    if [[ -z "$free_space" ]]; then
+        log_warn "Freier Speicher konnte nicht ermittelt werden."
+    elif [[ $free_space -lt 15 ]]; then
+        log_warn "Weniger als 15GB freier Speicher (${free_space} GB). Mindestens 20GB empfohlen."
     else
         log_info "Freier Speicher: ${free_space}GB - OK"
     fi
@@ -110,6 +118,20 @@ install_docker() {
 install_dependencies() {
     log_info "Installiere Abhängigkeiten..."
 
+    # Offline: kein Paket-Repository erreichbar. git/curl/openssl müssen vorhanden sein.
+    if [[ "$OFFLINE" == "true" ]]; then
+        local missing=""
+        for tool in git curl openssl; do
+            command -v "$tool" &>/dev/null || missing="$missing $tool"
+        done
+        if [[ -n "$missing" ]]; then
+            log_error "Offline-Modus: folgende Programme fehlen und müssen vorab installiert werden:$missing"
+            exit 1
+        fi
+        log_info "Offline-Modus: benötigte Programme vorhanden."
+        return 0
+    fi
+
     if command -v apt-get &> /dev/null; then
         sudo apt-get update -qq
         sudo apt-get install -y -qq git curl openssl
@@ -123,6 +145,18 @@ install_dependencies() {
 }
 
 clone_repository() {
+    # Offline-Modus: Repository muss bereits lokal vorliegen (kein GitHub-Zugriff)
+    if [[ "$OFFLINE" == "true" ]]; then
+        if [[ -d "$INSTALL_DIR/.git" ]]; then
+            log_info "Offline-Modus: Verwende vorhandenes Repository in $INSTALL_DIR."
+            cd "$INSTALL_DIR"
+            return 0
+        fi
+        log_error "Offline-Modus: Kein Repository unter $INSTALL_DIR gefunden."
+        log_error "Bitte das Repository vorab dorthin kopieren."
+        exit 1
+    fi
+
     if [[ -d "$INSTALL_DIR" ]]; then
         log_info "Verzeichnis $INSTALL_DIR existiert bereits."
         read -p "Überschreiben? (j/N): " confirm
@@ -224,11 +258,28 @@ start_containers() {
     log_info "Starte Docker Container..."
     cd "$INSTALL_DIR"
 
-    # Images bauen
-    docker compose build --quiet
+    if [[ "$OFFLINE" == "true" ]]; then
+        # Offline: Images aus vorbereitetem Bundle laden statt bauen (kein Docker-Hub-Zugriff)
+        local bundle="${IMAGE_BUNDLE:-$INSTALL_DIR/flvs-images.tar}"
+        if [[ ! -f "$bundle" ]]; then
+            log_error "Offline-Modus: Image-Bundle nicht gefunden: $bundle"
+            log_error "Bundle auf einer Maschine MIT Internet erstellen:"
+            log_error "  ./docker/scripts/build-offline-bundle.sh"
+            log_error "und die Datei nach $bundle kopieren (oder --image-bundle PFAD angeben)."
+            exit 1
+        fi
+        log_info "Offline-Modus: Lade Images aus $bundle ..."
+        docker load -i "$bundle"
 
-    # Container starten
-    docker compose up -d
+        # Container starten OHNE Build
+        docker compose up -d --no-build
+    else
+        # Images bauen
+        docker compose build --quiet
+
+        # Container starten
+        docker compose up -d
+    fi
 
     log_info "Warte auf Container-Start..."
     sleep 10
@@ -342,6 +393,14 @@ while [[ $# -gt 0 ]]; do
             SKIP_DOCKER_INSTALL=true
             shift
             ;;
+        --offline)
+            OFFLINE=true
+            shift
+            ;;
+        --image-bundle)
+            IMAGE_BUNDLE="$2"
+            shift 2
+            ;;
         --help|-h)
             echo "Verwendung: $0 [OPTIONEN]"
             echo ""
@@ -351,6 +410,9 @@ while [[ $# -gt 0 ]]; do
             echo "  --password PASSWORD   Admin Passwort (sonst generiert)"
             echo "  --install-dir DIR     Installationsverzeichnis (Standard: /opt/flvs)"
             echo "  --skip-docker-install Docker-Installation überspringen"
+            echo "  --offline             Offline-Modus: Images aus Bundle laden statt bauen"
+            echo "                        (Repo muss lokal vorliegen, kein GitHub/Docker-Hub-Zugriff)"
+            echo "  --image-bundle PFAD   Pfad zum Image-Bundle (Standard: <install-dir>/flvs-images.tar)"
             echo "  --help, -h            Diese Hilfe anzeigen"
             exit 0
             ;;

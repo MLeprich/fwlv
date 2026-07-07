@@ -51,6 +51,7 @@ services:
     build:
       context: .
       target: production
+    image: flvs-web:local
     container_name: flvs-web
     restart: unless-stopped
     volumes:
@@ -98,6 +99,7 @@ services:
     build:
       context: .
       target: celery-worker
+    image: flvs-celery-worker:local
     container_name: flvs-celery-worker
     restart: unless-stopped
     volumes:
@@ -124,6 +126,7 @@ services:
     build:
       context: .
       target: celery-beat
+    image: flvs-celery-beat:local
     container_name: flvs-celery-beat
     restart: unless-stopped
     volumes:
