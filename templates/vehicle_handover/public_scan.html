@@ -1,0 +1,145 @@
+{% extends 'public_base.html' %}
+{% load static %}
+
+{% block title %}Fahrzeug scannen - Fahrzeugübergabe - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center mb-6">
+            <span class="text-4xl mr-4">📷</span>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Fahrzeug scannen</h1>
+                <p class="text-sm text-gray-600 mt-1">QR-Code am Fahrzeug scannen oder Fahrzeug auswählen.</p>
+            </div>
+        </div>
+
+        <div id="scan-error" class="hidden mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+            Der QR-Code gehört nicht zu einer Fahrzeugübernahme. Bitte erneut versuchen.
+        </div>
+
+        <!-- Kamera-Scanner (nur bei sicherem Kontext / HTTPS) -->
+        <div id="camera-block" class="hidden">
+            <div id="reader" class="mx-auto" style="width:100%; max-width:420px;"></div>
+        </div>
+
+        <!-- Hardware-Scanner / manuelle Eingabe (Fallback ohne Kamera) -->
+        <div id="wedge-block" class="hidden">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 mb-4">
+                <span class="font-medium">Kamera nicht verfügbar.</span>
+                Nutzen Sie einen angeschlossenen Hand-Scanner (USB/Bluetooth) oder wählen Sie das Fahrzeug unten aus.
+            </div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Scan-Eingabe</label>
+            <input id="wedge-input" type="text" inputmode="none" autocomplete="off"
+                   placeholder="Hier scannen (Cursor muss im Feld sein)…"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm mb-2">
+            <p class="text-xs text-gray-500 mb-4">Der Hand-Scanner überträgt den QR-Inhalt automatisch in dieses Feld.</p>
+        </div>
+
+        <!-- Manuelle Fahrzeug-Auswahl (immer verfügbar) -->
+        <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Fahrzeug manuell auswählen</label>
+            <select id="manual-vehicle"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white">
+                <option value="">🚒 Fahrzeug auswählen…</option>
+                {% for vehicle in vehicles %}
+                <option value="{{ vehicle.pk }}">{{ vehicle.call_sign }}{% if vehicle.name %} – {{ vehicle.name }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between">
+            <a href="{% url 'vehicle_handover:public_create' %}?step=1"
+               class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                Ohne Scan fortfahren
+            </a>
+            <span class="text-xs text-gray-500">Tipp: QR auch mit der Handy-Kamera scannbar</span>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'vendor/js/html5-qrcode.min.js' %}"></script>
+<script>
+(function () {
+    var baseUrl = "{% url 'vehicle_handover:public_create' %}";
+    var handled = false;
+
+    function extractVehicleId(text) {
+        try {
+            var u = new URL(text, window.location.origin);
+            var v = u.searchParams.get('vehicle');
+            if (v && /^\d+$/.test(v)) return v;
+        } catch (e) { /* kein gültiger URL – Fallback unten */ }
+        var m = String(text).match(/vehicle=(\d+)/);
+        if (m) return m[1];
+        // Reine Zahl (z. B. nur die Fahrzeug-ID)
+        if (/^\d+$/.test(String(text).trim())) return String(text).trim();
+        return null;
+    }
+
+    function goToVehicle(vehicleId) {
+        if (handled) return;
+        handled = true;
+        window.location.href = baseUrl + '?step=1&vehicle=' + vehicleId;
+    }
+
+    function handleScanText(text) {
+        var vehicleId = extractVehicleId(text);
+        if (!vehicleId) {
+            document.getElementById('scan-error').classList.remove('hidden');
+            return false;
+        }
+        goToVehicle(vehicleId);
+        return true;
+    }
+
+    // Manuelle Auswahl (immer aktiv)
+    var manual = document.getElementById('manual-vehicle');
+    manual.addEventListener('change', function () {
+        if (manual.value) goToVehicle(manual.value);
+    });
+
+    // Sicherer Kontext (HTTPS/localhost)? -> Kamera. Sonst Hardware-Scanner-Feld.
+    var secure = window.isSecureContext && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].indexOf(location.hostname) !== -1);
+    var hasCameraApi = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+    if (secure && hasCameraApi && typeof Html5QrcodeScanner !== 'undefined') {
+        document.getElementById('camera-block').classList.remove('hidden');
+        try {
+            var scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250, rememberLastUsedCamera: true }, false);
+            scanner.render(function (decodedText) {
+                if (handled) return;
+                if (handleScanText(decodedText)) {
+                    try { scanner.clear(); } catch (e) {}
+                }
+            });
+        } catch (e) {
+            // Fällt auf Hardware-Scanner zurück
+            document.getElementById('camera-block').classList.add('hidden');
+            enableWedge();
+        }
+    } else {
+        enableWedge();
+    }
+
+    function enableWedge() {
+        var block = document.getElementById('wedge-block');
+        block.classList.remove('hidden');
+        var input = document.getElementById('wedge-input');
+        input.focus();
+        // Hand-Scanner schließt i. d. R. mit Enter ab
+        input.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                handleScanText(input.value);
+                input.value = '';
+            }
+        });
+        // Fallback: kompletter URL/Wert wird auf einmal eingefügt
+        input.addEventListener('paste', function () {
+            setTimeout(function () { handleScanText(input.value); }, 50);
+        });
+    }
+})();
+</script>
+{% endblock %}

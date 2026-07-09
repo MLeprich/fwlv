@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Fahrzeug-QR-Codes - Fahrzeugübernahme - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3 no-print">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">QR-Codes</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+    @media print {
+        .no-print { display: none !important; }
+        .qr-card { break-inside: avoid; page-break-inside: avoid; }
+        body { background: white !important; }
+    }
+    .qr-card img, .qr-card svg { width: 100%; height: auto; }
+</style>
+
+<div class="max-w-6xl mx-auto px-6 py-6">
+    <div class="flex items-center justify-between mb-6 no-print">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Fahrzeug-QR-Codes</h1>
+            <p class="text-sm text-gray-600 mt-1">
+                QR-Code am Fahrzeug anbringen. Beim Scannen öffnet sich direkt die Fahrzeugübernahme für dieses Fahrzeug.
+            </p>
+        </div>
+        <button onclick="window.print()"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+            🖨️ Drucken
+        </button>
+    </div>
+
+    {% if vehicles %}
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {% for vehicle in vehicles %}
+        <div class="qr-card bg-white border border-gray-300 rounded-lg p-4 text-center">
+            <div class="mx-auto mb-3" style="max-width: 200px;">
+                <img src="{% url 'vehicle_handover:vehicle_qr_image' vehicle.pk %}" alt="QR {{ vehicle.call_sign }}">
+            </div>
+            <p class="font-bold text-gray-900 leading-tight">{{ vehicle.call_sign }}</p>
+            {% if vehicle.name %}<p class="text-sm text-gray-700">{{ vehicle.name }}</p>{% endif %}
+            {% if vehicle.license_plate %}<p class="text-xs text-gray-500 mt-1">{{ vehicle.license_plate }}</p>{% endif %}
+            <p class="text-xs text-blue-600 mt-2">Scannen für Übernahme</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+        Keine aktiven Fahrzeuge vorhanden.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

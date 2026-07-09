@@ -62,6 +62,14 @@ class DefectCategoryModel(TimeStampedModel):
         verbose_name="Model-Name",
         help_text="Django Model-Name für Objekt-Lookup, z.B. 'vehicle'",
     )
+    responsible_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='responsible_defect_categories',
+        verbose_name="Zuständige Bearbeiter",
+        help_text="Sachbearbeiter, die Mängel dieser Kategorie sehen/bearbeiten dürfen. "
+                  "Leer = für alle Bearbeiter sichtbar (keine Einschränkung).",
+    )
 
     class Meta:
         ordering = ['sort_order', 'name']

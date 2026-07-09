@@ -149,6 +149,34 @@
                         Jetzt starten →
                     </p>
                 </a>
+
+                <!-- QR-Codes -->
+                <a href="{% url 'vehicle_handover:vehicle_qr_sheet' %}" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 hover:border-blue-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">🔳</span>
+                        <h3 class="font-bold text-gray-900">Fahrzeug-QR-Codes</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        QR-Codes drucken &amp; am Fahrzeug anbringen
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Übersicht öffnen →
+                    </p>
+                </a>
+
+                <!-- Fahrzeug scannen -->
+                <a href="{% url 'vehicle_handover:public_scan' %}" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200 hover:border-blue-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">📷</span>
+                        <h3 class="font-bold text-gray-900">Fahrzeug scannen</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        QR am Fahrzeug scannen &amp; Übernahme starten
+                    </p>
+                    <p class="text-sm text-gray-500 font-medium">
+                        Scanner öffnen →
+                    </p>
+                </a>
             </div>
 
             <!-- Letzte Übergaben -->

@@ -846,6 +846,17 @@ class HandoverDefect(AuditedModel):
     #     verbose_name=_('Werkstatt-Auftrag')
     # )
 
+    # Verknüpfung ins Mängelwesen (bei Abschluss der Übergabe erzeugt)
+    exported_defect = models.ForeignKey(
+        'defect_management.Defect',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name=_('Mängelwesen-Eintrag'),
+        help_text=_('Automatisch erzeugter Eintrag im Mängelwesen')
+    )
+
     class Meta:
         db_table = 'vehicle_handover_defect'
         verbose_name = _('Fahrzeug-Mangel')

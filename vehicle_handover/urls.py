@@ -15,6 +15,11 @@ urlpatterns = [
     path('public/api/check-person/', views.public_check_person, name='public_api_check_person'),
     path('public/resume/<int:pk>/', views.public_handover_resume, name='public_resume'),
     path('public/discard/<int:pk>/', views.public_handover_discard, name='public_discard'),
+    path('public/scan/', views.public_scan, name='public_scan'),
+
+    # QR-Codes für Fahrzeuge
+    path('vehicles/qr/', views.vehicle_qr_sheet, name='vehicle_qr_sheet'),
+    path('vehicles/<int:pk>/qr.svg', views.vehicle_qr_image, name='vehicle_qr_image'),
 
     # Dashboard
     path('', views.HandoverDashboardView.as_view(), name='dashboard'),

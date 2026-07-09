@@ -108,6 +108,12 @@
                     🔧 Prüfung eintragen
                 </button>
 
+                <a href="{% url 'vehicle_handover:vehicle_qr_sheet' %}?ids={{ vehicle.pk }}"
+                   target="_blank"
+                   class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-center">
+                    🔳 QR-Code
+                </a>
+
                 <a href="{% url 'vehicles:update' vehicle.pk %}"
                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-center">
                     ✏️ Bearbeiten

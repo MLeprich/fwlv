@@ -167,10 +167,24 @@ class DefectCommentForm(forms.ModelForm):
 class DefectCategoryForm(forms.ModelForm):
     """Formular für Mangel-Kategorien"""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Auswahl auf aktive Benutzer beschränken, nach Name sortiert
+        User = self._meta.model._meta.get_field('responsible_users').remote_field.model
+        self.fields['responsible_users'].queryset = User.objects.filter(
+            is_active=True
+        ).order_by('first_name', 'last_name', 'username')
+        self.fields['responsible_users'].required = False
+
     class Meta:
         model = DefectCategoryModel
-        fields = ['name', 'icon', 'color', 'description', 'is_active', 'sort_order', 'app_label', 'model_name']
+        fields = ['name', 'icon', 'color', 'description', 'is_active', 'sort_order',
+                  'responsible_users', 'app_label', 'model_name']
         widgets = {
+            'responsible_users': forms.SelectMultiple(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500',
+                'size': '6',
+            }),
             'name': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500',
                 'placeholder': 'z.B. Fahrzeug',

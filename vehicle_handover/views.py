@@ -17,6 +17,7 @@ from django.db import transaction
 from django.views.decorators.http import require_POST
 
 from .csv_import import import_checklist_csv
+from .defect_sync import sync_handover_defects_to_management
 
 from .models import (
     ChecklistTemplate,
@@ -917,6 +918,9 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
             inspector = request.user.get_full_name() or request.user.get_username()
             equip_count = process_equipment_inspections(handover, request, inspector)
 
+            # Erfasste Mängel ins Mängelwesen übernehmen
+            sync_handover_defects_to_management(handover)
+
             # PDF-Protokoll archivieren (inkl. Fotos)
             generate_and_archive_pdf(handover, request=request)
 
@@ -1304,6 +1308,12 @@ class PublicHandoverCreateView(TemplateView):
         step = self.get_current_step()
         wizard_data = request.session.get('public_handover_wizard', {})
 
+        # Aufruf per QR/Scan (?vehicle=): frischen Wizard für dieses Fahrzeug starten
+        if step == 1 and request.GET.get('vehicle'):
+            if 'public_handover_wizard' in request.session:
+                del request.session['public_handover_wizard']
+                request.session.modified = True
+
         if step in [2, 3, 4, 5, 6]:
             handover_id = wizard_data.get('handover_id')
             if not handover_id:
@@ -1325,8 +1335,17 @@ class PublicHandoverCreateView(TemplateView):
         wizard_data = self.request.session.get('public_handover_wizard', {})
 
         if step == 1:
-            form = PublicVehicleHandoverStep1Form(initial=wizard_data.get('step1', {}), step=1)
+            initial = dict(wizard_data.get('step1', {}))
+            # Fahrzeug aus QR/Scan vorbelegen
+            prefill_vehicle = self.request.GET.get('vehicle')
+            if prefill_vehicle and not initial.get('vehicle'):
+                try:
+                    initial['vehicle'] = int(prefill_vehicle)
+                except (ValueError, TypeError):
+                    pass
+            form = PublicVehicleHandoverStep1Form(initial=initial, step=1)
             context['form'] = form
+            context['prefill_vehicle'] = initial.get('vehicle')
             # Offene Entwürfe (unterbrochene öffentliche Übergaben) zum Fortsetzen anbieten
             context['drafts'] = (
                 VehicleHandover.objects
@@ -1520,6 +1539,9 @@ class PublicHandoverCreateView(TemplateView):
             inspector = f"{handover.reporter_first_name} {handover.reporter_last_name}".strip() or _('Öffentliche Übergabe')
             process_equipment_inspections(handover, request, inspector)
 
+            # Erfasste Mängel ins Mängelwesen übernehmen
+            sync_handover_defects_to_management(handover)
+
             # PDF-Protokoll archivieren (inkl. Fotos)
             generate_and_archive_pdf(handover, request=request)
 
@@ -1687,6 +1709,66 @@ def public_handover_discard(request, pk):
 
     messages.success(request, _('Entwurf wurde verworfen.'))
     return redirect('vehicle_handover:public_create')
+
+
+# ===== QR-Codes & Scan für Fahrzeugübernahme =====
+
+def _vehicle_handover_url(request, vehicle_pk):
+    """Absolute URL zur öffentlichen Übernahme mit vorausgewähltem Fahrzeug."""
+    return request.build_absolute_uri(
+        reverse('vehicle_handover:public_create') + f'?vehicle={vehicle_pk}'
+    )
+
+
+@login_required
+def vehicle_qr_image(request, pk):
+    """QR-Code (SVG) für ein Fahrzeug – kodiert die öffentliche Übernahme-URL."""
+    import qrcode
+    import qrcode.image.svg
+    from io import BytesIO
+    from vehicles.models import Vehicle
+
+    vehicle = get_object_or_404(Vehicle, pk=pk)
+    target = _vehicle_handover_url(request, vehicle.pk)
+
+    factory = qrcode.image.svg.SvgPathImage
+    img = qrcode.make(target, image_factory=factory, box_size=12)
+    stream = BytesIO()
+    img.save(stream)
+    response = HttpResponse(stream.getvalue(), content_type='image/svg+xml')
+    response['Content-Disposition'] = f'inline; filename="qr_fahrzeug_{vehicle.pk}.svg"'
+    return response
+
+
+@login_required
+def vehicle_qr_sheet(request):
+    """Druckbare Übersicht aller Fahrzeug-QR-Codes (optional gefiltert per ?ids=)."""
+    from vehicles.models import Vehicle
+
+    vehicles = Vehicle.objects.filter(is_active=True).order_by('call_sign')
+    ids = request.GET.get('ids', '')
+    if ids:
+        try:
+            id_list = [int(x) for x in ids.split(',') if x.strip()]
+            vehicles = Vehicle.objects.filter(pk__in=id_list).order_by('call_sign')
+        except ValueError:
+            pass
+
+    return render(request, 'vehicle_handover/vehicle_qr_sheet.html', {'vehicles': vehicles})
+
+
+def public_scan(request):
+    """
+    Öffentliche Scan-Seite: Fahrzeug-QR lesen und Übernahme starten.
+
+    - Sicherer Kontext (HTTPS/localhost): Kamera-Scanner im Browser.
+    - Ohne HTTPS: Eingabefeld für Hardware-Scanner (USB/Bluetooth) + manuelle
+      Fahrzeug-Auswahl (getUserMedia ist dort nicht verfügbar).
+    """
+    from vehicles.models import Vehicle
+
+    vehicles = Vehicle.objects.filter(is_active=True).order_by('call_sign')
+    return render(request, 'vehicle_handover/public_scan.html', {'vehicles': vehicles})
 
 
 # ===== 360° Fahrzeuginnenraum-Verwaltung =====

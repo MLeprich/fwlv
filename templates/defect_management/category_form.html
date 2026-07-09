@@ -86,6 +86,20 @@
                     </label>
                 </div>
             </div>
+
+            <!-- Zuständige Bearbeiter -->
+            <div>
+                <label for="id_responsible_users" class="block text-sm font-medium text-gray-700 mb-1">Zuständige Bearbeiter</label>
+                {{ form.responsible_users }}
+                <p class="text-xs text-gray-500 mt-1">
+                    Nur diese Sachbearbeiter sehen/bearbeiten Mängel dieser Kategorie
+                    (Mehrfachauswahl mit Strg/Cmd). <strong>Leer = für alle Bearbeiter sichtbar.</strong>
+                    Modulverantwortliche und Admins sehen immer alles.
+                </p>
+                {% if form.responsible_users.errors %}
+                <p class="text-sm text-red-600 mt-1">{{ form.responsible_users.errors.0 }}</p>
+                {% endif %}
+            </div>
         </div>
 
         <!-- Objekt-Lookup -->

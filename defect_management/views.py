@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from datetime import timedelta
 
 from .models import Defect, DefectStatus, DefectCategoryModel, DefectPhoto, DefectComment
@@ -27,6 +28,29 @@ def _is_module_admin(user):
     ).exists()
 
 
+def _visible_defects(user, qs):
+    """
+    Schränkt ein Defect-Queryset auf die für den User sichtbaren Kategorien ein.
+
+    - Modulverantwortliche/Admins/Superuser sehen alles.
+    - Sonst: nur Mängel aus Kategorien, denen der User als zuständiger Bearbeiter
+      zugeordnet ist ODER die keine zuständigen Bearbeiter haben (unbeschränkt).
+    """
+    if _is_module_admin(user):
+        return qs
+    restricted = list(
+        DefectCategoryModel.objects
+        .filter(responsible_users__isnull=False)
+        .values_list('id', flat=True).distinct()
+    )
+    mine = list(
+        DefectCategoryModel.objects
+        .filter(responsible_users=user)
+        .values_list('id', flat=True)
+    )
+    return qs.filter(Q(category_id__in=mine) | ~Q(category_id__in=restricted))
+
+
 class DefectDashboardView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """Dashboard mit KPIs und letzten Mängeln"""
     model = Defect
@@ -35,23 +59,25 @@ class DefectDashboardView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
     permission_required = 'defect_management.view_defect'
 
     def get_queryset(self):
-        return Defect.objects.select_related(
+        qs = _visible_defects(self.request.user, Defect.objects.select_related(
             'created_by', 'assigned_to', 'category'
-        ).order_by('-reported_date')[:10]
+        )).order_by('-reported_date')
+        return qs[:10]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         now = timezone.now()
         thirty_days_ago = now - timedelta(days=30)
 
+        visible = _visible_defects(self.request.user, Defect.objects.all())
         context['current_module'] = 'defect_management'
-        context['open_count'] = Defect.objects.filter(status=DefectStatus.OPEN).count()
-        context['in_progress_count'] = Defect.objects.filter(status=DefectStatus.IN_PROGRESS).count()
-        context['resolved_count'] = Defect.objects.filter(
+        context['open_count'] = visible.filter(status=DefectStatus.OPEN).count()
+        context['in_progress_count'] = visible.filter(status=DefectStatus.IN_PROGRESS).count()
+        context['resolved_count'] = visible.filter(
             status=DefectStatus.RESOLVED,
             resolved_date__gte=thirty_days_ago,
         ).count()
-        context['total_count'] = Defect.objects.count()
+        context['total_count'] = visible.count()
         context['is_module_admin'] = _is_module_admin(self.request.user)
         return context
 
@@ -65,9 +91,9 @@ class DefectListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        qs = Defect.objects.select_related(
+        qs = _visible_defects(self.request.user, Defect.objects.select_related(
             'created_by', 'assigned_to', 'content_type', 'category'
-        ).order_by('-reported_date')
+        )).order_by('-reported_date')
 
         # Filter: Status
         status = self.request.GET.get('status')
@@ -135,9 +161,9 @@ class DefectDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     permission_required = 'defect_management.view_defect'
 
     def get_queryset(self):
-        return Defect.objects.select_related(
+        return _visible_defects(self.request.user, Defect.objects.select_related(
             'created_by', 'assigned_to', 'resolved_by', 'content_type', 'category',
-        ).prefetch_related('photos', 'comments__created_by')
+        ).prefetch_related('photos', 'comments__created_by'))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -153,6 +179,9 @@ class DefectUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     form_class = DefectUpdateForm
     template_name = 'defect_management/defect_form.html'
     permission_required = 'defect_management.change_defect'
+
+    def get_queryset(self):
+        return _visible_defects(self.request.user, Defect.objects.all())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -195,6 +224,9 @@ class DefectDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     template_name = 'defect_management/defect_confirm_delete.html'
     success_url = reverse_lazy('defect_management:list')
     permission_required = 'defect_management.delete_defect'
+
+    def get_queryset(self):
+        return _visible_defects(self.request.user, Defect.objects.all())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
