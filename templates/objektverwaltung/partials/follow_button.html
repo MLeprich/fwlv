@@ -1,0 +1,15 @@
+{% if is_following %}
+<button hx-post="{% url 'objektverwaltung:toggle_follow' object.pk %}"
+        hx-swap="outerHTML"
+        class="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+        title="Du wirst bei Änderungen benachrichtigt – klicken zum Beenden">
+    <span>★</span> Abonniert
+</button>
+{% else %}
+<button hx-post="{% url 'objektverwaltung:toggle_follow' object.pk %}"
+        hx-swap="outerHTML"
+        class="inline-flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+        title="Objekt abonnieren, um bei Änderungen benachrichtigt zu werden">
+    <span>☆</span> Abonnieren
+</button>
+{% endif %}

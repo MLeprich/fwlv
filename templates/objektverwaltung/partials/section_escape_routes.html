@@ -1,0 +1,47 @@
+<div class="bg-white rounded-lg shadow p-6" x-data="{ addOpen: false }">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-gray-900">Fluchtwege ({{ object.escape_routes.count }})</h2>
+        {% if perms.objektverwaltung.change_buildingobject %}
+        <button @click="addOpen = !addOpen" class="text-sm text-primary-600 hover:text-primary-800 font-medium">
+            <span x-show="!addOpen">+ Fluchtweg</span>
+            <span x-show="addOpen" x-cloak>Abbrechen</span>
+        </button>
+        {% endif %}
+    </div>
+
+    {% if object.escape_routes.all %}
+    <ul class="divide-y divide-gray-100">
+        {% for route in object.escape_routes.all %}
+        <li class="py-2 flex items-center justify-between">
+            <div>
+                <span class="text-sm font-medium text-gray-900">{{ route.name }}</span>
+                {% if route.floor %}<span class="text-xs text-gray-500 ml-2">{{ route.floor.name|default:route.floor.level }}</span>{% endif %}
+                {% if route.description %}<p class="text-xs text-gray-500">{{ route.description }}</p>{% endif %}
+            </div>
+            {% if perms.objektverwaltung.change_buildingobject %}
+            <form method="post" action="{% url 'objektverwaltung:delete_escape_route' route.pk %}"
+                  onsubmit="return confirm('Fluchtweg löschen?');">
+                {% csrf_token %}
+                <button type="submit" class="text-xs text-red-600 hover:text-red-800">Löschen</button>
+            </form>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-500">Noch keine Fluchtwege erfasst.</p>
+    {% endif %}
+
+    {% if perms.objektverwaltung.change_buildingobject %}
+    <form method="post" action="{% url 'objektverwaltung:add_escape_route' object.pk %}"
+          x-show="addOpen" x-cloak class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-3">
+        {% csrf_token %}
+        <div><label class="block text-xs text-gray-500 mb-1">Bezeichnung</label>{{ escape_route_form.name }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Etage</label>{{ escape_route_form.floor }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Beschreibung</label>{{ escape_route_form.description }}</div>
+        <div class="md:col-span-3 text-right">
+            <button type="submit" class="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-primary-700">Fluchtweg hinzufügen</button>
+        </div>
+    </form>
+    {% endif %}
+</div>

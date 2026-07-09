@@ -16,6 +16,7 @@ from .models import (
     HandoverDefect,
     HandoverStatus,
     DefectSeverity,
+    HandoverEquipmentInspection,
     Vehicle360Photo,
     Vehicle360Hotspot,
     HotspotImage,
@@ -1065,3 +1066,17 @@ class HotspotImageAdmin(admin.ModelAdmin):
         if obj.image:
             return format_html('<img src="{}" style="max-width: 600px; max-height: 600px; border-radius: 5px;" />', obj.image.url)
         return _('Kein Bild vorhanden')
+
+
+# ===== Ausrüstungsprüfungen (im Rahmen einer Übergabe) =====
+
+@admin.register(HandoverEquipmentInspection)
+class HandoverEquipmentInspectionAdmin(admin.ModelAdmin):
+    """Nachweise geprüfter verlasteter Ausrüstung aus Fahrzeugübergaben"""
+    list_display = ('equipment_label', 'inspector_name', 'inspected_at', 'next_inspection_date', 'handover')
+    list_filter = ('inspected_at', 'next_inspection_date')
+    search_fields = ('equipment_label', 'inspector_name')
+    date_hierarchy = 'inspected_at'
+    autocomplete_fields = ('handover', 'device_instance', 'equipment_item')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('-inspected_at',)

@@ -429,6 +429,11 @@
                     → {{ item.notes }}
                 </div>
                 {% endif %}
+                {% if item.pdf_photo_uri %}
+                <div style="padding-left: 42px; margin: 4px 0;">
+                    <img src="{{ item.pdf_photo_uri }}" style="max-height: 120px; max-width: 200px; border: 1px solid #d1d5db; border-radius: 4px;">
+                </div>
+                {% endif %}
                 {% endfor %}
             </div>
             {% endfor %}
@@ -473,14 +478,45 @@
     </div>
     {% endif %}
 
-    <!-- Fotos (nur Anzahl im PDF, Bilder können zu groß sein) -->
-    {% if photo_count > 0 %}
+    <!-- Geprüfte verlastete Ausrüstung -->
+    {% if equipment_inspections %}
+    <div class="section">
+        <div class="section-title">Geprüfte verlastete Ausrüstung ({{ equipment_inspections|length }})</div>
+        <div class="checklist">
+            {% for insp in equipment_inspections %}
+            <div class="checklist-item">
+                <span class="check-icon">✅</span>
+                <span class="check-name">
+                    {{ insp.equipment_label }}
+                    <span style="font-size: 8pt; color: #666;">
+                        – geprüft am {{ insp.inspected_at|date:"d.m.Y" }} durch {{ insp.inspector_name }}{% if insp.next_inspection_date %}, nächste Prüfung {{ insp.next_inspection_date|date:"d.m.Y" }}{% endif %}
+                    </span>
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Fotos zur Dokumentation -->
+    {% if handover_photos %}
+    <div class="section">
+        <div class="section-title">Foto-Dokumentation ({{ handover_photos|length }})</div>
+        <div class="photo-grid">
+            {% for photo in handover_photos %}
+            <div class="photo-cell" style="display: inline-block; width: 30%; margin: 1%; vertical-align: top;">
+                <img src="{{ photo.uri }}" style="width: 100%; border: 1px solid #d1d5db; border-radius: 4px;">
+                <div class="photo-caption" style="font-size: 8pt; color: #666; margin-top: 2px;">
+                    {{ photo.type }}{% if photo.description %} – {{ photo.description }}{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif photo_count > 0 %}
     <div class="section">
         <div class="section-title">Dokumentation</div>
         <p>Es wurden <strong>{{ photo_count }} Fotos</strong> zur Dokumentation hochgeladen.</p>
-        <p style="font-size: 8pt; color: #666; margin-top: 5px;">
-            Fotos sind im digitalen System unter https://lager.resqware.de/vehicle_handover/handovers/{{ handover.pk }}/ einsehbar.
-        </p>
     </div>
     {% endif %}
 

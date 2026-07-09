@@ -2,16 +2,21 @@
 Views für Fahrzeugübernahme App
 """
 
+import csv
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-from django.db.models import Count, Q, Prefetch
+from django.db.models import Count, Q, Prefetch, Max
 from django.utils.translation import gettext_lazy as _
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.db import transaction
+from django.views.decorators.http import require_POST
+
+from .csv_import import import_checklist_csv
 
 from .models import (
     ChecklistTemplate,
@@ -21,6 +26,7 @@ from .models import (
     HandoverChecklist,
     HandoverPhoto,
     HandoverDefect,
+    HandoverEquipmentInspection,
 )
 from .forms import (
     ChecklistTemplateForm,
@@ -32,6 +38,154 @@ from .forms import (
     HandoverPhotoFormSet,
     HandoverDefectFormSet,
 )
+
+
+def annotate_checklist_due(handover):
+    """
+    Reichert die Checklisten-Items einer Übergabe mit Fälligkeits-Infos an
+    (nur zur Anzeige – es werden keine Daten gespeichert).
+
+    Fälligkeit bezieht sich auf DAS FAHRZEUG: fällig, wenn dieses Item bei
+    diesem Fahrzeug seit dem Prüfintervall nicht mehr auf 'geprüft' stand.
+    Setzt je Item: is_due (bool), last_checked (datetime|None), days_since (int|None).
+    """
+    from django.utils import timezone
+
+    items = list(handover.checklist_items.all().order_by('category', 'order'))
+
+    # Letzte Prüfung (checked=True) je (Kategorie, Item-Name) für dieses Fahrzeug,
+    # aus anderen Übergaben.
+    prior = (
+        HandoverChecklist.objects
+        .filter(handover__vehicle=handover.vehicle, checked=True)
+        .exclude(handover=handover)
+        .values('category', 'item_name')
+        .annotate(last=Max('handover__handover_date'))
+    )
+    last_map = {(p['category'], p['item_name']): p['last'] for p in prior}
+
+    now = timezone.now()
+    for item in items:
+        item.is_due = False
+        item.last_checked = last_map.get((item.category, item.item_name))
+        item.days_since = None
+        days = item.interval_days()
+        if not days:
+            continue  # kein Intervall gesetzt
+        if item.last_checked is None:
+            item.is_due = True  # noch nie geprüft
+        else:
+            delta = (now - item.last_checked).days
+            item.days_since = delta
+            item.is_due = delta >= days
+    return items
+
+
+def get_due_equipment(vehicle):
+    """
+    Liefert die dem Fahrzeug zugeordnete Ausrüstung, deren Prüfung fällig ist
+    (next_inspection_date <= heute). Vereinheitlicht beide Instanztypen für die Anzeige.
+    """
+    from django.utils import timezone
+    from equipment.models import EquipmentDeviceInstance, EquipmentItem
+
+    if vehicle is None:
+        return []
+    today = timezone.now().date()
+    due = []
+
+    devices = EquipmentDeviceInstance.objects.filter(
+        assigned_vehicle=vehicle,
+        is_active=True,
+        next_inspection_date__isnull=False,
+        next_inspection_date__lte=today,
+    ).select_related('master')
+    for d in devices:
+        label = f"{d.inventory_number} – {d.master.name}" if d.master_id else d.inventory_number
+        due.append({
+            'field_name': f'equipment_device_{d.pk}',
+            'label': label,
+            'identifier': d.inventory_number,
+            'next_inspection_date': d.next_inspection_date,
+        })
+
+    items = EquipmentItem.objects.filter(
+        assigned_vehicle=vehicle,
+        is_active=True,
+        next_inspection_date__isnull=False,
+        next_inspection_date__lte=today,
+    )
+    for it in items:
+        due.append({
+            'field_name': f'equipment_item_{it.pk}',
+            'label': f"{it.get_equipment_type_display()} – {it.item_number}",
+            'identifier': it.item_number,
+            'next_inspection_date': it.next_inspection_date,
+        })
+
+    return due
+
+
+def process_equipment_inspections(handover, request, inspector_name):
+    """
+    Verarbeitet die im Bestätigungs-Schritt abgehakten Ausrüstungs-Prüfungen:
+    schreibt Prüfdatum/-intervall auf die Ausrüstung zurück und legt einen
+    Nachweis (inkl. Prüfer-Name) an. Gibt die Anzahl geprüfter Geräte zurück.
+    """
+    from django.utils import timezone
+    from dateutil.relativedelta import relativedelta
+    from equipment.models import EquipmentDeviceInstance, EquipmentItem
+
+    when = handover.handover_date or timezone.now()
+    when_date = when.date()
+    count = 0
+
+    def writeback(obj, label, fk_kwargs):
+        obj.last_inspection_date = when_date
+        next_date = None
+        fields = ['last_inspection_date', 'inspection_notes']
+        if getattr(obj, 'inspection_interval_months', None):
+            next_date = when_date + relativedelta(months=obj.inspection_interval_months)
+            obj.next_inspection_date = next_date
+            fields.append('next_inspection_date')
+        note = (
+            f"Geprüft bei Fahrzeugübergabe #{handover.pk} am "
+            f"{when_date:%d.%m.%Y} durch {inspector_name}."
+        )
+        obj.inspection_notes = (
+            (obj.inspection_notes + "\n" + note).strip() if obj.inspection_notes else note
+        )
+        obj.save(update_fields=fields)
+        HandoverEquipmentInspection.objects.create(
+            handover=handover,
+            equipment_label=label,
+            inspected_at=when,
+            inspector_name=inspector_name,
+            next_inspection_date=next_date,
+            **fk_kwargs,
+        )
+
+    for key, value in request.POST.items():
+        if value != 'on':
+            continue
+        if key.startswith('equipment_device_'):
+            obj = EquipmentDeviceInstance.objects.filter(
+                pk=key.rsplit('_', 1)[-1], assigned_vehicle=handover.vehicle
+            ).select_related('master').first()
+            if obj:
+                label = f"{obj.inventory_number} – {obj.master.name}" if obj.master_id else obj.inventory_number
+                writeback(obj, label, {'device_instance': obj})
+                count += 1
+        elif key.startswith('equipment_item_'):
+            obj = EquipmentItem.objects.filter(
+                pk=key.rsplit('_', 1)[-1], assigned_vehicle=handover.vehicle
+            ).first()
+            if obj:
+                label = f"{obj.get_equipment_type_display()} – {obj.item_number}"
+                writeback(obj, label, {'equipment_item': obj})
+                count += 1
+
+    return count
 
 
 # ===== Dashboard =====
@@ -148,7 +302,14 @@ class ChecklistTemplateCreateView(LoginRequiredMixin, PermissionRequiredMixin, C
             _('Checklisten-Vorlage "{}" wurde erfolgreich erstellt.').format(form.instance.name)
         )
 
-        return super().form_valid(form)
+        response = super().form_valid(form)
+
+        # Optionaler CSV-Import direkt beim Anlegen
+        csv_file = self.request.FILES.get('csv_file')
+        if csv_file:
+            _apply_csv_import(self.request, self.object, csv_file)
+
+        return response
 
 
 class ChecklistTemplateUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -214,6 +375,94 @@ def template_duplicate(request, pk):
     return redirect('vehicle_handover:template_detail', pk=new_template.pk)
 
 
+# ===== CSV-Import für Kategorien + Items =====
+
+CSV_SAMPLE_ROWS = [
+    ['Kategorie', 'Kategorie-Beschreibung', 'Kategorie-Prüfintervall', 'Item',
+     'Item-Beschreibung', 'Seriennummer erforderlich', 'Foto möglich',
+     'Prüfintervall', 'Erwartete Anzahl'],
+    # Fahrzeugpapiere – Kategorie monatlich, Items erben das Intervall
+    ['Fahrzeugpapiere', 'Dokumente im Fahrzeug', 'monatlich', 'Fahrzeugschein', '', 'Nein', 'Nein', '', '1'],
+    ['Fahrzeugpapiere', '', '', 'Fahrtenbuch', 'Vollständig und aktuell?', 'Nein', 'Nein', '', '1'],
+    ['Fahrzeugpapiere', '', '', 'Verbandskasten', 'Auf Vollständigkeit und Ablaufdatum prüfen', 'Nein', 'Ja', 'monatlich', '1'],
+    # Beladung – täglich, ein Item mit eigener Serie/Foto und abweichendem Intervall
+    ['Beladung', 'Beladung nach Norm', 'täglich', 'Atemschutzgerät', 'Flaschendruck prüfen', 'Ja', 'Ja', '', '4'],
+    ['Beladung', '', '', 'Feuerlöscher', 'Druck und Plombe prüfen', 'Nein', 'Ja', 'wöchentlich', '2'],
+    ['Beladung', '', '', 'Warndreieck', '', 'Nein', 'Nein', 'keine', '1'],
+    # Technik – wöchentlich
+    ['Technik', 'Technische Ausstattung', 'wöchentlich', 'Stromerzeuger', 'Probelauf, Tankfüllung', 'Ja', 'Ja', '', '1'],
+    ['Technik', '', '', 'Tauchpumpe', 'Funktionstest', 'Ja', 'Ja', '', '1'],
+    ['Technik', '', '', 'Beleuchtungssatz', 'Alle Leuchten funktionsfähig?', 'Nein', 'Nein', '', '1'],
+    # Sicherheit – monatlich
+    ['Sicherheit', 'Persönliche Schutzausrüstung / Sicherheit', 'monatlich', 'Rettungsleine', 'Auf Beschädigung prüfen', 'Ja', 'Ja', '', '2'],
+    ['Sicherheit', '', '', 'Erste-Hilfe-Rucksack', 'Vollständig, nichts abgelaufen?', 'Nein', 'Nein', '', '1'],
+]
+
+
+def _apply_csv_import(request, template, csv_file):
+    """Führt den CSV-Import aus und erzeugt passende Meldungen."""
+    result = import_checklist_csv(template, csv_file.read())
+
+    if result['categories_created'] or result['items_created']:
+        messages.success(
+            request,
+            _('CSV-Import: {cats} Kategorie(n) und {items} Item(s) übernommen.').format(
+                cats=result['categories_created'], items=result['items_created']
+            )
+        )
+    if result['items_skipped']:
+        messages.info(
+            request,
+            _('{n} bereits vorhandene(s) Item(s) wurden übersprungen.').format(
+                n=result['items_skipped']
+            )
+        )
+    for err in result['errors'][:10]:
+        messages.warning(request, err)
+    if not result['categories_created'] and not result['items_created'] and not result['errors']:
+        messages.warning(request, _('CSV enthielt keine verwertbaren Zeilen.'))
+
+    return result
+
+
+def template_import_sample(request):
+    """Beispiel-/Vorlage-CSV zum Download."""
+    import io
+
+    # CSV in einem Puffer aufbauen und den Body EINMALIG setzen. Sonst würde Django
+    # bei charset=utf-8-sig jeder einzelnen geschriebenen Zeile ein BOM voranstellen.
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=';')
+    for row in CSV_SAMPLE_ROWS:
+        writer.writerow(row)
+
+    # Ein einzelnes BOM voranstellen (Excel erkennt dann UTF-8 korrekt)
+    content = '﻿' + buffer.getvalue()
+    response = HttpResponse(content, content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="checklisten_vorlage.csv"'
+    return response
+
+
+@login_required
+def template_import(request, pk):
+    """CSV-Import von Kategorien + Items in eine bestehende Vorlage."""
+    template = get_object_or_404(ChecklistTemplate, pk=pk)
+
+    if not request.user.has_perm('vehicle_handover.change_checklisttemplate'):
+        messages.error(request, _('Keine Berechtigung für den Import.'))
+        return redirect('vehicle_handover:template_detail', pk=pk)
+
+    if request.method == 'POST':
+        csv_file = request.FILES.get('csv_file')
+        if not csv_file:
+            messages.error(request, _('Bitte eine CSV-Datei auswählen.'))
+        else:
+            _apply_csv_import(request, template, csv_file)
+        return redirect('vehicle_handover:template_detail', pk=pk)
+
+    return render(request, 'vehicle_handover/template_import.html', {'template': template})
+
+
 # ===== Kategorien verwalten (HTMX-Endpoints) =====
 
 class CategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
@@ -222,7 +471,7 @@ class CategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
     """
     model = ChecklistTemplateCategory
     template_name = 'vehicle_handover/partials/category_form.html'
-    fields = ['name', 'order', 'description']
+    fields = ['name', 'order', 'inspection_interval', 'description']
     permission_required = 'vehicle_handover.add_checklistcategory'
 
     def get_context_data(self, **kwargs):
@@ -248,7 +497,7 @@ class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
     """
     model = ChecklistTemplateCategory
     template_name = 'vehicle_handover/partials/category_form.html'
-    fields = ['name', 'order', 'description']
+    fields = ['name', 'order', 'inspection_interval', 'description']
     permission_required = 'vehicle_handover.change_checklistcategory'
 
     def get_success_url(self):
@@ -294,7 +543,7 @@ class ItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     model = ChecklistTemplateItem
     template_name = 'vehicle_handover/partials/item_form.html'
-    fields = ['name', 'order', 'expected_quantity', 'requires_serial', 'description']
+    fields = ['name', 'order', 'expected_quantity', 'requires_serial', 'allows_photo', 'inspection_interval', 'description']
     permission_required = 'vehicle_handover.add_checklistitem'
 
     def get_context_data(self, **kwargs):
@@ -321,7 +570,7 @@ class ItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     model = ChecklistTemplateItem
     template_name = 'vehicle_handover/partials/item_form.html'
-    fields = ['name', 'order', 'expected_quantity', 'requires_serial', 'description']
+    fields = ['name', 'order', 'expected_quantity', 'requires_serial', 'allows_photo', 'inspection_interval', 'description']
     permission_required = 'vehicle_handover.change_checklistitem'
 
     def get_success_url(self):
@@ -440,7 +689,8 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
                 handover = get_object_or_404(VehicleHandover, pk=handover_id)
                 context['handover'] = handover
                 checklist_items = handover.checklist_items.all().order_by('category', 'order')
-                context['checklist_items'] = checklist_items
+                # Für die Anzeige mit Fälligkeits-Infos anreichern (Formset nutzt das Queryset)
+                context['checklist_items'] = annotate_checklist_due(handover)
 
                 # Formset mit queryset laden
                 formset = HandoverChecklistFormSet(
@@ -482,6 +732,7 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
                 context['checklist_completion'] = handover.get_checklist_completion()
                 context['photo_count'] = handover.get_photo_count()
                 context['defect_count'] = handover.defects.count()
+                context['due_equipment'] = get_due_equipment(handover.vehicle)
 
         return context
 
@@ -596,7 +847,7 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
         elif step == 3:
             handover_id = wizard_data.get('handover_id')
             handover = get_object_or_404(VehicleHandover, pk=handover_id)
-            formset = HandoverChecklistFormSet(request.POST, instance=handover)
+            formset = HandoverChecklistFormSet(request.POST, request.FILES, instance=handover)
 
             if formset.is_valid():
                 formset.save()
@@ -656,14 +907,27 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
             # Bestätigungen verarbeiten
             handover.confirmed_by_receiver = request.POST.get('confirm_receiver') == 'on'
             handover.completeness_check_done = True
-            handover.status = 'completed' if handover.is_complete() else 'in_progress'
+            # Wizard bis zum Schluss durchlaufen = abgeschlossen, unabhängig von der
+            # Checklisten-Quote. Sonst würde eine fertige Übergabe als 'in_progress'
+            # unsichtbar bleiben (Dashboard/Liste blenden diese aus).
+            handover.status = 'defects_noted' if handover.defects.exists() else 'completed'
             handover.save()
+
+            # Fällige Ausrüstungsprüfungen zurückschreiben (inkl. Prüfer-Name)
+            inspector = request.user.get_full_name() or request.user.get_username()
+            equip_count = process_equipment_inspections(handover, request, inspector)
+
+            # PDF-Protokoll archivieren (inkl. Fotos)
+            generate_and_archive_pdf(handover, request=request)
 
             # Wizard-Daten aus Session löschen
             if 'handover_wizard' in request.session:
                 del request.session['handover_wizard']
 
-            messages.success(request, _('Fahrzeugübergabe wurde erfolgreich abgeschlossen!'))
+            msg = _('Fahrzeugübergabe wurde erfolgreich abgeschlossen!')
+            if equip_count:
+                msg = _('Fahrzeugübergabe abgeschlossen. {n} Ausrüstungsprüfung(en) dokumentiert.').format(n=equip_count)
+            messages.success(request, msg)
             return redirect('vehicle_handover:handover_detail', pk=handover.pk)
 
         return redirect('vehicle_handover:handover_create')
@@ -687,6 +951,8 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
                         order=item.order,
                         serial_number='',
                         notes='',
+                        allows_photo=item.allows_photo,
+                        inspection_interval=item.effective_interval(),
                     )
                 )
 
@@ -764,6 +1030,7 @@ class HandoverDetailView(LoginRequiredMixin, DetailView):
             'checklist_items',
             'photos',
             'defects',
+            'equipment_inspections',
         )
 
     def get_context_data(self, **kwargs):
@@ -780,6 +1047,7 @@ class HandoverDetailView(LoginRequiredMixin, DetailView):
         context['checklist_by_category'] = checklist_by_category
         context['checklist_completion'] = handover.get_checklist_completion()
         context['photo_count'] = handover.get_photo_count()
+        context['equipment_inspections'] = handover.equipment_inspections.all()
 
         # 360° Fotos für dieses Fahrzeug
         context['vehicle_360_photos'] = Vehicle360Photo.objects.filter(
@@ -790,44 +1058,68 @@ class HandoverDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-@login_required
-def handover_pdf_export(request, pk):
-    """
-    Exportiert Fahrzeugübergabe als PDF mit QR-Code
-    """
-    from django.http import HttpResponse
+def _image_field_to_data_uri(image_field, max_width=900):
+    """Verkleinert ein Bild und liefert es als base64-data-URI (oder None)."""
+    from PIL import Image
+    import io
+    import base64
+
+    if not image_field:
+        return None
+    try:
+        image_field.open('rb')
+        img = Image.open(image_field)
+        img = img.convert('RGB')
+        if img.width > max_width:
+            ratio = max_width / float(img.width)
+            img = img.resize((max_width, int(img.height * ratio)))
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG', quality=70)
+        return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        return None
+    finally:
+        try:
+            image_field.close()
+        except Exception:
+            pass
+
+
+def build_handover_pdf(handover, request=None, base_url=None):
+    """Rendert das Übergabeprotokoll-PDF (inkl. eingebetteter Fotos) und liefert Bytes."""
     from django.template.loader import render_to_string
     from weasyprint import HTML
     import qrcode
     import io
     import base64
 
-    handover = get_object_or_404(
-        VehicleHandover.objects.select_related(
-            'vehicle',
-            'handover_to',
-            'location',
-            'checklist_template',
-            'created_by',
-        ).prefetch_related(
-            'checklist_items',
-            'photos',
-            'defects',
-        ),
-        pk=pk
-    )
-
-    # Gruppiere Checkliste nach Kategorie
+    # Checkliste nach Kategorie gruppieren; Item-Fotos direkt an die Instanz hängen
     checklist_by_category = {}
     for item in handover.checklist_items.all():
-        if item.category not in checklist_by_category:
-            checklist_by_category[item.category] = []
-        checklist_by_category[item.category].append(item)
+        if item.photo:
+            item.pdf_photo_uri = _image_field_to_data_uri(item.photo)
+        checklist_by_category.setdefault(item.category, []).append(item)
 
-    # Generiere QR-Code für den Link zum Protokoll
-    protocol_url = request.build_absolute_uri(
-        reverse('vehicle_handover:handover_detail', kwargs={'pk': handover.pk})
-    )
+    # Übernahme-Fotos als data-URIs einbetten
+    handover_photos = []
+    for photo in handover.photos.all():
+        uri = _image_field_to_data_uri(photo.image)
+        if uri:
+            handover_photos.append({
+                'uri': uri,
+                'type': photo.get_photo_type_display(),
+                'description': photo.description,
+            })
+
+    # QR-Code zum digitalen Protokoll
+    if request is not None:
+        protocol_url = request.build_absolute_uri(
+            reverse('vehicle_handover:handover_detail', kwargs={'pk': handover.pk})
+        )
+    else:
+        protocol_url = (
+            f"https://lager.resqware.de/vehicle_handover/handovers/{handover.pk}/"
+        )
 
     qr = qrcode.QRCode(
         version=1,
@@ -837,33 +1129,71 @@ def handover_pdf_export(request, pk):
     )
     qr.add_data(protocol_url)
     qr.make(fit=True)
-
     qr_img = qr.make_image(fill_color="black", back_color="white")
     buffer = io.BytesIO()
     qr_img.save(buffer, format='PNG')
     qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
 
-    # Kontext für Template
     context = {
         'handover': handover,
         'checklist_by_category': checklist_by_category,
         'checklist_completion': handover.get_checklist_completion(),
         'photo_count': handover.get_photo_count(),
         'qr_code': qr_code_base64,
+        'handover_photos': handover_photos,
+        'equipment_inspections': list(handover.equipment_inspections.all()),
     }
 
-    # Render HTML
     html_string = render_to_string('vehicle_handover/handover_pdf.html', context)
+    resolved_base = base_url or (request.build_absolute_uri('/') if request else None)
+    return HTML(string=html_string, base_url=resolved_base).write_pdf()
 
-    # Generiere PDF
-    html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
-    pdf = html.write_pdf()
 
-    # Response
-    response = HttpResponse(pdf, content_type='application/pdf')
+def generate_and_archive_pdf(handover, request=None):
+    """Erzeugt das PDF und speichert es am Datensatz (Archiv). Robust gegen Fehler."""
+    from django.core.files.base import ContentFile
+
+    try:
+        pdf_bytes = build_handover_pdf(handover, request=request)
+        filename = (
+            f"Uebergabeprotokoll_{handover.pk}_"
+            f"{handover.handover_date.strftime('%Y%m%d')}.pdf"
+        )
+        handover.pdf_archive.save(filename, ContentFile(pdf_bytes), save=True)
+        return True
+    except Exception:
+        return False
+
+
+@login_required
+def handover_pdf_export(request, pk):
+    """
+    Exportiert Fahrzeugübergabe als PDF. Ist ein archiviertes PDF vorhanden,
+    wird dieses (unveränderliche) ausgeliefert, sonst live erzeugt.
+    """
+    handover = get_object_or_404(
+        VehicleHandover.objects.select_related(
+            'vehicle', 'handover_to', 'location', 'checklist_template', 'created_by',
+        ).prefetch_related('checklist_items', 'photos', 'defects'),
+        pk=pk
+    )
     filename = f"Uebergabeprotokoll_{handover.vehicle}_{handover.handover_date.strftime('%Y%m%d')}.pdf"
-    response['Content-Disposition'] = f'inline; filename="{filename}"'
 
+    # Archiviertes PDF bevorzugen (fixiertes Protokoll)
+    if handover.pdf_archive:
+        try:
+            handover.pdf_archive.open('rb')
+            data = handover.pdf_archive.read()
+            handover.pdf_archive.close()
+            response = HttpResponse(data, content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
+        except Exception:
+            pass  # Fallback auf Live-Erzeugung
+
+    pdf = build_handover_pdf(handover, request=request)
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
     return response
 
 
@@ -997,6 +1327,13 @@ class PublicHandoverCreateView(TemplateView):
         if step == 1:
             form = PublicVehicleHandoverStep1Form(initial=wizard_data.get('step1', {}), step=1)
             context['form'] = form
+            # Offene Entwürfe (unterbrochene öffentliche Übergaben) zum Fortsetzen anbieten
+            context['drafts'] = (
+                VehicleHandover.objects
+                .filter(status='in_progress', created_by__isnull=True)
+                .select_related('vehicle')
+                .order_by('-updated_at')
+            )
         elif step == 2:
             handover_id = wizard_data.get('handover_id')
             handover = get_object_or_404(VehicleHandover, pk=handover_id)
@@ -1009,7 +1346,8 @@ class PublicHandoverCreateView(TemplateView):
                 handover = get_object_or_404(VehicleHandover, pk=handover_id)
                 context['handover'] = handover
                 checklist_items = handover.checklist_items.all().order_by('category', 'order')
-                context['checklist_items'] = checklist_items
+                # Für die Anzeige mit Fälligkeits-Infos anreichern (Formset nutzt das Queryset)
+                context['checklist_items'] = annotate_checklist_due(handover)
                 formset = HandoverChecklistFormSet(instance=handover, queryset=checklist_items)
                 for form, item in zip(formset.forms, checklist_items):
                     form.initial['item_name'] = item.item_name
@@ -1037,6 +1375,7 @@ class PublicHandoverCreateView(TemplateView):
                 context['checklist_completion'] = handover.get_checklist_completion()
                 context['photo_count'] = handover.get_photo_count()
                 context['defect_count'] = handover.defects.count()
+                context['due_equipment'] = get_due_equipment(handover.vehicle)
 
         return context
 
@@ -1124,7 +1463,7 @@ class PublicHandoverCreateView(TemplateView):
         elif step == 3:
             handover_id = wizard_data.get('handover_id')
             handover = get_object_or_404(VehicleHandover, pk=handover_id)
-            formset = HandoverChecklistFormSet(request.POST, instance=handover)
+            formset = HandoverChecklistFormSet(request.POST, request.FILES, instance=handover)
             if formset.is_valid():
                 formset.save()
                 return redirect(f"{reverse('vehicle_handover:public_create')}?step=4")
@@ -1171,8 +1510,18 @@ class PublicHandoverCreateView(TemplateView):
 
             handover.confirmed_by_receiver = request.POST.get('confirm_receiver') == 'on'
             handover.completeness_check_done = True
-            handover.status = 'completed' if handover.is_complete() else 'in_progress'
+            # Wizard bis zum Schluss durchlaufen = abgeschlossen, unabhängig von der
+            # Checklisten-Quote. Sonst würde eine fertige öffentliche Übergabe als
+            # 'in_progress' unsichtbar bleiben (Dashboard/Liste blenden diese aus).
+            handover.status = 'defects_noted' if handover.defects.exists() else 'completed'
             handover.save()
+
+            # Fällige Ausrüstungsprüfungen zurückschreiben (Prüfer = Melder)
+            inspector = f"{handover.reporter_first_name} {handover.reporter_last_name}".strip() or _('Öffentliche Übergabe')
+            process_equipment_inspections(handover, request, inspector)
+
+            # PDF-Protokoll archivieren (inkl. Fotos)
+            generate_and_archive_pdf(handover, request=request)
 
             if 'public_handover_wizard' in request.session:
                 del request.session['public_handover_wizard']
@@ -1200,6 +1549,8 @@ class PublicHandoverCreateView(TemplateView):
                         order=item.order,
                         serial_number='',
                         notes='',
+                        allows_photo=item.allows_photo,
+                        inspection_interval=item.effective_interval(),
                     )
                 )
 
@@ -1267,6 +1618,75 @@ def public_check_person(request):
         'found': False,
         'matches': [{'first_name': s.first_name, 'last_name': s.last_name} for s in similar],
     })
+
+
+def public_handover_resume(request, pk):
+    """
+    Öffentlichen Entwurf einer Fahrzeugübergabe fortsetzen (ohne Login).
+
+    Stellt die Wizard-Session aus den bereits gespeicherten DB-Daten wieder her
+    und springt zum weitesten bereits bearbeiteten Schritt. Ermöglicht das
+    Fortsetzen nach einer Unterbrechung (z. B. Alarm) auch von einem anderen
+    Gerät/Browser, da nicht auf die alte Session angewiesen.
+    """
+    handover = get_object_or_404(
+        VehicleHandover, pk=pk, status='in_progress', created_by__isnull=True
+    )
+
+    # Session-Daten aus den gespeicherten Werten rekonstruieren
+    wizard_data = {
+        'handover_id': handover.pk,
+        'step1': {
+            'reporter_first_name': handover.reporter_first_name,
+            'reporter_last_name': handover.reporter_last_name,
+            'vehicle': handover.vehicle_id,
+            'checklist_template': handover.checklist_template_id,
+            'handover_to': handover.handover_to_id,
+            'handover_type': handover.handover_type,
+            'handover_date': handover.handover_date.isoformat(),
+            'location': handover.location_id if handover.location_id else None,
+        },
+        'step2': {
+            'odometer_reading': handover.odometer_reading,
+            'fuel_level': handover.fuel_level,
+            'notes': handover.notes or '',
+        },
+    }
+    request.session['public_handover_wizard'] = wizard_data
+    request.session.modified = True
+
+    # Weitesten bereits bearbeiteten Schritt ermitteln
+    next_step = 2
+    if handover.odometer_reading:
+        next_step = 3
+    if handover.checklist_items.filter(checked=True).exists():
+        next_step = 4
+    if handover.photos.exists():
+        next_step = 5
+    if handover.defects.exists():
+        next_step = 6
+
+    messages.info(request, _('Entwurf wurde geladen. Sie können die Übergabe fortsetzen.'))
+    return redirect(f"{reverse('vehicle_handover:public_create')}?step={next_step}")
+
+
+@require_POST
+def public_handover_discard(request, pk):
+    """Öffentlichen Entwurf verwerfen (ohne Login)."""
+    handover = get_object_or_404(
+        VehicleHandover, pk=pk, status='in_progress', created_by__isnull=True
+    )
+    handover.status = 'cancelled'
+    handover.save(update_fields=['status', 'updated_at'])
+
+    # Falls der verworfene Entwurf gerade in der Session lag, entfernen
+    wizard_data = request.session.get('public_handover_wizard', {})
+    if wizard_data.get('handover_id') == handover.pk:
+        del request.session['public_handover_wizard']
+        request.session.modified = True
+
+    messages.success(request, _('Entwurf wurde verworfen.'))
+    return redirect('vehicle_handover:public_create')
 
 
 # ===== 360° Fahrzeuginnenraum-Verwaltung =====

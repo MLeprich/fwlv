@@ -199,6 +199,7 @@ class Command(BaseCommand):
             Modules.PROCUREMENT: 'Procurement',
             Modules.DEFECT_MANAGEMENT: 'Defect Management',
             Modules.CIVIL_PROTECTION: 'Civil Protection',
+            Modules.OBJEKTVERWALTUNG: 'Objektverwaltung',
         }
 
         for module_name, display_name in modules.items():
@@ -277,6 +278,7 @@ class Command(BaseCommand):
             Modules.PROCUREMENT: 'Procurement',
             Modules.DEFECT_MANAGEMENT: 'Defect Management',
             Modules.CIVIL_PROTECTION: 'Civil Protection',
+            Modules.OBJEKTVERWALTUNG: 'Objektverwaltung',
         }
 
         for module_name, display_name in modules.items():

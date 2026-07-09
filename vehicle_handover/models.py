@@ -43,6 +43,31 @@ class DefectSeverity(models.TextChoices):
     CRITICAL = 'critical', _('Kritischer Mangel (Verkehrssicherheit gefährdet)')
 
 
+class InspectionInterval(models.TextChoices):
+    """Prüfintervall für Checklisten-Kategorien/Items"""
+    NONE = 'none', _('Keine')
+    DAILY = 'daily', _('Täglich')
+    WEEKLY = 'weekly', _('Wöchentlich')
+    MONTHLY = 'monthly', _('Monatlich')
+
+
+class ItemInspectionInterval(models.TextChoices):
+    """Prüfintervall für ein Item (kann von der Kategorie erben)"""
+    INHERIT = 'inherit', _('Von Kategorie übernehmen')
+    NONE = 'none', _('Keine')
+    DAILY = 'daily', _('Täglich')
+    WEEKLY = 'weekly', _('Wöchentlich')
+    MONTHLY = 'monthly', _('Monatlich')
+
+
+# Intervall (Wert) -> Anzahl Tage bis zur nächsten Fälligkeit
+INSPECTION_INTERVAL_DAYS = {
+    'daily': 1,
+    'weekly': 7,
+    'monthly': 30,
+}
+
+
 class ChecklistTemplate(AuditedModel):
     """
     Wiederverwendbare Checklisten-Vorlage für Fahrzeugübergaben
@@ -189,6 +214,14 @@ class ChecklistTemplateCategory(models.Model):
         verbose_name=_('Beschreibung')
     )
 
+    inspection_interval = models.CharField(
+        max_length=10,
+        choices=InspectionInterval.choices,
+        default=InspectionInterval.NONE,
+        verbose_name=_('Prüfintervall'),
+        help_text=_('Gilt für alle Items dieser Kategorie (Items können abweichen)')
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -237,10 +270,24 @@ class ChecklistTemplateItem(models.Model):
         help_text=_('Bei der Übergabe muss eine Seriennummer erfasst werden')
     )
 
+    allows_photo = models.BooleanField(
+        default=False,
+        verbose_name=_('Foto möglich'),
+        help_text=_('Bei der Übergabe kann optional ein Foto zu diesem Item hochgeladen werden')
+    )
+
     expected_quantity = models.PositiveIntegerField(
         default=1,
         verbose_name=_('Erwartete Anzahl'),
         help_text=_('Wie viele Stück sollten vorhanden sein?')
+    )
+
+    inspection_interval = models.CharField(
+        max_length=10,
+        choices=ItemInspectionInterval.choices,
+        default=ItemInspectionInterval.INHERIT,
+        verbose_name=_('Prüfintervall'),
+        help_text=_('Standard: von der Kategorie übernehmen')
     )
 
     description = models.TextField(
@@ -263,6 +310,12 @@ class ChecklistTemplateItem(models.Model):
 
     def __str__(self):
         return f"{self.category.name} - {self.name}"
+
+    def effective_interval(self):
+        """Effektives Prüfintervall (Item überschreibt Kategorie; sonst geerbt)."""
+        if self.inspection_interval == ItemInspectionInterval.INHERIT:
+            return self.category.inspection_interval
+        return self.inspection_interval
 
 
 class VehicleHandover(AuditedModel):
@@ -427,6 +480,15 @@ class VehicleHandover(AuditedModel):
         blank=True
     )
 
+    # Archiviertes PDF-Protokoll (bei Abschluss erzeugt)
+    pdf_archive = models.FileField(
+        upload_to='vehicle_handovers/protocols/%Y/%m/',
+        null=True,
+        blank=True,
+        verbose_name=_('Archiviertes Protokoll (PDF)'),
+        help_text=_('Bei Abschluss automatisch erzeugtes Übergabeprotokoll')
+    )
+
     class Meta:
         db_table = 'vehicle_handover'
         verbose_name = _('Fahrzeugübergabe')
@@ -523,6 +585,29 @@ class HandoverChecklist(TimeStampedModel):
         help_text=_('Falls zutreffend')
     )
 
+    # Optional: Foto zu diesem Prüfpunkt
+    allows_photo = models.BooleanField(
+        default=False,
+        verbose_name=_('Foto möglich'),
+        help_text=_('Zu diesem Item kann ein Foto hochgeladen werden')
+    )
+
+    photo = models.ImageField(
+        upload_to='vehicle_handovers/checklist/%Y/%m/%d/',
+        null=True,
+        blank=True,
+        verbose_name=_('Foto'),
+        help_text=_('Optionales Foto zu diesem Prüfpunkt')
+    )
+
+    # Aufgelöstes Prüfintervall (aus Template-Item/-Kategorie übernommen)
+    inspection_interval = models.CharField(
+        max_length=10,
+        choices=InspectionInterval.choices,
+        default=InspectionInterval.NONE,
+        verbose_name=_('Prüfintervall')
+    )
+
     # Notizen zu diesem Item
     notes = models.TextField(
         blank=True,
@@ -534,6 +619,10 @@ class HandoverChecklist(TimeStampedModel):
         default=0,
         verbose_name=_('Reihenfolge')
     )
+
+    def interval_days(self):
+        """Anzahl Tage bis zur Fälligkeit (None, wenn kein Intervall)."""
+        return INSPECTION_INTERVAL_DAYS.get(self.inspection_interval)
 
     class Meta:
         db_table = 'vehicle_handover_checklist'
@@ -1068,3 +1157,71 @@ class HotspotImage(TimeStampedModel):
 
     def __str__(self):
         return f"{self.hotspot.title} - Bild {self.order + 1}"
+
+
+class HandoverEquipmentInspection(TimeStampedModel):
+    """
+    Nachweis, dass eine verlastete Ausrüstung im Rahmen einer Fahrzeugübergabe
+    geprüft wurde. Hält fest, WER (Name, ggf. Melder ohne Login) WANN WAS geprüft hat.
+    Verweist auf einen der beiden Ausrüstungs-Instanztypen (nur einer ist gesetzt).
+    """
+
+    handover = models.ForeignKey(
+        VehicleHandover,
+        on_delete=models.CASCADE,
+        related_name='equipment_inspections',
+        verbose_name=_('Übergabe')
+    )
+
+    # Eine der beiden Referenzen ist gesetzt
+    device_instance = models.ForeignKey(
+        'equipment.EquipmentDeviceInstance',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='handover_inspections',
+        verbose_name=_('Gerät (Instanz)')
+    )
+
+    equipment_item = models.ForeignKey(
+        'equipment.EquipmentItem',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='handover_inspections',
+        verbose_name=_('Ausrüstungsstück')
+    )
+
+    # Dokumentation der Prüfung
+    equipment_label = models.CharField(
+        max_length=250,
+        verbose_name=_('Bezeichnung'),
+        help_text=_('Kopie der Gerätebezeichnung zum Zeitpunkt der Prüfung')
+    )
+
+    inspected_at = models.DateTimeField(
+        verbose_name=_('Geprüft am')
+    )
+
+    inspector_name = models.CharField(
+        max_length=200,
+        verbose_name=_('Prüfer'),
+        help_text=_('Name des Prüfers (Melder der Übergabe bzw. angemeldeter Benutzer)')
+    )
+
+    next_inspection_date = models.DateField(
+        null=True, blank=True,
+        verbose_name=_('Nächste Prüfung fällig am')
+    )
+
+    class Meta:
+        db_table = 'vehicle_handover_equipment_inspection'
+        verbose_name = _('Ausrüstungsprüfung (Übergabe)')
+        verbose_name_plural = _('Ausrüstungsprüfungen (Übergabe)')
+        ordering = ['-inspected_at']
+        indexes = [
+            models.Index(fields=['handover']),
+            models.Index(fields=['device_instance']),
+            models.Index(fields=['equipment_item']),
+        ]
+
+    def __str__(self):
+        return f"{self.equipment_label} – {self.inspector_name} ({self.inspected_at:%d.%m.%Y})"

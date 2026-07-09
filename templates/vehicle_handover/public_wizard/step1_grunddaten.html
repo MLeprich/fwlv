@@ -24,6 +24,53 @@
         </div>
     </div>
 
+    <!-- Offene Entwürfe fortsetzen -->
+    {% if drafts %}
+    <div class="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <div class="flex items-center mb-3">
+            <span class="text-2xl mr-2">⏸️</span>
+            <div>
+                <h2 class="text-base font-semibold text-amber-900">Angefangene Übergaben fortsetzen</h2>
+                <p class="text-xs text-amber-700">Unterbrochene Übergaben (z. B. wegen Alarm). Klicken Sie auf „Fortsetzen", um weiterzumachen.</p>
+            </div>
+        </div>
+        <div class="space-y-2">
+            {% for draft in drafts %}
+            <div class="bg-white border border-amber-200 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">
+                        🚒 {{ draft.vehicle }}
+                        {% if draft.reporter_first_name or draft.reporter_last_name %}
+                        <span class="text-gray-500 font-normal">· {{ draft.reporter_first_name }} {{ draft.reporter_last_name }}</span>
+                        {% endif %}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        Zuletzt bearbeitet: {{ draft.updated_at|date:"d.m.Y H:i" }} Uhr
+                        · Checkliste {{ draft.get_checklist_completion }} %
+                        {% if draft.get_photo_count %}· {{ draft.get_photo_count }} Foto(s){% endif %}
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <a href="{% url 'vehicle_handover:public_resume' draft.pk %}"
+                       class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                        Fortsetzen →
+                    </a>
+                    <form method="post" action="{% url 'vehicle_handover:public_discard' draft.pk %}"
+                          onsubmit="return confirm('Diesen Entwurf wirklich verwerfen? Die Eingaben gehen verloren.');">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="px-3 py-1.5 bg-white text-gray-500 border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                                title="Entwurf verwerfen">
+                            Verwerfen
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center mb-6">
             <span class="text-4xl mr-4">📋</span>

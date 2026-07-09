@@ -34,6 +34,7 @@ class Roles:
     MODUL_PROCUREMENT = 'Modulverantwortlicher Procurement'
     MODUL_DEFECT_MANAGEMENT = 'Modulverantwortlicher Defect Management'
     MODUL_CIVIL_PROTECTION = 'Modulverantwortlicher Civil Protection'
+    MODUL_OBJEKTVERWALTUNG = 'Modulverantwortlicher Objektverwaltung'
 
     # Sachbearbeiter pro Modul (view + add)
     SACHBEARBEITER_MEDICAL = 'Sachbearbeiter Medical'
@@ -51,6 +52,7 @@ class Roles:
     SACHBEARBEITER_PROCUREMENT = 'Sachbearbeiter Procurement'
     SACHBEARBEITER_DEFECT_MANAGEMENT = 'Sachbearbeiter Defect Management'
     SACHBEARBEITER_CIVIL_PROTECTION = 'Sachbearbeiter Civil Protection'
+    SACHBEARBEITER_OBJEKTVERWALTUNG = 'Sachbearbeiter Objektverwaltung'
 
     # Freigabe-Gruppen (Procurement Approval)
     FREIGABE_STUFE_1 = 'Freigabe Stufe 1'  # bis 1.000€
@@ -93,6 +95,7 @@ class Roles:
             cls.MODUL_PROCUREMENT,
             cls.MODUL_DEFECT_MANAGEMENT,
             cls.MODUL_CIVIL_PROTECTION,
+            cls.MODUL_OBJEKTVERWALTUNG,
             cls.SACHBEARBEITER_MEDICAL,
             cls.SACHBEARBEITER_CLOTHING,
             cls.SACHBEARBEITER_MAGAZINE,
@@ -108,6 +111,7 @@ class Roles:
             cls.SACHBEARBEITER_PROCUREMENT,
             cls.SACHBEARBEITER_DEFECT_MANAGEMENT,
             cls.SACHBEARBEITER_CIVIL_PROTECTION,
+            cls.SACHBEARBEITER_OBJEKTVERWALTUNG,
             cls.LST_INFOMONITOR,
             cls.FREIGABE_STUFE_1,
             cls.FREIGABE_STUFE_2,
@@ -140,6 +144,7 @@ class Roles:
             cls.MODUL_PROCUREMENT,
             cls.MODUL_DEFECT_MANAGEMENT,
             cls.MODUL_CIVIL_PROTECTION,
+            cls.MODUL_OBJEKTVERWALTUNG,
         ]
 
     @classmethod
@@ -161,6 +166,7 @@ class Roles:
             cls.SACHBEARBEITER_PROCUREMENT,
             cls.SACHBEARBEITER_DEFECT_MANAGEMENT,
             cls.SACHBEARBEITER_CIVIL_PROTECTION,
+            cls.SACHBEARBEITER_OBJEKTVERWALTUNG,
         ]
 
     @classmethod
@@ -218,6 +224,9 @@ class Modules:
     # Dienstausweise
     IDCARDS = 'idcards'
 
+    # Objektverwaltung
+    OBJEKTVERWALTUNG = 'objektverwaltung'
+
     @classmethod
     def get_all_modules(cls):
         """Alle Module"""
@@ -248,6 +257,7 @@ class Modules:
             cls.DEFECT_MANAGEMENT,
             cls.CIVIL_PROTECTION,
             cls.IDCARDS,
+            cls.OBJEKTVERWALTUNG,
         ]
 
     @classmethod
@@ -710,6 +720,7 @@ def get_module_from_role(role_name):
             'Procurement': Modules.PROCUREMENT,
             'Defect Management': Modules.DEFECT_MANAGEMENT,
             'Civil Protection': Modules.CIVIL_PROTECTION,
+            'Objektverwaltung': Modules.OBJEKTVERWALTUNG,
         }
         return mapping.get(module_display)
     return None

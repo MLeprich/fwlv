@@ -247,6 +247,25 @@
             {% endif %}
             {% endif %}
 
+            {% if modules.objektverwaltung_enabled %}
+            {% if perms.objektverwaltung.view_buildingobject %}
+            <a
+                href="{% url 'objektverwaltung:dashboard' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'objektverwaltung' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Objektverwaltung'"
+            >
+                <span class="text-xl flex-shrink-0">&#x1F3E2;</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Objektverwaltung
+                </span>
+            </a>
+            {% endif %}
+            {% endif %}
+
         </div>
     </div>
 

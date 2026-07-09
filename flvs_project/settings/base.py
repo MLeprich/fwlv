@@ -102,6 +102,7 @@ LOCAL_APPS = [
     'defect_management.apps.DefectManagementConfig',
     'civil_protection.apps.CivilProtectionConfig',
     'idcards.apps.IdcardsConfig',
+    'objektverwaltung.apps.ObjektverwaltungConfig',
     # Weitere Apps werden hier hinzugefuegt
 ]
 

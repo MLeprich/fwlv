@@ -709,6 +709,44 @@
                     </div>
                 </div>
 
+                <!-- Objektverwaltung Modul -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">&#x1F3E2;</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-semibold text-gray-900">Objektverwaltung</h4>
+                                    {% if modules.objektverwaltung_enabled %}
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktiv</span>
+                                    {% else %}
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inaktiv</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Verwaltung öffentlicher Gebäude mit Etagen, Fluchtwegen, Brandmeldezentralen, Laufkarten/Plänen und Ansprechpartnern. Abonnierbare Änderungs-Benachrichtigungen pro Objekt.
+                                </p>
+                                <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                        </svg>
+                                        Gebäude, Brandschutzdaten, Laufkarten, Abos
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center ml-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="objektverwaltung_enabled" value="true" class="sr-only peer" {% if modules.objektverwaltung_enabled %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 

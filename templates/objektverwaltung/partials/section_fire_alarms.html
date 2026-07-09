@@ -1,0 +1,49 @@
+<div class="bg-white rounded-lg shadow p-6" x-data="{ addOpen: false }">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-gray-900">Brandmeldezentralen ({{ object.fire_alarm_panels.count }})</h2>
+        {% if perms.objektverwaltung.change_buildingobject %}
+        <button @click="addOpen = !addOpen" class="text-sm text-primary-600 hover:text-primary-800 font-medium">
+            <span x-show="!addOpen">+ BMZ</span>
+            <span x-show="addOpen" x-cloak>Abbrechen</span>
+        </button>
+        {% endif %}
+    </div>
+
+    {% if object.fire_alarm_panels.all %}
+    <ul class="divide-y divide-gray-100">
+        {% for bmz in object.fire_alarm_panels.all %}
+        <li class="py-2 flex items-center justify-between">
+            <div>
+                <span class="text-sm font-medium text-gray-900">{{ bmz.designation }}</span>
+                {% if bmz.location_description %}<p class="text-xs text-gray-500">Standort: {{ bmz.location_description }}</p>{% endif %}
+                {% if bmz.manufacturer or bmz.model %}<p class="text-xs text-gray-500">{{ bmz.manufacturer }} {{ bmz.model }}</p>{% endif %}
+            </div>
+            {% if perms.objektverwaltung.change_buildingobject %}
+            <form method="post" action="{% url 'objektverwaltung:delete_fire_alarm_panel' bmz.pk %}"
+                  onsubmit="return confirm('Brandmeldezentrale löschen?');">
+                {% csrf_token %}
+                <button type="submit" class="text-xs text-red-600 hover:text-red-800">Löschen</button>
+            </form>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-500">Noch keine Brandmeldezentrale erfasst.</p>
+    {% endif %}
+
+    {% if perms.objektverwaltung.change_buildingobject %}
+    <form method="post" action="{% url 'objektverwaltung:add_fire_alarm_panel' object.pk %}"
+          x-show="addOpen" x-cloak class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {% csrf_token %}
+        <div><label class="block text-xs text-gray-500 mb-1">Bezeichnung</label>{{ fire_alarm_form.designation }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Standort</label>{{ fire_alarm_form.location_description }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Hersteller</label>{{ fire_alarm_form.manufacturer }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Typ/Modell</label>{{ fire_alarm_form.model }}</div>
+        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Hinweise</label>{{ fire_alarm_form.notes }}</div>
+        <div class="md:col-span-2 text-right">
+            <button type="submit" class="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-primary-700">BMZ hinzufügen</button>
+        </div>
+    </form>
+    {% endif %}
+</div>

@@ -114,6 +114,9 @@ urlpatterns = [
     # ID Cards App (Dienstausweise)
     path('idcards/', include('idcards.urls')),
 
+    # Objektverwaltung (öffentliche Gebäude)
+    path('objektverwaltung/', include('objektverwaltung.urls')),
+
     # Placeholder für zukünftige Apps
     # path('workshop/', include('workshop.urls')),
     # path('notifications/', include('notifications.urls')),

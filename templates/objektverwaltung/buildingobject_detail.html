@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ object.name }} - Objektverwaltung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'objektverwaltung:list' %}" class="text-gray-500 hover:text-gray-700">Objekte</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ object.name|truncatechars:40 }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-6">
+    <!-- Header -->
+    <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ object.name }}</h1>
+            <div class="flex flex-wrap items-center gap-3 mt-2">
+                <span class="text-sm text-gray-500">{{ object.object_number }}</span>
+                <span class="text-sm text-gray-400">|</span>
+                <span class="text-sm text-gray-500">{{ object.get_usage_type_display }}</span>
+                <span class="text-sm text-gray-400">|</span>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    {% if object.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {% if object.is_active %}Aktiv{% else %}Inaktiv{% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            {% include 'objektverwaltung/partials/follow_button.html' %}
+            {% if perms.objektverwaltung.change_buildingobject %}
+            <a href="{% url 'objektverwaltung:update' object.pk %}"
+               class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">Bearbeiten</a>
+            {% endif %}
+            {% if perms.objektverwaltung.delete_buildingobject %}
+            <a href="{% url 'objektverwaltung:delete' object.pk %}"
+               class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">Löschen</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Linke Spalte: Stammdaten + Unterobjekte -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Adresse & Gebäudeinfo -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-3">Adresse &amp; Gebäude</h2>
+                <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <div><dt class="text-gray-500 inline">Anschrift:</dt> <dd class="text-gray-900 inline">{{ object.full_address|default:"—" }}</dd></div>
+                    <div><dt class="text-gray-500 inline">Brandmeldeanlage:</dt> <dd class="text-gray-900 inline">{% if object.has_fire_alarm_system %}Ja{% else %}Nein{% endif %}</dd></div>
+                    <div><dt class="text-gray-500 inline">Obergeschosse:</dt> <dd class="text-gray-900 inline">{{ object.floor_count|default:"—" }}</dd></div>
+                    <div><dt class="text-gray-500 inline">Untergeschosse:</dt> <dd class="text-gray-900 inline">{{ object.basement_count|default:"—" }}</dd></div>
+                    {% if object.latitude and object.longitude %}
+                    <div class="col-span-2"><dt class="text-gray-500 inline">Koordinaten:</dt> <dd class="text-gray-900 inline">{{ object.latitude }}, {{ object.longitude }}</dd></div>
+                    {% endif %}
+                </dl>
+                {% if object.notes %}
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <p class="text-xs text-gray-500 mb-1">Hinweise</p>
+                    <p class="text-sm text-gray-700 whitespace-pre-line">{{ object.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Etagen -->
+            {% include 'objektverwaltung/partials/section_floors.html' %}
+
+            <!-- Fluchtwege -->
+            {% include 'objektverwaltung/partials/section_escape_routes.html' %}
+
+            <!-- Brandmeldezentralen -->
+            {% include 'objektverwaltung/partials/section_fire_alarms.html' %}
+
+            <!-- Löschanlagen -->
+            {% include 'objektverwaltung/partials/section_suppression.html' %}
+
+            <!-- Kompensationsmaßnahmen -->
+            {% include 'objektverwaltung/partials/section_compensation.html' %}
+
+            <!-- Pläne / Laufkarten -->
+            {% include 'objektverwaltung/partials/section_plans.html' %}
+        </div>
+
+        <!-- Rechte Spalte: Ansprechpartner, Abonnenten, Meta -->
+        <div class="space-y-6">
+
+            <!-- Ansprechpartner -->
+            {% include 'objektverwaltung/partials/section_contacts.html' %}
+
+            <!-- Abonnenten -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">
+                    Abonnenten ({{ object.followers.count }})
+                </h3>
+                {% if object.followers.all %}
+                <div class="space-y-1">
+                    {% for follower in object.followers.all|slice:":8" %}
+                    <p class="text-sm text-gray-600">{{ follower.get_full_name|default:follower.username }}</p>
+                    {% endfor %}
+                    {% if object.followers.count > 8 %}
+                    <p class="text-xs text-gray-500 pt-1">+{{ object.followers.count|add:"-8" }} weitere</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500">Noch keine Abonnenten.</p>
+                {% endif %}
+            </div>
+
+            <!-- Meta -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Verwaltung</h3>
+                <dl class="space-y-2 text-sm">
+                    <div><dt class="text-xs text-gray-500">Erstellt</dt><dd class="text-gray-900">{{ object.created_at|date:"d.m.Y H:i" }}</dd></div>
+                    <div><dt class="text-xs text-gray-500">Geändert</dt><dd class="text-gray-900">{{ object.updated_at|date:"d.m.Y H:i" }}</dd></div>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

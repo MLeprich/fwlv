@@ -1,0 +1,47 @@
+<div class="bg-white rounded-lg shadow p-6" x-data="{ addOpen: false }">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-gray-900">Etagen ({{ object.floors.count }})</h2>
+        {% if perms.objektverwaltung.change_buildingobject %}
+        <button @click="addOpen = !addOpen" class="text-sm text-primary-600 hover:text-primary-800 font-medium">
+            <span x-show="!addOpen">+ Etage</span>
+            <span x-show="addOpen" x-cloak>Abbrechen</span>
+        </button>
+        {% endif %}
+    </div>
+
+    {% if object.floors.all %}
+    <ul class="divide-y divide-gray-100">
+        {% for floor in object.floors.all %}
+        <li class="py-2 flex items-center justify-between">
+            <div>
+                <span class="text-sm font-medium text-gray-900">{{ floor.name|default:floor.level }}</span>
+                <span class="text-xs text-gray-500 ml-2">Ebene {{ floor.level }}</span>
+                {% if floor.description %}<p class="text-xs text-gray-500">{{ floor.description }}</p>{% endif %}
+            </div>
+            {% if perms.objektverwaltung.change_buildingobject %}
+            <form method="post" action="{% url 'objektverwaltung:delete_floor' floor.pk %}"
+                  onsubmit="return confirm('Etage löschen?');">
+                {% csrf_token %}
+                <button type="submit" class="text-xs text-red-600 hover:text-red-800">Löschen</button>
+            </form>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-500">Noch keine Etagen erfasst.</p>
+    {% endif %}
+
+    {% if perms.objektverwaltung.change_buildingobject %}
+    <form method="post" action="{% url 'objektverwaltung:add_floor' object.pk %}"
+          x-show="addOpen" x-cloak class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-3">
+        {% csrf_token %}
+        <div><label class="block text-xs text-gray-500 mb-1">Ebene</label>{{ floor_form.level }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Bezeichnung</label>{{ floor_form.name }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Beschreibung</label>{{ floor_form.description }}</div>
+        <div class="md:col-span-3 text-right">
+            <button type="submit" class="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-primary-700">Etage hinzufügen</button>
+        </div>
+    </form>
+    {% endif %}
+</div>

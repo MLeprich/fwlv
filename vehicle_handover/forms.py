@@ -245,6 +245,7 @@ class HandoverChecklistItemForm(forms.ModelForm):
             'present',
             'functional',
             'serial_number',
+            'photo',
             'notes',
             'order',
         ]
@@ -253,6 +254,10 @@ class HandoverChecklistItemForm(forms.ModelForm):
             'item_name': forms.HiddenInput(),
             'category': forms.HiddenInput(),
             'order': forms.HiddenInput(),
+            'photo': forms.ClearableFileInput(attrs={
+                'class': 'w-full text-sm text-gray-700 file:mr-2 file:px-2 file:py-1 file:rounded file:border-0 file:bg-blue-600 file:text-white file:cursor-pointer',
+                'accept': 'image/*',
+            }),
             'checked': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500',
             }),
@@ -278,6 +283,7 @@ class HandoverChecklistItemForm(forms.ModelForm):
             'present': _('Vorhanden'),
             'functional': _('Funktionsfähig'),
             'serial_number': _('Seriennummer'),
+            'photo': _('Foto'),
             'notes': _('Bemerkungen'),
         }
 

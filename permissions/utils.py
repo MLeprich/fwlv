@@ -105,6 +105,7 @@ class PermissionHelper:
             Modules.DIVING: 'Diving',
             Modules.EQUIPMENT: 'Equipment',
             Modules.IT_HARDWARE: 'IT Hardware',
+            Modules.OBJEKTVERWALTUNG: 'Objektverwaltung',
         }
 
         display_name = module_display_map.get(module_name)
@@ -416,6 +417,7 @@ def get_module_responsible_users(module_name):
         Modules.DIVING: 'Diving',
         Modules.EQUIPMENT: 'Equipment',
         Modules.IT_HARDWARE: 'IT Hardware',
+        Modules.OBJEKTVERWALTUNG: 'Objektverwaltung',
     }
 
     display_name = module_display_map.get(module_name)

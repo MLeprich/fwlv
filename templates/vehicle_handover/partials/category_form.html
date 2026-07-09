@@ -47,6 +47,15 @@
             </div>
 
             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.inspection_interval.label }}</label>
+                {{ form.inspection_interval }}
+                {% if form.inspection_interval.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.inspection_interval.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">Gilt für alle Items dieser Kategorie. Einzelne Items können ein eigenes Intervall setzen.</p>
+            </div>
+
+            <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Beschreibung</label>
                 {{ form.description }}
                 {% if form.description.errors %}

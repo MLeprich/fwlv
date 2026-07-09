@@ -1462,11 +1462,10 @@ def export_personnel(request):
         'user', 'department', 'volunteer_unit', 'watch_crew', 'work_location'
     ).prefetch_related('functions').order_by('last_name', 'first_name')
 
-    # CSV Export
-    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-    response['Content-Disposition'] = 'attachment; filename="personal_export.csv"'
-
-    writer = csv.writer(response, delimiter=';')
+    # CSV Export – in einem Puffer aufbauen und Body einmalig setzen, sonst würde
+    # Django bei charset=utf-8-sig jeder geschriebenen Zeile ein BOM voranstellen.
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=';')
 
     # Header - Alle Felder aus dem Person Model
     writer.writerow([
@@ -1581,6 +1580,9 @@ def export_personnel(request):
             person.notes,
         ])
 
+    # Ein einzelnes BOM voranstellen (Excel erkennt UTF-8 korrekt)
+    response = HttpResponse('﻿' + buffer.getvalue(), content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="personal_export.csv"'
     return response
 
 
@@ -1589,10 +1591,10 @@ def import_template(request):
     """
     CSV-Vorlage zum Download (vollständiges Personal-Modul)
     """
-    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-    response['Content-Disposition'] = 'attachment; filename="personal_import_vorlage.csv"'
-
-    writer = csv.writer(response, delimiter=';')
+    # In einem Puffer aufbauen und Body einmalig setzen, sonst würde Django bei
+    # charset=utf-8-sig jeder geschriebenen Zeile ein BOM voranstellen.
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=';')
 
     # Hinweis-Zeilen (werden von Excel/LibreOffice als Kommentare behandelt)
     writer.writerow(['# PERSONAL-IMPORT VORLAGE'])
@@ -1731,6 +1733,9 @@ def import_template(request):
         'Standard-Nutzer, Lagerverwalter',  # Benutzer-Rollen
     ])
 
+    # Ein einzelnes BOM voranstellen (Excel erkennt UTF-8 korrekt)
+    response = HttpResponse('﻿' + buffer.getvalue(), content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="personal_import_vorlage.csv"'
     return response
 
 

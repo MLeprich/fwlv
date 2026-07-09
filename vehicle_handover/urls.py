@@ -13,6 +13,8 @@ urlpatterns = [
     path('public/success/', views.PublicHandoverSuccessView.as_view(), name='public_success'),
     path('public/api/vehicle/<int:vehicle_pk>/templates/', views.public_get_templates_for_vehicle, name='public_api_vehicle_templates'),
     path('public/api/check-person/', views.public_check_person, name='public_api_check_person'),
+    path('public/resume/<int:pk>/', views.public_handover_resume, name='public_resume'),
+    path('public/discard/<int:pk>/', views.public_handover_discard, name='public_discard'),
 
     # Dashboard
     path('', views.HandoverDashboardView.as_view(), name='dashboard'),
@@ -20,6 +22,8 @@ urlpatterns = [
     # Checklisten-Templates
     path('templates/', views.ChecklistTemplateListView.as_view(), name='template_list'),
     path('templates/create/', views.ChecklistTemplateCreateView.as_view(), name='template_create'),
+    path('templates/import/sample/', views.template_import_sample, name='template_import_sample'),
+    path('templates/<int:pk>/import/', views.template_import, name='template_import'),
     path('templates/<int:pk>/', views.ChecklistTemplateDetailView.as_view(), name='template_detail'),
     path('templates/<int:pk>/edit/', views.ChecklistTemplateUpdateView.as_view(), name='template_update'),
     path('templates/<int:pk>/delete/', views.ChecklistTemplateDeleteView.as_view(), name='template_delete'),

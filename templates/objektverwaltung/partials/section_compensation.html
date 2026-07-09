@@ -1,0 +1,66 @@
+<div class="bg-white rounded-lg shadow p-6" x-data="{ addOpen: false }">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-gray-900">Kompensationsmaßnahmen ({{ object.compensation_measures.count }})</h2>
+        {% if perms.objektverwaltung.change_buildingobject %}
+        <button @click="addOpen = !addOpen" class="text-sm text-primary-600 hover:text-primary-800 font-medium">
+            <span x-show="!addOpen">+ Maßnahme</span>
+            <span x-show="addOpen" x-cloak>Abbrechen</span>
+        </button>
+        {% endif %}
+    </div>
+
+    {% if object.compensation_measures.all %}
+    <ul class="divide-y divide-gray-100">
+        {% for m in object.compensation_measures.all %}
+        <li class="py-3 flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-gray-900">{{ m.title }}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                        {% if m.status == 'active' %}bg-amber-100 text-amber-800{% elif m.status == 'done' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-700{% endif %}">
+                        {{ m.get_status_display }}
+                    </span>
+                </div>
+                {% if m.reason %}<p class="text-xs text-gray-500">Grund: {{ m.reason }}</p>{% endif %}
+                {% if m.description %}<p class="text-xs text-gray-600">Maßnahme: {{ m.description }}</p>{% endif %}
+                {% if m.escape_route %}<p class="text-xs text-gray-500">Fluchtweg: {{ m.escape_route.name }}</p>{% endif %}
+                {% if m.suppression_system %}<p class="text-xs text-gray-500">Löschanlage: {{ m.suppression_system.designation }}</p>{% endif %}
+                <p class="text-xs text-gray-500">
+                    {% if m.start_date %}ab {{ m.start_date|date:"d.m.Y" }}{% endif %}
+                    {% if m.end_date %}· Frist {{ m.end_date|date:"d.m.Y" }}{% endif %}
+                    {% if m.responsible %}· {{ m.responsible }}{% endif %}
+                </p>
+            </div>
+            {% if perms.objektverwaltung.change_buildingobject %}
+            <form method="post" action="{% url 'objektverwaltung:delete_compensation' m.pk %}"
+                  onsubmit="return confirm('Maßnahme löschen?');">
+                {% csrf_token %}
+                <button type="submit" class="text-xs text-red-600 hover:text-red-800 flex-shrink-0">Löschen</button>
+            </form>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-500">Noch keine Kompensationsmaßnahmen erfasst.</p>
+    {% endif %}
+
+    {% if perms.objektverwaltung.change_buildingobject %}
+    <form method="post" action="{% url 'objektverwaltung:add_compensation' object.pk %}"
+          x-show="addOpen" x-cloak class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {% csrf_token %}
+        <div><label class="block text-xs text-gray-500 mb-1">Bezeichnung</label>{{ compensation_form.title }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Status</label>{{ compensation_form.status }}</div>
+        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Grund / Mangel</label>{{ compensation_form.reason }}</div>
+        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Maßnahme</label>{{ compensation_form.description }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Betroffener Fluchtweg</label>{{ compensation_form.escape_route }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Betroffene Löschanlage</label>{{ compensation_form.suppression_system }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Beginn</label>{{ compensation_form.start_date }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Frist / Ende</label>{{ compensation_form.end_date }}</div>
+        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Verantwortlich</label>{{ compensation_form.responsible }}</div>
+        <div class="md:col-span-2 text-right">
+            <button type="submit" class="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-primary-700">Maßnahme hinzufügen</button>
+        </div>
+    </form>
+    {% endif %}
+</div>

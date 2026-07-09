@@ -111,6 +111,12 @@ class SystemSettings(models.Model):
         help_text="Bevölkerungsschutz-Modul (Bund, Land & Kommune)"
     )
 
+    objektverwaltung_enabled = models.BooleanField(
+        default=True,
+        verbose_name="Objektverwaltung",
+        help_text="Verwaltung öffentlicher Gebäude (Etagen, Fluchtwege, Laufkarten)"
+    )
+
     # ============================================================================
     # PERSONAL - TAB VISIBILITY
     # ============================================================================
@@ -340,4 +346,6 @@ class SystemSettings(models.Model):
             modules.append('defect_management')
         if self.civil_protection_enabled:
             modules.append('civil_protection')
+        if self.objektverwaltung_enabled:
+            modules.append('objektverwaltung')
         return modules

@@ -144,6 +144,29 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # Letzte Aktivitäten (Placeholder)
         context['recent_activities'] = []
 
+        # Objektverwaltung: abonnierte Änderungen (nur In-App-Notifications,
+        # gefiltert über die Generic-FK auf BuildingObject)
+        context['object_subscription_feed'] = []
+        context['object_followed_count'] = 0
+        try:
+            from objektverwaltung.models import BuildingObject
+            from notifications.models import Notification
+            from django.contrib.contenttypes.models import ContentType
+
+            ct = ContentType.objects.get_for_model(BuildingObject)
+            context['object_subscription_feed'] = list(
+                Notification.objects.filter(
+                    recipient=user,
+                    is_archived=False,
+                    content_type=ct,
+                ).order_by('-created_at')[:5]
+            )
+            context['object_followed_count'] = BuildingObject.objects.filter(
+                followers=user
+            ).count()
+        except Exception:
+            pass
+
         # Aktuelles Modul für Sidebar-Highlighting
         context['current_module'] = 'dashboard'
 
@@ -396,6 +419,7 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.phonebook_enabled = request.POST.get('phonebook_enabled') == 'true'
                 sys_settings.defect_management_enabled = request.POST.get('defect_management_enabled') == 'true'
                 sys_settings.civil_protection_enabled = request.POST.get('civil_protection_enabled') == 'true'
+                sys_settings.objektverwaltung_enabled = request.POST.get('objektverwaltung_enabled') == 'true'
                 sys_settings.person_tab_duty_hours_visible = request.POST.get('person_tab_duty_hours_visible') == 'true'
                 sys_settings.person_tab_qualifications_visible = request.POST.get('person_tab_qualifications_visible') == 'true'
                 sys_settings.person_tab_inspections_visible = request.POST.get('person_tab_inspections_visible') == 'true'
@@ -818,7 +842,8 @@ def global_search_view(request):
             Q(name__icontains=query) |
             Q(description__icontains=query) |
             Q(manufacturer__icontains=query) |
-            Q(model_number__icontains=query)
+            Q(model__icontains=query) |
+            Q(master_number__icontains=query)
         ).filter(is_active=True)[:max_results_per_type]
 
         for item in equipment_items:
@@ -878,7 +903,8 @@ def global_search_view(request):
             Q(name__icontains=query) |
             Q(description__icontains=query) |
             Q(manufacturer__icontains=query) |
-            Q(part_number__icontains=query)
+            Q(model__icontains=query) |
+            Q(master_number__icontains=query)
         ).filter(is_active=True)[:max_results_per_type]
 
         for item in workshop_items:
@@ -905,7 +931,8 @@ def global_search_view(request):
             Q(name__icontains=query) |
             Q(description__icontains=query) |
             Q(manufacturer__icontains=query) |
-            Q(model_number__icontains=query)
+            Q(model__icontains=query) |
+            Q(master_number__icontains=query)
         ).filter(is_active=True)[:max_results_per_type]
 
         for item in diving_items:
@@ -958,7 +985,8 @@ def global_search_view(request):
             Q(name__icontains=query) |
             Q(description__icontains=query) |
             Q(manufacturer__icontains=query) |
-            Q(model_number__icontains=query)
+            Q(model__icontains=query) |
+            Q(master_number__icontains=query)
         ).filter(is_active=True)[:max_results_per_type]
 
         for item in height_rescue_items:
@@ -1042,6 +1070,31 @@ def global_search_view(request):
                 })
     except Exception as e:
         logger.error(f"Error searching wiki pages: {e}")
+
+    # OBJEKTVERWALTUNG - Objekte durchsuchen (nur mit Berechtigung)
+    try:
+        if request.user.has_perm('objektverwaltung.view_buildingobject'):
+            from objektverwaltung.models import BuildingObject
+            objects = BuildingObject.objects.filter(
+                Q(name__icontains=query) |
+                Q(object_number__icontains=query) |
+                Q(street__icontains=query) |
+                Q(city__icontains=query)
+            )[:max_results_per_type]
+
+            for obj in objects:
+                description_parts = [obj.get_usage_type_display()]
+                if obj.city:
+                    description_parts.append(obj.city)
+                results.append({
+                    'type': 'objektverwaltung',
+                    'title': obj.name,
+                    'description': 'Objekt - ' + ' • '.join(description_parts),
+                    'url': obj.get_absolute_url(),
+                    'icon': '🏢'
+                })
+    except Exception as e:
+        logger.error(f"Error searching objektverwaltung: {e}")
 
     # Sortiere Ergebnisse nach Relevanz
     # Priorität: Exakte Übereinstimmung > Beginnt mit > Enthält
