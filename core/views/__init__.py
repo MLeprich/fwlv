@@ -466,6 +466,38 @@ class SettingsView(LoginRequiredMixin, View):
                 messages.error(request, 'Keine Berechtigung für diese Aktion.')
                 return redirect('core:settings')
 
+        elif section == 'branding':
+            # Nur Superuser dürfen Branding/Startseite ändern
+            if user.is_superuser:
+                from core.models import SystemSettings
+
+                sys_settings = SystemSettings.load()
+
+                site_title = request.POST.get('site_title', '').strip()
+                if site_title:
+                    sys_settings.site_title = site_title
+
+                organization_name = request.POST.get('organization_name', '').strip()
+                if organization_name:
+                    sys_settings.organization_name = organization_name
+
+                # Logo entfernen oder ersetzen
+                if request.POST.get('remove_logo') == 'true':
+                    sys_settings.organization_logo.delete(save=False)
+                    sys_settings.organization_logo = None
+                elif request.FILES.get('organization_logo'):
+                    sys_settings.organization_logo = request.FILES['organization_logo']
+
+                sys_settings.updated_by = user
+                sys_settings.save()
+                SystemSettings.clear_cache()
+
+                messages.success(request, 'Branding-Einstellungen wurden gespeichert.')
+                return redirect('core:settings')
+            else:
+                messages.error(request, 'Keine Berechtigung für diese Aktion.')
+                return redirect('core:settings')
+
         elif section == 'dsgvo':
             # Nur Superuser dürfen DSGVO-Einstellungen ändern
             if user.is_superuser:

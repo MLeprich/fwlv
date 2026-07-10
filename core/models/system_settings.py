@@ -255,11 +255,20 @@ class SystemSettings(models.Model):
         verbose_name="Organisationsname"
     )
 
+    site_title = models.CharField(
+        max_length=200,
+        default="Feuerwehr Lagerverwaltungssystem",
+        verbose_name="Titel auf der Startseite",
+        help_text="Wird auf der öffentlichen Startseite als Überschrift angezeigt "
+                  "(z.B. 'Feuerwehr Oberhausen Lagerverwaltung')."
+    )
+
     organization_logo = models.ImageField(
         upload_to='system/logos/',
         null=True,
         blank=True,
-        verbose_name="Organisations-Logo"
+        verbose_name="Organisations-Logo",
+        help_text="Wird auf der Startseite angezeigt (empfohlen: PNG mit transparentem Hintergrund)."
     )
 
     system_email = models.EmailField(

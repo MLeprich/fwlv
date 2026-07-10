@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FLVS - Feuerwehr Lagerverwaltungssystem</title>
+    <title>{{ system_settings.site_title|default:"Feuerwehr Lagerverwaltungssystem" }}</title>
 
     <!-- Tailwind CSS (lokal) -->
     <script src="{% static 'vendor/js/tailwind.js' %}"></script>
@@ -21,11 +21,15 @@
 
         <!-- Logo & Title -->
         <div class="text-center mb-8">
+            {% if system_settings.organization_logo %}
+            <img src="{{ system_settings.organization_logo.url }}" alt="Logo"
+                 class="mx-auto mb-4 max-h-24 w-auto object-contain">
+            {% else %}
             <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-full mb-4 shadow-lg">
                 <span class="text-4xl text-white">🚒</span>
             </div>
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">FLVS</h1>
-            <p class="text-gray-600">Feuerwehr Lagerverwaltungssystem</p>
+            {% endif %}
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ system_settings.site_title|default:"Feuerwehr Lagerverwaltungssystem" }}</h1>
         </div>
 
         <!-- Split Layout -->
@@ -187,7 +191,7 @@
         <!-- Footer -->
         <div class="mt-8 text-center">
             <p class="text-sm text-gray-600">
-                &copy; {{ "now"|date:"Y" }} FLVS - Alle Rechte vorbehalten
+                &copy; {{ "now"|date:"Y" }} {{ system_settings.site_title|default:"Feuerwehr Lagerverwaltungssystem" }} - Alle Rechte vorbehalten
             </p>
         </div>
 
