@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Unfallberichte - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Unfallberichte</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-4xl">🚑</span>
+                <div>
+                    <h1 class="text-2xl font-bold">Unfallberichte</h1>
+                    <p class="text-indigo-100">Unfälle & Verletzungen im Dienst</p>
+                </div>
+            </div>
+            {% if can_add %}
+            <a href="{% url 'accident_report:create' %}"
+               class="bg-white text-indigo-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Neuer Bericht
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <p class="text-sm text-gray-500">Gesamt</p>
+            <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <p class="text-sm text-gray-500">Schwer / tödlich</p>
+            <p class="text-2xl font-bold text-red-600">{{ stats.schwer }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <p class="text-sm text-gray-500">Meldepflichtig</p>
+            <p class="text-2xl font-bold text-yellow-600">{{ stats.meldepflichtig }}</p>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <form method="get" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <input type="text" name="search" value="{{ search }}" placeholder="Nummer, Person, Ort, Hergang…"
+                   class="md:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <select name="severity" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="">Alle Schweregrade</option>
+                {% for value, label in severity_choices %}
+                <option value="{{ value }}" {% if active_severity == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <select name="activity_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="">Alle Tätigkeiten</option>
+                {% for value, label in activity_choices %}
+                <option value="{{ value }}" {% if active_activity == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex justify-end gap-2 mt-3">
+            <a href="{% url 'accident_report:list' %}" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Zurücksetzen</a>
+            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">Filtern</button>
+        </div>
+    </form>
+
+    <!-- Liste -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nr.</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Person</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ort</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tätigkeit</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schwere</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for report in reports %}
+                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'accident_report:detail' report.pk %}'">
+                        <td class="px-4 py-3 text-sm font-medium text-indigo-600">{{ report.report_number }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">{{ report.accident_date|date:"d.m.Y" }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ report.injured_display }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">{{ report.location|truncatechars:40 }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">{{ report.get_activity_type_display }}</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {{ report.severity_color }}">{{ report.get_severity_display }}</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-12 text-center text-gray-500">
+                            <span class="text-4xl block mb-2">🚑</span>
+                            Noch keine Unfallberichte erfasst.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="flex justify-center items-center gap-2 mt-6">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if active_severity %}&severity={{ active_severity }}{% endif %}{% if active_activity %}&activity_type={{ active_activity }}{% endif %}"
+           class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Zurück</a>
+        {% endif %}
+        <span class="text-sm text-gray-600">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if active_severity %}&severity={{ active_severity }}{% endif %}{% if active_activity %}&activity_type={{ active_activity }}{% endif %}"
+           class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Weiter</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

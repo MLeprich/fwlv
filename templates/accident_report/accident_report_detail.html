@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ report.report_number }} - Unfallbericht - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'accident_report:list' %}" class="text-gray-500 hover:text-gray-700">Unfallberichte</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ report.report_number }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-4xl">🚑</span>
+                <div>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl font-bold">{{ report.report_number }}</h1>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ report.severity_color }}">{{ report.get_severity_display }}</span>
+                    </div>
+                    <p class="text-indigo-100">{{ report.injured_display }} · {{ report.accident_date|date:"d.m.Y" }}{% if report.accident_time %}, {{ report.accident_time|time:"H:i" }} Uhr{% endif %}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                {% if can_change %}
+                <a href="{% url 'accident_report:edit' report.pk %}" class="bg-indigo-700/50 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">Bearbeiten</a>
+                {% endif %}
+                {% if can_delete %}
+                <a href="{% url 'accident_report:delete' report.pk %}" class="bg-red-500/80 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">Löschen</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-6">
+        <!-- Person -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Verletzte / betroffene Person</h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div><dt class="text-gray-500">Name</dt><dd class="text-gray-900 font-medium">{{ report.injured_display }}</dd></div>
+                {% if report.injured_person %}<div><dt class="text-gray-500">Personalnummer</dt><dd class="text-gray-900">{{ report.injured_person.personnel_number }}</dd></div>{% endif %}
+                {% if report.injured_birthdate %}<div><dt class="text-gray-500">Geburtsdatum</dt><dd class="text-gray-900">{{ report.injured_birthdate|date:"d.m.Y" }}</dd></div>{% endif %}
+                {% if report.injured_function %}<div><dt class="text-gray-500">Funktion / Dienstgrad</dt><dd class="text-gray-900">{{ report.injured_function }}</dd></div>{% endif %}
+                {% if report.injured_contact %}<div><dt class="text-gray-500">Kontakt</dt><dd class="text-gray-900">{{ report.injured_contact }}</dd></div>{% endif %}
+            </dl>
+        </div>
+
+        <!-- Unfalldaten -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Unfalldaten</h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div><dt class="text-gray-500">Datum / Zeit</dt><dd class="text-gray-900">{{ report.accident_date|date:"d.m.Y" }}{% if report.accident_time %}, {{ report.accident_time|time:"H:i" }} Uhr{% endif %}</dd></div>
+                <div><dt class="text-gray-500">Ort</dt><dd class="text-gray-900">{{ report.location }}</dd></div>
+                <div><dt class="text-gray-500">Tätigkeit</dt><dd class="text-gray-900">{{ report.get_activity_type_display }}</dd></div>
+                {% if report.activity_detail %}<div><dt class="text-gray-500">Bezug</dt><dd class="text-gray-900">{{ report.activity_detail }}</dd></div>{% endif %}
+                {% if report.vehicle %}<div><dt class="text-gray-500">Fahrzeug</dt><dd class="text-gray-900">{{ report.vehicle }}</dd></div>{% endif %}
+            </dl>
+        </div>
+
+        <!-- Hergang -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Hergang & Ursache</h2>
+            <div class="space-y-3 text-sm">
+                <div><p class="text-gray-500">Unfallhergang</p><p class="text-gray-900 whitespace-pre-line">{{ report.description }}</p></div>
+                {% if report.cause %}<div><p class="text-gray-500">Ursache</p><p class="text-gray-900 whitespace-pre-line">{{ report.cause }}</p></div>{% endif %}
+            </div>
+        </div>
+
+        <!-- Verletzung -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Verletzung & Erstversorgung</h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                {% if report.injury_type %}<div><dt class="text-gray-500">Art der Verletzung</dt><dd class="text-gray-900">{{ report.injury_type }}</dd></div>{% endif %}
+                {% if report.body_part %}<div><dt class="text-gray-500">Körperteile</dt><dd class="text-gray-900">{{ report.body_part }}</dd></div>{% endif %}
+                <div><dt class="text-gray-500">Erste Hilfe</dt><dd class="text-gray-900">{% if report.first_aid_given %}Ja{% if report.first_aid_by %} (durch {{ report.first_aid_by }}){% endif %}{% else %}Nein{% endif %}</dd></div>
+                <div><dt class="text-gray-500">Ärztliche Behandlung</dt><dd class="text-gray-900">{% if report.doctor_visited %}Ja{% if report.doctor_hospital %} ({{ report.doctor_hospital }}){% endif %}{% else %}Nein{% endif %}</dd></div>
+                <div><dt class="text-gray-500">Arbeitsunfähigkeit erwartet</dt><dd class="text-gray-900">{% if report.incapacity_expected %}Ja{% else %}Nein{% endif %}</dd></div>
+            </dl>
+        </div>
+
+        <!-- Zeugen & Meldung -->
+        {% if report.witnesses or report.reported_to or report.reported_date or report.notes %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Zeugen & Meldung</h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                {% if report.witnesses %}<div class="md:col-span-2"><dt class="text-gray-500">Zeugen</dt><dd class="text-gray-900 whitespace-pre-line">{{ report.witnesses }}</dd></div>{% endif %}
+                {% if report.reported_to %}<div><dt class="text-gray-500">Gemeldet an</dt><dd class="text-gray-900">{{ report.reported_to }}</dd></div>{% endif %}
+                {% if report.reported_date %}<div><dt class="text-gray-500">Meldedatum</dt><dd class="text-gray-900">{{ report.reported_date|date:"d.m.Y" }}</dd></div>{% endif %}
+                {% if report.notes %}<div class="md:col-span-2"><dt class="text-gray-500">Bemerkungen</dt><dd class="text-gray-900 whitespace-pre-line">{{ report.notes }}</dd></div>{% endif %}
+            </dl>
+        </div>
+        {% endif %}
+
+        <!-- Bilder -->
+        {% if report.images.all %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Fotos / Anhänge</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {% for img in report.images.all %}
+                <div class="relative group">
+                    <a href="{{ img.image.url }}" target="_blank">
+                        <img src="{{ img.image.url }}" alt="{{ img.caption }}" class="w-full h-32 object-cover rounded-lg border border-gray-200">
+                    </a>
+                    {% if can_change %}
+                    <form method="post" action="{% url 'accident_report:image_delete' img.pk %}" class="absolute top-1 right-1"
+                          onsubmit="return confirm('Bild wirklich löschen?');">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-red-600/80 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Meta -->
+        <p class="text-xs text-gray-400 text-center">
+            Erfasst von {{ report.created_by.get_full_name|default:report.created_by.username }} am {{ report.created_at|date:"d.m.Y H:i" }}
+            · Zuletzt geändert {{ report.updated_at|date:"d.m.Y H:i" }}
+        </p>
+    </div>
+
+</div>
+{% endblock %}

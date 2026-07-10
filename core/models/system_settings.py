@@ -117,6 +117,12 @@ class SystemSettings(models.Model):
         help_text="Verwaltung öffentlicher Gebäude (Etagen, Fluchtwege, Laufkarten)"
     )
 
+    accident_report_enabled = models.BooleanField(
+        default=True,
+        verbose_name="Unfallberichte",
+        help_text="Erfassung und Verwaltung von Unfall-/Verletzungsmeldungen im Dienst"
+    )
+
     # ============================================================================
     # PERSONAL - TAB VISIBILITY
     # ============================================================================
@@ -348,4 +354,6 @@ class SystemSettings(models.Model):
             modules.append('civil_protection')
         if self.objektverwaltung_enabled:
             modules.append('objektverwaltung')
+        if self.accident_report_enabled:
+            modules.append('accident_report')
         return modules

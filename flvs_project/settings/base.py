@@ -103,6 +103,7 @@ LOCAL_APPS = [
     'civil_protection.apps.CivilProtectionConfig',
     'idcards.apps.IdcardsConfig',
     'objektverwaltung.apps.ObjektverwaltungConfig',
+    'accident_report.apps.AccidentReportConfig',
     # Weitere Apps werden hier hinzugefuegt
 ]
 

@@ -420,6 +420,7 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.defect_management_enabled = request.POST.get('defect_management_enabled') == 'true'
                 sys_settings.civil_protection_enabled = request.POST.get('civil_protection_enabled') == 'true'
                 sys_settings.objektverwaltung_enabled = request.POST.get('objektverwaltung_enabled') == 'true'
+                sys_settings.accident_report_enabled = request.POST.get('accident_report_enabled') == 'true'
                 sys_settings.person_tab_duty_hours_visible = request.POST.get('person_tab_duty_hours_visible') == 'true'
                 sys_settings.person_tab_qualifications_visible = request.POST.get('person_tab_qualifications_visible') == 'true'
                 sys_settings.person_tab_inspections_visible = request.POST.get('person_tab_inspections_visible') == 'true'

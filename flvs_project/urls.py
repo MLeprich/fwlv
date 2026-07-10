@@ -117,6 +117,9 @@ urlpatterns = [
     # Objektverwaltung (öffentliche Gebäude)
     path('objektverwaltung/', include('objektverwaltung.urls')),
 
+    # Accident Report App (Unfallberichte)
+    path('accident_report/', include('accident_report.urls')),
+
     # Placeholder für zukünftige Apps
     # path('workshop/', include('workshop.urls')),
     # path('notifications/', include('notifications.urls')),

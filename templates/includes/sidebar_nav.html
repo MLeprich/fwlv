@@ -521,6 +521,26 @@
             {% endif %}
             {% endif %}
 
+            <!-- Unfallberichte -->
+            {% if modules.accident_report_enabled %}
+            {% if perms.accident_report.view_accidentreport %}
+            <a
+                href="{% url 'accident_report:list' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if current_module == 'accident_report' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Unfallberichte'"
+            >
+                <span class="text-xl flex-shrink-0">🚑</span>
+                <span
+                    class="text-sm truncate"
+                    x-show="$store.sidebar.expanded"
+                >
+                    Unfallberichte
+                </span>
+            </a>
+            {% endif %}
+            {% endif %}
+
             <!-- Standorte & Lagerorte -->
             {% if perms.locations.view_location %}
             <a
