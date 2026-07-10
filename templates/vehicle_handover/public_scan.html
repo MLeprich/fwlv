@@ -20,7 +20,18 @@
 
         <!-- Kamera-Scanner (nur bei sicherem Kontext / HTTPS) -->
         <div id="camera-block" class="hidden">
-            <div id="reader" class="mx-auto" style="width:100%; max-width:420px;"></div>
+            <div id="reader" class="mx-auto rounded-lg overflow-hidden bg-black/5" style="width:100%; max-width:420px; min-height:60px;"></div>
+            <div class="mt-3 flex items-center justify-center gap-2">
+                <button id="cam-start" type="button"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm inline-flex items-center gap-2">
+                    <span>📷</span> Kamera starten
+                </button>
+                <button id="cam-stop" type="button"
+                        class="hidden px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm">
+                    Kamera stoppen
+                </button>
+            </div>
+            <p id="cam-status" class="mt-2 text-center text-xs text-gray-500" aria-live="polite"></p>
         </div>
 
         <!-- Hardware-Scanner / manuelle Eingabe (Fallback ohne Kamera) -->
@@ -103,26 +114,75 @@
     var secure = window.isSecureContext && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].indexOf(location.hostname) !== -1);
     var hasCameraApi = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
-    if (secure && hasCameraApi && typeof Html5QrcodeScanner !== 'undefined') {
-        document.getElementById('camera-block').classList.remove('hidden');
-        try {
-            var scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250, rememberLastUsedCamera: true }, false);
-            scanner.render(function (decodedText) {
-                if (handled) return;
-                if (handleScanText(decodedText)) {
-                    try { scanner.clear(); } catch (e) {}
-                }
-            });
-        } catch (e) {
-            // Fällt auf Hardware-Scanner zurück
-            document.getElementById('camera-block').classList.add('hidden');
-            enableWedge();
-        }
+    if (secure && hasCameraApi && typeof Html5Qrcode !== 'undefined') {
+        setupCamera();
     } else {
         enableWedge();
     }
 
+    // Direkter Kamera-Start per Nutzer-Geste (zuverlässig auf Mobilgeräten,
+    // im Gegensatz zum internen "Request Camera Permissions"-Button der Lib).
+    function setupCamera() {
+        document.getElementById('camera-block').classList.remove('hidden');
+
+        var startBtn = document.getElementById('cam-start');
+        var stopBtn = document.getElementById('cam-stop');
+        var status = document.getElementById('cam-status');
+        var html5Qr = new Html5Qrcode("reader", { verbose: false });
+        var running = false;
+
+        function qrbox(viewW, viewH) {
+            var m = Math.floor(Math.min(viewW, viewH) * 0.8);
+            return { width: m, height: m };
+        }
+
+        function onSuccess(decodedText) {
+            if (handled) return;
+            if (handleScanText(decodedText)) { stop(); }
+        }
+
+        function start() {
+            startBtn.disabled = true;
+            status.textContent = 'Kamera wird gestartet…';
+            html5Qr.start({ facingMode: 'environment' }, { fps: 10, qrbox: qrbox, aspectRatio: 1.0 }, onSuccess)
+                .then(function () {
+                    running = true;
+                    startBtn.disabled = false;
+                    startBtn.classList.add('hidden');
+                    stopBtn.classList.remove('hidden');
+                    status.textContent = 'Richten Sie die Kamera auf den QR-Code.';
+                })
+                .catch(function (err) {
+                    startBtn.disabled = false;
+                    var name = (err && (err.name || err)) + '';
+                    if (name.indexOf('NotAllowed') !== -1 || name.indexOf('Permission') !== -1) {
+                        status.textContent = 'Kamerazugriff wurde blockiert. Bitte in den Browser-Einstellungen erlauben – oder Fahrzeug unten auswählen.';
+                    } else if (name.indexOf('NotFound') !== -1 || name.indexOf('NotReadable') !== -1 || name.indexOf('Overconstrained') !== -1) {
+                        status.textContent = 'Keine nutzbare Kamera gefunden. Bitte Hand-Scanner nutzen oder Fahrzeug unten auswählen.';
+                    } else {
+                        status.textContent = 'Kamera konnte nicht gestartet werden. Bitte Fahrzeug unten auswählen.';
+                    }
+                    enableWedge();
+                });
+        }
+
+        function stop() {
+            if (!running) return;
+            running = false;
+            stopBtn.classList.add('hidden');
+            startBtn.classList.remove('hidden');
+            status.textContent = '';
+            html5Qr.stop().catch(function () {});
+        }
+
+        startBtn.addEventListener('click', start);
+        stopBtn.addEventListener('click', stop);
+    }
+
+    var wedgeEnabled = false;
     function enableWedge() {
+        if (wedgeEnabled) return;
+        wedgeEnabled = true;
         var block = document.getElementById('wedge-block');
         block.classList.remove('hidden');
         var input = document.getElementById('wedge-input');
