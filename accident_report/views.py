@@ -5,9 +5,10 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
+                                  TemplateView, UpdateView)
 
-from .forms import AccidentReportForm
+from .forms import AccidentReportForm, PublicAccidentReportForm
 from .models import AccidentReport, AccidentReportImage, Severity, ActivityType
 
 
@@ -149,6 +150,38 @@ class AccidentReportDeleteView(LoginRequiredMixin, PermissionRequiredMixin, Dele
         response = super().form_valid(form)
         messages.success(self.request, f'Unfallbericht {number} wurde gelöscht.')
         return response
+
+
+class PublicAccidentReportCreateView(CreateView):
+    """
+    Öffentliche Unfallmeldung **ohne Login**.
+
+    Jede Person kann einen Unfallbericht einreichen. Die Meldung ist
+    anschließend nur für Berechtigte (Rolle „Unfallbeauftragter") einseh-
+    und bearbeitbar.
+    """
+    model = AccidentReport
+    form_class = PublicAccidentReportForm
+    template_name = 'accident_report/public_accident_form.html'
+
+    def form_valid(self, form):
+        # Anonyme Meldung: kein created_by/updated_by, Standard-Schwere.
+        form.instance.created_by = None
+        form.instance.updated_by = None
+        response = super().form_valid(form)
+        for image_file in self.request.FILES.getlist('images'):
+            if image_file:
+                AccidentReportImage.objects.create(
+                    report=self.object,
+                    image=image_file,
+                    uploaded_by=None,
+                )
+        return redirect('accident_report:public_success')
+
+
+class PublicAccidentReportSuccessView(TemplateView):
+    """Danke-Seite nach öffentlicher Unfallmeldung."""
+    template_name = 'accident_report/public_accident_success.html'
 
 
 def image_delete(request, pk):

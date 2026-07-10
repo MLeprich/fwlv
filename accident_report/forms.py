@@ -107,3 +107,94 @@ class AccidentReportForm(forms.ModelForm):
             msg = 'Bitte eine Person aus dem Personalstamm wählen oder einen Namen eintragen.'
             self.add_error('injured_person', msg)
         return cleaned
+
+
+class PublicAccidentReportForm(forms.ModelForm):
+    """
+    Öffentliches Formular zur Unfallmeldung **ohne Login**.
+
+    Bewusst reduziert: keine internen Felder (Personalstamm-Auswahl,
+    Fahrzeugliste, Schwere-Klassifizierung, interne Meldefelder) – diese
+    würden andernfalls interne Daten an anonyme Nutzer preisgeben bzw.
+    obliegen der Bewertung durch die/den Unfallbeauftragte(n).
+    """
+
+    # Grüne Akzentfarbe passend zur öffentlichen Seite
+    PTW = ('w-full px-3 py-2 border border-gray-300 rounded-lg '
+           'focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500')
+
+    images = MultipleFileField(
+        required=False,
+        widget=MultipleFileInput(attrs={
+            'class': PTW,
+            'accept': 'image/*',
+            'multiple': True,
+        }),
+        label='Fotos anhängen',
+    )
+
+    class Meta:
+        model = AccidentReport
+        fields = [
+            # Melder
+            'reporter_first_name', 'reporter_last_name', 'reporter_contact',
+            # Verletzte Person (nur Freitext – kein Personalstamm-Zugriff)
+            'injured_name', 'injured_birthdate', 'injured_function', 'injured_contact',
+            # Unfalldaten
+            'accident_date', 'accident_time', 'location',
+            'activity_type', 'activity_detail',
+            # Hergang
+            'description', 'cause',
+            # Verletzung
+            'injury_type', 'body_part', 'first_aid_given', 'first_aid_by',
+            'doctor_visited', 'doctor_hospital',
+            # Zeugen
+            'witnesses',
+        ]
+        widgets = {
+            'injured_birthdate': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
+            'accident_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
+            'accident_time': forms.TimeInput(format='%H:%M', attrs={'type': 'time'}),
+            'activity_type': forms.Select(),
+            'description': forms.Textarea(attrs={'rows': 5, 'placeholder': 'Was ist passiert?'}),
+            'cause': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Ursache / Umstände (optional)'}),
+            'witnesses': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Name, Kontakt je Zeuge (optional)'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        ptw = self.PTW
+        ptw_cb = 'rounded border-gray-300 text-emerald-600 focus:ring-emerald-500'
+        placeholders = {
+            'reporter_first_name': 'Ihr Vorname',
+            'reporter_last_name': 'Ihr Nachname',
+            'reporter_contact': 'Telefon oder E-Mail',
+            'injured_name': 'Nachname, Vorname',
+            'injured_function': 'z.B. Truppmann, HBM',
+            'injured_contact': 'Telefon / Anschrift',
+            'location': 'Straße, Ort / Objekt',
+            'activity_detail': 'z.B. Einsatz-Nr. 2026/0815',
+            'first_aid_by': 'Name',
+            'doctor_hospital': 'Arzt / Krankenhaus',
+        }
+        for name, field in self.fields.items():
+            if name == 'images':
+                continue
+            widget = field.widget
+            if isinstance(widget, forms.CheckboxInput):
+                widget.attrs.setdefault('class', ptw_cb)
+            else:
+                widget.attrs.setdefault('class', ptw)
+            if name in placeholders:
+                widget.attrs.setdefault('placeholder', placeholders[name])
+
+        # Pflichtfelder für eine sinnvolle Meldung
+        self.fields['reporter_first_name'].required = True
+        self.fields['reporter_last_name'].required = True
+        self.fields['injured_name'].required = True
+
+    def clean_injured_name(self):
+        name = self.cleaned_data.get('injured_name', '').strip()
+        if not name:
+            raise forms.ValidationError('Bitte den Namen der verletzten Person angeben.')
+        return name

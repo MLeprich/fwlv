@@ -48,3 +48,36 @@ class AccidentReportPermissionTests(TestCase):
     def test_list_requires_permission(self):
         resp = self.client.get(reverse('accident_report:list'))
         self.assertEqual(resp.status_code, 403)
+
+
+class PublicAccidentReportTests(TestCase):
+    """Öffentliche Meldung ohne Login."""
+
+    def test_public_create_is_reachable_without_login(self):
+        resp = self.client.get(reverse('accident_report:public_create'))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_public_form_does_not_expose_personnel_or_vehicles(self):
+        body = self.client.get(reverse('accident_report:public_create')).content.decode()
+        self.assertNotIn('name="injured_person"', body)
+        self.assertNotIn('name="vehicle"', body)
+
+    def test_anonymous_submission_creates_report_without_user(self):
+        resp = self.client.post(reverse('accident_report:public_create'), {
+            'reporter_first_name': 'Anna',
+            'reporter_last_name': 'Melder',
+            'injured_name': 'Opfer, Otto',
+            'accident_date': '2026-07-08',
+            'location': 'Übungsgelände',
+            'activity_type': 'uebung',
+            'description': 'Von der Leiter gestürzt.',
+        })
+        self.assertRedirects(resp, reverse('accident_report:public_success'))
+        report = AccidentReport.objects.get(injured_name='Opfer, Otto')
+        self.assertIsNone(report.created_by)
+        self.assertTrue(report.is_public_submission)
+        self.assertEqual(report.reporter_display, 'Anna Melder')
+
+    def test_anonymous_cannot_view_list(self):
+        resp = self.client.get(reverse('accident_report:list'))
+        self.assertEqual(resp.status_code, 302)  # Redirect zum Login

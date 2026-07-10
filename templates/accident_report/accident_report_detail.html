@@ -126,9 +126,22 @@
         </div>
         {% endif %}
 
+        <!-- Melder / Herkunft -->
+        {% if report.is_public_submission or report.reporter_last_name %}
+        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm">
+            <p class="font-medium text-emerald-800 mb-1">
+                {% if report.is_public_submission %}Öffentliche Meldung (ohne Login){% else %}Gemeldet durch{% endif %}
+            </p>
+            <p class="text-emerald-900">
+                {{ report.reporter_display }}{% if report.reporter_contact %} · {{ report.reporter_contact }}{% endif %}
+            </p>
+        </div>
+        {% endif %}
+
         <!-- Meta -->
         <p class="text-xs text-gray-400 text-center">
-            Erfasst von {{ report.created_by.get_full_name|default:report.created_by.username }} am {{ report.created_at|date:"d.m.Y H:i" }}
+            {% if report.created_by %}Erfasst von {{ report.created_by.get_full_name|default:report.created_by.username }}{% else %}Öffentlich eingereicht{% endif %}
+            am {{ report.created_at|date:"d.m.Y H:i" }}
             · Zuletzt geändert {{ report.updated_at|date:"d.m.Y H:i" }}
         </p>
     </div>

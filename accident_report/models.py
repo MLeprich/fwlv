@@ -68,6 +68,25 @@ class AccidentReport(AuditedModel):
     dokumentieren.
     """
 
+    # AuditedModel-Felder überschreiben: öffentliche (anonyme) Meldungen
+    # haben keinen angemeldeten Benutzer.
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='accident_report_accidentreport_created',
+        verbose_name=_('Erstellt von'),
+        null=True,
+        blank=True,
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='accident_report_accidentreport_updated',
+        verbose_name=_('Aktualisiert von'),
+        null=True,
+        blank=True,
+    )
+
     # -- Bericht ------------------------------------------------------------
     report_number = models.CharField(
         max_length=20,
@@ -80,6 +99,23 @@ class AccidentReport(AuditedModel):
         choices=Severity.choices,
         default=Severity.LEICHT,
         verbose_name=_('Schwere'),
+    )
+
+    # -- Melder (bei öffentlicher Meldung ohne Login) ----------------------
+    reporter_first_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Melder – Vorname'),
+    )
+    reporter_last_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Melder – Nachname'),
+    )
+    reporter_contact = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_('Melder – Kontakt (Telefon / E-Mail)'),
     )
 
     # -- Verletzte / betroffene Person -------------------------------------
@@ -258,6 +294,21 @@ class AccidentReport(AuditedModel):
         return self.injured_name or _('Unbekannt')
 
     @property
+    def reporter_display(self):
+        """Name der meldenden Person (öffentliche Meldung) oder erfassender User."""
+        name = f'{self.reporter_first_name} {self.reporter_last_name}'.strip()
+        if name:
+            return name
+        if self.created_by:
+            return self.created_by.get_full_name() or self.created_by.username
+        return _('Unbekannt')
+
+    @property
+    def is_public_submission(self):
+        """True, wenn der Bericht ohne angemeldeten Benutzer eingereicht wurde."""
+        return self.created_by_id is None
+
+    @property
     def severity_color(self):
         """Tailwind-Klassen für das Schwere-Badge."""
         return {
@@ -291,6 +342,8 @@ class AccidentReportImage(TimeStampedModel):
         on_delete=models.PROTECT,
         related_name='uploaded_accident_images',
         verbose_name=_('Hochgeladen von'),
+        null=True,
+        blank=True,
     )
 
     class Meta:
