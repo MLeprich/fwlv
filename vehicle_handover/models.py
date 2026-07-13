@@ -737,6 +737,25 @@ class HandoverDefect(AuditedModel):
     Dokumentiert festgestellte Mängel mit Schweregrad und Behebungsstatus
     """
 
+    # Öffentliche Übergaben laufen ohne Login – wie bei VehicleHandover bleibt der
+    # Audit-User dann leer. Der Melder steht am Handover (reporter_first_name/-last_name).
+    created_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.PROTECT,
+        related_name='vehicle_handover_handoverdefect_created',
+        verbose_name=_('Erstellt von'),
+        null=True,
+        blank=True,
+    )
+    updated_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.PROTECT,
+        related_name='vehicle_handover_handoverdefect_updated',
+        verbose_name=_('Aktualisiert von'),
+        null=True,
+        blank=True,
+    )
+
     handover = models.ForeignKey(
         VehicleHandover,
         on_delete=models.CASCADE,

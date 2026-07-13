@@ -16,8 +16,10 @@ from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.views.decorators.http import require_POST
 
+from .condition_step import condition_step_context, save_condition_and_defects
 from .csv_import import import_checklist_csv
 from .defect_sync import sync_handover_defects_to_management
+from .defects import open_defects_for_vehicle, serialize_defects
 
 from .models import (
     ChecklistTemplate,
@@ -36,7 +38,6 @@ from .forms import (
     VehicleHandoverForm,
     PublicVehicleHandoverStep1Form,
     HandoverChecklistFormSet,
-    HandoverPhotoFormSet,
     HandoverDefectFormSet,
 )
 
@@ -618,22 +619,20 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
     """
     Multi-Step Wizard für Fahrzeugübergabe-Erstellung
 
-    6 Schritte:
-    1. Grunddaten (Fahrzeug, Personen, Datum)
+    5 Schritte:
+    1. Grunddaten (Fahrzeug, Personen, Datum) – inkl. offener Mängel des Fahrzeugs
     2. Fahrzeugdaten (KM-Stand, Tankfüllung, Sauberkeit)
     3. Checkliste (Template-basiert)
-    4. Fotos
-    5. Mängel
-    6. Bestätigung & Abschluss
+    4. Zustand & Mängel (Mängel mit ihren Fotos, dazu allgemeine Zustandsfotos)
+    5. Bestätigung & Abschluss
     """
 
     STEPS = {
         1: 'grunddaten',
         2: 'fahrzeugdaten',
         3: 'checkliste',
-        4: 'fotos',
-        5: 'maengel',
-        6: 'bestaetigung',
+        4: 'zustand_maengel',
+        5: 'bestaetigung',
     }
 
     def get_template_names(self):
@@ -650,7 +649,7 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
         wizard_data = request.session.get('handover_wizard', {})
 
         # Validierung für Steps die ein handover_id benötigen
-        if step in [2, 3, 4, 5, 6]:
+        if step in [2, 3, 4, 5]:
             handover_id = wizard_data.get('handover_id')
             if not handover_id:
                 messages.warning(request, _('Bitte beginnen Sie bei Schritt 1.'))
@@ -706,26 +705,15 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
 
                 context['formset'] = formset
 
-        # Schritt 4: Fotos
+        # Schritt 4: Zustand & Mängel
         elif step == 4:
             handover_id = wizard_data.get('handover_id')
             if handover_id:
                 handover = get_object_or_404(VehicleHandover, pk=handover_id)
-                context['handover'] = handover
-                context['formset'] = HandoverPhotoFormSet(instance=handover)
-                context['existing_photos'] = handover.photos.all().order_by('order', 'photo_type')
+                context.update(condition_step_context(handover))
 
-        # Schritt 5: Mängel
+        # Schritt 5: Bestätigung
         elif step == 5:
-            handover_id = wizard_data.get('handover_id')
-            if handover_id:
-                handover = get_object_or_404(VehicleHandover, pk=handover_id)
-                context['handover'] = handover
-                context['formset'] = HandoverDefectFormSet(instance=handover)
-                context['existing_defects'] = handover.defects.all()
-
-        # Schritt 6: Bestätigung
-        elif step == 6:
             handover_id = wizard_data.get('handover_id')
             if handover_id:
                 handover = get_object_or_404(VehicleHandover, pk=handover_id)
@@ -859,54 +847,30 @@ class HandoverCreateWizardView(LoginRequiredMixin, TemplateView):
                 context['formset'] = formset
                 return render(request, self.get_template_names()[0], context)
 
-        # Schritt 4: Fotos
+        # Schritt 4: Zustand & Mängel (Mängel mit ihren Fotos + Zustandsfotos)
         elif step == 4:
             handover_id = wizard_data.get('handover_id')
             handover = get_object_or_404(VehicleHandover, pk=handover_id)
-            formset = HandoverPhotoFormSet(request.POST, request.FILES, instance=handover)
+            formset = HandoverDefectFormSet(request.POST, request.FILES, instance=handover)
 
             if formset.is_valid():
-                formset.save()
-                messages.success(request, _('Fotos wurden gespeichert.'))
+                save_condition_and_defects(handover, request, formset, is_public=False)
+                messages.success(request, _('Zustand und Mängel wurden gespeichert.'))
                 return redirect(f"{reverse('vehicle_handover:handover_create')}?step=5")
             else:
                 context = self.get_context_data()
-                context['formset'] = formset
+                context.update(condition_step_context(handover, formset=formset))
                 return render(request, self.get_template_names()[0], context)
 
-        # Schritt 5: Mängel
+        # Schritt 5: Bestätigung & Abschluss
         elif step == 5:
-            handover_id = wizard_data.get('handover_id')
-            handover = get_object_or_404(VehicleHandover, pk=handover_id)
-            formset = HandoverDefectFormSet(request.POST, instance=handover)
-
-            if formset.is_valid():
-                with transaction.atomic():
-                    defects = formset.save(commit=False)
-                    for defect in defects:
-                        defect.created_by = request.user
-                        defect.updated_by = request.user
-                        defect.save()
-
-                    # Update handover defect counts
-                    handover.has_defects = handover.defects.count() > 0
-                    handover.defects_count = handover.defects.count()
-                    handover.save()
-
-                messages.success(request, _('Mängel wurden gespeichert.'))
-                return redirect(f"{reverse('vehicle_handover:handover_create')}?step=6")
-            else:
-                context = self.get_context_data()
-                context['formset'] = formset
-                return render(request, self.get_template_names()[0], context)
-
-        # Schritt 6: Bestätigung & Abschluss
-        elif step == 6:
             handover_id = wizard_data.get('handover_id')
             handover = get_object_or_404(VehicleHandover, pk=handover_id)
 
             # Bestätigungen verarbeiten
-            handover.confirmed_by_receiver = request.POST.get('confirm_receiver') == 'on'
+            # Wer den Wizard abschließt, ist die übernehmende Mannschaft – ein
+            # zusätzliches Häkchen wäre eine Bestätigung seiner selbst.
+            handover.confirmed_by_receiver = True
             handover.completeness_check_done = True
             # Wizard bis zum Schluss durchlaufen = abgeschlossen, unabhängig von der
             # Checklisten-Quote. Sonst würde eine fertige Übergabe als 'in_progress'
@@ -1291,9 +1255,8 @@ class PublicHandoverCreateView(TemplateView):
         1: 'grunddaten',
         2: 'fahrzeugdaten',
         3: 'checkliste',
-        4: 'fotos',
-        5: 'maengel',
-        6: 'bestaetigung',
+        4: 'zustand_maengel',
+        5: 'bestaetigung',
     }
 
     def get_template_names(self):
@@ -1303,6 +1266,15 @@ class PublicHandoverCreateView(TemplateView):
 
     def get_current_step(self):
         return int(self.request.GET.get('step', 1))
+
+    @staticmethod
+    def _open_defects(vehicle_pk):
+        """Offene Mängelwesen-Einträge zu einem Fahrzeug (leer, wenn keins gewählt)."""
+        if not vehicle_pk:
+            return []
+        from vehicles.models import Vehicle
+        vehicle = Vehicle.objects.filter(pk=vehicle_pk).first()
+        return open_defects_for_vehicle(vehicle)
 
     def get(self, request, *args, **kwargs):
         step = self.get_current_step()
@@ -1314,7 +1286,7 @@ class PublicHandoverCreateView(TemplateView):
                 del request.session['public_handover_wizard']
                 request.session.modified = True
 
-        if step in [2, 3, 4, 5, 6]:
+        if step in [2, 3, 4, 5]:
             handover_id = wizard_data.get('handover_id')
             if not handover_id:
                 messages.warning(request, _('Bitte beginnen Sie bei Schritt 1.'))
@@ -1346,6 +1318,8 @@ class PublicHandoverCreateView(TemplateView):
             form = PublicVehicleHandoverStep1Form(initial=initial, step=1)
             context['form'] = form
             context['prefill_vehicle'] = initial.get('vehicle')
+            # Offene Mängel des vorausgewählten Fahrzeugs (z.B. per QR-Scan)
+            context['open_defects'] = self._open_defects(initial.get('vehicle'))
             # Offene Entwürfe (unterbrochene öffentliche Übergaben) zum Fortsetzen anbieten
             context['drafts'] = (
                 VehicleHandover.objects
@@ -1376,17 +1350,8 @@ class PublicHandoverCreateView(TemplateView):
             handover_id = wizard_data.get('handover_id')
             if handover_id:
                 handover = get_object_or_404(VehicleHandover, pk=handover_id)
-                context['handover'] = handover
-                context['formset'] = HandoverPhotoFormSet(instance=handover)
-                context['existing_photos'] = handover.photos.all().order_by('order', 'photo_type')
+                context.update(condition_step_context(handover))
         elif step == 5:
-            handover_id = wizard_data.get('handover_id')
-            if handover_id:
-                handover = get_object_or_404(VehicleHandover, pk=handover_id)
-                context['handover'] = handover
-                context['formset'] = HandoverDefectFormSet(instance=handover)
-                context['existing_defects'] = handover.defects.all()
-        elif step == 6:
             handover_id = wizard_data.get('handover_id')
             if handover_id:
                 handover = get_object_or_404(VehicleHandover, pk=handover_id)
@@ -1491,43 +1456,26 @@ class PublicHandoverCreateView(TemplateView):
                 context['formset'] = formset
                 return render(request, self.get_template_names()[0], context)
 
+        # Schritt 4: Zustand & Mängel (Mängel mit ihren Fotos + Zustandsfotos)
         elif step == 4:
             handover_id = wizard_data.get('handover_id')
             handover = get_object_or_404(VehicleHandover, pk=handover_id)
-            formset = HandoverPhotoFormSet(request.POST, request.FILES, instance=handover)
+            formset = HandoverDefectFormSet(request.POST, request.FILES, instance=handover)
             if formset.is_valid():
-                formset.save()
+                save_condition_and_defects(handover, request, formset, is_public=True)
                 return redirect(f"{reverse('vehicle_handover:public_create')}?step=5")
             else:
                 context = self.get_context_data()
-                context['formset'] = formset
+                context.update(condition_step_context(handover, formset=formset))
                 return render(request, self.get_template_names()[0], context)
 
         elif step == 5:
             handover_id = wizard_data.get('handover_id')
             handover = get_object_or_404(VehicleHandover, pk=handover_id)
-            formset = HandoverDefectFormSet(request.POST, instance=handover)
-            if formset.is_valid():
-                with transaction.atomic():
-                    defects = formset.save(commit=False)
-                    for defect in defects:
-                        defect.created_by = None
-                        defect.updated_by = None
-                        defect.save()
-                    handover.has_defects = handover.defects.count() > 0
-                    handover.defects_count = handover.defects.count()
-                    handover.save()
-                return redirect(f"{reverse('vehicle_handover:public_create')}?step=6")
-            else:
-                context = self.get_context_data()
-                context['formset'] = formset
-                return render(request, self.get_template_names()[0], context)
 
-        elif step == 6:
-            handover_id = wizard_data.get('handover_id')
-            handover = get_object_or_404(VehicleHandover, pk=handover_id)
-
-            handover.confirmed_by_receiver = request.POST.get('confirm_receiver') == 'on'
+            # Wer den Wizard abschließt, ist die übernehmende Mannschaft – ein
+            # zusätzliches Häkchen wäre eine Bestätigung seiner selbst.
+            handover.confirmed_by_receiver = True
             handover.completeness_check_done = True
             # Wizard bis zum Schluss durchlaufen = abgeschlossen, unabhängig von der
             # Checklisten-Quote. Sonst würde eine fertige öffentliche Übergabe als
@@ -1605,7 +1553,14 @@ def public_get_templates_for_vehicle(request, vehicle_pk):
         if location_entry:
             location_data = {'id': str(location_entry.pk), 'name': str(location_entry)}
 
-    return JsonResponse({'templates': data, 'location': location_data})
+    # Offene Mängel des Fahrzeugs, damit die neue Wachmannschaft sie sofort sieht
+    open_defects = serialize_defects(open_defects_for_vehicle(vehicle))
+
+    return JsonResponse({
+        'templates': data,
+        'location': location_data,
+        'open_defects': open_defects,
+    })
 
 
 def public_check_person(request):
@@ -2135,7 +2090,14 @@ def get_templates_for_vehicle(request, vehicle_pk):
         if location_entry:
             location_data = {'id': str(location_entry.pk), 'name': str(location_entry)}
 
-    return JsonResponse({'templates': data, 'location': location_data})
+    # Offene Mängel des Fahrzeugs, damit die neue Wachmannschaft sie sofort sieht
+    open_defects = serialize_defects(open_defects_for_vehicle(vehicle))
+
+    return JsonResponse({
+        'templates': data,
+        'location': location_data,
+        'open_defects': open_defects,
+    })
 
 
 @login_required

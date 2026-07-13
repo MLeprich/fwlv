@@ -198,6 +198,20 @@ class Defect(AuditedModel):
             return str(self.related_object)
         return '-'
 
+    @property
+    def reporter_display(self):
+        """
+        Wer den Mangel gemeldet hat.
+
+        Meldungen ohne Login (z.B. aus einer öffentlichen Fahrzeugübernahme) haben
+        kein `created_by` – dann zählt der eingetragene Melder-Name.
+        """
+        if self.created_by:
+            return self.created_by.get_full_name() or self.created_by.get_username()
+
+        name = f'{self.reporter_first_name} {self.reporter_last_name}'.strip()
+        return name or 'Unbekannt'
+
     def get_status_color(self):
         """CSS-Farbe für Status-Badge"""
         colors = {

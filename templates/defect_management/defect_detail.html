@@ -145,7 +145,7 @@
                     <div>
                         <dt class="text-xs text-gray-500">Gemeldet von</dt>
                         <dd class="text-sm font-medium text-gray-900">
-                            {{ defect.created_by.get_full_name|default:defect.created_by.username }}
+                            {{ defect.reporter_display }}
                         </dd>
                     </div>
                     <div>

@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Neue Übergabe - Schritt 4: Zustand & Mängel - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicle_handover:dashboard' %}" class="text-gray-500 hover:text-gray-700">Fahrzeugübernahme</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Neue Übergabe</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <!-- Fortschrittsanzeige -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-700">Schritt {{ current_step }} von {{ total_steps }}</span>
+            <span class="text-sm font-medium text-gray-700">{{ step_progress }}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: {{ step_progress }}%"></div>
+        </div>
+        <div class="flex justify-between mt-3 text-xs text-gray-500">
+            <span class="text-green-600">✓ 1. Grunddaten</span>
+            <span class="text-green-600">✓ 2. Fahrzeugdaten</span>
+            <span class="text-green-600">✓ 3. Checkliste</span>
+            <span class="font-medium text-blue-600">4. Zustand &amp; Mängel</span>
+            <span>5. Bestätigung</span>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div class="flex items-center mb-6">
+            <span class="text-4xl mr-4">🔍</span>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Zustand &amp; Mängel</h1>
+                <p class="text-sm text-gray-600 mt-1">
+                    Fotos zum Fahrzeugzustand – und Mängel jeweils mit ihren eigenen Fotos
+                </p>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-8">
+            {% csrf_token %}
+            {{ formset.management_form }}
+
+            <!-- ================= Allgemeine Zustandsfotos ================= -->
+            <section>
+                <h2 class="text-lg font-semibold text-gray-900 mb-1">📷 Allgemeine Zustandsfotos</h2>
+                <p class="text-sm text-gray-600 mb-4">
+                    Übersichtsaufnahmen des Fahrzeugs. Sie dokumentieren den Zustand und werden
+                    einem gemeldeten Mangel als Kontext mitgegeben.
+                </p>
+
+                {% if condition_photos %}
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    {% for photo in condition_photos %}
+                    <div class="relative">
+                        <img src="{{ photo.image.url }}" alt="{{ photo.get_photo_type_display }}"
+                             class="w-full h-32 object-cover rounded-lg border border-gray-200">
+                        <span class="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 text-white text-xs rounded">
+                            {{ photo.get_photo_type_display }}
+                        </span>
+                        <label class="absolute top-1 right-1 bg-white/90 rounded px-1.5 py-0.5 text-xs cursor-pointer">
+                            <input type="checkbox" name="delete_photos" value="{{ photo.pk }}" class="align-middle">
+                            <span class="text-red-600">löschen</span>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="border-2 border-dashed border-green-300 rounded-lg bg-green-50 p-4">
+                    <label for="condition_photos"
+                           class="block w-full text-center cursor-pointer py-6 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                        📱 Kamera öffnen / Fotos wählen
+                    </label>
+                    <input type="file" id="condition_photos" name="condition_photos"
+                           accept="image/*" capture="environment" multiple class="hidden">
+
+                    <div id="conditionPreview" class="hidden mt-4">
+                        <p class="text-sm font-medium text-gray-900 mb-2">Ausgewählte Fotos:</p>
+                        <div id="conditionPreviewGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie</label>
+                            <select name="condition_photo_type"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                {% for value, label in photo_type_choices %}
+                                {% if value != 'defect' %}
+                                <option value="{{ value }}" {% if value == 'exterior' %}selected{% endif %}>{{ label }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung (optional)</label>
+                            <input type="text" name="condition_photo_description" maxlength="200"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                   placeholder="z.B. Front links">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= Mängel ================= -->
+            <section>
+                <h2 class="text-lg font-semibold text-gray-900 mb-1">⚠️ Mängel melden</h2>
+                <p class="text-sm text-gray-600 mb-4">
+                    Jeder Mangel wird beim Abschluss automatisch ins Mängelwesen übernommen –
+                    zusammen mit den Fotos, die Sie ihm hier direkt zuordnen.
+                </p>
+
+                <div id="defectForms" class="space-y-4">
+                    {% for form in formset %}
+                    <div class="defect-form border border-gray-200 rounded-lg p-4">
+                        {{ form.id }}
+                        <h3 class="font-semibold text-gray-900 mb-4">Mangel {{ forloop.counter }}</h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Titel</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.title.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Kategorie</label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Beschreibung</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Schweregrad</label>
+                            {{ form.severity }}
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <label class="flex items-center cursor-pointer">
+                                {{ form.requires_immediate_action }}
+                                <span class="ml-2 text-sm text-gray-700">Sofortige Maßnahme erforderlich</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                {{ form.affects_operational_readiness }}
+                                <span class="ml-2 text-sm text-gray-700">Beeinträchtigt Einsatzbereitschaft</span>
+                            </label>
+                        </div>
+
+                        <!-- Fotos zu genau diesem Mangel -->
+                        <div class="pt-4 border-t border-gray-200">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                📷 Fotos zu diesem Mangel
+                            </label>
+
+                            {% if form.instance.pk and form.instance.photos.exists %}
+                            <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
+                                {% for photo in form.instance.photos.all %}
+                                <div class="relative">
+                                    <img src="{{ photo.image.url }}" alt="{{ photo.description }}"
+                                         class="w-full h-20 object-cover rounded border border-gray-200">
+                                    <label class="absolute top-0.5 right-0.5 bg-white/90 rounded px-1 text-xs cursor-pointer">
+                                        <input type="checkbox" name="delete_photos" value="{{ photo.pk }}" class="align-middle">
+                                        <span class="text-red-600">×</span>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <input type="file" name="photos_{{ form.prefix }}"
+                                   accept="image/*" capture="environment" multiple
+                                   class="w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:font-medium hover:file:bg-blue-700">
+                            <p class="mt-1 text-xs text-gray-500">
+                                Diese Fotos landen beim Mangel – im Protokoll und im Mängelwesen.
+                            </p>
+                        </div>
+
+                        {% if form.instance.pk %}
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <label class="flex items-center cursor-pointer">
+                                {{ form.DELETE }}
+                                <span class="ml-2 text-sm text-red-600">Diesen Mangel löschen</span>
+                            </label>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <button type="button" id="addDefect"
+                        class="mt-4 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 font-medium">
+                    + Weiteren Mangel hinzufügen
+                </button>
+
+                <!-- Vorlage für weitere Mängel (__prefix__ wird per JS durch den Index ersetzt) -->
+                <template id="emptyDefectForm">
+                    {% with form=formset.empty_form %}
+                    <div class="defect-form border border-gray-200 rounded-lg p-4">
+                        {{ form.id }}
+                        <h3 class="font-semibold text-gray-900 mb-4">Weiterer Mangel</h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Titel</label>
+                                {{ form.title }}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Kategorie</label>
+                                {{ form.category }}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Beschreibung</label>
+                            {{ form.description }}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Schweregrad</label>
+                            {{ form.severity }}
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <label class="flex items-center cursor-pointer">
+                                {{ form.requires_immediate_action }}
+                                <span class="ml-2 text-sm text-gray-700">Sofortige Maßnahme erforderlich</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                {{ form.affects_operational_readiness }}
+                                <span class="ml-2 text-sm text-gray-700">Beeinträchtigt Einsatzbereitschaft</span>
+                            </label>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-200">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                📷 Fotos zu diesem Mangel
+                            </label>
+                            <input type="file" name="photos_{{ form.prefix }}"
+                                   accept="image/*" capture="environment" multiple
+                                   class="w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:font-medium hover:file:bg-blue-700">
+                        </div>
+                    </div>
+                    {% endwith %}
+                </template>
+            </section>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% url 'vehicle_handover:handover_create' %}?step=3"
+                   class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                    ← Zurück
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                    Weiter zur Bestätigung →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function () {
+    // Vorschau der allgemeinen Zustandsfotos
+    const input = document.getElementById('condition_photos');
+    const preview = document.getElementById('conditionPreview');
+    const grid = document.getElementById('conditionPreviewGrid');
+
+    input.addEventListener('change', () => {
+        grid.innerHTML = '';
+        if (!input.files.length) {
+            preview.classList.add('hidden');
+            return;
+        }
+        Array.from(input.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const wrapper = document.createElement('div');
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'w-full h-24 object-cover rounded border border-gray-200';
+                wrapper.appendChild(img);
+                grid.appendChild(wrapper);
+            };
+            reader.readAsDataURL(file);
+        });
+        preview.classList.remove('hidden');
+    });
+
+    // Weiteren Mangel aus der leeren Formset-Vorlage anhängen
+    const container = document.getElementById('defectForms');
+    const totalForms = document.getElementById('id_{{ formset.prefix }}-TOTAL_FORMS');
+    const vorlage = document.getElementById('emptyDefectForm').innerHTML;
+
+    document.getElementById('addDefect').addEventListener('click', () => {
+        const index = parseInt(totalForms.value, 10);
+
+        const huelle = document.createElement('div');
+        huelle.innerHTML = vorlage.replace(/__prefix__/g, index);
+
+        const block = huelle.querySelector('.defect-form');
+        const titel = block.querySelector('h3');
+        if (titel) titel.textContent = 'Mangel ' + (index + 1);
+
+        container.appendChild(block);
+        totalForms.value = index + 1;
+    });
+})();
+</script>
+{% endblock %}

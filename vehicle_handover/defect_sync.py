@@ -101,6 +101,10 @@ def sync_handover_defects_to_management(handover):
     label_map = dict(HandoverDefect._meta.get_field('category').choices)
     vehicle_ct = ContentType.objects.get_for_model(handover.vehicle.__class__)
 
+    # Allgemeine Zustandsfotos (ohne Mangel-Bezug) werden jedem Mangel als Kontext
+    # mitgegeben – der Sachbearbeiter sieht damit auch die Gesamtansicht.
+    zustandsfotos = list(handover.photos.filter(related_defect__isnull=True))
+
     count = 0
     for hd in pending:
         category = _resolve_category(hd.category, label_map.get(hd.category))
@@ -116,8 +120,39 @@ def sync_handover_defects_to_management(handover):
             created_by=handover.created_by,
             updated_by=handover.updated_by,
         )
+        _copy_photos(defect, hd.photos.all(), zustandsfotos)
+
         hd.exported_defect = defect
         hd.save(update_fields=['exported_defect'])
         count += 1
 
     return count
+
+
+def _copy_photos(defect, mangel_fotos, zustandsfotos):
+    """
+    Hängt die Übergabe-Fotos an den Mängelwesen-Eintrag.
+
+    Die Bilddatei wird nicht kopiert, sondern nur erneut referenziert (gleicher
+    Pfad im Storage) – das spart Speicher und hält beide Ansichten identisch.
+    """
+    from defect_management.models import DefectPhoto
+
+    for foto in mangel_fotos:
+        if not foto.image:
+            continue
+        DefectPhoto.objects.create(
+            defect=defect,
+            image=foto.image.name,
+            description=foto.description or 'Foto aus Fahrzeugübergabe',
+        )
+
+    for foto in zustandsfotos:
+        if not foto.image:
+            continue
+        beschreibung = foto.description or foto.get_photo_type_display()
+        DefectPhoto.objects.create(
+            defect=defect,
+            image=foto.image.name,
+            description=f'Zustandsfoto der Übergabe – {beschreibung}',
+        )

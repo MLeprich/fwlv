@@ -146,7 +146,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">
-                            {{ defect.created_by.get_full_name|default:defect.created_by.username }}
+                            {{ defect.reporter_display }}
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ defect.reported_date|date:"d.m.Y H:i" }}</td>
                     </tr>
