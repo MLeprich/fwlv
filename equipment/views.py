@@ -1955,7 +1955,7 @@ def export_masters(request):
 
     headers = [
         'Name', 'Beschreibung', 'Kategorie-ID', 'Kategorie', 'Hersteller',
-        'Modell', 'Typ', 'Barcode', 'Wartungsintervall (Tage)', 'Prüfintervall (Tage)',
+        'Modell', 'Typ', 'Stammdaten-Nummer', 'Wartungsintervall (Monate)', 'Prüfintervall (Monate)',
         'Lebensdauer (Jahre)', 'Notizen', 'Erstellt am', 'Aktualisiert am'
     ]
 
@@ -1974,12 +1974,12 @@ def export_masters(request):
         ws.cell(row=row_num, column=3, value=master.category.id if master.category else '')
         ws.cell(row=row_num, column=4, value=master.category.name if master.category else '')
         ws.cell(row=row_num, column=5, value=master.manufacturer)
-        ws.cell(row=row_num, column=6, value=master.model_number)
-        ws.cell(row=row_num, column=7, value=master.equipment_type)
-        ws.cell(row=row_num, column=8, value=master.barcode)
-        ws.cell(row=row_num, column=9, value=master.maintenance_interval_days if master.maintenance_interval_days else '')
-        ws.cell(row=row_num, column=10, value=master.inspection_interval_days if master.inspection_interval_days else '')
-        ws.cell(row=row_num, column=11, value=master.lifespan_years if master.lifespan_years else '')
+        ws.cell(row=row_num, column=6, value=master.model)
+        ws.cell(row=row_num, column=7, value=master.get_equipment_type_display())
+        ws.cell(row=row_num, column=8, value=master.master_number)
+        ws.cell(row=row_num, column=9, value=master.maintenance_interval_months if master.maintenance_interval_months else '')
+        ws.cell(row=row_num, column=10, value=master.inspection_interval_months if master.inspection_interval_months else '')
+        ws.cell(row=row_num, column=11, value=master.max_usage_years if master.max_usage_years else '')
         ws.cell(row=row_num, column=12, value=master.notes)
         ws.cell(row=row_num, column=13, value=master.created_at.strftime('%d.%m.%Y %H:%M') if master.created_at else '')
         ws.cell(row=row_num, column=14, value=master.updated_at.strftime('%d.%m.%Y %H:%M') if master.updated_at else '')
@@ -2019,8 +2019,8 @@ def export_devices(request):
 
     headers = [
         'Inventarnummer', 'Stammdaten (Master)', 'Seriennummer', 'Anschaffungsdatum',
-        'Anschaffungspreis', 'Lagerort', 'Zugewiesenes Fahrzeug', 'Status',
-        'Condition', 'Nächste Wartung', 'Nächste Prüfung', 'Notizen',
+        'Anschaffungspreis', 'Lagerort', 'Zugewiesenes Fahrzeug', 'Betriebszustand',
+        'Einsatzbereit', 'Nächste Wartung', 'Nächste Prüfung', 'Notizen',
         'Erstellt am', 'Aktualisiert am'
     ]
 
@@ -2041,8 +2041,8 @@ def export_devices(request):
         ws.cell(row=row_num, column=5, value=float(device.purchase_price) if device.purchase_price else '')
         ws.cell(row=row_num, column=6, value=device.location.name if device.location else '')
         ws.cell(row=row_num, column=7, value=device.assigned_vehicle.license_plate if device.assigned_vehicle else '')
-        ws.cell(row=row_num, column=8, value=device.get_status_display())
-        ws.cell(row=row_num, column=9, value=device.get_condition_display())
+        ws.cell(row=row_num, column=8, value=device.get_equipment_status_display())
+        ws.cell(row=row_num, column=9, value='Ja' if device.is_operational else 'Nein')
         ws.cell(row=row_num, column=10, value=device.next_maintenance_date.strftime('%d.%m.%Y') if device.next_maintenance_date else '')
         ws.cell(row=row_num, column=11, value=device.next_inspection_date.strftime('%d.%m.%Y') if device.next_inspection_date else '')
         ws.cell(row=row_num, column=12, value=device.notes)
@@ -2102,7 +2102,7 @@ def export_movements(request):
         ws.cell(row=row_num, column=2, value=movement.get_movement_type_display())
         ws.cell(row=row_num, column=3, value=movement.item.name)
         ws.cell(row=row_num, column=4, value=float(movement.quantity))
-        ws.cell(row=row_num, column=5, value=movement.get_unit_display())
+        ws.cell(row=row_num, column=5, value=movement.unit)
         ws.cell(row=row_num, column=6, value=movement.from_location.name if movement.from_location else '')
         ws.cell(row=row_num, column=7, value=movement.to_location.name if movement.to_location else '')
         ws.cell(row=row_num, column=8, value=movement.vehicle.license_plate if movement.vehicle else '')

@@ -498,7 +498,7 @@ class WorkshopStockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixi
     template_name = 'workshop/movement_form.html'
     permission_required = 'workshop.add_workshopstockmovement'
     fields = [
-        'movement_type', 'movement_date', 'item', 'quantity', 'unit',
+        'movement_type', 'item', 'quantity', 'unit',
         'vehicle', 'service_record', 'vehicle_mileage',
         'core_returned', 'core_return_date',
         'reference_number', 'delivery_note',
@@ -1005,7 +1005,7 @@ class ImportExportView(LoginRequiredMixin, TemplateView):
 def export_masters(request):
     """Export Workshop Masters als Excel"""
     masters = WorkshopItemMaster.objects.filter(is_active=True).select_related(
-        'created_by', 'updated_by'
+        'item_type', 'created_by'
     ).order_by('master_number')
 
     wb = openpyxl.Workbook()
@@ -1014,8 +1014,8 @@ def export_masters(request):
 
     # Header
     headers = [
-        'Stammdaten-Nr.', 'Name', 'Typ', 'Hersteller', 'Modell', 'Herstellerartikelnr.',
-        'Zertifizierungen', 'Gewicht (kg)', 'Gefahrstoff', 'Gefahrstoffklasse',
+        'Stammdaten-Nr.', 'Name', 'Typ', 'Hersteller', 'Modell', 'Werkzeuggröße',
+        'Spezifikation/Norm', 'Standardpreis (EUR)', 'Gefahrstoff', 'Gefahrensymbole',
         'Beschreibung', 'Erstellt am', 'Aktualisiert am'
     ]
 
@@ -1033,14 +1033,14 @@ def export_masters(request):
     for row_num, master in enumerate(masters, start=2):
         ws.cell(row=row_num, column=1, value=master.master_number)
         ws.cell(row=row_num, column=2, value=master.name)
-        ws.cell(row=row_num, column=3, value=master.item_type.name if hasattr(master, 'item_type') and master.item_type else '')
+        ws.cell(row=row_num, column=3, value=master.item_type.name if master.item_type else '')
         ws.cell(row=row_num, column=4, value=master.manufacturer)
         ws.cell(row=row_num, column=5, value=master.model)
-        ws.cell(row=row_num, column=6, value=master.manufacturer_part_number if hasattr(master, 'manufacturer_part_number') else '')
-        ws.cell(row=row_num, column=7, value=', '.join(master.certifications) if hasattr(master, 'certifications') and master.certifications else '')
-        ws.cell(row=row_num, column=8, value=float(master.weight_kg) if hasattr(master, 'weight_kg') and master.weight_kg else '')
-        ws.cell(row=row_num, column=9, value='Ja' if hasattr(master, 'is_hazardous') and master.is_hazardous else 'Nein')
-        ws.cell(row=row_num, column=10, value=master.hazardous_class if hasattr(master, 'hazardous_class') and master.hazardous_class else '')
+        ws.cell(row=row_num, column=6, value=master.tool_size)
+        ws.cell(row=row_num, column=7, value=master.specification_standard)
+        ws.cell(row=row_num, column=8, value=float(master.purchase_price) if master.purchase_price else '')
+        ws.cell(row=row_num, column=9, value='Ja' if master.is_hazardous else 'Nein')
+        ws.cell(row=row_num, column=10, value=master.hazard_symbols)
         ws.cell(row=row_num, column=11, value=master.description)
         ws.cell(row=row_num, column=12, value=master.created_at.strftime('%d.%m.%Y %H:%M') if master.created_at else '')
         ws.cell(row=row_num, column=13, value=master.updated_at.strftime('%d.%m.%Y %H:%M') if master.updated_at else '')
@@ -1069,7 +1069,7 @@ def export_masters(request):
 def export_tools(request):
     """Export Workshop Tools als Excel"""
     tools = WorkshopToolInstance.objects.filter(is_active=True).select_related(
-        'master', 'location', 'assigned_vehicle', 'assigned_to', 'created_by', 'updated_by'
+        'master', 'location', 'assigned_vehicle', 'assigned_to', 'created_by'
     ).order_by('inventory_number')
 
     wb = openpyxl.Workbook()
@@ -1080,7 +1080,7 @@ def export_tools(request):
     headers = [
         'Inventarnummer', 'Seriennummer', 'Stammdaten', 'Lagerort', 'Fahrzeug', 'Zugeordnet an',
         'Zustand', 'Einsatzbereit', 'Herstellungsdatum', 'Letzte Kalibrierung', 'Nächste Kalibrierung',
-        'Notizen', 'Erstellt am', 'Aktualisiert am'
+        'Zustandsnotizen', 'Erstellt am', 'Aktualisiert am'
     ]
 
     # Header-Styling
@@ -1101,12 +1101,12 @@ def export_tools(request):
         ws.cell(row=row_num, column=4, value=tool.location.name if tool.location else '')
         ws.cell(row=row_num, column=5, value=str(tool.assigned_vehicle) if tool.assigned_vehicle else '')
         ws.cell(row=row_num, column=6, value=tool.assigned_to.get_full_name() if tool.assigned_to else '')
-        ws.cell(row=row_num, column=7, value=tool.get_condition_display() if tool.condition and hasattr(tool, 'get_condition_display') else tool.condition if hasattr(tool, 'condition') and tool.condition else '')
+        ws.cell(row=row_num, column=7, value=tool.get_condition_display() if tool.condition else '')
         ws.cell(row=row_num, column=8, value='Ja' if tool.is_operational else 'Nein')
-        ws.cell(row=row_num, column=9, value=tool.manufacturing_date.strftime('%d.%m.%Y') if hasattr(tool, 'manufacturing_date') and tool.manufacturing_date else '')
-        ws.cell(row=row_num, column=10, value=tool.last_calibration_date.strftime('%d.%m.%Y') if hasattr(tool, 'last_calibration_date') and tool.last_calibration_date else '')
-        ws.cell(row=row_num, column=11, value=tool.next_calibration_date.strftime('%d.%m.%Y') if hasattr(tool, 'next_calibration_date') and tool.next_calibration_date else '')
-        ws.cell(row=row_num, column=12, value=tool.notes if hasattr(tool, 'notes') else '')
+        ws.cell(row=row_num, column=9, value=tool.manufacturing_date.strftime('%d.%m.%Y') if tool.manufacturing_date else '')
+        ws.cell(row=row_num, column=10, value=tool.last_calibration_date.strftime('%d.%m.%Y') if tool.last_calibration_date else '')
+        ws.cell(row=row_num, column=11, value=tool.next_calibration_date.strftime('%d.%m.%Y') if tool.next_calibration_date else '')
+        ws.cell(row=row_num, column=12, value=tool.condition_notes)
         ws.cell(row=row_num, column=13, value=tool.created_at.strftime('%d.%m.%Y %H:%M') if tool.created_at else '')
         ws.cell(row=row_num, column=14, value=tool.updated_at.strftime('%d.%m.%Y %H:%M') if tool.updated_at else '')
 
@@ -1135,7 +1135,7 @@ def export_services(request):
     """Export Vehicle Service Records als Excel"""
     services = VehicleServiceRecord.objects.select_related(
         'vehicle', 'technician'
-    ).order_by('-service_date')[:1000]
+    ).order_by('-scheduled_date')[:1000]
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -1143,8 +1143,8 @@ def export_services(request):
 
     # Header
     headers = [
-        'ID', 'Wartungsdatum', 'Fahrzeug', 'Techniker', 'Wartungstyp', 'Kilometerstand',
-        'Nächster Service (km)', 'Nächster Service (Datum)', 'Kosten', 'Beschreibung', 'Erstellt am'
+        'ID', 'Geplantes Datum', 'Fahrzeug', 'Techniker', 'Wartungstyp', 'Kilometerstand',
+        'Status', 'Abschlussdatum', 'Gesamtkosten (EUR)', 'Beschreibung', 'Erstellt am'
     ]
 
     # Header-Styling
@@ -1160,15 +1160,15 @@ def export_services(request):
     # Daten
     for row_num, service in enumerate(services, start=2):
         ws.cell(row=row_num, column=1, value=service.id)
-        ws.cell(row=row_num, column=2, value=service.service_date.strftime('%d.%m.%Y') if service.service_date else '')
+        ws.cell(row=row_num, column=2, value=service.scheduled_date.strftime('%d.%m.%Y') if service.scheduled_date else '')
         ws.cell(row=row_num, column=3, value=str(service.vehicle) if service.vehicle else '')
         ws.cell(row=row_num, column=4, value=service.technician.get_full_name() if service.technician else '')
-        ws.cell(row=row_num, column=5, value=service.service_type if hasattr(service, 'service_type') else '')
-        ws.cell(row=row_num, column=6, value=service.mileage if hasattr(service, 'mileage') else '')
-        ws.cell(row=row_num, column=7, value=service.next_service_mileage if hasattr(service, 'next_service_mileage') else '')
-        ws.cell(row=row_num, column=8, value=service.next_service_date.strftime('%d.%m.%Y') if hasattr(service, 'next_service_date') and service.next_service_date else '')
-        ws.cell(row=row_num, column=9, value=float(service.cost) if hasattr(service, 'cost') and service.cost else '')
-        ws.cell(row=row_num, column=10, value=service.description if hasattr(service, 'description') else '')
+        ws.cell(row=row_num, column=5, value=service.get_service_type_display())
+        ws.cell(row=row_num, column=6, value=service.mileage_at_service)
+        ws.cell(row=row_num, column=7, value=service.get_service_status_display())
+        ws.cell(row=row_num, column=8, value=service.completed_date.strftime('%d.%m.%Y') if service.completed_date else '')
+        ws.cell(row=row_num, column=9, value=float(service.total_cost) if service.total_cost else '')
+        ws.cell(row=row_num, column=10, value=service.description)
         ws.cell(row=row_num, column=11, value=service.created_at.strftime('%d.%m.%Y %H:%M') if service.created_at else '')
 
     # Spaltenbreiten

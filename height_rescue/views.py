@@ -1047,7 +1047,7 @@ class ImportExportView(LoginRequiredMixin, TemplateView):
 def export_masters(request):
     """Export Height Rescue Masters als Excel"""
     masters = HeightRescueItemMaster.objects.filter(is_active=True).select_related(
-        'created_by', 'updated_by'
+        'equipment_type', 'created_by'
     ).order_by('master_number')
 
     wb = openpyxl.Workbook()
@@ -1056,10 +1056,10 @@ def export_masters(request):
 
     # Header
     headers = [
-        'Stammdaten-Nr.', 'Name', 'Typ', 'Hersteller', 'Modell', 'Herstellerartikelnr.',
-        'EN-Zertifizierung', 'Zertifizierungsnummer', 'Max. Nutzungsdauer (Jahre)',
-        'Seiltyp', 'Seildurchmesser (mm)', 'Seillänge (m)', 'Gewicht (kg)',
-        'Beschreibung', 'Erstellt am', 'Aktualisiert am'
+        'Stammdaten-Nr.', 'Name', 'Typ', 'Hersteller', 'Modell/Artikelnummer',
+        'Zertifizierungen', 'Zertifizierungsnummer', 'Max. Nutzungsdauer (Jahre)',
+        'Prüfintervall (Monate)', 'Seiltyp', 'Seildurchmesser (mm)', 'Seillänge (m)',
+        'Max. Belastung (kg)', 'Beschreibung', 'Erstellt am', 'Aktualisiert am'
     ]
 
     # Header-Styling
@@ -1074,19 +1074,30 @@ def export_masters(request):
 
     # Daten
     for row_num, master in enumerate(masters, start=2):
+        # Typ: bevorzugt dynamischer Ausrüstungstyp, sonst Legacy-Auswahlfeld
+        if master.equipment_type:
+            item_type_label = master.equipment_type.name
+        elif master.item_type:
+            item_type_label = master.get_item_type_display()
+        else:
+            item_type_label = ''
+
+        # Zertifizierungen ist ein JSON-Feld (Liste)
+        certifications = ', '.join(str(c) for c in master.certifications) if master.certifications else ''
+
         ws.cell(row=row_num, column=1, value=master.master_number)
         ws.cell(row=row_num, column=2, value=master.name)
-        ws.cell(row=row_num, column=3, value=master.get_item_type_display())
+        ws.cell(row=row_num, column=3, value=item_type_label)
         ws.cell(row=row_num, column=4, value=master.manufacturer)
         ws.cell(row=row_num, column=5, value=master.model)
-        ws.cell(row=row_num, column=6, value=master.manufacturer_part_number)
-        ws.cell(row=row_num, column=7, value=master.get_en_certification_display() if master.en_certification else '')
-        ws.cell(row=row_num, column=8, value=master.certification_number)
-        ws.cell(row=row_num, column=9, value=master.max_service_life_years)
+        ws.cell(row=row_num, column=6, value=certifications)
+        ws.cell(row=row_num, column=7, value=master.certification_number)
+        ws.cell(row=row_num, column=8, value=master.max_service_life_years)
+        ws.cell(row=row_num, column=9, value=master.inspection_interval_months)
         ws.cell(row=row_num, column=10, value=master.get_rope_type_display() if master.rope_type else '')
         ws.cell(row=row_num, column=11, value=float(master.rope_diameter_mm) if master.rope_diameter_mm else '')
         ws.cell(row=row_num, column=12, value=float(master.rope_length_m) if master.rope_length_m else '')
-        ws.cell(row=row_num, column=13, value=float(master.weight_kg) if master.weight_kg else '')
+        ws.cell(row=row_num, column=13, value=master.max_load_kg)
         ws.cell(row=row_num, column=14, value=master.description)
         ws.cell(row=row_num, column=15, value=master.created_at.strftime('%d.%m.%Y %H:%M') if master.created_at else '')
         ws.cell(row=row_num, column=16, value=master.updated_at.strftime('%d.%m.%Y %H:%M') if master.updated_at else '')
@@ -1115,7 +1126,7 @@ def export_masters(request):
 def export_devices(request):
     """Export Height Rescue Devices als Excel"""
     devices = HeightRescueDeviceInstance.objects.filter(is_active=True).select_related(
-        'master', 'location', 'assigned_vehicle', 'assigned_to', 'created_by', 'updated_by'
+        'master', 'location', 'assigned_vehicle', 'assigned_to', 'last_inspector', 'created_by'
     ).order_by('inventory_number')
 
     wb = openpyxl.Workbook()
@@ -1192,7 +1203,7 @@ def export_inspections(request):
     # Header
     headers = [
         'ID', 'Prüfdatum', 'Artikel', 'Prüfer', 'Bestanden', 'Nächste Prüfung',
-        'Mängel', 'Maßnahmen', 'Notizen', 'Erstellt am'
+        'Feststellungen', 'Maßnahmen', 'Prüfart', 'Erstellt am'
     ]
 
     # Header-Styling
@@ -1213,9 +1224,9 @@ def export_inspections(request):
         ws.cell(row=row_num, column=4, value=inspection.inspector.get_full_name() if inspection.inspector else '')
         ws.cell(row=row_num, column=5, value='Ja' if inspection.passed else 'Nein')
         ws.cell(row=row_num, column=6, value=inspection.next_inspection_due.strftime('%d.%m.%Y') if inspection.next_inspection_due else '')
-        ws.cell(row=row_num, column=7, value=inspection.defects)
+        ws.cell(row=row_num, column=7, value=inspection.findings)
         ws.cell(row=row_num, column=8, value=inspection.actions_taken)
-        ws.cell(row=row_num, column=9, value=inspection.notes)
+        ws.cell(row=row_num, column=9, value=inspection.get_inspection_type_display() if inspection.inspection_type else '')
         ws.cell(row=row_num, column=10, value=inspection.created_at.strftime('%d.%m.%Y %H:%M') if inspection.created_at else '')
 
     # Spaltenbreiten

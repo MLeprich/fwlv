@@ -797,10 +797,18 @@ class StockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
     def get_context_data(self, **kwargs):
         import json
         context = super().get_context_data(**kwargs)
-        item_locations = dict(
-            MedicalItemMaster.objects.filter(location__isnull=False)
-            .values_list('pk', 'location_id')
+        # Bestand liegt bei Medical auf den Chargen, nicht am Master:
+        # Lagerort der jüngsten Charge mit Restbestand je Artikel vorbelegen.
+        item_locations = {}
+        batches = (
+            MedicalBatch.objects
+            .filter(location__isnull=False, quantity_remaining__gt=0)
+            .order_by('master_id', '-received_date')
+            .values_list('master_id', 'location_id')
         )
+        for master_id, location_id in batches:
+            item_locations.setdefault(master_id, location_id)
+
         context['item_location_map'] = json.dumps(item_locations)
         return context
 
@@ -1991,7 +1999,7 @@ def export_masters(request):
     Export Medical Item Masters als Excel
     """
     masters = MedicalItemMaster.objects.filter(is_active=True).select_related(
-        'category', 'manufacturer', 'created_by', 'updated_by'
+        'category', 'supplier', 'created_by', 'updated_by'
     ).order_by('master_number')
 
     # Excel-Workbook erstellen
@@ -2025,13 +2033,13 @@ def export_masters(request):
         ws.cell(row=row_num, column=5, value=master.atc_code)
         ws.cell(row=row_num, column=6, value=master.internal_order_number)
         ws.cell(row=row_num, column=7, value=master.external_order_number)
-        ws.cell(row=row_num, column=8, value=master.manufacturer.name if master.manufacturer else '')
+        ws.cell(row=row_num, column=8, value=master.manufacturer)
         ws.cell(row=row_num, column=9, value=master.active_ingredient)
-        ws.cell(row=row_num, column=10, value=master.unit)
-        ws.cell(row=row_num, column=11, value=master.strength)
-        ws.cell(row=row_num, column=12, value=master.dosage_form)
+        ws.cell(row=row_num, column=10, value=master.get_unit_display())
+        ws.cell(row=row_num, column=11, value=master.dosage)
+        ws.cell(row=row_num, column=12, value=master.pharmaceutical_form)
         ws.cell(row=row_num, column=13, value='Ja' if master.is_btm else 'Nein')
-        ws.cell(row=row_num, column=14, value='Ja' if master.requires_cooling else 'Nein')
+        ws.cell(row=row_num, column=14, value='Ja' if master.requires_cold_chain else 'Nein')
         ws.cell(row=row_num, column=15, value=master.description)
         ws.cell(row=row_num, column=16, value=master.created_at.strftime('%d.%m.%Y %H:%M') if master.created_at else '')
         ws.cell(row=row_num, column=17, value=master.updated_at.strftime('%d.%m.%Y %H:%M') if master.updated_at else '')
@@ -2076,7 +2084,7 @@ def export_devices(request):
     # Header
     headers = [
         'Inventarnummer', 'Stammdatennummer', 'Name', 'Seriennummer',
-        'Standort', 'Status', 'Nächste Prüfung', 'Nächste Wartung',
+        'Standort', 'Zustand', 'Nächste Prüfung', 'Nächste Wartung',
         'Anschaffungsdatum', 'Anschaffungspreis', 'Notizen', 'Erstellt am'
     ]
 
@@ -2096,11 +2104,11 @@ def export_devices(request):
         ws.cell(row=row_num, column=3, value=device.master.name if device.master else '')
         ws.cell(row=row_num, column=4, value=device.serial_number)
         ws.cell(row=row_num, column=5, value=device.location.name if device.location else '')
-        ws.cell(row=row_num, column=6, value=device.get_status_display())
+        ws.cell(row=row_num, column=6, value=device.get_condition_display())
         ws.cell(row=row_num, column=7, value=device.next_inspection_date.strftime('%d.%m.%Y') if device.next_inspection_date else '')
         ws.cell(row=row_num, column=8, value=device.next_maintenance_date.strftime('%d.%m.%Y') if device.next_maintenance_date else '')
-        ws.cell(row=row_num, column=9, value=device.acquisition_date.strftime('%d.%m.%Y') if device.acquisition_date else '')
-        ws.cell(row=row_num, column=10, value=f'{device.acquisition_price:.2f}' if device.acquisition_price else '')
+        ws.cell(row=row_num, column=9, value=device.purchase_date.strftime('%d.%m.%Y') if device.purchase_date else '')
+        ws.cell(row=row_num, column=10, value=f'{device.purchase_price:.2f}' if device.purchase_price else '')
         ws.cell(row=row_num, column=11, value=device.notes)
         ws.cell(row=row_num, column=12, value=device.created_at.strftime('%d.%m.%Y %H:%M') if device.created_at else '')
 
@@ -2145,7 +2153,7 @@ def export_batches(request):
     headers = [
         'Chargennummer', 'Artikel', 'Standort', 'Menge (Gesamt)',
         'Menge (Verbleibend)', 'Einheit', 'Verfallsdatum',
-        'Erstellt am', 'Status'
+        'Eingangsdatum', 'Status'
     ]
 
     # Header-Styling
@@ -2175,11 +2183,11 @@ def export_batches(request):
         ws.cell(row=row_num, column=1, value=batch.batch_number)
         ws.cell(row=row_num, column=2, value=article.name if article else '')
         ws.cell(row=row_num, column=3, value=batch.location.name if batch.location else '')
-        ws.cell(row=row_num, column=4, value=f'{batch.quantity:.2f}')
+        ws.cell(row=row_num, column=4, value=f'{batch.quantity_received:.2f}')
         ws.cell(row=row_num, column=5, value=f'{batch.quantity_remaining:.2f}')
-        ws.cell(row=row_num, column=6, value=batch.unit)
+        ws.cell(row=row_num, column=6, value=article.get_unit_display() if article else '')
         ws.cell(row=row_num, column=7, value=batch.expiry_date.strftime('%d.%m.%Y') if batch.expiry_date else '')
-        ws.cell(row=row_num, column=8, value=batch.created_at.strftime('%d.%m.%Y %H:%M') if batch.created_at else '')
+        ws.cell(row=row_num, column=8, value=batch.received_date.strftime('%d.%m.%Y') if batch.received_date else '')
         ws.cell(row=row_num, column=9, value=status)
 
     # Spaltenbreite anpassen

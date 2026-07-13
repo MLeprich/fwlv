@@ -1,5 +1,5 @@
 from django import forms
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required, permission_required
@@ -1390,7 +1390,7 @@ class ImportExportView(LoginRequiredMixin, TemplateView):
 def export_masters(request):
     """Export Diving Masters als Excel"""
     masters = DivingItemMaster.objects.filter(is_active=True).select_related(
-        'created_by', 'updated_by'
+        'created_by'
     ).order_by('master_number')
 
     wb = openpyxl.Workbook()
@@ -1454,7 +1454,7 @@ def export_masters(request):
 def export_devices(request):
     """Export Diving Devices als Excel"""
     devices = DivingDeviceInstance.objects.filter(is_active=True).select_related(
-        'master', 'location', 'assigned_vehicle', 'assigned_to', 'created_by', 'updated_by'
+        'master', 'location', 'assigned_vehicle', 'assigned_to', 'last_service_technician', 'created_by'
     ).order_by('inventory_number')
 
     wb = openpyxl.Workbook()
@@ -1492,7 +1492,7 @@ def export_devices(request):
         ws.cell(row=row_num, column=10, value=device.last_service_date.strftime('%d.%m.%Y') if hasattr(device, 'last_service_date') and device.last_service_date else '')
         ws.cell(row=row_num, column=11, value=device.next_service_date.strftime('%d.%m.%Y') if hasattr(device, 'next_service_date') and device.next_service_date else '')
         ws.cell(row=row_num, column=12, value=device.last_service_technician.get_full_name() if hasattr(device, 'last_service_technician') and device.last_service_technician else '')
-        ws.cell(row=row_num, column=13, value=device.notes)
+        ws.cell(row=row_num, column=13, value=device.condition_notes)
         ws.cell(row=row_num, column=14, value=device.created_at.strftime('%d.%m.%Y %H:%M') if device.created_at else '')
         ws.cell(row=row_num, column=15, value=device.updated_at.strftime('%d.%m.%Y %H:%M') if device.updated_at else '')
 
@@ -1520,7 +1520,7 @@ def export_devices(request):
 def export_services(request):
     """Export Diving Service Logs als Excel"""
     services = DivingServiceLog.objects.select_related(
-        'item', 'technician'
+        'device', 'device__master', 'technician'
     ).order_by('-service_date')[:1000]
 
     wb = openpyxl.Workbook()
@@ -1529,8 +1529,8 @@ def export_services(request):
 
     # Header
     headers = [
-        'ID', 'Wartungsdatum', 'Artikel', 'Techniker', 'Bestanden', 'Nächste Wartung',
-        'Mängel', 'Maßnahmen', 'Notizen', 'Erstellt am'
+        'ID', 'Wartungsdatum', 'Gerät', 'Techniker', 'Bestanden', 'Nächste Wartung',
+        'Feststellungen', 'Durchgeführte Arbeiten', 'Ersetzte Teile', 'Erstellt am'
     ]
 
     # Header-Styling
@@ -1547,13 +1547,13 @@ def export_services(request):
     for row_num, service in enumerate(services, start=2):
         ws.cell(row=row_num, column=1, value=service.id)
         ws.cell(row=row_num, column=2, value=service.service_date.strftime('%d.%m.%Y') if service.service_date else '')
-        ws.cell(row=row_num, column=3, value=service.item.name if hasattr(service, 'item') and service.item else '')
+        ws.cell(row=row_num, column=3, value=str(service.device) if service.device else '')
         ws.cell(row=row_num, column=4, value=service.technician.get_full_name() if service.technician else '')
         ws.cell(row=row_num, column=5, value='Ja' if service.passed else 'Nein')
         ws.cell(row=row_num, column=6, value=service.next_service_due.strftime('%d.%m.%Y') if service.next_service_due else '')
-        ws.cell(row=row_num, column=7, value=service.defects if hasattr(service, 'defects') else '')
-        ws.cell(row=row_num, column=8, value=service.actions_taken if hasattr(service, 'actions_taken') else '')
-        ws.cell(row=row_num, column=9, value=service.notes if hasattr(service, 'notes') else '')
+        ws.cell(row=row_num, column=7, value=service.findings)
+        ws.cell(row=row_num, column=8, value=service.work_performed)
+        ws.cell(row=row_num, column=9, value=service.parts_replaced)
         ws.cell(row=row_num, column=10, value=service.created_at.strftime('%d.%m.%Y %H:%M') if service.created_at else '')
 
     # Spaltenbreiten
@@ -1724,13 +1724,12 @@ def import_masters(request):
                     item_type=item_type,
                     manufacturer=manufacturer,
                     model=model,
-                    tank_type=tank_type if tank_type else None,
+                    tank_type=tank_type if tank_type else '',
                     volume_liters=float(volume_liters) if volume_liters else None,
                     working_pressure_bar=int(working_pressure_bar) if working_pressure_bar else None,
                     certification_number=certification_number,
                     description=description,
-                    created_by=request.user,
-                    updated_by=request.user
+                    created_by=request.user
                 )
 
                 success_count += 1
@@ -1857,9 +1856,8 @@ def import_devices(request):
                     manufacturing_date=manufacturing_date,
                     condition=condition,
                     is_operational=is_operational,
-                    notes=notes,
-                    created_by=request.user,
-                    updated_by=request.user
+                    condition_notes=notes,
+                    created_by=request.user
                 )
 
                 success_count += 1

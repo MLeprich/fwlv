@@ -37,7 +37,7 @@
         <div class="flex-1">
             <h3 class="text-red-800 font-semibold mb-2">Kritische Hinweise ({{ critical_alerts|length }})</h3>
             <ul class="space-y-1 text-sm text-red-700">
-                {% for alert in critical_alerts|slice:":3" %}
+                {% for alert in critical_alerts %}
                 <li>
                     <a href="{{ alert.url }}" class="hover:underline">
                         {{ alert.message }}
@@ -45,11 +45,6 @@
                 </li>
                 {% endfor %}
             </ul>
-            {% if critical_alerts|length > 3 %}
-            <a href="{% url 'core:alerts' %}" class="text-sm text-red-800 hover:underline font-semibold mt-2 inline-block">
-                + {{ critical_alerts|length|add:"-3" }} weitere ansehen
-            </a>
-            {% endif %}
         </div>
     </div>
 </div>
