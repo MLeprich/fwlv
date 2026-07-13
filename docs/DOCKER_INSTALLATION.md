@@ -157,27 +157,48 @@ Warum das so wichtig ist:
 
 ---
 
-### 1. Auf der Maschine MIT Internet: Image-Bundle bauen
+### Das Bundle muss nicht selbst gebaut werden
+
+Für jede Version wird ein fertiges Bundle als **GitHub-Release** bereitgestellt. Wer
+installiert, **baut nicht** – er lädt herunter. Selbst bauen muss nur, wer eine eigene,
+noch nicht veröffentlichte Codeversion ausrollen will (siehe „Neues Bundle bereitstellen"
+weiter unten).
+
+> **Wichtig: Das Bundle IST die Anwendungsversion.** Der Quellcode wird beim Bauen in das
+> Image gebacken (`COPY . .` im Dockerfile), und der Container mountet **keinen** Quellcode
+> vom Host. Das geklonte Repository liefert nur die Infrastruktur (`docker-compose.yml`,
+> `install.sh`, nginx-Konfiguration).
+>
+> Daraus folgt: **Ein `git pull` auf der VM aktualisiert die Anwendung nicht.** Wer das Repo
+> aktualisiert und sich wundert, warum die neuen Funktionen fehlen, ist genau hier
+> hineingelaufen. Repository und Bundle müssen zum **selben Stand** gehören – deshalb wird
+> auf der VM der Release-Tag ausgecheckt, zu dem das Bundle gehört.
+
+### 1. Bundle und Repository auf die Ziel-VM bringen
+
+Die VM erreicht GitHub in vielen Netzen auch dann, wenn Docker Hub gesperrt ist (der Proxy
+lässt `git`/`https` durch). Dann geht es direkt auf der VM:
 
 ```bash
-git clone https://github.com/MLeprich/fwlv.git
-cd fwlv
+# Repository auf den Stand des Releases bringen
+sudo git clone https://github.com/MLeprich/fwlv.git /opt/flvs
+cd /opt/flvs
+git checkout v1.0.0                    # der Tag des Releases – derselbe wie beim Bundle!
 
-# Baut alle Images und exportiert sie nach flvs-images.tar (ca. 400 MB)
-./docker/scripts/build-offline-bundle.sh
+# Fertiges Bundle herunterladen (ca. 400 MB)
+curl -L -o flvs-images.tar \
+  https://github.com/MLeprich/fwlv/releases/latest/download/flvs-images.tar
 ```
 
-Das Bundle enthält genau die sechs Images, die der Standardstart braucht: die drei
-Anwendungs-Images (`flvs-web`, `flvs-celery-worker`, `flvs-celery-beat`) und die drei
-Basis-Images (`postgres:16-alpine`, `redis:7-alpine`, `nginx:alpine`).
+> `releases/latest/download/…` zeigt immer auf das neueste Release. Soll eine **bestimmte**
+> Version installiert werden, den Tag explizit angeben:
+> `https://github.com/MLeprich/fwlv/releases/download/v1.0.0/flvs-images.tar`
 
-### 2. Auf die Ziel-VM übertragen
-
-Beides muss rüber – **Repository und Bundle**, und zwar in dasselbe Verzeichnis:
+**Kommt die VM gar nicht ins Netz** (auch nicht zu GitHub), dann beides von einer anderen
+Maschine herüberkopieren – per `scp` oder USB-Stick:
 
 ```bash
-# z.B. per scp (oder USB-Stick)
-scp -r fwlv/            root@ziel-vm:/opt/flvs
+scp -r fwlv/             root@ziel-vm:/opt/flvs
 scp fwlv/flvs-images.tar root@ziel-vm:/opt/flvs/flvs-images.tar
 ```
 
@@ -192,7 +213,7 @@ Danach muss es auf der VM so aussehen:
 └── ...
 ```
 
-### 3. Auf der Ziel-VM offline installieren
+### 2. Auf der Ziel-VM offline installieren
 
 ```bash
 cd /opt/flvs
@@ -224,17 +245,61 @@ nicht nach.
 Steht dort ein alter Commit, läuft eine veraltete Fassung – etwa eine, die `--offline`
 noch gar nicht kennt. Dann `git pull` und erneut starten.
 
-### Updates
+### Updates auf der VM
 
-Genauso: neues Bundle **extern** bauen, auf die VM kopieren, dort einspielen.
+Ein Update ist immer **ein neues Bundle** – `git pull` allein ändert nichts an der
+laufenden Anwendung, weil der Code im Image steckt (siehe oben).
 
 ```bash
-# Auf der VM:
 cd /opt/flvs
-git pull                                  # falls das Repo erreichbar ist, sonst neu kopieren
+
+# 1. Repository auf den Stand des neuen Releases bringen
+git fetch --tags
+git checkout v1.1.0
+
+# 2. Passendes Bundle holen und laden
+curl -L -o flvs-images.tar \
+  https://github.com/MLeprich/fwlv/releases/download/v1.1.0/flvs-images.tar
 docker load -i flvs-images.tar
+
+# 3. Container mit den neuen Images starten (kein Build, kein Registry-Zugriff)
 docker compose up -d --no-build --pull never
 docker compose exec web python manage.py migrate
+```
+
+> Der Tag beim `git checkout` und der Tag des Bundles müssen **derselbe** sein. Sonst
+> laufen die Container mit dem Code aus dem Image, während `docker-compose.yml` und die
+> nginx-Konfiguration von einem anderen Stand stammen.
+
+---
+
+## Neues Bundle bereitstellen (für Betreuer/Entwickler)
+
+Wer eine neue Version für die abgeschotteten VMs veröffentlicht, macht das **auf einer
+Maschine mit Internet**:
+
+```bash
+# 1. Auf dem Stand bauen, der veröffentlicht werden soll
+git checkout main && git pull
+./docker/scripts/build-offline-bundle.sh          # erzeugt flvs-images.tar (~400 MB)
+
+# 2. Version taggen
+git tag v1.1.0 && git push origin v1.1.0
+
+# 3. Release anlegen und das Bundle als Asset anhängen
+gh release create v1.1.0 flvs-images.tar \
+  --title "FLVS v1.1.0" \
+  --notes "Offline-Bundle für Air-Gap-Installationen. Auf der Ziel-VM: git checkout v1.1.0 && ./install.sh --offline"
+```
+
+Ohne `gh` geht es genauso über die GitHub-Weboberfläche: *Releases → Draft a new release →
+Tag wählen → `flvs-images.tar` als Asset hochladen*.
+
+**Die Datei muss exakt `flvs-images.tar` heißen.** Nur dann funktioniert die stabile
+Download-URL, auf die diese Anleitung verweist:
+
+```
+https://github.com/MLeprich/fwlv/releases/latest/download/flvs-images.tar
 ```
 
 ---
