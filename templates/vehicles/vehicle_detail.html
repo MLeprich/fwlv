@@ -137,7 +137,24 @@
                     <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Funkrufname</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ vehicle.call_sign }}</dd>
+                            <dd class="mt-1 text-sm text-gray-900 flex items-center gap-2">
+                                {% if vehicle.call_sign %}
+                                <span>{{ vehicle.call_sign }}</span>
+                                {% else %}
+                                <span class="text-gray-400">– trägt aktuell keinen –</span>
+                                {% endif %}
+                                {% if perms.vehicles.change_vehicle %}
+                                <a href="{% url 'vehicles:call_sign_reassign' vehicle.pk %}"
+                                   class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                    umhängen →
+                                </a>
+                                {% endif %}
+                            </dd>
+                            {% if call_sign_history|length > 1 %}
+                            <dd class="mt-1 text-xs text-gray-500">
+                                {{ call_sign_history|length|add:"-1" }} frühere{{ call_sign_history|length|add:"-1"|pluralize:"r," }} Träger
+                            </dd>
+                            {% endif %}
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Kennzeichen</dt>

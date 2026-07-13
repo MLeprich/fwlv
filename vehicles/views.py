@@ -7,7 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View
 from django.urls import reverse_lazy, reverse
 from django.db.models import Q, Count, Max
 from django.utils.translation import gettext_lazy as _
@@ -173,6 +173,12 @@ class VehicleDetailView(LoginRequiredMixin, DetailView):
         context['inspection_due'] = self.object.is_inspection_due()
         context['safety_check_due'] = self.object.is_safety_check_due()
         context['insurance_expiring'] = self.object.is_insurance_expiring()
+
+        # Wer trug den aktuellen Funkrufnamen vor diesem Fahrzeug?
+        from .call_signs import history_of_call_sign
+        context['call_sign_history'] = (
+            list(history_of_call_sign(self.object.call_sign)) if self.object.call_sign else []
+        )
 
         return context
 
@@ -1313,3 +1319,83 @@ class SetReplacementVehicleView(LoginRequiredMixin, PermissionRequiredMixin, Upd
 
     def get_success_url(self):
         return reverse('vehicles:list')
+
+
+class CallSignReassignView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Funkrufnamen eines Fahrzeugs umhängen oder freigeben.
+
+    Bewusst eine eigene Aktion statt eines Feldes im Fahrzeugformular: das Umhängen
+    betrifft immer ZWEI Fahrzeuge und muss die Historie fortschreiben. Wer den
+    Funkrufnamen einfach im Formular überschreibt, hinterlässt eine Historie, die lügt.
+    """
+    permission_required = 'vehicles.change_vehicle'
+    template_name = 'vehicles/call_sign_reassign.html'
+
+    def get_vehicle(self):
+        return get_object_or_404(Vehicle, pk=self.kwargs['pk'])
+
+    def get(self, request, *args, **kwargs):
+        from .call_signs import history_of_call_sign
+        from .forms import CallSignReassignForm
+
+        vehicle = self.get_vehicle()
+        return render(request, self.template_name, {
+            'vehicle': vehicle,
+            'form': CallSignReassignForm(vehicle=vehicle),
+            'history': history_of_call_sign(vehicle.call_sign) if vehicle.call_sign else [],
+        })
+
+    def post(self, request, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        from .call_signs import assign_call_sign, history_of_call_sign, release_call_sign
+        from .forms import CallSignReassignForm
+
+        vehicle = self.get_vehicle()
+        form = CallSignReassignForm(request.POST, vehicle=vehicle)
+
+        if form.is_valid():
+            call_sign = vehicle.call_sign
+            if not call_sign:
+                messages.error(request, _('Dieses Fahrzeug trägt aktuell keinen Funkrufnamen.'))
+                return redirect('vehicles:detail', pk=vehicle.pk)
+
+            try:
+                if form.cleaned_data['aktion'] == 'release':
+                    release_call_sign(
+                        vehicle,
+                        valid_to=form.cleaned_data['valid_from'],
+                        reason=form.cleaned_data['reason'],
+                        user=request.user,
+                    )
+                    messages.success(
+                        request,
+                        _('Funkrufname "{}" wurde freigegeben. {} fährt jetzt ohne.').format(
+                            call_sign, vehicle.license_plate
+                        )
+                    )
+                else:
+                    ziel = form.cleaned_data['target_vehicle']
+                    assign_call_sign(
+                        call_sign,
+                        ziel,
+                        valid_from=form.cleaned_data['valid_from'],
+                        reason=form.cleaned_data['reason'],
+                        user=request.user,
+                    )
+                    messages.success(
+                        request,
+                        _('Funkrufname "{}" trägt jetzt {}. {} fährt ohne Funkrufnamen.').format(
+                            call_sign, ziel.license_plate, vehicle.license_plate
+                        )
+                    )
+                return redirect('vehicles:detail', pk=vehicle.pk)
+
+            except ValidationError as fehler:
+                form.add_error(None, fehler)
+
+        return render(request, self.template_name, {
+            'vehicle': vehicle,
+            'form': form,
+            'history': history_of_call_sign(vehicle.call_sign) if vehicle.call_sign else [],
+        })

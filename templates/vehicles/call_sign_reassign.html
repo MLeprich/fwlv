@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}Funkrufname umhängen – {{ vehicle.license_plate }} – FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:list' %}" class="text-gray-500 hover:text-gray-700">Fahrzeuge</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'vehicles:detail' vehicle.pk %}" class="text-gray-500 hover:text-gray-700">{{ vehicle.license_plate }}</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Funkrufname</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-6">
+
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Funkrufname umhängen</h1>
+        <p class="text-sm text-gray-600 mt-1">
+            Der Funkrufname gehört nicht dem Fahrzeug, sondern wandert – etwa auf ein
+            Ersatzfahrzeug, wenn dieses hier in die Werkstatt geht.
+        </p>
+    </div>
+
+    <!-- Aktueller Stand -->
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm mb-6">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h2 class="font-semibold text-gray-900">Aktueller Stand</h2>
+        </div>
+        <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Kennzeichen</dt>
+                <dd class="mt-1 text-lg font-semibold text-gray-900">{{ vehicle.license_plate }}</dd>
+                <p class="text-xs text-gray-500 mt-1">Das ist die feste Identität des Fahrzeugs.</p>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Funkrufname</dt>
+                {% if vehicle.call_sign %}
+                <dd class="mt-1 text-lg font-semibold text-gray-900">{{ vehicle.call_sign }}</dd>
+                {% else %}
+                <dd class="mt-1 text-lg text-gray-400">– trägt aktuell keinen –</dd>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if vehicle.call_sign %}
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm mb-6">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h2 class="font-semibold text-gray-900">Änderung</h2>
+        </div>
+        <form method="post" class="p-6 space-y-5">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+                {{ form.non_field_errors.0 }}
+            </div>
+            {% endif %}
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.aktion.label }}</label>
+                <div class="space-y-2">
+                    {% for radio in form.aktion %}
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        {{ radio.tag }}
+                        <span class="text-sm text-gray-700">{{ radio.choice_label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <label for="{{ form.target_vehicle.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.target_vehicle.label }}
+                </label>
+                {{ form.target_vehicle }}
+                {% if form.target_vehicle.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.target_vehicle.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">
+                    Trägt dieses Fahrzeug schon einen Funkrufnamen, gibt es ihn dabei ab.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="{{ form.valid_from.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.valid_from.label }}
+                    </label>
+                    {{ form.valid_from }}
+                    {% if form.valid_from.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.valid_from.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.reason.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.reason.label }}
+                    </label>
+                    {{ form.reason }}
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <a href="{% url 'vehicles:detail' vehicle.pk %}"
+                   class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                    Übernehmen
+                </button>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="rounded-lg border border-amber-300 bg-amber-50 p-4 mb-6 text-sm text-amber-800">
+        Dieses Fahrzeug trägt aktuell keinen Funkrufnamen – es gibt also nichts umzuhängen.
+        Einen Funkrufnamen bekommt es, indem er ihm von seinem jetzigen Träger aus zugewiesen wird.
+    </div>
+    {% endif %}
+
+    <!-- Historie -->
+    {% if history %}
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h2 class="font-semibold text-gray-900">Wer trug „{{ vehicle.call_sign }}" wann?</h2>
+        </div>
+        <div class="divide-y divide-gray-100">
+            {% for eintrag in history %}
+            <div class="px-6 py-3 flex items-center justify-between {% if eintrag.is_current %}bg-green-50{% endif %}">
+                <div>
+                    <a href="{% url 'vehicles:detail' eintrag.vehicle.pk %}" class="font-medium text-blue-600 hover:text-blue-800">
+                        {{ eintrag.vehicle.license_plate }}
+                    </a>
+                    {% if eintrag.vehicle.name %}
+                    <span class="text-sm text-gray-500">{{ eintrag.vehicle.name }}</span>
+                    {% endif %}
+                    {% if eintrag.reason %}
+                    <p class="text-xs text-gray-500 mt-0.5">{{ eintrag.reason }}</p>
+                    {% endif %}
+                </div>
+                <div class="text-sm text-gray-600 text-right">
+                    {{ eintrag.valid_from|date:"d.m.Y" }} –
+                    {% if eintrag.valid_to %}{{ eintrag.valid_to|date:"d.m.Y" }}{% else %}<span class="font-medium text-green-700">heute</span>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

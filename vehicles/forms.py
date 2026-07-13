@@ -364,3 +364,74 @@ class VehicleTypeForm(forms.ModelForm):
                 'class': 'w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500',
             }),
         }
+
+
+class CallSignReassignForm(forms.Form):
+    """
+    Funkrufnamen einem anderen Fahrzeug zuweisen oder ganz freigeben.
+
+    Der Funkrufname wandert, wenn ein Fahrzeug in die Werkstatt geht. Das Formular
+    kennt deshalb beide Richtungen: "übernimmt Fahrzeug X" und "wird freigegeben".
+    """
+
+    INPUT_CLASS = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
+
+    aktion = forms.ChoiceField(
+        label=_('Was soll passieren?'),
+        choices=[
+            ('assign', _('Funkrufname geht auf ein anderes Fahrzeug über')),
+            ('release', _('Funkrufname wird freigegeben (Fahrzeug fährt ohne)')),
+        ],
+        initial='assign',
+        widget=forms.RadioSelect,
+    )
+
+    target_vehicle = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        label=_('Neuer Träger'),
+        empty_label=_('--- Fahrzeug über Kennzeichen wählen ---'),
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+
+    valid_from = forms.DateField(
+        label=_('Gültig ab'),
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT_CLASS}),
+    )
+
+    reason = forms.CharField(
+        required=False,
+        max_length=200,
+        label=_('Grund'),
+        widget=forms.TextInput(attrs={
+            'class': INPUT_CLASS,
+            'placeholder': _('z.B. Fahrzeug in der Werkstatt'),
+        }),
+    )
+
+    def __init__(self, *args, vehicle=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        from django.utils import timezone as dj_timezone
+        from .models import Vehicle
+
+        self.vehicle = vehicle
+        self.fields['valid_from'].initial = dj_timezone.localdate()
+
+        # Auswahl über das Kennzeichen – der Funkrufname ist ja gerade das Wandernde.
+        auswahl = Vehicle.objects.filter(
+            is_active=True, actual_retirement_date__isnull=True
+        ).order_by('license_plate')
+        if vehicle is not None:
+            auswahl = auswahl.exclude(pk=vehicle.pk)
+        self.fields['target_vehicle'].queryset = auswahl
+        self.fields['target_vehicle'].label_from_instance = (
+            lambda v: f"{v.license_plate} · {v.call_sign or 'ohne Funkrufname'}"
+                      + (f" · {v.name}" if v.name else '')
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('aktion') == 'assign' and not cleaned.get('target_vehicle'):
+            self.add_error('target_vehicle', _('Bitte das Fahrzeug wählen, das den Funkrufnamen übernimmt.'))
+        return cleaned

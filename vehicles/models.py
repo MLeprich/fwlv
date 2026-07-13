@@ -179,10 +179,20 @@ class Vehicle(AuditedModel):
         help_text=_('Nur bei Rubrik Katastrophenschutz: Bund, Land oder Kommune'),
     )
 
+    # Der Funkrufname ist keine Eigenschaft des Fahrzeugs, sondern eine Rolle, die es
+    # gerade ausfüllt: geht ein Fahrzeug in die Werkstatt, wandert der Name auf das
+    # Ersatzfahrzeug. Hier steht nur der AKTUELLE Name; wer ihn wann hatte, führt
+    # CallSignAssignment. Gepflegt wird das Feld über vehicles.call_signs – nicht von
+    # Hand, sonst läuft die Historie auseinander.
+    #
+    # Kein unique=True auf dem Feld: das würde auch die leeren Werte gegeneinander
+    # eindeutig machen, sodass kein zweites Fahrzeug ohne Funkrufnamen dastehen könnte –
+    # genau der Fall, wenn zwei Fahrzeuge gleichzeitig in der Werkstatt sind. Die
+    # Eindeutigkeit gilt deshalb nur für gesetzte Werte (Constraint in Meta).
     call_sign = models.CharField(
         max_length=50,
-        unique=True,
         blank=True,
+        default='',
         verbose_name=_('Funkrufname'),
         help_text=_('z.B. Florian Musterstadt 10/1')
     )
@@ -384,7 +394,9 @@ class Vehicle(AuditedModel):
     class Meta:
         verbose_name = _('Fahrzeug')
         verbose_name_plural = _('Fahrzeuge')
-        ordering = ['call_sign']
+        # Das Kennzeichen ist die feste Identität, der Funkrufname wandert – danach
+        # wird deshalb sortiert.
+        ordering = ['license_plate']
         indexes = [
             models.Index(fields=['call_sign']),
             models.Index(fields=['license_plate']),
@@ -392,9 +404,19 @@ class Vehicle(AuditedModel):
             models.Index(fields=['is_active']),
             models.Index(fields=['next_inspection_date']),
         ]
+        constraints = [
+            # Eindeutig nur, wenn gesetzt: mehrere Fahrzeuge dürfen gleichzeitig ohne
+            # Funkrufnamen dastehen (z.B. weil sie in der Werkstatt sind).
+            models.UniqueConstraint(
+                fields=['call_sign'],
+                condition=~models.Q(call_sign=''),
+                name='unique_call_sign_when_set',
+            ),
+        ]
 
     def __str__(self):
-        return f"{self.call_sign} - {self.name}"
+        name = self.call_sign or self.license_plate
+        return f"{name} - {self.name}" if self.name else name
 
     def get_absolute_url(self):
         return reverse('vehicles:detail', kwargs={'pk': self.pk})
@@ -579,3 +601,100 @@ class VehicleInspection(AuditedModel):
         return self.status in [InspectionStatus.PASSED, InspectionStatus.PASSED_WITH_DEFECTS]
 
 
+
+
+class CallSignAssignment(AuditedModel):
+    """
+    Wer trug wann welchen Funkrufnamen.
+
+    Der Funkrufname wandert: geht ein Fahrzeug in die Werkstatt, übernimmt das
+    Ersatzfahrzeug den Namen. Ohne Historie zeigt ein Übernahmeprotokoll von letztem
+    Monat plötzlich den Namen, den das Fahrzeug HEUTE trägt – und niemand kann mehr
+    rekonstruieren, welches Fahrzeug damals unter welchem Namen gefahren ist.
+
+    Eine Zuordnung ohne `valid_to` ist die aktuell gültige. Geschrieben wird hier nicht
+    von Hand, sondern über vehicles.call_signs (assign_call_sign / release_call_sign),
+    damit Vehicle.call_sign und die Historie nicht auseinanderlaufen.
+    """
+
+    # Zuordnungen entstehen auch ohne angemeldeten Benutzer – etwa beim Übernehmen der
+    # heutigen Funkrufnamen in die Historie (Datenmigration) oder aus Automatismen.
+    created_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.PROTECT,
+        related_name='vehicles_callsignassignment_created',
+        verbose_name=_('Erstellt von'),
+        null=True,
+        blank=True,
+    )
+    updated_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.PROTECT,
+        related_name='vehicles_callsignassignment_updated',
+        verbose_name=_('Aktualisiert von'),
+        null=True,
+        blank=True,
+    )
+
+    call_sign = models.CharField(
+        max_length=50,
+        verbose_name=_('Funkrufname'),
+        help_text=_('z.B. Florian Musterstadt 10/1')
+    )
+
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.CASCADE,
+        related_name='call_sign_assignments',
+        verbose_name=_('Fahrzeug')
+    )
+
+    valid_from = models.DateField(
+        default=timezone.localdate,
+        verbose_name=_('Gültig ab')
+    )
+
+    valid_to = models.DateField(
+        null=True, blank=True,
+        verbose_name=_('Gültig bis'),
+        help_text=_('Leer = aktuell gültig')
+    )
+
+    reason = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_('Grund'),
+        help_text=_('z.B. "Fahrzeug in der Werkstatt", "Ersatzbeschaffung"')
+    )
+
+    class Meta:
+        verbose_name = _('Funkrufnamen-Zuordnung')
+        verbose_name_plural = _('Funkrufnamen-Zuordnungen')
+        ordering = ['-valid_from', '-id']
+        indexes = [
+            models.Index(fields=['call_sign']),
+            models.Index(fields=['vehicle']),
+            models.Index(fields=['valid_to']),
+        ]
+        constraints = [
+            # Ein Funkrufname darf nur einem Fahrzeug gleichzeitig gehören.
+            models.UniqueConstraint(
+                fields=['call_sign'],
+                condition=models.Q(valid_to__isnull=True),
+                name='unique_active_call_sign',
+            ),
+            # Und ein Fahrzeug trägt zur selben Zeit höchstens einen Funkrufnamen.
+            models.UniqueConstraint(
+                fields=['vehicle'],
+                condition=models.Q(valid_to__isnull=True),
+                name='unique_active_call_sign_per_vehicle',
+            ),
+        ]
+
+    def __str__(self):
+        bis = self.valid_to.strftime('%d.%m.%Y') if self.valid_to else 'heute'
+        return f"{self.call_sign} → {self.vehicle.license_plate} ({self.valid_from:%d.%m.%Y} – {bis})"
+
+    @property
+    def is_current(self):
+        return self.valid_to is None

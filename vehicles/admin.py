@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
-from .models import Vehicle, VehicleInspection, VehicleModel, VehicleType
+from .models import CallSignAssignment, Vehicle, VehicleInspection, VehicleModel, VehicleType
 
 
 class VehicleInspectionInline(admin.TabularInline):
@@ -363,3 +363,30 @@ class VehicleTypeAdmin(admin.ModelAdmin):
         count = obj.vehicles.count()
         return format_html('<span style="font-weight: bold;">{}</span>', count)
     vehicle_count.short_description = _('Fahrzeuge')
+
+
+@admin.register(CallSignAssignment)
+class CallSignAssignmentAdmin(admin.ModelAdmin):
+    """
+    Funkrufnamen-Historie – nur lesend.
+
+    Geschrieben wird ausschließlich über vehicles.call_signs, sonst laufen
+    Vehicle.call_sign und die Historie auseinander. Zum Umhängen gibt es die Aktion
+    auf der Fahrzeug-Detailseite.
+    """
+
+    list_display = ('call_sign', 'vehicle', 'valid_from', 'valid_to', 'is_current_badge', 'reason')
+    list_filter = ('valid_from', 'valid_to')
+    search_fields = ('call_sign', 'vehicle__license_plate', 'vehicle__name')
+    date_hierarchy = 'valid_from'
+    ordering = ('-valid_from', '-id')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description=_('Aktuell'), boolean=True)
+    def is_current_badge(self, obj):
+        return obj.valid_to is None

@@ -146,10 +146,37 @@ ItemFormSet = inlineformset_factory(
 # ============================================================================
 
 
+class VehicleChoiceField(forms.ModelChoiceField):
+    """
+    Fahrzeugauswahl über das Kennzeichen.
+
+    Das Kennzeichen ist der eineindeutige Wert – der Funkrufname wandert auf ein
+    Ersatzfahrzeug, wenn ein Fahrzeug in die Werkstatt geht. Er wird deshalb nur
+    mit angezeigt, damit erkennbar ist, unter welchem Namen das Fahrzeug gerade
+    läuft (oder dass es gerade keinen hat).
+    """
+
+    def label_from_instance(self, vehicle):
+        teile = [vehicle.license_plate]
+        teile.append(vehicle.call_sign or 'ohne Funkrufname')
+        if vehicle.name:
+            teile.append(vehicle.name)
+        return ' · '.join(teile)
+
+
 class VehicleHandoverForm(forms.ModelForm):
     """
     Hauptformular für Fahrzeugübergabe (Schritt 1 & 2 des Wizards)
     """
+
+    vehicle = VehicleChoiceField(
+        queryset=None,
+        label=_('Fahrzeug'),
+        empty_label=_('--- Fahrzeug über Kennzeichen wählen ---'),
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+        }),
+    )
 
     class Meta:
         model = VehicleHandover
@@ -205,6 +232,15 @@ class VehicleHandoverForm(forms.ModelForm):
 
     def __init__(self, *args, step=None, **kwargs):
         super().__init__(*args, **kwargs)
+
+        from vehicles.models import Vehicle
+
+        # Auswahl über das Kennzeichen, danach sortiert. Nur Fahrzeuge im Dienst.
+        self.fields['vehicle'].queryset = (
+            Vehicle.objects
+            .filter(is_active=True, actual_retirement_date__isnull=True)
+            .order_by('license_plate')
+        )
 
         # Nur aktive Templates anzeigen
         self.fields['checklist_template'].queryset = ChecklistTemplate.objects.filter(is_active=True)

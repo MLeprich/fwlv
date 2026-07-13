@@ -21,6 +21,7 @@ urlpatterns = [
 
     # Lifecycle Management
     path('<int:pk>/set-replacement/', views.SetReplacementVehicleView.as_view(), name='set_replacement'),
+    path('<int:pk>/call-sign/', views.CallSignReassignView.as_view(), name='call_sign_reassign'),
 
     # Inspections & Maintenance
     path('<int:vehicle_pk>/inspection/create/', views.VehicleInspectionCreateView.as_view(), name='inspection_create'),
