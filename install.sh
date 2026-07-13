@@ -27,15 +27,28 @@ SKIP_DOCKER_INSTALL=false
 OFFLINE=false
 IMAGE_BUNDLE=""
 
+# Pfad des laufenden Skripts (für die Selbstlösch-Prüfung und die Versionsanzeige)
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "$0")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+
 # =============================================================================
 # Funktionen
 # =============================================================================
 
 print_banner() {
+    # Commit des laufenden Skripts anzeigen. Sonst lässt sich hinterher aus dem
+    # Protokoll nicht erkennen, ob eine veraltete Fassung ausgeführt wurde.
+    local version="unbekannt"
+    if command -v git &>/dev/null && git -C "$SCRIPT_DIR" rev-parse --short HEAD &>/dev/null; then
+        version="$(git -C "$SCRIPT_DIR" rev-parse --short HEAD)"
+    fi
+
     echo -e "${BLUE}"
     echo "=============================================="
     echo "  FLVS - Feuerwehr Lagerverwaltungssystem"
-    echo "  Installation Script v1.0"
+    echo "  Installation Script"
+    echo "  Skript: $SCRIPT_PATH"
+    echo "  Stand:  $version"
     echo "=============================================="
     echo -e "${NC}"
 }
@@ -88,6 +101,89 @@ check_system() {
         log_warn "Weniger als 15GB freier Speicher (${free_space} GB). Mindestens 20GB empfohlen."
     else
         log_info "Freier Speicher: ${free_space}GB - OK"
+    fi
+}
+
+check_script_location() {
+    # Im Online-Modus wird $INSTALL_DIR vor dem Klonen gelöscht. Liegt das laufende
+    # Skript darin, löscht es sich dabei selbst. Bash liest danach weiter aus dem
+    # gelöschten Inode – also mit der ALTEN Logik –, während auf der Platte schon die
+    # frisch geklonte Fassung liegt. Genau so laufen veraltete Skriptstände unbemerkt
+    # weiter und ignorieren z.B. den erst später hinzugekommenen Offline-Modus.
+    if [[ "$OFFLINE" == "true" ]]; then
+        return 0
+    fi
+    if [[ ! -d "$INSTALL_DIR" ]]; then
+        return 0
+    fi
+    if [[ "$SCRIPT_PATH" != "$INSTALL_DIR"/* ]]; then
+        return 0
+    fi
+
+    log_error "Dieses Skript liegt in $INSTALL_DIR und würde sich beim Überschreiben selbst löschen."
+    log_error "Die Installation liefe dann mit der alten Skript-Version weiter."
+    log_error ""
+    log_error "Abhilfe – eine der beiden Varianten:"
+    log_error "  a) Offline installieren (kein Klon, kein Build, kein Netz):"
+    log_error "       cd $INSTALL_DIR && ./install.sh --offline"
+    log_error "  b) Skript herauskopieren und von außerhalb starten:"
+    log_error "       cp $SCRIPT_PATH ~/install.sh && ~/install.sh"
+    exit 1
+}
+
+check_connectivity() {
+    # Nur relevant, wenn geklont und gebaut wird. Der Offline-Modus braucht kein Netz.
+    if [[ "$OFFLINE" == "true" ]]; then
+        return 0
+    fi
+
+    log_info "Prüfe Erreichbarkeit der benötigten Gegenstellen..."
+
+    # Was die Online-Installation tatsächlich anfasst:
+    #   github.com        -> git clone des Repositories
+    #   auth.docker.io    -> Basis-Image python:3.12-slim beim Build
+    #   pypi.org          -> pip install im Dockerfile
+    #   deb.debian.org    -> apt-get im Dockerfile
+    local ziele=(
+        "https://github.com|GitHub (git clone)"
+        "https://auth.docker.io|Docker Hub (Basis-Images)"
+        "https://pypi.org|PyPI (pip install im Build)"
+        "http://deb.debian.org|Debian-Repos (apt im Build)"
+    )
+
+    local nicht_erreichbar=()
+    for eintrag in "${ziele[@]}"; do
+        local url="${eintrag%%|*}"
+        local name="${eintrag##*|}"
+        if curl -fsS --max-time 8 -o /dev/null "$url" 2>/dev/null; then
+            log_info "  erreichbar: $name"
+        else
+            log_warn "  NICHT erreichbar: $name"
+            nicht_erreichbar+=("$name")
+        fi
+    done
+
+    if [[ ${#nicht_erreichbar[@]} -gt 0 ]]; then
+        log_error ""
+        log_error "Die Online-Installation braucht alle vier Gegenstellen, ${#nicht_erreichbar[@]} davon sind nicht erreichbar."
+        log_error "Auf einer abgeschotteten VM ist das der Normalfall – dafür gibt es den Offline-Modus:"
+        log_error ""
+        log_error "  1. Auf einer Maschine MIT Internet:"
+        log_error "       ./docker/scripts/build-offline-bundle.sh"
+        log_error "  2. Repository und flvs-images.tar auf diese VM kopieren"
+        log_error "  3. Hier:"
+        log_error "       ./install.sh --offline"
+        log_error ""
+        log_error "Der Offline-Modus baut nichts und klont nichts – er braucht überhaupt kein Netz."
+        exit 1
+    fi
+
+    # Ein Proxy, der `docker pull` bedient, deckt den Build nicht automatisch mit ab:
+    # BuildKit läuft in einem eigenen Kontext und erbt die Proxy-Variablen nicht.
+    if [[ -n "${HTTP_PROXY:-}${HTTPS_PROXY:-}${http_proxy:-}${https_proxy:-}" ]]; then
+        log_warn "Proxy-Umgebung erkannt. Docker BuildKit übernimmt diese NICHT automatisch."
+        log_warn "Falls der Build an apt/pip hängenbleibt: Proxy in ~/.docker/config.json unter"
+        log_warn "\"proxies\" eintragen – oder einfacher: --offline verwenden."
     fi
 }
 
@@ -271,8 +367,10 @@ start_containers() {
         log_info "Offline-Modus: Lade Images aus $bundle ..."
         docker load -i "$bundle"
 
-        # Container starten OHNE Build
-        docker compose up -d --no-build
+        # Container starten OHNE Build und OHNE Registry-Zugriff. --pull never sorgt
+        # dafür, dass ein fehlendes Image hart fehlschlägt, statt still nachgeladen zu
+        # werden – auf einer abgeschotteten VM gäbe es diese zweite Chance ohnehin nicht.
+        docker compose up -d --no-build --pull never
     else
         # Images bauen
         docker compose build --quiet
@@ -430,6 +528,8 @@ done
 print_banner
 check_root
 check_system
+check_script_location
+check_connectivity
 install_dependencies
 install_docker
 clone_repository
