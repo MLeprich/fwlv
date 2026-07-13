@@ -186,15 +186,15 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            {% if item.assigned_to %}
+                            {% if item.issues %}
+                            {% for issue in item.issues %}
                             <div class="flex items-center">
-                                <span class="text-sm font-medium text-gray-900">{{ item.assigned_to }}</span>
-                                {% if item.is_personal_issue %}
+                                <span class="text-sm font-medium text-gray-900">{{ issue.person.get_full_name }}</span>
                                 <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                    Persönlich
+                                    {{ issue.quantity|floatformat:"-2" }} ausgegeben
                                 </span>
-                                {% endif %}
                             </div>
+                            {% endfor %}
                             {% else %}
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                 Pool

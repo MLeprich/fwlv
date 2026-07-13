@@ -641,33 +641,50 @@ class PersonDetailView(LoginRequiredMixin, DetailView):
         # Kleiderkammer-Daten laden (wenn clothing app existiert und Tab sichtbar)
         if not sys_settings or sys_settings.person_tab_clothing_visible:
             try:
-                from clothing.models import ClothingItem, ClothingSizeAssignment
+                from clothing.assignments import issued_items_for_person
+                from clothing.models import (
+                    ClothingItemInstance,
+                    ClothingSizeAssignment,
+                )
                 from decimal import Decimal
 
-                # Aktuell ausgegebene Kleidung
-                assigned_clothing = ClothingItem.objects.filter(
+                # Aktuell ausgegebene Kleidung (Mengenartikel, aus den Lagerbewegungen)
+                assigned_clothing = issued_items_for_person(self.object)
+
+                # Aktuell ausgegebene Exemplare (Stammdaten/Instanz)
+                assigned_instances = ClothingItemInstance.objects.filter(
                     assigned_to=self.object,
-                    is_personal_issue=True
-                ).select_related('category').order_by('clothing_type', 'size')
+                    is_active=True
+                ).select_related('master', 'master__category', 'location').order_by(
+                    'master__name', 'size'
+                )
 
                 # Größenzuordnungen
                 clothing_sizes = ClothingSizeAssignment.objects.filter(
                     person=self.object
                 ).order_by('clothing_type')
 
-                # Statistiken berechnen
-                total_items = assigned_clothing.count()
+                # Statistiken berechnen: Mengenartikel zählen mit ihrer ausgegebenen Menge
+                issued_quantity = sum(item.issued_quantity for item in assigned_clothing)
+                total_items = int(issued_quantity) + assigned_instances.count()
                 total_value = Decimal('0.00')
 
                 # Gesamtwert berechnen (wenn unit_price gesetzt ist)
                 for item in assigned_clothing:
-                    if hasattr(item, 'unit_price') and item.unit_price:
-                        total_value += item.unit_price
+                    if item.unit_price:
+                        total_value += item.unit_price * item.issued_quantity
+                for instance in assigned_instances:
+                    if instance.master.unit_price:
+                        total_value += instance.master.unit_price
 
                 # Prüfpflichtige Items
-                inspection_due_count = sum(1 for item in assigned_clothing if item.is_inspection_due())
+                inspection_due_count = (
+                    sum(1 for item in assigned_clothing if item.is_inspection_due())
+                    + sum(1 for inst in assigned_instances if inst.is_inspection_due())
+                )
 
                 context['assigned_clothing'] = assigned_clothing
+                context['assigned_instances'] = assigned_instances
                 context['clothing_sizes'] = clothing_sizes
                 context['clothing_stats'] = {
                     'total_items': total_items,
@@ -677,6 +694,7 @@ class PersonDetailView(LoginRequiredMixin, DetailView):
             except ImportError:
                 # clothing app nicht installiert
                 context['assigned_clothing'] = []
+                context['assigned_instances'] = []
                 context['clothing_sizes'] = []
                 context['clothing_stats'] = {
                     'total_items': 0,
@@ -686,6 +704,7 @@ class PersonDetailView(LoginRequiredMixin, DetailView):
         else:
             from decimal import Decimal
             context['assigned_clothing'] = []
+            context['assigned_instances'] = []
             context['clothing_sizes'] = []
             context['clothing_stats'] = {
                 'total_items': 0,

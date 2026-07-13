@@ -4,12 +4,14 @@ Formulare für das Kleiderkammer-Modul
 """
 
 from django import forms
+from django.utils.translation import gettext_lazy as _
 from .models import (
     ClothingItem,
     ClothingStockMovement,
     ClothingSizeAssignment,
     ClothingUnit,
     ClothingItemMaster,
+    ClothingItemInstance,
 )
 from inventory_base.models import StockMovementType
 
@@ -159,7 +161,7 @@ class ClothingItemForm(forms.ModelForm):
                 'min': '0',
                 'step': '1'
             }),
-            'supplier': forms.TextInput(attrs={
+            'supplier': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
             }),
             'unit_price': forms.NumberInput(attrs={
@@ -209,8 +211,28 @@ class ClothingItemForm(forms.ModelForm):
         return cleaned_data
 
 
+class ClothingItemChoiceField(forms.ModelChoiceField):
+    """Auswahlfeld für Lagerartikel – zeigt Artikel und Bestand, keine Person."""
+
+    def label_from_instance(self, item):
+        bezeichnung = item.name or item.get_clothing_type_display()
+        if item.size:
+            bezeichnung = f'{bezeichnung} {item.get_size_display()}'
+        bestand = f'{float(item.quantity):g}'
+        return f'{bezeichnung} – {item.item_number} (Bestand: {bestand} {item.unit})'
+
+
 class ClothingStockMovementForm(forms.ModelForm):
     """Form für Lagerbewegungen (Wareneingang, Warenausgang, etc.)"""
+
+    item = ClothingItemChoiceField(
+        queryset=ClothingItem.objects.none(),
+        label=_('Kleidungsstück'),
+        empty_label='--- Artikel auswählen ---',
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
+        }),
+    )
 
     class Meta:
         model = ClothingStockMovement
@@ -226,9 +248,6 @@ class ClothingStockMovementForm(forms.ModelForm):
             'notes',
         ]
         widgets = {
-            'item': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
-            }),
             'movement_type': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
             }),
@@ -260,12 +279,25 @@ class ClothingStockMovementForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Nur aktive Artikel bzw. Personen zur Auswahl anbieten
+        self.fields['item'].queryset = (
+            ClothingItem.objects.filter(is_active=True).order_by('name', 'size')
+        )
+        self.fields['person'].queryset = (
+            self.fields['person'].queryset.filter(is_active=True).order_by('last_name', 'first_name')
+        )
+
     def clean(self):
         cleaned_data = super().clean()
         movement_type = cleaned_data.get('movement_type')
         to_location = cleaned_data.get('to_location')
         from_location = cleaned_data.get('from_location')
         person = cleaned_data.get('person')
+        item = cleaned_data.get('item')
+        quantity = cleaned_data.get('quantity')
 
         # Bei Wareneingang muss to_location gesetzt sein
         if movement_type == StockMovementType.INCOMING and not to_location:
@@ -278,6 +310,20 @@ class ClothingStockMovementForm(forms.ModelForm):
         # Bei Warenausgang, Rückgabe und Beschädigung/Schwund muss eine Person angegeben werden
         if movement_type in [StockMovementType.OUTGOING, StockMovementType.RETURN, StockMovementType.DAMAGE] and not person:
             self.add_error('person', 'Bei Warenausgang, Rückgabe und Beschädigung/Schwund muss eine Person angegeben werden.')
+
+        # Bestandsdeckung prüfen: nicht mehr ausbuchen als vorhanden ist
+        bestandsmindernd = [
+            StockMovementType.OUTGOING,
+            StockMovementType.DAMAGE,
+            StockMovementType.DISPOSAL,
+        ]
+        if item and quantity and movement_type in bestandsmindernd:
+            if quantity > item.quantity:
+                self.add_error(
+                    'quantity',
+                    f'Nicht genügend Bestand: verfügbar sind {item.quantity:g} {item.unit}, '
+                    f'angefordert wurden {quantity:g}.'
+                )
 
         return cleaned_data
 
@@ -410,3 +456,110 @@ class ClothingItemMasterForm(forms.ModelForm):
         # Felder mit Model-Defaults als nicht-erforderlich markieren
         self.fields['category'].required = False
         self.fields['protection_level'].required = False
+
+
+INSTANCE_INPUT_CLASS = ('w-full px-3 py-2 border border-gray-300 rounded-lg '
+                        'focus:ring-2 focus:ring-purple-500 focus:border-purple-500')
+
+
+class ClothingItemInstanceForm(forms.ModelForm):
+    """
+    Form für konkrete Kleidungsstücke (Exemplare) zu einem Stammdatensatz.
+
+    Die Inventarnummer wird automatisch vergeben, wenn sie leer bleibt.
+    """
+
+    class Meta:
+        model = ClothingItemInstance
+        fields = [
+            'master',
+            'inventory_number',
+            'size',
+            'gender',
+            'color',
+            'condition',
+            'location',
+            'assigned_to',
+            'serial_number',
+            'certification_number',
+            'certification_date',
+            'certification_expires',
+            'purchase_date',
+            'first_use_date',
+            'last_inspection_date',
+            'next_inspection_date',
+            'has_name_tag',
+            'notes',
+        ]
+        labels = {
+            'master': 'Stammdaten (Produkt)',
+            'inventory_number': 'Inventarnummer',
+            'assigned_to': 'Zugeordnet an',
+            'has_name_tag': 'Mit Namensschild versehen',
+        }
+        help_texts = {
+            'inventory_number': 'Leer lassen für automatische Vergabe (z.B. CLO-0001).',
+            'assigned_to': 'Optional. Bei Auswahl wird das Exemplar als persönliche Ausgabe geführt.',
+        }
+        widgets = {
+            'master': forms.Select(attrs={'class': INSTANCE_INPUT_CLASS}),
+            'inventory_number': forms.TextInput(attrs={
+                'class': INSTANCE_INPUT_CLASS,
+                'placeholder': 'Leer lassen = automatisch',
+            }),
+            'size': forms.Select(attrs={'class': INSTANCE_INPUT_CLASS}),
+            'gender': forms.Select(attrs={'class': INSTANCE_INPUT_CLASS}),
+            'color': forms.TextInput(attrs={
+                'class': INSTANCE_INPUT_CLASS,
+                'placeholder': 'z.B. Gelb/Schwarz',
+            }),
+            'condition': forms.Select(attrs={'class': INSTANCE_INPUT_CLASS}),
+            'location': forms.Select(attrs={'class': INSTANCE_INPUT_CLASS}),
+            'assigned_to': forms.Select(attrs={'class': INSTANCE_INPUT_CLASS}),
+            'serial_number': forms.TextInput(attrs={'class': INSTANCE_INPUT_CLASS}),
+            'certification_number': forms.TextInput(attrs={'class': INSTANCE_INPUT_CLASS}),
+            'certification_date': forms.DateInput(
+                format='%Y-%m-%d', attrs={'type': 'date', 'class': INSTANCE_INPUT_CLASS}),
+            'certification_expires': forms.DateInput(
+                format='%Y-%m-%d', attrs={'type': 'date', 'class': INSTANCE_INPUT_CLASS}),
+            'purchase_date': forms.DateInput(
+                format='%Y-%m-%d', attrs={'type': 'date', 'class': INSTANCE_INPUT_CLASS}),
+            'first_use_date': forms.DateInput(
+                format='%Y-%m-%d', attrs={'type': 'date', 'class': INSTANCE_INPUT_CLASS}),
+            'last_inspection_date': forms.DateInput(
+                format='%Y-%m-%d', attrs={'type': 'date', 'class': INSTANCE_INPUT_CLASS}),
+            'next_inspection_date': forms.DateInput(
+                format='%Y-%m-%d', attrs={'type': 'date', 'class': INSTANCE_INPUT_CLASS}),
+            'has_name_tag': forms.CheckboxInput(attrs={
+                'class': 'rounded border-gray-300 text-purple-600 focus:ring-purple-500'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': INSTANCE_INPUT_CLASS,
+                'rows': 3,
+                'placeholder': 'Zusätzliche Informationen...',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        from personnel.models import Person
+
+        # Inventarnummer darf leer bleiben -> wird automatisch vergeben
+        self.fields['inventory_number'].required = False
+
+        # Nur aktive Stammdaten bzw. Personen zur Auswahl anbieten
+        self.fields['master'].queryset = (
+            ClothingItemMaster.objects.filter(is_active=True).order_by('name')
+        )
+        self.fields['assigned_to'].queryset = (
+            Person.objects.filter(is_active=True).order_by('last_name', 'first_name')
+        )
+        self.fields['assigned_to'].empty_label = 'Nicht zugeordnet (Poolware)'
+
+    def clean_inventory_number(self):
+        """Leere Inventarnummer automatisch vergeben (CLO-0001, CLO-0002, ...)."""
+        number = (self.cleaned_data.get('inventory_number') or '').strip()
+        if number:
+            return number
+        return ClothingItemInstance.generate_inventory_number()

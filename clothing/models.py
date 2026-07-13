@@ -618,19 +618,9 @@ class ClothingStockMovement(AbstractStockMovement):
             self.item.location = self.to_location
             self.item.save(update_fields=['location'])
 
-        # Bei Ausgabe: Item der Person zuordnen
-        if self.movement_type == StockMovementType.OUTGOING and self.person:
-            self.item.assigned_to = self.person
-            self.item.assignment_date = self.movement_date
-            self.item.is_personal_issue = True
-            self.item.save(update_fields=['assigned_to', 'assignment_date', 'is_personal_issue'])
-
-        # Bei Rückgabe: Zuweisung entfernen
-        elif self.movement_type == StockMovementType.RETURN:
-            self.item.assigned_to = None
-            self.item.assignment_date = None
-            self.item.is_personal_issue = False
-            self.item.save(update_fields=['assigned_to', 'assignment_date', 'is_personal_issue'])
+        # Die Personenzuordnung wird bewusst NICHT auf den Artikel geschrieben:
+        # ein Lagerartikel ist ein Mengenposten und gehört niemandem. Wer wieviel
+        # offen hat, leitet clothing.assignments aus diesen Bewegungen ab.
 
     def update_item_stock(self):
         """
@@ -1193,6 +1183,52 @@ class ClothingItemInstance(AuditedModel):
     def __str__(self):
         assigned = f" [{self.assigned_to}]" if self.assigned_to else ""
         return f"{self.inventory_number} - {self.master.name} ({self.get_size_display()}){assigned}"
+
+    NUMBER_PREFIX = 'CLO'
+
+    @classmethod
+    def generate_inventory_number(cls):
+        """
+        Vergibt die nächste freie Inventarnummer im Format CLO-0001.
+        Bestehende Nummern in anderen Formaten werden dabei ignoriert.
+        """
+        import re
+
+        pattern = re.compile(rf'^{cls.NUMBER_PREFIX}-(\d+)$')
+        highest = 0
+        for number in cls.objects.values_list('inventory_number', flat=True):
+            match = pattern.match(number or '')
+            if match:
+                highest = max(highest, int(match.group(1)))
+
+        # Gegen Lücken/Kollisionen absichern
+        candidate = highest + 1
+        while cls.objects.filter(
+            inventory_number=f'{cls.NUMBER_PREFIX}-{candidate:04d}'
+        ).exists():
+            candidate += 1
+
+        return f'{cls.NUMBER_PREFIX}-{candidate:04d}'
+
+    def save(self, *args, **kwargs):
+        """
+        Hält die Zuordnungsfelder konsistent:
+        Wird eine Person gesetzt, gilt das Exemplar als persönliche Ausgabe.
+        """
+        from django.utils import timezone
+
+        if not self.inventory_number:
+            self.inventory_number = self.generate_inventory_number()
+
+        if self.assigned_to:
+            if not self.assignment_date:
+                self.assignment_date = timezone.now().date()
+            self.is_personal_issue = True
+        else:
+            self.assignment_date = None
+            self.is_personal_issue = False
+
+        super().save(*args, **kwargs)
 
     def is_inspection_due(self):
         """Prüft ob Prüfung fällig ist"""

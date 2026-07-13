@@ -76,6 +76,15 @@ urlpatterns = [
     path('masters/<int:pk>/delete/', views.ClothingMasterDeleteView.as_view(), name='master_delete'),
 
     # ========================================================================
+    # EXEMPLARE / INSTANZEN (konkrete Stücke zu einem Stammdatensatz)
+    # ========================================================================
+    path('instances/', views.ClothingInstanceListView.as_view(), name='instance_list'),
+    path('instances/create/', views.ClothingInstanceCreateView.as_view(), name='instance_create'),
+    path('instances/<int:pk>/', views.ClothingInstanceDetailView.as_view(), name='instance_detail'),
+    path('instances/<int:pk>/update/', views.ClothingInstanceUpdateView.as_view(), name='instance_update'),
+    path('instances/<int:pk>/delete/', views.ClothingInstanceDeleteView.as_view(), name='instance_delete'),
+
+    # ========================================================================
     # PRODUKTTYPEN
     # ========================================================================
     path('producttypes/', views.ClothingProductTypeListView.as_view(), name='producttype_list'),

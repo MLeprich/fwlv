@@ -178,7 +178,13 @@
             <!-- Instances -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">Artikel ({{ instance_count }})</h3>
+                    <h3 class="text-lg font-bold text-gray-900">Exemplare ({{ instance_count }})</h3>
+                    {% if perms.clothing.add_clothingiteminstance %}
+                    <a href="{% url 'clothing:instance_create' %}?master={{ master.pk }}"
+                       class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                        + Exemplar anlegen
+                    </a>
+                    {% endif %}
                 </div>
                 {% if instances %}
                 <div class="overflow-x-auto">
@@ -196,15 +202,20 @@
                         <tbody class="divide-y divide-gray-200">
                             {% for instance in instances %}
                             <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-2 text-sm font-mono font-medium text-purple-600">{{ instance.inventory_number }}</td>
+                                <td class="px-4 py-2 text-sm font-mono font-medium text-purple-600">
+                                    <a href="{% url 'clothing:instance_detail' instance.pk %}" class="hover:underline">
+                                        {{ instance.inventory_number }}
+                                    </a>
+                                </td>
                                 <td class="px-4 py-2 text-sm text-gray-900">{{ instance.get_size_display }}</td>
                                 <td class="px-4 py-2 text-sm text-gray-900">{{ instance.color|default:"-" }}</td>
                                 <td class="px-4 py-2 text-sm">
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                                        {% if instance.condition == 'NEW' %}bg-green-100 text-green-800
-                                        {% elif instance.condition == 'GOOD' %}bg-blue-100 text-blue-800
-                                        {% elif instance.condition == 'FAIR' %}bg-yellow-100 text-yellow-800
-                                        {% elif instance.condition == 'POOR' %}bg-red-100 text-red-800
+                                        {% if instance.condition == 'new' %}bg-green-100 text-green-800
+                                        {% elif instance.condition == 'good' %}bg-blue-100 text-blue-800
+                                        {% elif instance.condition == 'used' %}bg-yellow-100 text-yellow-800
+                                        {% elif instance.condition == 'worn' %}bg-orange-100 text-orange-800
+                                        {% elif instance.condition == 'damaged' or instance.condition == 'defect' %}bg-red-100 text-red-800
                                         {% else %}bg-gray-100 text-gray-800{% endif %}">
                                         {{ instance.get_condition_display }}
                                     </span>
@@ -213,7 +224,7 @@
                                     {% if instance.assigned_to %}
                                     {{ instance.assigned_to.first_name }} {{ instance.assigned_to.last_name }}
                                     {% else %}
-                                    <span class="text-gray-400">Nicht zugeordnet</span>
+                                    <span class="text-gray-400">Poolware</span>
                                     {% endif %}
                                 </td>
                                 <td class="px-4 py-2 text-sm text-gray-500">{{ instance.location.name|default:"-" }}</td>
@@ -223,12 +234,23 @@
                     </table>
                 </div>
                 {% if instance_count > 20 %}
-                <p class="mt-3 text-sm text-gray-500">Zeige die letzten 20 Artikel. Insgesamt {{ instance_count }} Artikel vorhanden.</p>
+                <p class="mt-3 text-sm text-gray-500">
+                    Zeige die letzten 20 Exemplare.
+                    <a href="{% url 'clothing:instance_list' %}?master={{ master.pk }}" class="text-purple-600 hover:underline font-medium">
+                        Alle {{ instance_count }} Exemplare anzeigen
+                    </a>
+                </p>
                 {% endif %}
                 {% else %}
                 <div class="text-center py-8 text-gray-500">
                     <span class="text-3xl block mb-2">👕</span>
-                    <p>Keine Artikel zu diesen Stammdaten vorhanden</p>
+                    <p class="mb-4">Noch keine Exemplare zu diesen Stammdaten vorhanden</p>
+                    {% if perms.clothing.add_clothingiteminstance %}
+                    <a href="{% url 'clothing:instance_create' %}?master={{ master.pk }}"
+                       class="inline-block bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        Erstes Exemplar anlegen
+                    </a>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>

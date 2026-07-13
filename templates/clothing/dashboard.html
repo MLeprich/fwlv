@@ -163,6 +163,21 @@
                     <p class="text-xs text-gray-500 mt-2">Stammdaten verwalten →</p>
                 </a>
 
+                <!-- Exemplare -->
+                <a href="{% url 'clothing:instance_list' %}" class="bg-white rounded-lg shadow-sm border border-purple-200 hover:shadow-md hover:border-purple-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-purple-50 rounded-lg p-2">
+                            <span class="text-2xl">🏷️</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Exemplare</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Einzelstücke mit Inventarnummer & Personenzuordnung
+                    </p>
+                    <div class="text-2xl font-bold text-purple-600">{{ instance_count|default:0 }}</div>
+                    <p class="text-xs text-gray-500 mt-2">Exemplare verwalten →</p>
+                </a>
+
                 <!-- Kleidung & Ausrüstung -->
                 <a href="{% url 'clothing:item_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
                     <div class="flex items-center gap-3 mb-3">

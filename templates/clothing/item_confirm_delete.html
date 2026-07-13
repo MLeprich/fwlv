@@ -60,10 +60,14 @@
                         <dd class="text-gray-900">{{ object.size }}</dd>
                     </div>
                     {% endif %}
-                    {% if object.assigned_to %}
+                    {% if object.issues %}
                     <div>
-                        <dt class="text-sm font-medium text-gray-500">Zugewiesen an</dt>
-                        <dd class="text-gray-900">{{ object.assigned_to.get_full_name }}</dd>
+                        <dt class="text-sm font-medium text-gray-500">Aktuell ausgegeben an</dt>
+                        <dd class="text-gray-900">
+                            {% for issue in object.issues %}
+                            {{ issue.person.get_full_name }} ({{ issue.quantity|floatformat:"-2" }}){% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </dd>
                     </div>
                     {% endif %}
                     {% if object.location %}

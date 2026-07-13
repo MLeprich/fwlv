@@ -20,6 +20,9 @@ class Command(BaseCommand):
             'clothingstockmovement',
             'clothingcategory',
             'clothingsizeassignment',
+            'clothingitemmaster',
+            'clothingiteminstance',
+            'clothingproducttype',
         ]
 
         # ====================================================================

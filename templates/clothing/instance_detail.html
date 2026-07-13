@@ -1,0 +1,304 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ instance.inventory_number }} - Exemplar - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'clothing:dashboard' %}" class="text-gray-500 hover:text-gray-700">Kleiderkammer</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'clothing:instance_list' %}" class="text-gray-500 hover:text-gray-700">Exemplare</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ instance.inventory_number }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-3xl">👕</span>
+                    <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ instance.inventory_number }}</h1>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                        {% if instance.condition == 'new' %}bg-green-100 text-green-800
+                        {% elif instance.condition == 'good' %}bg-blue-100 text-blue-800
+                        {% elif instance.condition == 'used' %}bg-yellow-100 text-yellow-800
+                        {% elif instance.condition == 'worn' %}bg-orange-100 text-orange-800
+                        {% elif instance.condition == 'damaged' %}bg-red-100 text-red-800
+                        {% elif instance.condition == 'defect' %}bg-red-100 text-red-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ instance.get_condition_display }}
+                    </span>
+                    {% if instance.master.is_psa %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
+                        🦺 PSA
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-gray-600">
+                    Produkt:
+                    <a href="{% url 'clothing:master_detail' instance.master.pk %}" class="text-purple-600 hover:text-purple-900 font-medium">
+                        {{ instance.master.name }}
+                    </a>
+                    {% if instance.master.manufacturer %}
+                    <span class="text-gray-500">– {{ instance.master.manufacturer }}</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'clothing:instance_update' instance.pk %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    ✏️ Bearbeiten
+                </a>
+                <a href="{% url 'clothing:instance_delete' instance.pk %}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    🗑️ Löschen
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warnings -->
+    {% if instance.is_certification_expired %}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+        <p class="text-red-800 font-medium">
+            ⚠️ Die Zertifizierung dieses Exemplars ist abgelaufen{% if instance.certification_expires %} (seit {{ instance.certification_expires|date:"d.m.Y" }}){% endif %}.
+        </p>
+    </div>
+    {% endif %}
+    {% if instance.is_inspection_due %}
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+        <p class="text-amber-800 font-medium">
+            ⏰ Die Prüfung ist fällig{% if instance.next_inspection_date %} (Termin: {{ instance.next_inspection_date|date:"d.m.Y" }}){% endif %}.
+        </p>
+    </div>
+    {% endif %}
+    {% if instance.is_washing_limit_reached %}
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+        <p class="text-amber-800 font-medium">
+            🧺 Die maximale Anzahl an Waschzyklen ist erreicht ({{ instance.current_washing_cycles }}).
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Ausführung -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Ausführung</h3>
+                <dl class="grid grid-cols-2 gap-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Größe</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.get_size_display }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Schnitt</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.get_gender_display }}</dd>
+                    </div>
+                    {% if instance.color %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Farbe</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.color }}</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Zustand</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.get_condition_display }}</dd>
+                    </div>
+                    {% if instance.serial_number %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Seriennummer</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-mono">{{ instance.serial_number }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if instance.has_name_tag %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Namensschild</dt>
+                        <dd class="mt-1 text-sm text-gray-900">Vorhanden</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+
+            <!-- Zuordnung -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Zuordnung</h3>
+                {% if instance.assigned_to %}
+                <dl class="grid grid-cols-2 gap-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Zugeordnet an</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-medium">👤 {{ instance.assigned_to.get_full_name }}</dd>
+                    </div>
+                    {% if instance.assignment_date %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Zugeordnet am</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.assignment_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Persönliche Ausgabe</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{% if instance.is_personal_issue %}Ja{% else %}Nein{% endif %}</dd>
+                    </div>
+                </dl>
+                {% else %}
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <span class="text-2xl block mb-1">📦</span>
+                    <p class="text-gray-600 font-medium">Poolware / nicht zugeordnet</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Zertifizierung -->
+            {% if instance.certification_number or instance.certification_date or instance.certification_expires %}
+            <div class="bg-white rounded-lg shadow-sm border {% if instance.is_certification_expired %}border-red-200{% else %}border-gray-200{% endif %} p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Zertifizierung</h3>
+                <dl class="grid grid-cols-2 gap-4">
+                    {% if instance.certification_number %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Zertifizierungsnummer</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-mono">{{ instance.certification_number }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if instance.certification_date %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Zertifiziert am</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.certification_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if instance.certification_expires %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Läuft ab am</dt>
+                        <dd class="mt-1 text-sm {% if instance.is_certification_expired %}text-red-600 font-medium{% else %}text-gray-900{% endif %}">
+                            {{ instance.certification_expires|date:"d.m.Y" }}
+                            {% if instance.is_certification_expired %}(abgelaufen){% endif %}
+                        </dd>
+                    </div>
+                    {% endif %}
+                    {% if instance.master.norm_standard %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Norm/Standard</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.master.norm_standard }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+            {% endif %}
+
+            <!-- Prüfung & Nutzung -->
+            <div class="bg-white rounded-lg shadow-sm border {% if instance.is_inspection_due %}border-amber-200{% else %}border-gray-200{% endif %} p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Nutzung &amp; Prüfung</h3>
+                <dl class="grid grid-cols-2 gap-4">
+                    {% if instance.purchase_date %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Kaufdatum</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.purchase_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if instance.first_use_date %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Erstverwendung</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.first_use_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if instance.last_inspection_date %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Letzte Prüfung</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.last_inspection_date|date:"d.m.Y" }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if instance.next_inspection_date %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Nächste Prüfung</dt>
+                        <dd class="mt-1 text-sm {% if instance.is_inspection_due %}text-amber-700 font-medium{% else %}text-gray-900{% endif %}">
+                            {{ instance.next_inspection_date|date:"d.m.Y" }}
+                            {% if instance.is_inspection_due %}(fällig){% endif %}
+                        </dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Waschzyklen</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {{ instance.current_washing_cycles }}{% if instance.master.max_washing_cycles %} / {{ instance.master.max_washing_cycles }}{% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Notizen -->
+            {% if instance.notes %}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Notizen</h3>
+                <p class="text-gray-700 whitespace-pre-line">{{ instance.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Standort -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Standort</h3>
+                {% if instance.location %}
+                <p class="text-sm text-gray-900">📍 {{ instance.location.name }}</p>
+                {% else %}
+                <p class="text-sm text-gray-400">Kein Lagerort hinterlegt</p>
+                {% endif %}
+            </div>
+
+            <!-- Produkt -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Produkt</h3>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Bezeichnung</dt>
+                        <dd class="mt-1 text-sm">
+                            <a href="{% url 'clothing:master_detail' instance.master.pk %}" class="text-purple-600 hover:text-purple-900 font-medium">
+                                {{ instance.master.name }}
+                            </a>
+                        </dd>
+                    </div>
+                    {% if instance.master.category %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Kategorie</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.master.category.name }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if instance.master.manufacturer %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Hersteller</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ instance.master.manufacturer }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+
+            <!-- Aktionen -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Aktionen</h3>
+                <div class="space-y-2">
+                    <a href="{% url 'clothing:instance_update' instance.pk %}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-center transition-colors text-sm">
+                        ✏️ Bearbeiten
+                    </a>
+                    <a href="{% url 'clothing:master_detail' instance.master.pk %}" class="block w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium text-center transition-colors text-sm">
+                        📚 Zum Produkt
+                    </a>
+                    <a href="{% url 'clothing:instance_list' %}" class="block w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium text-center transition-colors text-sm">
+                        👕 Zur Übersicht
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

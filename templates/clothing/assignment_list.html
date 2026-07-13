@@ -117,6 +117,7 @@
                                 <div class="flex items-center gap-3">
                                     <div class="text-sm font-medium text-gray-900">
                                         {{ item.name }}
+                                        <span class="ml-1 text-blue-700">×&nbsp;{{ item.issued_quantity|floatformat:"-2" }}</span>
                                     </div>
                                     {% if item.is_personal_issue %}
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
@@ -141,9 +142,8 @@
                                     <div class="text-sm font-medium text-gray-900">{{ item.location.name }}</div>
                                 </div>
                                 {% endif %}
-                                {% with movement_id=assignment_movements|get_item:item.pk %}
-                                {% if movement_id %}
-                                <a href="{% url 'clothing:movement_detail' movement_id %}"
+                                {% if item.assignment_movement_id %}
+                                <a href="{% url 'clothing:movement_detail' item.assignment_movement_id %}"
                                    class="text-blue-600 hover:text-blue-900 text-sm font-medium"
                                    title="Zuordnungs-Details anzeigen">
                                     Ausgabe-Details →
@@ -155,7 +155,6 @@
                                     Artikel-Details →
                                 </a>
                                 {% endif %}
-                                {% endwith %}
                             </div>
                         </div>
                     </div>
@@ -223,7 +222,10 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">{{ item.name }}</div>
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ item.name }}
+                                    <span class="ml-1 text-blue-700">×&nbsp;{{ item.issued_quantity|floatformat:"-2" }}</span>
+                                </div>
                                 {% if item.item_number %}
                                 <div class="text-xs text-gray-500">Nr: {{ item.item_number }}</div>
                                 {% endif %}
@@ -254,9 +256,8 @@
                                 <div class="text-sm text-gray-900">{{ item.location.name|default:"–" }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                {% with movement_id=assignment_movements|get_item:item.pk %}
-                                {% if movement_id %}
-                                <a href="{% url 'clothing:movement_detail' movement_id %}" class="text-blue-600 hover:text-blue-900" title="Zuordnungs-Details">
+                                {% if item.assignment_movement_id %}
+                                <a href="{% url 'clothing:movement_detail' item.assignment_movement_id %}" class="text-blue-600 hover:text-blue-900" title="Zuordnungs-Details">
                                     Ausgabe-Details
                                 </a>
                                 {% else %}
@@ -264,7 +265,6 @@
                                     Artikel-Details
                                 </a>
                                 {% endif %}
-                                {% endwith %}
                             </td>
                         </tr>
                         {% empty %}

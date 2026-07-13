@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Exemplare - Kleiderkammer - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'clothing:dashboard' %}" class="text-gray-500 hover:text-gray-700">Kleiderkammer</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Exemplare</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-4xl">👕</span>
+                    <h1 class="text-2xl font-bold">Exemplare</h1>
+                </div>
+                <p class="text-purple-100">
+                    Konkrete Kleidungsstücke mit Inventarnummer, Größe und Zuordnung
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'clothing:master_list' %}" class="bg-purple-500 hover:bg-purple-400 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    Stammdaten
+                </a>
+                <a href="{% url 'clothing:instance_create' %}" class="bg-white text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-lg font-medium transition-colors">
+                    + Neues Exemplar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Exemplare gesamt</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_count }}</p>
+                </div>
+                <span class="text-2xl">👕</span>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-green-200 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Zugeordnet</p>
+                    <p class="text-2xl font-bold text-green-600">{{ assigned_count }}</p>
+                </div>
+                <span class="text-2xl">👤</span>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-blue-200 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Poolware</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ pool_count }}</p>
+                </div>
+                <span class="text-2xl">📦</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {% if selected_size %}
+            <input type="hidden" name="size" value="{{ selected_size }}">
+            {% endif %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Suche</label>
+                <input type="text" name="search" value="{{ search }}" placeholder="Inventarnr., Seriennr., Produkt, Farbe..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Produkt</label>
+                <select name="master" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="">Alle Produkte</option>
+                    {% for m in masters %}
+                    <option value="{{ m.id }}" {% if selected_master == m.id|stringformat:"s" %}selected{% endif %}>{{ m.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Zuordnung</label>
+                <select name="assignment" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="">Alle</option>
+                    <option value="assigned" {% if selected_assignment == "assigned" %}selected{% endif %}>Nur zugeordnet</option>
+                    <option value="pool" {% if selected_assignment == "pool" %}selected{% endif %}>Nur Poolware</option>
+                </select>
+            </div>
+            <div class="flex items-end gap-2">
+                <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    Filtern
+                </button>
+                {% if search or selected_master or selected_assignment or selected_size %}
+                <a href="{% url 'clothing:instance_list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg transition-colors" title="Filter zurücksetzen">
+                    X
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Instance List -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inventarnummer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produkt</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Größe</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Farbe</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zustand</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zugeordnet an</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Standort</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for instance in instances %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{% url 'clothing:instance_detail' instance.pk %}" class="font-mono font-medium text-purple-600 hover:text-purple-900">
+                                {{ instance.inventory_number }}
+                            </a>
+                            {% if instance.serial_number %}
+                            <p class="text-xs text-gray-500">SN: {{ instance.serial_number }}</p>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <a href="{% url 'clothing:master_detail' instance.master.pk %}" class="text-gray-900 hover:text-purple-700 font-medium">
+                                {{ instance.master.name }}
+                            </a>
+                            {% if instance.master.is_psa %}
+                            <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                🦺 PSA
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ instance.get_size_display }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ instance.color|default:"-" }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if instance.condition == 'new' %}bg-green-100 text-green-800
+                                {% elif instance.condition == 'good' %}bg-blue-100 text-blue-800
+                                {% elif instance.condition == 'used' %}bg-yellow-100 text-yellow-800
+                                {% elif instance.condition == 'worn' %}bg-orange-100 text-orange-800
+                                {% elif instance.condition == 'damaged' %}bg-red-100 text-red-800
+                                {% elif instance.condition == 'defect' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ instance.get_condition_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if instance.assigned_to %}
+                            <span class="text-gray-900">{{ instance.assigned_to.get_full_name }}</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                Poolware
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ instance.location.name|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="{% url 'clothing:instance_detail' instance.pk %}" class="text-gray-600 hover:text-gray-900 mr-3" title="Details">
+                                👁️
+                            </a>
+                            <a href="{% url 'clothing:instance_update' instance.pk %}" class="text-blue-600 hover:text-blue-900 mr-3" title="Bearbeiten">
+                                ✏️
+                            </a>
+                            <a href="{% url 'clothing:instance_delete' instance.pk %}" class="text-red-600 hover:text-red-900" title="Löschen">
+                                🗑️
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                            <span class="text-4xl block mb-2">👕</span>
+                            <p class="font-medium">Keine Exemplare gefunden</p>
+                            <p class="text-sm mt-1">Legen Sie das erste Exemplar an oder ändern Sie die Filter.</p>
+                            <a href="{% url 'clothing:instance_create' %}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                + Neues Exemplar
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="bg-gray-50 px-6 py-3 border-t border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Zeige {{ page_obj.start_index }} bis {{ page_obj.end_index }} von {{ page_obj.paginator.count }} Einträgen
+                </div>
+                <div class="flex gap-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_master %}&master={{ selected_master }}{% endif %}{% if selected_size %}&size={{ selected_size }}{% endif %}{% if selected_assignment %}&assignment={{ selected_assignment }}{% endif %}"
+                       class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                        Zurück
+                    </a>
+                    {% endif %}
+                    <span class="px-3 py-1 bg-purple-600 text-white rounded text-sm">
+                        {{ page_obj.number }}
+                    </span>
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_master %}&master={{ selected_master }}{% endif %}{% if selected_size %}&size={{ selected_size }}{% endif %}{% if selected_assignment %}&assignment={{ selected_assignment }}{% endif %}"
+                       class="px-3 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">
+                        Weiter
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

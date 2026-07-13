@@ -324,10 +324,15 @@
                                     {% endif %}
                                 </td>
                                 <td class="px-4 py-4 whitespace-nowrap">
-                                    {% if item.assigned_to %}
+                                    {% if item.issues %}
+                                    {% for issue in item.issues %}
                                     <div class="flex items-center gap-2">
-                                        <span class="text-sm text-gray-900">{{ item.assigned_to.get_full_name }}</span>
+                                        <span class="text-sm text-gray-900">
+                                            {{ issue.person.get_full_name }}
+                                            <span class="text-blue-700">×&nbsp;{{ issue.quantity|floatformat:"-2" }}</span>
+                                        </span>
                                     </div>
+                                    {% endfor %}
                                     {% else %}
                                     <span class="text-sm text-gray-500">Pool</span>
                                     {% endif %}

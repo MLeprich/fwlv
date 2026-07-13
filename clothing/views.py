@@ -16,11 +16,20 @@ from django.http import HttpResponse
 from datetime import timedelta
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
+import copy
 import csv
 import io
 import logging
 
 logger = logging.getLogger(__name__)
+
+from .assignments import (
+    annotate_issues,
+    issued_item_ids,
+    issued_items_for_person,
+    open_issues,
+    total_issued_quantity,
+)
 
 from .models import (
     ClothingItem,
@@ -31,7 +40,12 @@ from .models import (
     ClothingItemInstance,
     ClothingProductType,
 )
-from .forms import ClothingItemForm, ClothingStockMovementForm, ClothingItemMasterForm
+from .forms import (
+    ClothingItemForm,
+    ClothingStockMovementForm,
+    ClothingItemMasterForm,
+    ClothingItemInstanceForm,
+)
 
 
 # ============================================================================
@@ -74,20 +88,19 @@ class ClothingDashboardView(LoginRequiredMixin, TemplateView):
             next_inspection_date__lte=today
         ).count()
 
-        # Zugeordnete Items
-        context['assigned_items'] = ClothingItem.objects.filter(
-            is_active=True,
-            assigned_to__isnull=False
-        ).count()
+        # Persönlich ausgegebene Teile (aus den Lagerbewegungen abgeleitet)
+        context['assigned_items'] = int(total_issued_quantity())
 
-        # Pool-Items (nicht zugeordnet)
-        context['pool_items'] = ClothingItem.objects.filter(
-            is_active=True,
-            assigned_to__isnull=True
-        ).count()
+        # Pool: Bestand, der noch im Lager liegt
+        context['pool_items'] = int(
+            ClothingItem.objects.filter(is_active=True).aggregate(
+                bestand=Sum('quantity')
+            )['bestand'] or 0
+        )
 
-        # Stammdaten-Anzahl
+        # Stammdaten- und Exemplar-Anzahl
         context['master_count'] = ClothingItemMaster.objects.filter(is_active=True).count()
+        context['instance_count'] = ClothingItemInstance.objects.filter(is_active=True).count()
 
         # Kritische Alerts
         critical_alerts = []
@@ -205,7 +218,22 @@ class ClothingCategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, De
 # CLOTHING ITEM VIEWS
 # ============================================================================
 
-class ClothingItemListView(LoginRequiredMixin, ListView):
+class IssuesContextMixin:
+    """
+    Hängt den angezeigten Artikeln ihre offenen Personen-Ausgaben als `issues` an.
+
+    Ein Lagerartikel gehört niemandem – wer wieviel davon hat, steht in den
+    Bewegungen. Ohne das würden die Listen bei jedem Artikel "Pool" behaupten,
+    auch wenn Stücke bei Personen sind.
+    """
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        annotate_issues(context['object_list'])
+        return context
+
+
+class ClothingItemListView(LoginRequiredMixin, IssuesContextMixin, ListView):
     """Liste aller Kleidungsstücke"""
     model = ClothingItem
     template_name = 'clothing/item_list.html'
@@ -244,20 +272,21 @@ class ClothingItemListView(LoginRequiredMixin, ListView):
         if is_psa == 'yes':
             queryset = queryset.filter(is_psa=True)
 
-        # Zuordnungs-Filter
+        # Zuordnungs-Filter: hat der Artikel offene Ausgaben an Personen?
         assignment_status = self.request.GET.get('assignment')
         if assignment_status == 'assigned':
-            queryset = queryset.filter(assigned_to__isnull=False)
+            queryset = queryset.filter(pk__in=issued_item_ids())
         elif assignment_status == 'pool':
-            queryset = queryset.filter(assigned_to__isnull=True)
+            queryset = queryset.exclude(pk__in=issued_item_ids())
 
         return queryset.order_by('clothing_type', 'size')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['total_count'] = self.get_queryset().count()
-        context['psa_count'] = self.get_queryset().filter(is_psa=True).count()
-        context['assigned_count'] = self.get_queryset().filter(assigned_to__isnull=False).count()
+        queryset = self.get_queryset()
+        context['total_count'] = queryset.count()
+        context['psa_count'] = queryset.filter(is_psa=True).count()
+        context['assigned_count'] = queryset.filter(pk__in=issued_item_ids()).count()
         return context
 
 
@@ -274,6 +303,22 @@ class ClothingItemDetailView(LoginRequiredMixin, DetailView):
             'to_location',
             'created_by'
         ).order_by('-movement_date')[:10]
+
+        # Wer hat von diesem Artikel aktuell noch etwas?
+        from personnel.models import Person
+
+        rows = list(open_issues(item=self.object))
+        persons = Person.objects.in_bulk({row['person'] for row in rows})
+        context['issues'] = [
+            {
+                'person': persons[row['person']],
+                'quantity': row['quantity'],
+                'issued_date': row['last_issue'],
+            }
+            for row in rows
+            if row['person'] in persons
+        ]
+
         return context
 
 
@@ -328,6 +373,12 @@ class ClothingItemDeleteView(LoginRequiredMixin, PermissionRequiredMixin, Delete
     template_name = 'clothing/item_confirm_delete.html'
     success_url = reverse_lazy('clothing:item_list')
     permission_required = 'clothing.delete_clothingitem'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Warnen, wenn noch Stücke bei Personen sind
+        annotate_issues([self.object])
+        return context
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -406,7 +457,7 @@ class ClothingStockMovementCreateView(LoginRequiredMixin, PermissionRequiredMixi
 # PSA OVERVIEW VIEWS
 # ============================================================================
 
-class PSAOverviewView(LoginRequiredMixin, ListView):
+class PSAOverviewView(LoginRequiredMixin, IssuesContextMixin, ListView):
     """Übersicht aller PSA-Kleidung"""
     model = ClothingItem
     template_name = 'clothing/psa_overview.html'
@@ -434,7 +485,7 @@ class PSAOverviewView(LoginRequiredMixin, ListView):
         return context
 
 
-class PSAExpiringView(LoginRequiredMixin, ListView):
+class PSAExpiringView(LoginRequiredMixin, IssuesContextMixin, ListView):
     """PSA mit ablaufenden Zertifikaten"""
     model = ClothingItem
     template_name = 'clothing/psa_expiring.html'
@@ -458,7 +509,7 @@ class PSAExpiringView(LoginRequiredMixin, ListView):
 # INSPECTION VIEWS
 # ============================================================================
 
-class InspectionListView(LoginRequiredMixin, ListView):
+class InspectionListView(LoginRequiredMixin, IssuesContextMixin, ListView):
     """Liste aller prüfpflichtigen Kleidungsstücke"""
     model = ClothingItem
     template_name = 'clothing/inspection_list.html'
@@ -475,7 +526,7 @@ class InspectionListView(LoginRequiredMixin, ListView):
         ).order_by('next_inspection_date')
 
 
-class InspectionDueView(LoginRequiredMixin, ListView):
+class InspectionDueView(LoginRequiredMixin, IssuesContextMixin, ListView):
     """Fällige Prüfungen"""
     model = ClothingItem
     template_name = 'clothing/inspection_due.html'
@@ -499,49 +550,78 @@ class InspectionDueView(LoginRequiredMixin, ListView):
 # ============================================================================
 
 class PersonAssignmentListView(LoginRequiredMixin, ListView):
-    """Übersicht aller Personenzuordnungen"""
+    """Übersicht aller Personenzuordnungen (aus den Lagerbewegungen abgeleitet)"""
     model = ClothingItem
     template_name = 'clothing/assignment_list.html'
     context_object_name = 'items'
     paginate_by = 50
 
     def get_queryset(self):
-        return ClothingItem.objects.filter(
-            assigned_to__isnull=False,
-            is_active=True
-        ).select_related(
-            'assigned_to',
-            'location'
-        ).order_by('assigned_to', 'clothing_type')
+        """
+        Eine Zeile je (Person, Artikel) mit offener Ausgabe.
+
+        Derselbe Artikel kann an mehrere Personen ausgegeben sein, deshalb bekommt
+        jede Zeile eine eigene Kopie des Artikels. Person und Menge hängen nur als
+        Anzeige-Attribute daran und werden nicht gespeichert.
+        """
+        from inventory_base.models import StockMovementType
+        from personnel.models import Person
+
+        rows = list(open_issues())
+        if not rows:
+            return []
+
+        persons = Person.objects.in_bulk({row['person'] for row in rows})
+        items = ClothingItem.objects.select_related('category', 'location').in_bulk(
+            {row['item'] for row in rows}
+        )
+
+        # Letzte Ausgabe-Bewegung je (Artikel, Person) für den Detail-Link
+        movements = {}
+        for movement in ClothingStockMovement.objects.filter(
+            movement_type=StockMovementType.OUTGOING,
+            item__in=items,
+            person__in=persons,
+        ).order_by('movement_date'):
+            movements[(movement.item_id, movement.person_id)] = movement.id
+
+        issues = []
+        for row in rows:
+            person = persons.get(row['person'])
+            item = items.get(row['item'])
+            if person is None or item is None:
+                continue
+
+            issue = copy.copy(item)
+            issue.assigned_to = person
+            issue.is_personal_issue = True
+            issue.issued_quantity = row['quantity']
+            issue.issued_date = row['last_issue']
+            issue.assignment_movement_id = movements.get((item.pk, person.pk))
+            issues.append(issue)
+
+        return sorted(
+            issues,
+            key=lambda issue: (
+                issue.assigned_to.last_name,
+                issue.assigned_to.first_name,
+                issue.clothing_type,
+            ),
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Personen mit Anzahl zugeordneter Items
-        from django.db.models import Count
-        from personnel.models import Person
-        from inventory_base.models import StockMovementType
+        # Personen mit Anzahl offener Ausgaben, in der Reihenfolge der Zeilen
+        persons = []
+        for issue in self.object_list:
+            person = issue.assigned_to
+            if not hasattr(person, 'item_count'):
+                person.item_count = 0
+                persons.append(person)
+            person.item_count += 1
 
-        context['persons_with_items'] = Person.objects.filter(
-            assigned_clothing__isnull=False
-        ).annotate(
-            item_count=Count('assigned_clothing')
-        ).order_by('last_name', 'first_name')
-
-        # Mapping: item_id -> letzte Zuweisungsbewegung (OUTGOING)
-        items = self.get_queryset()
-        assignment_movements = {}
-        for item in items:
-            # Finde die letzte OUTGOING-Bewegung zu dieser Person für diesen Artikel
-            last_movement = ClothingStockMovement.objects.filter(
-                item=item,
-                person=item.assigned_to,
-                movement_type=StockMovementType.OUTGOING
-            ).order_by('-movement_date').first()
-            if last_movement:
-                assignment_movements[item.id] = last_movement.id
-
-        context['assignment_movements'] = assignment_movements
+        context['persons_with_items'] = persons
 
         return context
 
@@ -562,13 +642,11 @@ class PersonSizeManagementView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
 
         from personnel.models import Person
-        context['person'] = get_object_or_404(Person, pk=self.kwargs.get('person_id'))
+        person = get_object_or_404(Person, pk=self.kwargs.get('person_id'))
+        context['person'] = person
 
-        # Zugeordnete Kleidung dieser Person
-        context['assigned_items'] = ClothingItem.objects.filter(
-            assigned_to_id=self.kwargs.get('person_id'),
-            is_active=True
-        ).order_by('clothing_type', 'size')
+        # Aktuell an diese Person ausgegebene Kleidung
+        context['assigned_items'] = issued_items_for_person(person)
 
         return context
 
@@ -585,7 +663,7 @@ class ImportExportView(LoginRequiredMixin, TemplateView):
         context['total_items'] = ClothingItem.objects.filter(is_active=True).count()
         context['total_psa'] = ClothingItem.objects.filter(is_active=True, is_psa=True).count()
         context['total_movements'] = ClothingStockMovement.objects.count()
-        context['total_assigned'] = ClothingItem.objects.filter(is_active=True, assigned_to__isnull=False).count()
+        context['total_assigned'] = int(total_issued_quantity())
         return context
 
 
@@ -597,9 +675,22 @@ class ImportExportView(LoginRequiredMixin, TemplateView):
 def export_items(request):
     """Export Clothing Items als Excel"""
     items = ClothingItem.objects.filter(is_active=True).select_related(
-        'category', 'location', 'manufacturer', 'assigned_to', 'created_by', 'updated_by'
+        'category', 'location', 'created_by', 'updated_by'
     ).order_by('item_number')
-    
+
+    # Offene Ausgaben je Artikel: "Nachname, Vorname (2)"
+    from personnel.models import Person
+    rows = list(open_issues())
+    persons = Person.objects.in_bulk({row['person'] for row in rows})
+    ausgegeben_an = {}
+    for row in rows:
+        person = persons.get(row['person'])
+        if person is None:
+            continue
+        ausgegeben_an.setdefault(row['item'], []).append(
+            f"{person.get_full_name()} ({float(row['quantity']):g})"
+        )
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Kleidungsstücke"
@@ -643,10 +734,10 @@ def export_items(request):
         ws.cell(row=row_num, column=16, value=item.max_usage_years)
         ws.cell(row=row_num, column=17, value='Ja' if item.requires_inspection else 'Nein')
         ws.cell(row=row_num, column=18, value=item.location.name if item.location else '')
-        ws.cell(row=row_num, column=19, value=item.manufacturer.name if item.manufacturer else '')
+        ws.cell(row=row_num, column=19, value=item.manufacturer)
         ws.cell(row=row_num, column=20, value=float(item.quantity))
         ws.cell(row=row_num, column=21, value=item.unit)
-        ws.cell(row=row_num, column=22, value=item.assigned_to.get_full_name() if item.assigned_to else '')
+        ws.cell(row=row_num, column=22, value=', '.join(ausgegeben_an.get(item.pk, [])))
         ws.cell(row=row_num, column=23, value=item.description)
         ws.cell(row=row_num, column=24, value=item.created_at.strftime('%d.%m.%Y %H:%M') if item.created_at else '')
         ws.cell(row=row_num, column=25, value=item.updated_at.strftime('%d.%m.%Y %H:%M') if item.updated_at else '')
@@ -675,7 +766,7 @@ def export_items(request):
 def export_movements(request):
     """Export Clothing Stock Movements als Excel"""
     movements = ClothingStockMovement.objects.select_related(
-        'item', 'from_location', 'to_location', 'created_by'
+        'item', 'from_location', 'to_location', 'person', 'created_by'
     ).order_by('-movement_date')[:1000]
     
     wb = openpyxl.Workbook()
@@ -685,10 +776,10 @@ def export_movements(request):
     # Header
     headers = [
         'ID', 'Datum', 'Artikel', 'Bewegungstyp', 'Menge', 'Einheit',
-        'Von Standort', 'Nach Standort', 'Grund', 'Notiz',
+        'Von Standort', 'Nach Standort', 'Person', 'Rückgabegrund', 'Notiz',
         'Erstellt von', 'Erstellt am'
     ]
-    
+
     # Header-Styling
     header_fill = PatternFill(start_color='FF9800', end_color='FF9800', fill_type='solid')
     header_font = Font(bold=True, color='FFFFFF')
@@ -709,10 +800,11 @@ def export_movements(request):
         ws.cell(row=row_num, column=6, value=movement.unit)
         ws.cell(row=row_num, column=7, value=movement.from_location.name if movement.from_location else '')
         ws.cell(row=row_num, column=8, value=movement.to_location.name if movement.to_location else '')
-        ws.cell(row=row_num, column=9, value=movement.reason)
-        ws.cell(row=row_num, column=10, value=movement.notes)
-        ws.cell(row=row_num, column=11, value=movement.created_by.get_full_name() if movement.created_by else '')
-        ws.cell(row=row_num, column=12, value=movement.created_at.strftime('%d.%m.%Y %H:%M') if movement.created_at else '')
+        ws.cell(row=row_num, column=9, value=movement.person.get_full_name() if movement.person else '')
+        ws.cell(row=row_num, column=10, value=movement.return_reason)
+        ws.cell(row=row_num, column=11, value=movement.notes)
+        ws.cell(row=row_num, column=12, value=movement.created_by.get_full_name() if movement.created_by else '')
+        ws.cell(row=row_num, column=13, value=movement.created_at.strftime('%d.%m.%Y %H:%M') if movement.created_at else '')
     
     # Spaltenbreiten
     for col in ws.columns:
@@ -748,15 +840,15 @@ def template_items(request):
     headers = [
         'Artikelnummer*', 'Name*', 'Kategorie-ID*', 'Typ*', 'Größe*', 'Schnitt',
         'Farbe', 'Material', 'PSA (Ja/Nein)', 'Schutzlevel', 'Norm/Standard',
-        'Standort-ID*', 'Hersteller-ID', 'Bestand*', 'Einheit*', 'Beschreibung'
+        'Standort-ID*', 'Hersteller', 'Bestand*', 'Einheit*', 'Beschreibung'
     ]
     writer.writerow(headers)
-    
+
     # Beispielzeile
     example_data = [
         'KLEID-001', 'Einsatzjacke HuPF', '1', 'jacket', 'l', 'unisex',
         'Rot/Gelb', 'Nomex', 'Ja', 'high', 'EN 469',
-        '1', '1', '5', 'Stück', 'Beispiel: Feuerwehrjacke - diese Zeile löschen!'
+        '1', 'TEXPORT', '5', 'Stück', 'Beispiel: Feuerwehrjacke - diese Zeile löschen!'
     ]
     writer.writerow(example_data)
     
@@ -768,9 +860,9 @@ def template_items(request):
     writer.writerow(['# Größe: xxs, xs, s, m, l, xl, xxl, xxxl, xxxxl, 36-60, s36-s48 (Schuhgrößen)'])
     writer.writerow(['# Schnitt: unisex, male, female'])
     writer.writerow(['# PSA: Ja oder Nein'])
-    writer.writerow(['# Schutzlevel: none, low, medium, high'])
+    writer.writerow(['# Schutzlevel: none, basic, enhanced, high, specialist'])
     writer.writerow(['# Einheit: Stück, Paar, Set, Packung, Karton'])
-    writer.writerow(['# Kategorie-ID, Standort-ID, Hersteller-ID müssen existieren'])
+    writer.writerow(['# Kategorie-ID und Standort-ID müssen existieren; Hersteller ist Freitext'])
     
     # Response
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
@@ -833,7 +925,7 @@ def import_items(request):
                 protection_level = row[9] if len(row) > 9 else 'none'
                 norm_standard = row[10] if len(row) > 10 else ''
                 location_id = row[11] if len(row) > 11 else None
-                manufacturer_id = row[12] if len(row) > 12 else None
+                manufacturer = row[12] if len(row) > 12 else ''
                 quantity = row[13] if len(row) > 13 else None
                 unit = row[14] if len(row) > 14 else None
                 description = row[15] if len(row) > 15 else ''
@@ -866,15 +958,6 @@ def import_items(request):
                     errors.append(f"Zeile {row_num}: Standort-ID {location_id} nicht gefunden")
                     error_count += 1
                     continue
-                
-                # Hersteller laden (optional)
-                manufacturer = None
-                if manufacturer_id:
-                    from inventory_base.models import Manufacturer
-                    try:
-                        manufacturer = Manufacturer.objects.get(id=int(manufacturer_id))
-                    except (Manufacturer.DoesNotExist, ValueError):
-                        pass
                 
                 # Boolean-Konvertierung
                 is_psa = is_psa_str.lower() in ['ja', 'yes', 'true', '1']
@@ -1189,7 +1272,6 @@ class ClothingMasterListView(LoginRequiredMixin, ListView):
         if search:
             queryset = queryset.filter(
                 Q(name__icontains=search) |
-                Q(article_number__icontains=search) |
                 Q(manufacturer__icontains=search) |
                 Q(model_number__icontains=search)
             )
@@ -1315,6 +1397,178 @@ class ClothingMasterDeleteView(LoginRequiredMixin, PermissionRequiredMixin, Dele
         master.save()
         messages.success(request, f'✅ Stammdaten "{master.name}" erfolgreich gelöscht.')
         return redirect(self.success_url)
+
+
+# ============================================================================
+# EXEMPLARE / INSTANZEN (konkrete Kleidungsstücke zu einem Stammdatensatz)
+# ============================================================================
+
+class ClothingInstanceListView(LoginRequiredMixin, ListView):
+    """Liste aller Exemplare (konkrete Kleidungsstücke)"""
+    model = ClothingItemInstance
+    template_name = 'clothing/instance_list.html'
+    context_object_name = 'instances'
+    paginate_by = 50
+
+    def get_queryset(self):
+        queryset = ClothingItemInstance.objects.filter(is_active=True).select_related(
+            'master', 'location', 'assigned_to'
+        )
+
+        # Suchfilter
+        search = self.request.GET.get('search', '')
+        if search:
+            queryset = queryset.filter(
+                Q(inventory_number__icontains=search) |
+                Q(serial_number__icontains=search) |
+                Q(master__name__icontains=search) |
+                Q(color__icontains=search)
+            )
+
+        # Filter auf einen Stammdatensatz
+        master_id = self.request.GET.get('master', '')
+        if master_id:
+            queryset = queryset.filter(master_id=master_id)
+
+        # Größen-Filter
+        size = self.request.GET.get('size', '')
+        if size:
+            queryset = queryset.filter(size=size)
+
+        # Zuordnungs-Filter
+        assignment = self.request.GET.get('assignment', '')
+        if assignment == 'assigned':
+            queryset = queryset.filter(assigned_to__isnull=False)
+        elif assignment == 'pool':
+            queryset = queryset.filter(assigned_to__isnull=True)
+
+        return queryset.order_by('master__name', 'size', 'inventory_number')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        base = ClothingItemInstance.objects.filter(is_active=True)
+
+        context['masters'] = ClothingItemMaster.objects.filter(is_active=True).order_by('name')
+        context['search'] = self.request.GET.get('search', '')
+        context['selected_master'] = self.request.GET.get('master', '')
+        context['selected_size'] = self.request.GET.get('size', '')
+        context['selected_assignment'] = self.request.GET.get('assignment', '')
+
+        context['total_count'] = base.count()
+        context['assigned_count'] = base.filter(assigned_to__isnull=False).count()
+        context['pool_count'] = base.filter(assigned_to__isnull=True).count()
+
+        context['current_module'] = 'clothing'
+        return context
+
+
+class ClothingInstanceDetailView(LoginRequiredMixin, DetailView):
+    """Detailansicht eines Exemplars"""
+    model = ClothingItemInstance
+    template_name = 'clothing/instance_detail.html'
+    context_object_name = 'instance'
+
+    def get_queryset(self):
+        return ClothingItemInstance.objects.select_related(
+            'master', 'master__category', 'location', 'assigned_to'
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_module'] = 'clothing'
+        return context
+
+
+class ClothingInstanceCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    """Neues Exemplar zu einem Stammdatensatz anlegen"""
+    model = ClothingItemInstance
+    form_class = ClothingItemInstanceForm
+    template_name = 'clothing/instance_form.html'
+    permission_required = 'clothing.add_clothingiteminstance'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        # Stammdatensatz aus der URL vorbelegen (?master=<pk>)
+        master_id = self.request.GET.get('master')
+        if master_id:
+            initial['master'] = master_id
+        return initial
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f'Exemplar "{self.object.inventory_number}" wurde erfolgreich angelegt.'
+        )
+        return response
+
+    def get_success_url(self):
+        return reverse_lazy('clothing:instance_detail', kwargs={'pk': self.object.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Neues Exemplar anlegen'
+        context['submit_text'] = 'Exemplar anlegen'
+
+        master_id = self.request.GET.get('master')
+        if master_id:
+            context['master'] = ClothingItemMaster.objects.filter(pk=master_id).first()
+
+        context['current_module'] = 'clothing'
+        return context
+
+
+class ClothingInstanceUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    """Exemplar bearbeiten (inkl. Zuordnung zu einer Person)"""
+    model = ClothingItemInstance
+    form_class = ClothingItemInstanceForm
+    template_name = 'clothing/instance_form.html'
+    permission_required = 'clothing.change_clothingiteminstance'
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f'Exemplar "{self.object.inventory_number}" wurde erfolgreich aktualisiert.'
+        )
+        return response
+
+    def get_success_url(self):
+        return reverse_lazy('clothing:instance_detail', kwargs={'pk': self.object.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f'Exemplar bearbeiten: {self.object.inventory_number}'
+        context['submit_text'] = 'Änderungen speichern'
+        context['master'] = self.object.master
+        context['current_module'] = 'clothing'
+        return context
+
+
+class ClothingInstanceDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    """Exemplar löschen (Soft-Delete)"""
+    model = ClothingItemInstance
+    template_name = 'clothing/instance_confirm_delete.html'
+    success_url = reverse_lazy('clothing:instance_list')
+    permission_required = 'clothing.delete_clothingiteminstance'
+    context_object_name = 'instance'
+
+    def form_valid(self, form):
+        """Soft-Delete statt echtem Löschen"""
+        instance = self.get_object()
+        instance.is_active = False
+        instance.updated_by = self.request.user
+        instance.save()
+        messages.success(self.request, f'Exemplar "{instance.inventory_number}" wurde deaktiviert.')
+        return redirect(self.success_url)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_module'] = 'clothing'
+        return context
 
 
 # ============================================================================

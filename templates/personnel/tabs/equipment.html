@@ -59,7 +59,10 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex items-start justify-between mb-2">
                             <div>
-                                <h4 class="font-semibold text-gray-900">{{ item.get_clothing_type_display }}</h4>
+                                <h4 class="font-semibold text-gray-900">
+                                    {{ item.get_clothing_type_display }}
+                                    <span class="ml-1 text-blue-700">×&nbsp;{{ item.issued_quantity|floatformat:"-2" }}</span>
+                                </h4>
                                 <p class="text-sm text-gray-600">{{ item.item_number }}</p>
                             </div>
                             <div class="flex items-center gap-2">
@@ -85,10 +88,10 @@
                                 <p class="text-gray-500">Geschlecht</p>
                                 <p class="font-medium text-gray-900">{{ item.get_gender_display }}</p>
                             </div>
-                            {% if item.assignment_date %}
+                            {% if item.issued_date %}
                             <div>
                                 <p class="text-gray-500">Ausgegeben am</p>
-                                <p class="font-medium text-gray-900">{{ item.assignment_date|date:"d.m.Y" }}</p>
+                                <p class="font-medium text-gray-900">{{ item.issued_date|date:"d.m.Y" }}</p>
                             </div>
                             {% endif %}
                             {% if item.category %}
@@ -138,7 +141,90 @@
             {% endfor %}
         </div>
     </div>
-    {% else %}
+    {% endif %}
+
+    {% if assigned_instances %}
+    <!-- Ausgegebene Exemplare (Stammdaten/Produktkatalog) -->
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900">Ausgegebene Exemplare</h3>
+            <a href="{% url 'clothing:instance_list' %}" class="text-sm text-purple-600 hover:text-purple-800 font-medium">
+                Alle Exemplare →
+            </a>
+        </div>
+
+        <div class="divide-y divide-gray-100">
+            {% for instance in assigned_instances %}
+            <div class="p-4 hover:bg-gray-50 transition-colors">
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-2xl">
+                        👕
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between mb-2">
+                            <div>
+                                <h4 class="font-semibold text-gray-900">{{ instance.master.name }}</h4>
+                                <p class="text-sm font-mono text-purple-600">{{ instance.inventory_number }}</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                {% if instance.master.is_psa %}
+                                <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
+                                    PSA
+                                </span>
+                                {% endif %}
+                                {% if instance.is_inspection_due %}
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">
+                                    ⚠️ Prüfung fällig
+                                </span>
+                                {% endif %}
+                                {% if instance.is_certification_expired %}
+                                <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
+                                    Zertifikat abgelaufen
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div>
+                                <p class="text-gray-500">Größe</p>
+                                <p class="font-medium text-gray-900">{{ instance.get_size_display }}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Zustand</p>
+                                <p class="font-medium text-gray-900">{{ instance.get_condition_display }}</p>
+                            </div>
+                            {% if instance.assignment_date %}
+                            <div>
+                                <p class="text-gray-500">Ausgegeben am</p>
+                                <p class="font-medium text-gray-900">{{ instance.assignment_date|date:"d.m.Y" }}</p>
+                            </div>
+                            {% endif %}
+                            {% if instance.next_inspection_date %}
+                            <div>
+                                <p class="text-gray-500">Nächste Prüfung</p>
+                                <p class="font-medium {% if instance.is_inspection_due %}text-red-600{% else %}text-gray-900{% endif %}">
+                                    {{ instance.next_inspection_date|date:"d.m.Y" }}
+                                </p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="flex-shrink-0">
+                        <a href="{% url 'clothing:instance_detail' instance.pk %}" class="px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-50 rounded font-medium transition-colors">
+                            Details →
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not assigned_clothing and not assigned_instances %}
     <!-- Keine Kleidung ausgegeben -->
     <div class="bg-gray-50 rounded-lg p-8 text-center border border-gray-200">
         <div class="text-5xl mb-4">👕</div>

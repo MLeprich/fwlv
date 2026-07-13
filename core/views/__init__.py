@@ -199,19 +199,20 @@ class ProfileView(LoginRequiredMixin, UpdateView):
         if person:
             # Zugeordnete Kleidung
             if CLOTHING_AVAILABLE:
-                assigned_clothing = ClothingItem.objects.filter(
-                    assigned_to=person,
-                    is_active=True
-                ).select_related('location', 'category').order_by('-assignment_date')
-                context['assigned_clothing'] = assigned_clothing
-                context['assigned_clothing_count'] = assigned_clothing.count()
+                from clothing.assignments import issued_items_for_person
 
-                # Berechne Gesamtwert der zugeordneten Kleidung
-                total_value = sum(
-                    item.unit_price or 0
+                # Mengenartikel werden aus den Lagerbewegungen abgeleitet
+                assigned_clothing = issued_items_for_person(person)
+                context['assigned_clothing'] = assigned_clothing
+                context['assigned_clothing_count'] = int(
+                    sum(item.issued_quantity for item in assigned_clothing)
+                )
+
+                # Gesamtwert der ausgegebenen Teile
+                context['assigned_clothing_value'] = sum(
+                    (item.unit_price or 0) * item.issued_quantity
                     for item in assigned_clothing
                 )
-                context['assigned_clothing_value'] = total_value
 
                 # Letzte Kleidungs-Bewegungen (Ausgaben an diese Person)
                 clothing_movements = ClothingStockMovement.objects.filter(
@@ -293,8 +294,32 @@ class ProfileView(LoginRequiredMixin, UpdateView):
         except Exception:
             pass
 
-        # Nach Datum sortieren und auf 15 begrenzen
-        recent_activities.sort(key=lambda x: x['date'], reverse=True)
+        # Die Quellen liefern teils reine Daten, teils Zeitstempel (mal mit, mal ohne
+        # Zeitzone). Ohne Vereinheitlichung lassen sie sich weder vergleichen noch
+        # einheitlich formatieren – deshalb hier normalisieren, statt im Template.
+        from datetime import date as date_cls, datetime as datetime_cls, time as time_cls
+        from datetime import timezone as std_timezone
+
+        for aktivitaet in recent_activities:
+            wert = aktivitaet.get('date')
+
+            if wert is None:
+                aktivitaet['sort_key'] = datetime_cls.min.replace(tzinfo=std_timezone.utc)
+                aktivitaet['date_display'] = '–'
+                continue
+
+            nur_datum = not isinstance(wert, datetime_cls) and isinstance(wert, date_cls)
+            zeitpunkt = datetime_cls.combine(wert, time_cls.min) if nur_datum else wert
+            if timezone.is_naive(zeitpunkt):
+                zeitpunkt = timezone.make_aware(zeitpunkt, timezone.get_default_timezone())
+
+            aktivitaet['sort_key'] = zeitpunkt
+            aktivitaet['date_display'] = (
+                wert.strftime('%d.%m.%Y') if nur_datum
+                else timezone.localtime(zeitpunkt).strftime('%d.%m.%Y %H:%M')
+            )
+
+        recent_activities.sort(key=lambda a: a['sort_key'], reverse=True)
         context['recent_activities'] = recent_activities[:15]
 
         return context

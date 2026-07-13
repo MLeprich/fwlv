@@ -186,6 +186,9 @@ class ClothingStaffManagementView(LoginRequiredMixin, TemplateView):
             'clothingstockmovement',
             'clothingcategory',
             'clothingsizeassignment',
+            'clothingitemmaster',
+            'clothingiteminstance',
+            'clothingproducttype',
         ]
 
         permissions_to_add = []
@@ -218,6 +221,9 @@ class ClothingStaffManagementView(LoginRequiredMixin, TemplateView):
             'clothingstockmovement',
             'clothingcategory',
             'clothingsizeassignment',
+            'clothingitemmaster',
+            'clothingiteminstance',
+            'clothingproducttype',
         ]
 
         permissions_to_add = []
@@ -249,6 +255,9 @@ class ClothingStaffManagementView(LoginRequiredMixin, TemplateView):
             'clothingstockmovement',
             'clothingcategory',
             'clothingsizeassignment',
+            'clothingitemmaster',
+            'clothingiteminstance',
+            'clothingproducttype',
         ]
 
         permissions_to_remove = []

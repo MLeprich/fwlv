@@ -157,7 +157,7 @@
                                 {% for activity in recent_activities %}
                                 <div class="relative">
                                     <div class="absolute -left-8 w-4 h-4 bg-{{ activity.color }}-500 rounded-full border-4 border-white"></div>
-                                    <div class="text-sm text-gray-500 mb-1">{{ activity.date|date:"d.m.Y H:i" }}</div>
+                                    <div class="text-sm text-gray-500 mb-1">{{ activity.date_display }}</div>
                                     {% if activity.url %}
                                     <a href="{{ activity.url }}" class="font-medium text-gray-900 hover:text-blue-600">
                                         {% if activity.icon == 'truck' %}🚒{% elif activity.icon == 'clipboard-check' %}📋{% else %}📌{% endif %}
@@ -408,7 +408,10 @@
                                                         {% else %}👕{% endif %}
                                                     </span>
                                                     <div>
-                                                        <div class="text-sm font-medium text-gray-900">{{ item.name }}</div>
+                                                        <div class="text-sm font-medium text-gray-900">
+                                                            {{ item.name }}
+                                                            <span class="ml-1 text-blue-700">×&nbsp;{{ item.issued_quantity|floatformat:"-2" }}</span>
+                                                        </div>
                                                         {% if item.manufacturer %}
                                                         <div class="text-xs text-gray-500">{{ item.manufacturer }}</div>
                                                         {% endif %}
@@ -422,7 +425,7 @@
                                                 {{ item.get_size_display|default:item.size|default:"-" }}
                                             </td>
                                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                                                {{ item.assignment_date|date:"d.m.Y"|default:"-" }}
+                                                {{ item.issued_date|date:"d.m.Y"|default:"-" }}
                                             </td>
                                             <td class="px-4 py-3 whitespace-nowrap">
                                                 {% if item.is_psa %}
