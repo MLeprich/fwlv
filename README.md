@@ -20,18 +20,38 @@ Ein Lagerverwaltungssystem für Feuerwehr und Katastrophenschutz.
 ### Option A: Docker (empfohlen)
 
 ```bash
-git clone https://github.com/MLeprich/fwlv.git
-cd fwlv
-
-cp .env.example .env
-nano .env  # SECRET_KEY und POSTGRES_PASSWORD setzen
-
-docker compose up -d
+sudo git clone https://github.com/MLeprich/fwlv.git /opt/flvs
+cd /opt/flvs
+./install.sh
 ```
 
 Ausführliche Anleitung: [docs/DOCKER_INSTALLATION.md](docs/DOCKER_INSTALLATION.md)
 
-### Option B: Manuelle Installation
+> **Warum `/opt/flvs`?** Docker Compose leitet den Projektnamen aus dem Verzeichnisnamen
+> ab. Wer im Home-Verzeichnis installiert und später aus einem anderen Pfad heraus
+> `docker compose` aufruft, startet einen **zweiten, leeren Stack** – die Datenbank scheint
+> verschwunden. Deshalb ein festes Verzeichnis, und `/opt` ist dafür der vorgesehene Ort.
+
+### Option B: Ziel-VM ohne Internetzugang (Air-Gap)
+
+Auf einer abgeschotteten VM kann **nicht gebaut** werden – `docker compose build` bräuchte
+Docker Hub, PyPI und die Debian-Repos. Die Images werden deshalb vorab auf einer Maschine
+**mit** Internet gebaut und als Bundle übertragen:
+
+```bash
+# 1. Auf einer Maschine MIT Internet:
+./docker/scripts/build-offline-bundle.sh      # erzeugt flvs-images.tar (~400 MB)
+
+# 2. Repository UND flvs-images.tar auf die VM kopieren, beides nach /opt/flvs
+
+# 3. Auf der Ziel-VM – hier wird NICHT gebaut:
+cd /opt/flvs && ./install.sh --offline
+```
+
+Der Offline-Modus greift an keiner Stelle ins Netz: kein Klon, kein `apt`, kein Build.
+Details und Fallstricke: [docs/DOCKER_INSTALLATION.md](docs/DOCKER_INSTALLATION.md#installation-ohne-internet-air-gap--stadt-vm)
+
+### Option C: Manuelle Installation
 
 ```bash
 git clone https://github.com/MLeprich/fwlv.git

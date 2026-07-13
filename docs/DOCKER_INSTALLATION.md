@@ -33,20 +33,30 @@ Nach ca. 5-10 Minuten ist die Anwendung unter `http://ihre-domain/` erreichbar. 
 | `--domain` | Domain für die Installation | `--domain flvs.feuerwehr.de` |
 | `--email` | Admin E-Mail-Adresse | `--email admin@feuerwehr.de` |
 | `--password` | Admin-Passwort (sonst generiert) | `--password MeinPasswort123` |
-| `--install-dir` | Installationsverzeichnis | `--install-dir /opt/flvs` |
+| `--install-dir` | Installationsverzeichnis (Standard `/opt/flvs`) | `--install-dir /opt/flvs` |
 | `--skip-docker-install` | Docker-Installation überspringen | `--skip-docker-install` |
+| **`--offline`** | **Für VMs ohne Internet: nicht klonen, nicht bauen, Images aus dem Bundle laden** | `--offline` |
+| `--image-bundle` | Pfad zum Bundle (Standard `<install-dir>/flvs-images.tar`) | `--image-bundle /tmp/flvs-images.tar` |
 
 ### Was das Skript automatisch macht
 
 1. Systemvoraussetzungen prüfen (RAM, Speicher, OS)
-2. Docker installieren (falls nicht vorhanden)
-3. Repository nach `/opt/flvs` klonen
-4. Sichere Passwörter generieren (SECRET_KEY, DB-Passwort, Admin-Passwort)
-5. `.env` Konfiguration erstellen
-6. Docker-Container bauen und starten
-7. Datenbank migrieren und Permissions einrichten
-8. Superuser erstellen
-9. Zugangsdaten in `.credentials` speichern
+2. Erreichbarkeit von GitHub, Docker Hub, PyPI und den Debian-Repos prüfen –
+   fehlt eines davon, bricht es ab und verweist auf `--offline` (entfällt im Offline-Modus)
+3. Docker installieren (falls nicht vorhanden)
+4. Repository nach `/opt/flvs` klonen (im Offline-Modus: vorhandenes verwenden)
+5. Sichere Passwörter generieren (SECRET_KEY, DB-Passwort, Admin-Passwort)
+6. `.env` Konfiguration erstellen
+7. Docker-Container bauen und starten (im Offline-Modus: `docker load` aus dem Bundle)
+8. Datenbank migrieren und Permissions einrichten
+9. Superuser erstellen
+10. Zugangsdaten in `.credentials` speichern
+
+> **Nicht aus dem Installationsverzeichnis heraus starten.** Beim Überschreiben würde sich
+> das Skript selbst löschen und danach mit der alten Fassung weiterlaufen – Bash liest aus
+> dem gelöschten Inode weiter. Genau so lief auf der Stadt-VM zweimal ein veralteter Stand,
+> der `--offline` noch gar nicht kannte. Das Skript bricht heute in diesem Fall ab. Im
+> Offline-Modus ist der Aufruf aus `/opt/flvs` dagegen richtig – dort wird ja nichts geklont.
 
 ---
 
@@ -80,49 +90,152 @@ docker compose version
 
 ## Installation ohne Internet (Air-Gap / Stadt-VM)
 
-Auf einer VM **ohne Internetzugang** (bzw. ohne Zugriff auf Docker Hub) schlägt
-`docker compose build` fehl, weil die Basis-Images (`python:3.12-slim`, `postgres`,
-`redis`, `nginx`) nicht von Docker Hub geladen werden können — typische Fehlermeldung:
+### Es sind ZWEI Maschinen im Spiel
 
-```
-failed to fetch anonymous token: Get "https://auth.docker.io/token?...": i/o timeout
-```
+Das ist der Punkt, an dem die Installation erfahrungsgemäß scheitert. Die Arbeit teilt
+sich auf zwei Rechner auf, und beide haben eine klar getrennte Rolle:
 
-Lösung: Die Images **vorab auf einer Maschine MIT Internet** bauen und als Bundle
-übertragen. Das Frontend (Tailwind, Alpine.js, HTMX) ist vollständig lokal eingebunden,
-d. h. **zur Laufzeit** wird kein Internet benötigt.
+| | Maschine **MIT** Internet | Ziel-VM **OHNE** Internet |
+|---|---|---|
+| **Rolle** | baut | installiert |
+| **Skript** | `build-offline-bundle.sh` | `install.sh --offline` |
+| **Ergebnis** | `flvs-images.tar` (ca. 400 MB) | laufende Anwendung |
+| **Braucht Netz** | ja (Docker Hub, PyPI, Debian) | **nein** |
 
-### 1. Auf einer Maschine MIT Internet: Image-Bundle erstellen
+> **Auf der Ziel-VM wird NICHT gebaut.** `build-offline-bundle.sh` gehört dort nicht hin:
+> es lädt Basis-Images vom Docker Hub und führt `apt`/`pip` im Container aus. Ohne Netz
+> kann das nicht funktionieren. Startet man es trotzdem dort, bricht es heute mit einer
+> Erklärung ab – früher lief es 30 Sekunden ins Leere und meldete dann nur:
+>
+> ```
+> failed to fetch anonymous token: Get "https://auth.docker.io/token?...": i/o timeout
+> ```
+>
+> Dieselbe Meldung erscheint, wenn man `install.sh` **ohne** `--offline` startet: dann
+> baut Compose ebenfalls.
+
+**Ein Proxy hilft hier meist nicht.** Selbst wenn `docker pull` über einen Proxy
+funktioniert: Docker BuildKit übernimmt die Proxy-Umgebung **nicht** automatisch, und die
+`apt`- und `pip`-Aufrufe *innerhalb* des Builds laufen ins Leere. Der Offline-Weg umgeht
+das komplett – er baut ja nicht.
+
+**Zur Laufzeit braucht die Anwendung kein Internet.** Frontend (Tailwind, Alpine.js,
+HTMX), Datenbank und Cache sind lokal eingebunden.
+
+---
+
+### Wohin installieren – und warum `/opt/flvs`?
+
+Das Installationsverzeichnis ist **nicht** frei wählbar im Sinne von „egal". Es muss
+**ein einziges, festes Verzeichnis** sein, aus dem heraus alles läuft. Der Standard ist
+`/opt/flvs`; mit `--install-dir` lässt sich ein anderes wählen – aber dann konsequent
+überall dasselbe.
+
+Warum das so wichtig ist:
+
+1. **Docker Compose leitet den Projektnamen aus dem Verzeichnisnamen ab.** In `~/fwlv`
+   heißt das Projekt `fwlv`, in `/opt/flvs` heißt es `flvs`. Das sind **zwei getrennte
+   Stacks mit getrennten Volumes** (`fwlv_postgres_data` vs. `flvs_postgres_data`). Wer
+   im Home-Verzeichnis installiert und später aus `/opt/flvs` heraus `docker compose`
+   aufruft, startet einen **zweiten, leeren Stack** – die Datenbank scheint verschwunden.
+   Das ist der teuerste Fehler in dieser Anleitung.
+
+2. **Alles hängt relativ am Verzeichnis.** `.env`, `.credentials`, die Backups
+   (`docker/backup/`), die Zertifikate (`docker/certbot/`) und die nginx-Konfiguration
+   werden als Bind-Mounts eingebunden. Verschiebt man das Verzeichnis später, zeigen die
+   Mounts ins Leere.
+
+3. **`install.sh --offline` sucht das Bundle unter `<install-dir>/flvs-images.tar`.**
+   Liegt es woanders, muss man es explizit angeben (`--image-bundle`).
+
+4. **`/opt` ist der vorgesehene Ort.** Nach FHS gehört dorthin in sich geschlossene
+   Software, die nicht aus der Paketverwaltung der Distribution stammt – genau das ist ein
+   Docker-Compose-Stack mit eigener Konfiguration und eigenen Zertifikaten. Ein
+   Home-Verzeichnis (`~/fwlv`) ist der falsche Ort: die Container laufen unter root, das
+   Backup-Profil und ein Neustart nach Reboot hängen nicht an einem Benutzer-Login, und
+   die Zugangsdaten in `.credentials` haben im Home nichts verloren.
+
+---
+
+### 1. Auf der Maschine MIT Internet: Image-Bundle bauen
 
 ```bash
 git clone https://github.com/MLeprich/fwlv.git
 cd fwlv
 
-# Baut alle Images und exportiert sie nach flvs-images.tar
+# Baut alle Images und exportiert sie nach flvs-images.tar (ca. 400 MB)
 ./docker/scripts/build-offline-bundle.sh
 ```
 
+Das Bundle enthält genau die sechs Images, die der Standardstart braucht: die drei
+Anwendungs-Images (`flvs-web`, `flvs-celery-worker`, `flvs-celery-beat`) und die drei
+Basis-Images (`postgres:16-alpine`, `redis:7-alpine`, `nginx:alpine`).
+
 ### 2. Auf die Ziel-VM übertragen
 
-Das **Repository** und die Datei **`flvs-images.tar`** auf die VM kopieren
-(z. B. per USB/`scp`), etwa nach `/opt/flvs/` und `/opt/flvs/flvs-images.tar`.
+Beides muss rüber – **Repository und Bundle**, und zwar in dasselbe Verzeichnis:
 
-### 3. Auf der VM offline installieren
+```bash
+# z.B. per scp (oder USB-Stick)
+scp -r fwlv/            root@ziel-vm:/opt/flvs
+scp fwlv/flvs-images.tar root@ziel-vm:/opt/flvs/flvs-images.tar
+```
+
+Danach muss es auf der VM so aussehen:
+
+```
+/opt/flvs/
+├── install.sh
+├── docker-compose.yml
+├── Dockerfile
+├── flvs-images.tar      <- das Bundle
+└── ...
+```
+
+### 3. Auf der Ziel-VM offline installieren
 
 ```bash
 cd /opt/flvs
 ./install.sh --offline
 ```
 
-Der `--offline`-Modus:
-- verwendet das bereits vorhandene Repository (kein GitHub-Klon),
-- lädt die Images aus `flvs-images.tar` (`docker load`) statt sie zu bauen,
-- startet die Container mit `docker compose up -d --no-build` (kein Docker-Hub-Zugriff).
+Der `--offline`-Modus greift an **keiner einzigen Stelle** ins Netz:
+
+- kein `git clone` (verwendet das vorhandene Repository),
+- kein `apt-get` (prüft nur, ob `git`, `curl` und `openssl` vorhanden sind),
+- kein Build – die Images kommen per `docker load` aus dem Bundle,
+- Start mit `docker compose up -d --no-build --pull never`; ein fehlendes Image schlägt
+  hart fehl, statt still nachgeladen zu werden.
+
+Docker selbst muss auf der VM **vorinstalliert** sein – der Offline-Modus installiert es
+nicht nach.
 
 > Liegt das Bundle woanders: `./install.sh --offline --image-bundle /pfad/zu/flvs-images.tar`
 
-**Updates** laufen genauso: neues Bundle extern bauen, auf die VM kopieren, dann
-`docker load -i flvs-images.tar && docker compose up -d --no-build`.
+### Prüfen, welcher Skriptstand läuft
+
+`install.sh` zeigt beim Start seinen Pfad und den Commit an:
+
+```
+  Skript: /opt/flvs/install.sh
+  Stand:  c0e9a73
+```
+
+Steht dort ein alter Commit, läuft eine veraltete Fassung – etwa eine, die `--offline`
+noch gar nicht kennt. Dann `git pull` und erneut starten.
+
+### Updates
+
+Genauso: neues Bundle **extern** bauen, auf die VM kopieren, dort einspielen.
+
+```bash
+# Auf der VM:
+cd /opt/flvs
+git pull                                  # falls das Repo erreichbar ist, sonst neu kopieren
+docker load -i flvs-images.tar
+docker compose up -d --no-build --pull never
+docker compose exec web python manage.py migrate
+```
 
 ---
 
