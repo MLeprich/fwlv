@@ -118,7 +118,6 @@ class ClothingItemAdmin(admin.ModelAdmin):
         'size',
         'gender',
         'psa_badge',
-        'assigned_person_badge',
         'quantity',
         'inspection_status_badge',
         'certification_status_badge',
@@ -132,7 +131,6 @@ class ClothingItemAdmin(admin.ModelAdmin):
         'is_psa',
         'protection_level',
         'requires_inspection',
-        'is_personal_issue',
     )
 
     search_fields = (
@@ -199,13 +197,6 @@ class ClothingItemAdmin(admin.ModelAdmin):
             ),
             'classes': ('collapse',)
         }),
-        (_('Personenzuordnung'), {
-            'fields': (
-                'assigned_to',
-                'assignment_date',
-                'is_personal_issue',
-            )
-        }),
         (_('Besondere Merkmale'), {
             'fields': (
                 'has_name_tag',
@@ -218,16 +209,15 @@ class ClothingItemAdmin(admin.ModelAdmin):
             'fields': (
                 'quantity',
                 'unit',
-                'minimum_stock',
-                'maximum_stock',
+                'min_quantity',
+                'max_quantity',
             )
         }),
         (_('Einkauf'), {
             'fields': (
                 'manufacturer',
                 'manufacturer_part_number',
-                'purchase_price',
-                'last_purchase_date',
+                'unit_price',
             ),
             'classes': ('collapse',)
         }),
@@ -243,7 +233,6 @@ class ClothingItemAdmin(admin.ModelAdmin):
         'mark_for_inspection',
         'mark_inspection_complete',
         'increment_washing_cycles',
-        'unassign_from_person',
     ]
 
     # ========================================================================
@@ -271,26 +260,6 @@ class ClothingItemAdmin(admin.ModelAdmin):
             )
         return format_html(
             '<span style="color: #9ca3af; font-size: 11px;">–</span>'
-        )
-
-    @admin.display(description=_('Zugeordnet'))
-    def assigned_person_badge(self, obj):
-        """Zeigt zugeordnete Person"""
-        if obj.assigned_to:
-            badge_type = 'personal' if obj.is_personal_issue else 'pool'
-            color = '#10b981' if obj.is_personal_issue else '#3b82f6'
-            icon = '👤' if obj.is_personal_issue else '🔄'
-
-            return format_html(
-                '<span style="background-color: {}; color: white; padding: 3px 8px; '
-                'border-radius: 3px; font-size: 11px;">'
-                '{} {}</span>',
-                color,
-                icon,
-                obj.assigned_to
-            )
-        return format_html(
-            '<span style="color: #9ca3af; font-size: 11px;">Pool</span>'
         )
 
     @admin.display(description=_('Prüfstatus'))
@@ -427,19 +396,6 @@ class ClothingItemAdmin(admin.ModelAdmin):
             _('{} Kleidungsstück(e) Waschzyklus erhöht.').format(updated)
         )
 
-    @admin.action(description=_('Personenzuordnung aufheben'))
-    def unassign_from_person(self, request, queryset):
-        """Hebt Personenzuordnung auf"""
-        updated = queryset.update(
-            assigned_to=None,
-            assignment_date=None,
-            is_personal_issue=False
-        )
-        self.message_user(
-            request,
-            _('{} Kleidungsstück(e) von Personen getrennt.').format(updated)
-        )
-
 
 # ============================================================================
 # CLOTHING STOCK MOVEMENT ADMIN
@@ -479,7 +435,8 @@ class ClothingStockMovementAdmin(admin.ModelAdmin):
 
     autocomplete_fields = ['item', 'person']
 
-    readonly_fields = ('created_at', 'updated_at')
+    # movement_date wird beim Buchen automatisch gesetzt und ist nicht editierbar
+    readonly_fields = ('movement_date', 'created_at', 'updated_at')
 
     fieldsets = (
         (_('Bewegung'), {
@@ -879,7 +836,7 @@ class ClothingItemInstanceAdmin(admin.ModelAdmin):
         'inventory_number',
         'serial_number',
         'master__name',
-        'master__article_number',
+        'master__model_number',
         'color'
     ]
     
@@ -895,21 +852,22 @@ class ClothingItemInstanceAdmin(admin.ModelAdmin):
             'fields': ('size', 'gender', 'color', 'condition')
         }),
         ('Standort & Zuordnung', {
-            'fields': ('location', 'assigned_to', 'assigned_date')
+            'fields': ('location', 'assigned_to', 'assignment_date', 'is_personal_issue')
         }),
         ('Beschaffung', {
-            'fields': ('purchase_date', 'purchase_price', 'warranty_expires')
+            # Der Preis hängt am Stammdatensatz (master.unit_price), nicht am Exemplar
+            'fields': ('purchase_date', 'first_use_date')
         }),
         ('Zertifizierung', {
-            'fields': ('last_certification_date', 'next_certification_date', 'certification_number'),
+            'fields': ('certification_date', 'certification_expires', 'certification_number'),
             'classes': ('collapse',)
         }),
         ('Wäsche', {
-            'fields': ('last_wash_date', 'total_wash_cycles'),
+            'fields': ('last_washing_date', 'current_washing_cycles'),
             'classes': ('collapse',)
         }),
         ('Prüfungen', {
-            'fields': ('last_inspection_date', 'next_inspection_date', 'inspection_notes'),
+            'fields': ('last_inspection_date', 'next_inspection_date'),
             'classes': ('collapse',)
         }),
         ('Notizen', {

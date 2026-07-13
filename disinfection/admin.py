@@ -300,6 +300,9 @@ class DisinfectionStockMovementAdmin(admin.ModelAdmin):
     readonly_fields = (
         'created_by',
         'created_at',
+        # movement_date wird beim Buchen automatisch gesetzt (auto_now_add)
+        # und ist daher nicht editierbar -> nur lesend anzeigen
+        'movement_date',
     )
 
     fieldsets = (

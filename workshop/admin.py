@@ -107,8 +107,6 @@ class WorkshopItemAdmin(admin.ModelAdmin):
             'fields': (
                 'shelf_life_months',
                 'production_date',
-                'expiry_date',
-                'batch_number',
                 'storage_temperature_min',
                 'storage_temperature_max',
             ),
@@ -131,7 +129,7 @@ class WorkshopItemAdmin(admin.ModelAdmin):
         }),
         (_('Kosten & Pfand'), {
             'fields': (
-                'purchase_price',
+                'unit_price',
                 'core_charge',
             ),
             'classes': ('collapse',)
@@ -202,7 +200,9 @@ class WorkshopItemAdmin(admin.ModelAdmin):
 
     @admin.display(description=_('Ablaufdatum'))
     def expiry_badge(self, obj):
-        if not obj.expiry_date:
+        expiry_date = obj.expiry_date
+
+        if not expiry_date:
             return format_html(
                 '<span style="color: #9ca3af; font-size: 11px;">-</span>'
             )
@@ -212,22 +212,22 @@ class WorkshopItemAdmin(admin.ModelAdmin):
                 '<span style="background-color: #dc2626; color: white; padding: 3px 8px; '
                 'border-radius: 3px; font-size: 11px; font-weight: bold;">'
                 '❌ {}</span>',
-                obj.expiry_date.strftime('%d.%m.%Y')
+                expiry_date.strftime('%d.%m.%Y')
             )
 
         # Warnung 30 Tage vorher
-        days_until_expiry = (obj.expiry_date - timezone.now().date()).days
+        days_until_expiry = (expiry_date - timezone.now().date()).days
         if days_until_expiry <= 30:
             return format_html(
                 '<span style="background-color: #f59e0b; color: white; padding: 3px 8px; '
                 'border-radius: 3px; font-size: 11px; font-weight: bold;">'
                 '⚠ {}</span>',
-                obj.expiry_date.strftime('%d.%m.%Y')
+                expiry_date.strftime('%d.%m.%Y')
             )
 
         return format_html(
             '<span style="color: #10b981; font-size: 11px;">{}</span>',
-            obj.expiry_date.strftime('%d.%m.%Y')
+            expiry_date.strftime('%d.%m.%Y')
         )
 
     @admin.display(description=_('Bestand'))
@@ -300,7 +300,9 @@ class WorkshopStockMovementAdmin(admin.ModelAdmin):
         'notes',
     )
 
+    # movement_date wird beim Buchen automatisch gesetzt (nicht editierbar)
     readonly_fields = (
+        'movement_date',
         'created_by',
         'created_at',
     )
@@ -460,7 +462,7 @@ class VehicleServiceRecordAdmin(admin.ModelAdmin):
 
     search_fields = (
         'vehicle__license_plate',
-        'vehicle__vehicle_number',
+        'vehicle__call_sign',
         'description',
         'invoice_number',
         'notes',

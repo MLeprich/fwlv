@@ -174,16 +174,15 @@ class EquipmentItemAdmin(admin.ModelAdmin):
             'fields': (
                 'quantity',
                 'unit',
-                'minimum_stock',
-                'maximum_stock',
+                'min_quantity',
+                'max_quantity',
             )
         }),
         (_('Einkauf'), {
             'fields': (
                 'manufacturer',
                 'manufacturer_part_number',
-                'purchase_price',
-                'last_purchase_date',
+                'unit_price',
             ),
             'classes': ('collapse',)
         }),
@@ -549,7 +548,8 @@ class EquipmentStockMovementAdmin(admin.ModelAdmin):
 
     autocomplete_fields = ['item', 'vehicle', 'person']
 
-    readonly_fields = ('created_at', 'updated_at')
+    # movement_date wird beim Buchen automatisch gesetzt (nicht editierbar)
+    readonly_fields = ('movement_date', 'created_at', 'updated_at')
 
     fieldsets = (
         (_('Bewegung'), {
@@ -1441,7 +1441,7 @@ class MaintenanceRecordAdmin(admin.ModelAdmin):
 
     list_display = (
         'maintenance_date',
-        'item_display',
+        'device_display',
         'maintenance_type_display',
         'technician',
         'status_badge',
@@ -1458,8 +1458,8 @@ class MaintenanceRecordAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        'assignment__item__item_number',
-        'assignment__item__name',
+        'assignment__device__inventory_number',
+        'assignment__device__master__name',
         'assignment__maintenance_type__name',
         'technician__first_name',
         'technician__last_name',
@@ -1525,12 +1525,12 @@ class MaintenanceRecordAdmin(admin.ModelAdmin):
     date_hierarchy = 'maintenance_date'
 
     @admin.display(description=_('Gerät'))
-    def item_display(self, obj):
-        """Zeigt Gerät"""
+    def device_display(self, obj):
+        """Zeigt Gerät der Wartungszuweisung"""
         return format_html(
             '<span style="background-color: #f59e0b; color: white; padding: 3px 8px; '
             'border-radius: 3px; font-size: 11px;">{}</span>',
-            obj.assignment.item
+            obj.assignment.device
         )
 
     @admin.display(description=_('Wartungsart'))

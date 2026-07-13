@@ -241,7 +241,14 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
     @admin.display(description=_('Gesamtkosten'))
     def total_cost_display(self, obj):
         """Formatierte Gesamtkosten"""
-        return format_html('<span style="font-weight: bold;">{:,.2f} €</span>', obj.total_cost)
+        if obj.total_cost is None:
+            return '–'
+        # Betrag vorab formatieren: format_html() nutzt str.format() auf SafeString,
+        # dort sind Zahlen-Formatcodes wie :,.2f nicht erlaubt
+        return format_html(
+            '<span style="font-weight: bold;">{}</span>',
+            f'{obj.total_cost:,.2f} €'
+        )
 
     @admin.display(description=_('Freigabe-Fortschritt'))
     def approval_progress_bar(self, obj):
@@ -394,13 +401,22 @@ class OrderItemAdmin(admin.ModelAdmin):
     @admin.display(description=_('Einzelpreis'))
     def unit_price_display(self, obj):
         """Formatierter Einzelpreis"""
-        return format_html('<span>{:.2f} €</span>', obj.unit_price)
+        if obj.unit_price is None:
+            return '–'
+        # Betrag vorab formatieren: format_html() nutzt str.format() auf SafeString,
+        # dort sind Zahlen-Formatcodes wie :.2f nicht erlaubt
+        return format_html('<span>{}</span>', f'{obj.unit_price:.2f} €')
 
     @admin.display(description=_('Gesamtpreis'))
     def total_price_display(self, obj):
         """Gesamtpreis der Position"""
         total = obj.get_total_price()
-        return format_html('<span style="font-weight: bold;">{:.2f} €</span>', total)
+        if total is None:
+            return '–'
+        return format_html(
+            '<span style="font-weight: bold;">{}</span>',
+            f'{total:.2f} €'
+        )
 
     @admin.display(description=_('Lieferung'))
     def received_progress(self, obj):

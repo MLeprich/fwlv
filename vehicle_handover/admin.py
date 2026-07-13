@@ -4,7 +4,8 @@ Admin Interface für Fahrzeugübernahme App
 
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
 from django.db.models import Count, Q
 from .models import (
     ChecklistTemplate,
@@ -125,8 +126,9 @@ class ChecklistTemplateAdmin(admin.ModelAdmin):
 
     def vehicle_types_display(self, obj):
         """Fahrzeugtypen anzeigen"""
-        if obj.vehicle_types:
-            return ', '.join(obj.vehicle_types)
+        namen = [str(vt) for vt in obj.vehicle_types.all()]
+        if namen:
+            return ', '.join(namen)
         return '-'
     vehicle_types_display.short_description = _('Fahrzeugtypen')
 
@@ -313,7 +315,7 @@ class VehicleHandoverAdmin(admin.ModelAdmin):
 
     search_fields = (
         'vehicle__license_plate',
-        'vehicle__radio_callsign',
+        'vehicle__call_sign',
         'handover_to__first_name',
         'handover_to__last_name',
         'notes',
@@ -348,8 +350,6 @@ class VehicleHandoverAdmin(admin.ModelAdmin):
         }),
         (_('Zustand'), {
             'fields': (
-                'cleanliness_interior',
-                'cleanliness_exterior',
                 'completeness_check_done',
                 'all_items_present',
             )
@@ -451,11 +451,15 @@ class VehicleHandoverAdmin(admin.ModelAdmin):
     @admin.display(description=_('KM-Stand'))
     def odometer_reading_display(self, obj):
         """Formatierter KM-Stand"""
-        return format_html('<span style="font-weight: bold;">{:,} km</span>', obj.odometer_reading)
+        if obj.odometer_reading is None:
+            return '-'
+        return format_html('<span style="font-weight: bold;">{}</span>', f'{obj.odometer_reading:,} km')
 
     @admin.display(description=_('Tank'))
     def fuel_level_display(self, obj):
         """Tankfüllung mit Farbe"""
+        if obj.fuel_level is None:
+            return '-'
         if obj.fuel_level >= 75:
             color = '#10b981'
         elif obj.fuel_level >= 50:
@@ -539,7 +543,7 @@ class VehicleHandoverAdmin(admin.ModelAdmin):
         else:
             checks.append(f'✗ Checkliste nur {completion}% vollständig')
 
-        return format_html('<br>'.join(checks))
+        return format_html_join(mark_safe('<br>'), '{}', ((check,) for check in checks))
 
     @admin.action(description=_('Als abgeschlossen markieren'))
     def mark_as_completed(self, request, queryset):
@@ -879,9 +883,9 @@ class HandoverDefectAdmin(admin.ModelAdmin):
     def cost_display(self, obj):
         """Kosten-Anzeige"""
         if obj.actual_repair_cost:
-            return format_html('<span style="font-weight: bold;">{:.2f} €</span>', obj.actual_repair_cost)
+            return format_html('<span style="font-weight: bold;">{}</span>', f'{obj.actual_repair_cost:.2f} €')
         elif obj.estimated_repair_cost:
-            return format_html('<span style="color: #9ca3af;">~{:.2f} €</span>', obj.estimated_repair_cost)
+            return format_html('<span style="color: #9ca3af;">{}</span>', f'~{obj.estimated_repair_cost:.2f} €')
         return '-'
 
     @admin.action(description=_('Als behoben markieren'))
@@ -1031,7 +1035,12 @@ class Vehicle360HotspotAdmin(admin.ModelAdmin):
 
     @admin.display(description=_('Position'))
     def position_display(self, obj):
-        return format_html('<span style="font-family: monospace; font-size: 10px;">P: {:.1f}° | Y: {:.1f}°</span>', obj.pitch, obj.yaw)
+        if obj.pitch is None or obj.yaw is None:
+            return '-'
+        return format_html(
+            '<span style="font-family: monospace; font-size: 10px;">{}</span>',
+            f'P: {obj.pitch:.1f}° | Y: {obj.yaw:.1f}°'
+        )
 
     @admin.display(description=_('Status'))
     def is_active_badge(self, obj):

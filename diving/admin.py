@@ -259,7 +259,10 @@ class DivingStockMovementAdmin(admin.ModelAdmin):
 
     readonly_fields = [
         'created_at', 'updated_at', 'gas_filled_badge',
-        'dive_badge', 'service_badge'
+        'dive_badge', 'service_badge',
+        # movement_date wird beim Buchen automatisch gesetzt (auto_now_add)
+        # und ist daher nicht editierbar -> nur lesend anzeigen
+        'movement_date'
     ]
 
     fieldsets = (

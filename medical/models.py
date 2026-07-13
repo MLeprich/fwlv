@@ -1137,7 +1137,9 @@ class MedicalStockMovement(AbstractStockMovement):
 
     def __str__(self):
         btm_marker = ' [BTM-Freigabe erforderlich]' if self.requires_approval else ''
-        return f"{self.get_movement_type_display()} - {self.item.name} ({self.quantity} {self.unit}){btm_marker}"
+        # item ist optional (Bewegungen können auf Stammdaten statt Artikel verweisen)
+        item_name = self.item.name if self.item else '–'
+        return f"{self.get_movement_type_display()} - {item_name} ({self.quantity} {self.unit}){btm_marker}"
 
     def save(self, *args, **kwargs):
         """

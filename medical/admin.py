@@ -927,7 +927,8 @@ class MedicalStockMovementAdmin(admin.ModelAdmin):
 
     search_fields = (
         'item__name',
-        'item__item_number',
+        # item zeigt auf MedicalItemMaster – dort heißt die Nummer master_number
+        'item__master_number',
         'batch_number',
         'reference_number',
         'patient_id',
@@ -1286,11 +1287,13 @@ class MedicalBatchAdmin(admin.ModelAdmin):
         else:
             color = '#ef4444'
 
+        # Zahlen vorab formatieren: format_html() nutzt str.format() auf SafeString,
+        # dort sind Zahlen-Formatcodes wie :.0f nicht erlaubt
         return format_html(
             '<div style="width:100px; background-color:#e5e7eb; border-radius:3px;">'
             '<div style="width:{}%; background-color:{}; color:white; text-align:center; '
-            'border-radius:3px; padding:2px; font-size:0.75em;">{:.0f}%</div></div>',
-            percentage, color, percentage
+            'border-radius:3px; padding:2px; font-size:0.75em;">{}</div></div>',
+            f'{percentage:.0f}', color, f'{percentage:.0f}%'
         )
     quantity_remaining_display.short_description = _('Restmenge')
 

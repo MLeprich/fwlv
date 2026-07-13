@@ -256,7 +256,10 @@ class HeightRescueStockMovementAdmin(admin.ModelAdmin):
 
     readonly_fields = [
         'created_at', 'updated_at', 'fall_arrested_badge',
-        'inspection_badge'
+        'inspection_badge',
+        # movement_date wird beim Buchen automatisch gesetzt (auto_now_add)
+        # und ist daher nicht editierbar -> nur lesend anzeigen
+        'movement_date'
     ]
 
     fieldsets = (
@@ -547,7 +550,10 @@ class HeightRescueInventoryCheckItemAdmin(admin.ModelAdmin):
 
     readonly_fields = [
         'variance_quantity', 'counted_date', 'counted_by',
-        'inspection_status_badge', 'age_badge', 'rope_status_badge'
+        'inspection_status_badge', 'age_badge', 'rope_status_badge',
+        # created_at/updated_at werden automatisch gesetzt (auto_now_add/auto_now)
+        # und sind daher nicht editierbar -> nur lesend anzeigen
+        'created_at', 'updated_at'
     ]
 
     fieldsets = (

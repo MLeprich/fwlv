@@ -248,7 +248,10 @@ class ITHardwareStockMovementAdmin(admin.ModelAdmin):
 
     readonly_fields = [
         'created_at', 'updated_at', 'assigned_to_badge',
-        'maintenance_badge', 'os_update_badge'
+        'maintenance_badge', 'os_update_badge',
+        # movement_date wird beim Buchen automatisch gesetzt (auto_now_add)
+        # und ist daher nicht editierbar -> nur lesend anzeigen
+        'movement_date'
     ]
 
     fieldsets = (

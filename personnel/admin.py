@@ -99,7 +99,8 @@ class PersonAdmin(admin.ModelAdmin):
         'first_name',
         'last_name',
         'email',
-        'department',
+        # department ist ein ForeignKey – es muss auf ein Feld der Abteilung gesucht werden
+        'department__name',
     ]
 
     fieldsets = (
@@ -189,11 +190,9 @@ class PersonAdmin(admin.ModelAdmin):
 
     def has_user_account(self, obj):
         """Zeigt an ob Person einen User-Account hat"""
-        if obj.user:
-            return format_html(
-                '<span style="color: green;">✓</span>'
-            )
-        return format_html('<span style="color: gray;">—</span>')
+        # boolean=True: Django rendert das Icon selbst und erwartet True/False,
+        # kein fertiges HTML.
+        return obj.user is not None
     has_user_account.short_description = _('Account')
     has_user_account.boolean = True
 
@@ -716,7 +715,8 @@ class DutyHoursRequirementAdmin(admin.ModelAdmin):
     ]
 
     search_fields = [
-        'category',
+        # category ist ein ForeignKey auf DutyHoursCategory
+        'category__name',
         'description',
     ]
 
