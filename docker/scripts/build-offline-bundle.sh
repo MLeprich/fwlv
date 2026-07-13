@@ -27,6 +27,38 @@ BASE_IMAGES="postgres:16-alpine redis:7-alpine nginx:alpine"
 # Anwendungs-Images: entsprechen den image:-Tags in docker-compose.yml
 APP_IMAGES="flvs-web:local flvs-celery-worker:local flvs-celery-beat:local"
 
+# -----------------------------------------------------------------------------
+# Dieses Skript gehört NICHT auf die abgeschottete Ziel-VM.
+#
+# Es BAUT die Images (apt + pip im Container) und ZIEHT die Basis-Images vom Docker
+# Hub – ohne Internet kann das gar nicht funktionieren. Auf der Ziel-VM wird
+# stattdessen nur das fertige Bundle geladen: ./install.sh --offline
+#
+# Weil die Verwechslung teuer ist (30 Sekunden Timeout, dann eine kryptische
+# Meldung über auth.docker.io), wird sie hier vorab abgefangen.
+# -----------------------------------------------------------------------------
+echo "[0/3] Prüfe Internetzugang (dieses Skript braucht ihn)..."
+if ! curl -fsS --max-time 8 -o /dev/null https://auth.docker.io 2>/dev/null; then
+    echo ""
+    echo "FEHLER: Docker Hub ist von dieser Maschine aus nicht erreichbar."
+    echo ""
+    echo "Dieses Skript baut die Images und lädt die Basis-Images – dafür braucht es"
+    echo "Internet. Es gehört auf eine Maschine MIT Internetzugang, nicht auf die"
+    echo "abgeschottete Ziel-VM."
+    echo ""
+    echo "Richtiger Ablauf:"
+    echo "  1. Auf einer Maschine MIT Internet (z.B. dem Entwicklungsserver):"
+    echo "       ./docker/scripts/build-offline-bundle.sh"
+    echo "     -> erzeugt flvs-images.tar (ca. 400 MB)"
+    echo "  2. Repository UND flvs-images.tar auf die Ziel-VM kopieren,"
+    echo "     z.B. nach /opt/flvs/ und /opt/flvs/flvs-images.tar"
+    echo "  3. Auf der Ziel-VM – hier wird NICHT gebaut:"
+    echo "       cd /opt/flvs && ./install.sh --offline"
+    echo ""
+    exit 1
+fi
+echo "      Docker Hub erreichbar."
+
 # docker compose build wertet die ganze Datei aus; Pflicht-Variablen mit
 # :? würden sonst abbrechen -> Dummy-Werte reichen für den reinen Build.
 export SECRET_KEY="${SECRET_KEY:-build-dummy-secret}"
