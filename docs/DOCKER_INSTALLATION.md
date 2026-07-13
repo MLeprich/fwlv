@@ -194,6 +194,17 @@ curl -L -o flvs-images.tar \
 > Version installiert werden, den Tag explizit angeben:
 > `https://github.com/MLeprich/fwlv/releases/download/v1.0.0/flvs-images.tar`
 
+**Hinter einem Proxy wichtig:** GitHub leitet den Download auf einen **anderen Host** um –
+`release-assets.githubusercontent.com`. Eine Freigabe, die nur `github.com` kennt, reicht
+also nicht; der `git clone` funktioniert dann zwar, der Asset-Download aber nicht. In dem
+Fall entweder den Host mit freigeben lassen oder das Bundle per `scp`/USB übertragen
+(siehe unten). Ob es klappt, zeigt ein Test auf der VM:
+
+```bash
+curl -sIL https://github.com/MLeprich/fwlv/releases/latest/download/flvs-images.tar \
+  | grep -E '^HTTP|^location'
+```
+
 **Kommt die VM gar nicht ins Netz** (auch nicht zu GitHub), dann beides von einer anderen
 Maschine herüberkopieren – per `scp` oder USB-Stick:
 
