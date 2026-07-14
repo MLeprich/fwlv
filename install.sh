@@ -92,15 +92,70 @@ check_system() {
         log_info "RAM: ${total_ram}MB - OK"
     fi
 
-    # Speicherplatz prüfen (LC_ALL=C + -P verhindern lokalisierte/umgebrochene
-    # df-Ausgabe, die sonst die falsche Spalte liest)
-    free_space=$(LC_ALL=C df -P -BG / 2>/dev/null | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
-    if [[ -z "$free_space" ]]; then
-        log_warn "Freier Speicher konnte nicht ermittelt werden."
-    elif [[ $free_space -lt 15 ]]; then
-        log_warn "Weniger als 15GB freier Speicher (${free_space} GB). Mindestens 20GB empfohlen."
-    else
-        log_info "Freier Speicher: ${free_space}GB - OK"
+    # Speicherplatz prüfen – und zwar dort, wo er wirklich gebraucht wird.
+    #
+    # Ein Blick auf "/" sagt nichts aus, wenn /var oder /opt eigene Partitionen sind.
+    # Zwei Orte zählen:
+    #   1. Docker-Datenverzeichnis (meist /var/lib/docker): hier landen die Images
+    #      (~1,8 GB), die Container und die Volumes (Datenbank, Medien, Logs) – sie
+    #      wachsen mit der Nutzung. Bei einem Update liegen kurzzeitig ALTE und NEUE
+    #      Images nebeneinander.
+    #   2. Installationsverzeichnis: Repository (~50 MB) und, im Offline-Modus, das
+    #      Image-Bundle (~420 MB). Das Bundle kann nach dem Laden gelöscht werden.
+    check_free_space() {
+        local pfad="$1" label="$2" minimum="$3"
+
+        local frei
+        frei=$(LC_ALL=C df -P -BG "$pfad" 2>/dev/null | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+        if [[ -z "$frei" ]]; then
+            log_warn "Freier Speicher für $label konnte nicht ermittelt werden."
+            return 0
+        fi
+
+        local geraet
+        geraet=$(LC_ALL=C df -P "$pfad" 2>/dev/null | awk 'NR==2 {print $1}')
+
+        if [[ $frei -lt $minimum ]]; then
+            log_error "$label ($pfad, $geraet): nur ${frei} GB frei – mindestens ${minimum} GB nötig."
+            return 1
+        fi
+        log_info "$label ($pfad): ${frei} GB frei - OK"
+        return 0
+    }
+
+    local docker_root="/var/lib/docker"
+    if command -v docker &>/dev/null; then
+        docker_root=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker)
+    fi
+    # Existiert das Verzeichnis noch nicht, prüfen wir das darüberliegende.
+    [[ -d "$docker_root" ]] || docker_root=$(dirname "$docker_root")
+
+    local install_root="$INSTALL_DIR"
+    [[ -d "$install_root" ]] || install_root=$(dirname "$install_root")
+
+    local platz_ok=0
+    # 8 GB: Images (~1,8) + Volumes + Container + Reserve für ein Update, bei dem
+    # alte und neue Images kurzzeitig nebeneinander liegen.
+    check_free_space "$docker_root" "Docker-Daten (Images, Datenbank, Medien)" 8 || platz_ok=1
+    # 1 GB: Repository + Image-Bundle im Offline-Modus.
+    check_free_space "$install_root" "Installationsverzeichnis" 1 || platz_ok=1
+
+    if [[ $platz_ok -ne 0 ]]; then
+        log_error ""
+        log_error "Zu wenig Speicherplatz. Die Installation würde mitten im Laden der Images"
+        log_error "abbrechen (typisch: 'unexpected EOF' bei docker load)."
+        log_error ""
+        log_error "Platzbedarf im Überblick:"
+        log_error "  Docker-Daten ($docker_root):"
+        log_error "    ~1,8 GB  Images"
+        log_error "    + Volumes (Datenbank, Medien, Logs) – wachsen mit der Nutzung"
+        log_error "    + Reserve für Updates (alte und neue Images liegen kurz nebeneinander)"
+        log_error "  Installationsverzeichnis ($install_root):"
+        log_error "    ~50 MB   Repository"
+        log_error "    ~420 MB  Image-Bundle (kann nach dem Laden gelöscht werden)"
+        log_error ""
+        log_error "Empfehlung: 20 GB auf dem Dateisystem mit $docker_root."
+        exit 1
     fi
 }
 
@@ -364,6 +419,34 @@ start_containers() {
             log_error "und die Datei nach $bundle kopieren (oder --image-bundle PFAD angeben)."
             exit 1
         fi
+        # Das Bundle prüfen, BEVOR docker load daran scheitert. Eine unterbrochene
+        # Übertragung (abgebrochener Download, volle Platte) hinterlässt eine
+        # abgeschnittene Datei – docker load meldet dann nur "unexpected EOF" und
+        # verrät nicht, dass die Datei selbst das Problem ist.
+        log_info "Offline-Modus: Prüfe Image-Bundle ..."
+        local groesse
+        groesse=$(stat -c %s "$bundle" 2>/dev/null || echo 0)
+        if [[ $groesse -lt 100000000 ]]; then
+            log_error "Das Image-Bundle ist nur $((groesse / 1024 / 1024)) MB groß – erwartet werden ~420 MB."
+            log_error "Die Datei ist unvollständig übertragen worden: $bundle"
+            log_error ""
+            log_error "Häufigste Ursache: die Platte lief beim Herunterladen/Kopieren voll."
+            log_error "Datei löschen, Platz schaffen und erneut übertragen."
+            exit 1
+        fi
+        if ! tar -tf "$bundle" >/dev/null 2>&1; then
+            log_error "Das Image-Bundle ist beschädigt oder unvollständig: $bundle"
+            log_error "($(du -h "$bundle" | cut -f1) vorhanden, aber das Archiv lässt sich nicht lesen.)"
+            log_error ""
+            log_error "Häufigste Ursache: der Download wurde abgebrochen, oft weil die Platte voll lief."
+            log_error "Datei löschen, Platz schaffen und erneut übertragen:"
+            log_error "  rm -f $bundle"
+            log_error "  curl -L -o $bundle \\"
+            log_error "    https://github.com/MLeprich/fwlv/releases/latest/download/flvs-images.tar"
+            exit 1
+        fi
+        log_info "Image-Bundle vollständig ($(du -h "$bundle" | cut -f1))."
+
         log_info "Offline-Modus: Lade Images aus $bundle ..."
         docker load -i "$bundle"
 

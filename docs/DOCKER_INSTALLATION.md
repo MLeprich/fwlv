@@ -71,6 +71,36 @@ Nach ca. 5-10 Minuten ist die Anwendung unter `http://ihre-domain/` erreichbar. 
 | Speicher | 20 GB | 50 GB |
 | OS | Ubuntu 22.04+ / Debian 12+ | Ubuntu 24.04 LTS |
 
+### Wo genau wird der Speicher gebraucht?
+
+Nicht auf `/` und **nicht** in `/opt` – der Löwenanteil liegt im **Docker-Datenverzeichnis**,
+standardmäßig `/var/lib/docker`. Sind `/var` oder `/opt` eigene Partitionen, hilft ein Blick
+auf `/` gar nichts.
+
+| Ort | Was liegt dort | Bedarf |
+|-----|----------------|--------|
+| **Docker-Daten** (`/var/lib/docker`) | Images | ~1,8 GB |
+| | Volumes: Datenbank, Medien, Logs | wächst mit der Nutzung |
+| | Container-Schreibschichten | gering |
+| | Reserve für Updates – alte und neue Images liegen kurz nebeneinander | ~2 GB |
+| **Installationsverzeichnis** (`/opt/flvs`) | Repository | ~50 MB |
+| | Image-Bundle `flvs-images.tar` (nur offline) | ~420 MB, nach dem Laden löschbar |
+
+**Faustregel: 20 GB frei auf dem Dateisystem, das `/var/lib/docker` enthält.** Im
+Installationsverzeichnis reicht 1 GB.
+
+Wo Docker tatsächlich ablegt, verrät:
+
+```bash
+docker info --format '{{.DockerRootDir}}'
+df -h $(docker info --format '{{.DockerRootDir}}')
+```
+
+> **Zu wenig Platz bricht mitten im Laden ab.** Typisch ist `unexpected EOF` bei
+> `docker load` – dann ist nicht das Bundle schuld, sondern die volle Platte, die schon den
+> Download abgeschnitten hat. `install.sh` prüft beide Orte vorab und bricht mit einer
+> klaren Meldung ab, statt in diesen Fehler zu laufen.
+
 ### Software-Voraussetzungen
 
 - Docker Engine 24.0+
