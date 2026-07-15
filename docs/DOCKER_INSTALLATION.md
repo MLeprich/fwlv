@@ -654,6 +654,70 @@ curl -fsSL https://raw.githubusercontent.com/MLeprich/fwlv/main/install.sh | bas
 
 ## Troubleshooting
 
+### Schnelldiagnose bei Zugriffsproblemen (400 / 403 / 502)
+
+Statt einzeln zu prüfen, sammelt ein Skript alles Relevante auf einmal:
+
+```bash
+cd /opt/flvs
+./docker/scripts/diagnose.sh                              # intern
+./docker/scripts/diagnose.sh https://fwlager.example.de/  # zusätzlich von außen
+```
+
+Die Ausgabe komplett kopieren und weitergeben – sie zeigt Container-Status, die
+`.env`-Eckwerte, interne Zugriffstests, einen Test mit großen Headern, die nginx-Logs
+(mit durchgereichtem Host) und die von Django abgelehnten Hosts.
+
+### „400 Bad Request" beim Aufruf im Browser
+
+Zwei völlig verschiedene Ursachen – der Diagnoselauf (oben) unterscheidet sie:
+
+**a) Django lehnt den Host ab (`DisallowedHost`).** Der Host-Header passt nicht zu
+`ALLOWED_HOSTS`. Im Log steht der abgelehnte Name im Klartext:
+
+```bash
+docker compose logs web | grep "Invalid HTTP_HOST"
+# -> Invalid HTTP_HOST header: 'kurzname'. You may need to add 'kurzname' to ALLOWED_HOSTS.
+```
+
+Fix: den genannten Namen in `/opt/flvs/.env` zu `ALLOWED_HOSTS` ergänzen, dann
+`docker compose up -d web`.
+
+**b) nginx lehnt ab, bevor Django den Request sieht.** Symptom: im nginx-Zugriffslog steht
+`400`, aber `docker compose logs web` zeigt **keinen** `DisallowedHost`. Fast immer sind es
+**zu große Request-Header** – Firmen-Proxies mit SSO (Kerberos/NTLM) hängen große
+`Authorization`-/Cookie-Header an, die nginx' Default-Puffer sprengen. Der konkrete Grund
+steht im nginx-Fehlerlog:
+
+```bash
+docker compose exec nginx tail -30 /var/log/nginx/error.log
+# -> "client sent too long header line" / "client exceeded ... buffer"
+```
+
+Fix: Die Puffer sind ab v1.0.1 großzügig voreingestellt (`large_client_header_buffers 8 32k`
+in `docker/nginx/nginx.conf`). Reicht das nicht, den zweiten Wert weiter erhöhen und
+`docker compose restart nginx`.
+
+### „403 CSRF verification failed" beim Anmelden
+
+Tritt hinter einem **TLS-terminierenden Proxy** auf: der Proxy spricht außen HTTPS, reicht
+intern aber HTTP weiter. Django hält den Request dann für unsicher, der Browser schickt
+aber `Origin: https://…` – der Login-POST wird abgelehnt. In `/opt/flvs/.env` setzen:
+
+```bash
+TRUST_PROXY_SSL_HEADER=true
+# Der Proxy MUSS dabei den Header X-Forwarded-Proto: https setzen.
+```
+
+Die vertrauten Ursprünge (`CSRF_TRUSTED_ORIGINS`) leitet Django automatisch aus `DOMAIN`
+ab. Nur wenn die Anwendung unter weiteren Namen erreichbar ist, explizit ergänzen:
+
+```bash
+CSRF_TRUSTED_ORIGINS=https://fwlager.example.de,https://kurzname
+```
+
+Danach `docker compose up -d web`.
+
 ### Container startet nicht
 
 ```bash

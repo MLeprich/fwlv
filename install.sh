@@ -384,6 +384,15 @@ HTTPS_PORT=443
 # SSL (false für Erstinstallation ohne Zertifikat, nach SSL-Einrichtung auf true setzen)
 USE_SSL=false
 
+# Betrieb hinter einem TLS-terminierenden Proxy (Proxy spricht außen HTTPS, intern HTTP):
+# auf true setzen, damit Django dem X-Forwarded-Proto-Header vertraut. Sonst scheitert die
+# Anmeldung mit "403 CSRF verification failed". Der Proxy muss X-Forwarded-Proto setzen.
+TRUST_PROXY_SSL_HEADER=false
+
+# CSRF: wird automatisch aus DOMAIN abgeleitet (https und http). Nur setzen, wenn die
+# Anwendung unter weiteren Namen erreichbar ist – kommagetrennt MIT Schema, z.B.:
+# CSRF_TRUSTED_ORIGINS=https://fwlager.rz.oberhausen.de,https://kurzname
+
 # Superuser (wird beim ersten Start erstellt)
 CREATE_SUPERUSER=true
 SUPERUSER_USERNAME=admin

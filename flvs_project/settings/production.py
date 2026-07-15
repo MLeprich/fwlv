@@ -32,8 +32,43 @@ USE_SSL = env.bool('USE_SSL', default=True)
 # Alle HTTP-Requests zu HTTPS umleiten
 SECURE_SSL_REDIRECT = USE_SSL
 
-# Proxy SSL-Header (wenn hinter Nginx/Apache)
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if USE_SSL else None
+# Proxy SSL-Header (wenn hinter Nginx/Apache/Load-Balancer)
+#
+# Wichtig für den Betrieb hinter einem TLS-terminierenden Proxy: Der Proxy spricht außen
+# HTTPS, reicht intern aber HTTP weiter (USE_SSL=false). Ohne diesen Header hält Django den
+# Request für unsicher, während der Browser Origin: https://... schickt – die Anmeldung
+# scheitert dann mit "403 CSRF verification failed". Der Proxy muss dazu
+# X-Forwarded-Proto setzen. Getrennt von USE_SSL schaltbar über TRUST_PROXY_SSL_HEADER.
+#
+# Docker Compose reicht nicht gesetzte Variablen als LEEREN String durch – der wird hier
+# wie "nicht gesetzt" behandelt und fällt auf den Default (USE_SSL) zurück.
+_trust_proxy = os.environ.get('TRUST_PROXY_SSL_HEADER', '').strip()
+TRUST_PROXY_SSL_HEADER = _trust_proxy.lower() in ('true', '1', 'yes', 'on') if _trust_proxy else USE_SSL
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if TRUST_PROXY_SSL_HEADER else None
+
+# CSRF: unter welchen Ursprüngen ist die Anwendung im Browser erreichbar?
+#
+# Django ab 4.0 verlangt für POST-Requests (Login, Formulare) ein Schema in der Liste.
+# Standardmäßig aus DOMAIN und ALLOWED_HOSTS abgeleitet, mit https UND http, damit es
+# sowohl hinter einem TLS-Proxy als auch bei reinem HTTP-Betrieb funktioniert. Bei Bedarf
+# explizit über CSRF_TRUSTED_ORIGINS in der .env überschreibbar (kommagetrennt, MIT Schema).
+#
+# Wichtig: ein LEER durchgereichtes CSRF_TRUSTED_ORIGINS (Compose-Default für "nicht
+# gesetzt") darf NICHT die abgeleitete Liste leeren – sonst gäbe es gar keine vertrauten
+# Ursprünge und jeder Login-POST scheiterte. Deshalb explizit auf non-empty prüfen.
+_csrf_override = os.environ.get('CSRF_TRUSTED_ORIGINS', '').strip()
+if _csrf_override:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_override.split(',') if o.strip()]
+else:
+    _domain = os.environ.get('DOMAIN', '').strip()
+    _csrf_hosts = ([_domain] if _domain else []) + [
+        h for h in ALLOWED_HOSTS if h not in ('localhost', '127.0.0.1', '0.0.0.0', '*')
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        f'{scheme}://{host}'
+        for host in dict.fromkeys(_csrf_hosts)  # Reihenfolge erhalten, Duplikate entfernen
+        for scheme in ('https', 'http')
+    ]
 
 # ============================================================================
 # COOKIE SECURITY
@@ -171,8 +206,11 @@ LOGGING['loggers']['btm_audit'] = {
     'propagate': False,
 }
 
+# Zusätzlich 'console': Sicherheitsmeldungen (allen voran DisallowedHost) landen sonst
+# NUR in einer Datei im Container – ein 'docker compose logs web' zeigt sie nicht, was die
+# Fehlersuche bei 400-er Antworten unnötig schwer macht.
 LOGGING['loggers']['django.security'] = {
-    'handlers': ['security_file'],
+    'handlers': ['security_file', 'console'],
     'level': 'WARNING',
     'propagate': False,
 }
