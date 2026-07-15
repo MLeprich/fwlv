@@ -38,7 +38,11 @@ APP_IMAGES="flvs-web:local flvs-celery-worker:local flvs-celery-beat:local"
 # Meldung über auth.docker.io), wird sie hier vorab abgefangen.
 # -----------------------------------------------------------------------------
 echo "[0/3] Prüfe Internetzugang (dieses Skript braucht ihn)..."
-if ! curl -fsS --max-time 8 -o /dev/null https://auth.docker.io 2>/dev/null; then
+# KEIN -f: auth.docker.io antwortet auf ein nacktes GET mit 404 – das ist trotzdem eine
+# Antwort und beweist Erreichbarkeit. -f würde den 404 als Fehler werten und auf einer
+# völlig intakten Internet-Verbindung fälschlich abbrechen. Ohne -f liefert curl nur bei
+# echten Verbindungsproblemen (Timeout/DNS/refused) einen Fehlercode.
+if ! curl -sS --max-time 8 -o /dev/null https://auth.docker.io 2>/dev/null; then
     echo ""
     echo "FEHLER: Docker Hub ist von dieser Maschine aus nicht erreichbar."
     echo ""

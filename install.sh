@@ -208,11 +208,15 @@ check_connectivity() {
         "http://deb.debian.org|Debian-Repos (apt im Build)"
     )
 
+    # KEIN -f: manche dieser Hosts antworten auf ein nacktes GET mit 4xx (z.B.
+    # auth.docker.io -> 404). Das ist trotzdem eine Antwort und beweist Erreichbarkeit.
+    # -f würde sie als Fehler werten und auf intakter Verbindung fälschlich abbrechen.
+    # Ohne -f meldet curl nur echte Verbindungsprobleme (Timeout/DNS/refused).
     local nicht_erreichbar=()
     for eintrag in "${ziele[@]}"; do
         local url="${eintrag%%|*}"
         local name="${eintrag##*|}"
-        if curl -fsS --max-time 8 -o /dev/null "$url" 2>/dev/null; then
+        if curl -sS --max-time 8 -o /dev/null "$url" 2>/dev/null; then
             log_info "  erreichbar: $name"
         else
             log_warn "  NICHT erreichbar: $name"
