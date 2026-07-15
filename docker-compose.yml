@@ -121,6 +121,16 @@ services:
       - db
     networks:
       - flvs-network
+    # Der aus dem Image geerbte HTTP-Healthcheck (GET /health/ auf Port 8000) passt NICHT
+    # zu einem Celery-Worker – der hat keinen Webserver. Ohne Override stünde der Container
+    # dauerhaft auf "unhealthy", obwohl Celery läuft. Stattdessen den Worker über den Broker
+    # anpingen: antwortet er mit "pong", ist er gesund.
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A flvs_project inspect ping | grep -q pong || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
 
   # ---------------------------------------------------------------------------
   # Celery Beat (Scheduled Tasks)
@@ -147,6 +157,12 @@ services:
       - db
     networks:
       - flvs-network
+    # Celery Beat ist kein Worker und lässt sich nicht per "inspect ping" prüfen; einen
+    # Health-Endpunkt hat es nicht. Der geerbte HTTP-Check (Port 8000) passt ebenso wenig.
+    # Deshalb abschalten – der Container zeigt dann ehrlich "Up" statt falsch "unhealthy".
+    # Beat läuft nur mit, restart: unless-stopped fängt ein Abstürzen ohnehin ab.
+    healthcheck:
+      disable: true
 
   # ---------------------------------------------------------------------------
   # Nginx Reverse Proxy

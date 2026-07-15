@@ -81,6 +81,11 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60", 
 # =============================================================================
 FROM production as celery-worker
 
+# Der HTTP-Healthcheck aus der production-Stage (GET /health/ auf Port 8000) passt hier
+# nicht – ein Worker hat keinen Webserver. Stattdessen über den Broker anpingen.
+HEALTHCHECK --interval=60s --timeout=15s --start-period=60s --retries=3 \
+    CMD celery -A flvs_project inspect ping | grep -q pong || exit 1
+
 USER flvs
 CMD ["celery", "-A", "flvs_project", "worker", "--loglevel=info"]
 
@@ -88,6 +93,10 @@ CMD ["celery", "-A", "flvs_project", "worker", "--loglevel=info"]
 # Celery Beat Stage
 # =============================================================================
 FROM production as celery-beat
+
+# Beat ist kein Worker (kein "inspect ping") und hat keinen Health-Endpunkt. Den geerbten
+# HTTP-Healthcheck deaktivieren, damit der Container nicht dauerhaft "unhealthy" zeigt.
+HEALTHCHECK NONE
 
 USER flvs
 CMD ["celery", "-A", "flvs_project", "beat", "--loglevel=info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
