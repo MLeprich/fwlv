@@ -46,6 +46,12 @@ _trust_proxy = os.environ.get('TRUST_PROXY_SSL_HEADER', '').strip()
 TRUST_PROXY_SSL_HEADER = _trust_proxy.lower() in ('true', '1', 'yes', 'on') if _trust_proxy else USE_SSL
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if TRUST_PROXY_SSL_HEADER else None
 
+# Ist die Verbindung ZUM BROWSER verschlüsselt? Entweder terminiert unser eigener nginx
+# das SSL (USE_SSL) oder ein vorgelagerter Reverse-Proxy (TRUST_PROXY_SSL_HEADER). Beides
+# bedeutet: der Browser spricht HTTPS. Daran hängen die Secure-Cookie-Flags weiter unten –
+# hinge das nur an USE_SSL, blieben die Cookies hinter einem TLS-Proxy ungeschützt.
+_BROWSER_HTTPS = USE_SSL or TRUST_PROXY_SSL_HEADER
+
 # CSRF: unter welchen Ursprüngen ist die Anwendung im Browser erreichbar?
 #
 # Django ab 4.0 verlangt für POST-Requests (Login, Formulare) ein Schema in der Liste.
@@ -75,13 +81,13 @@ else:
 # ============================================================================
 
 # Session Cookies
-SESSION_COOKIE_SECURE = USE_SSL  # Nur HTTPS wenn SSL aktiv
+SESSION_COOKIE_SECURE = _BROWSER_HTTPS  # Secure, wenn der Browser HTTPS spricht (auch via Proxy)
 SESSION_COOKIE_HTTPONLY = True  # Kein JavaScript-Zugriff
 SESSION_COOKIE_SAMESITE = 'Strict'  # CSRF-Schutz
 SESSION_COOKIE_AGE = 1209600  # 2 Wochen
 
 # CSRF Cookies
-CSRF_COOKIE_SECURE = USE_SSL  # Nur HTTPS wenn SSL aktiv
+CSRF_COOKIE_SECURE = _BROWSER_HTTPS  # Secure, wenn der Browser HTTPS spricht (auch via Proxy)
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Strict'
 CSRF_COOKIE_AGE = 31449600  # 1 Jahr

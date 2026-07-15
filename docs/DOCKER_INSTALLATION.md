@@ -452,6 +452,60 @@ Nach erfolgreichem Start ist die Anwendung erreichbar unter:
 
 ---
 
+## Betrieb hinter einem Reverse-Proxy (z.B. Stadt-Rechenzentrum)
+
+Der häufigste Fall in Behörden: Ein **vorgelagerter Reverse-Proxy** terminiert das SSL
+(spricht außen HTTPS mit dem Browser) und reicht die Anfragen intern per HTTP an die VM
+weiter. FLVS muss dann *wissen*, dass es hinter einem solchen Proxy läuft – sonst hält es
+jeden Request für unverschlüsselt: die Anmeldung scheitert mit **403 CSRF**, und bei
+aktivem SSL-Redirect entstünde eine Endlosschleife.
+
+### Einrichtung – ein Schalter
+
+Bei der Installation:
+
+```bash
+./install.sh --offline --reverse-proxy --domain fwlager.example.de
+```
+
+`--reverse-proxy` setzt in der `.env`:
+
+```bash
+USE_SSL=false               # unser nginx macht KEIN eigenes SSL
+TRUST_PROXY_SSL_HEADER=true  # Django vertraut dem X-Forwarded-Proto des Proxys
+```
+
+Nachträglich umstellen: diese zwei Zeilen in `/opt/flvs/.env` setzen und
+`docker compose up -d web` ausführen.
+
+### Was der vorgelagerte Proxy senden muss
+
+Damit die Kette funktioniert, muss der Reverse-Proxy des Rechenzentrums beim Weiterleiten
+diese Header setzen:
+
+| Header | Wert | Wofür |
+|--------|------|-------|
+| `Host` | der ursprüngliche Hostname (z.B. `fwlager.example.de`) | muss in `ALLOWED_HOSTS` stehen |
+| `X-Forwarded-Proto` | `https` | damit Django den Request als sicher erkennt |
+| `X-Forwarded-For` | Client-IP | korrekte IP in den Logs (optional) |
+
+Der nginx **im** FLVS-Stack ist bereits darauf vorbereitet: er übernimmt ein vorhandenes
+`X-Forwarded-Proto` des vorgelagerten Proxys, statt es mit dem internen `http` zu
+überschreiben. Am Stack selbst muss dafür nichts angepasst werden.
+
+### Prüfen, ob es ankommt
+
+Der Diagnoselauf zeigt in Abschnitt 7 (`xfp="..."`), welches Protokoll der Proxy meldet:
+
+```bash
+./docker/scripts/diagnose.sh https://fwlager.example.de/
+```
+
+Steht dort `xfp="https"`, ist alles richtig verdrahtet. Ist es leer, setzt der Proxy den
+Header `X-Forwarded-Proto` nicht – das muss dann im Rechenzentrum ergänzt werden.
+
+---
+
 ## SSL/HTTPS Konfiguration
 
 ### Erstinstallation ohne SSL-Zertifikat

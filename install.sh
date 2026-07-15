@@ -26,6 +26,8 @@ ADMIN_PASSWORD=""
 SKIP_DOCKER_INSTALL=false
 OFFLINE=false
 IMAGE_BUNDLE=""
+# Betrieb hinter einem vorgelagerten Reverse-Proxy, der SSL terminiert (z.B. Stadt-RZ).
+REVERSE_PROXY=false
 
 # Pfad des laufenden Skripts (für die Selbstlösch-Prüfung und die Versionsanzeige)
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "$0")"
@@ -355,6 +357,18 @@ create_env_file() {
         ADMIN_EMAIL=${ADMIN_EMAIL:-admin@$DOMAIN}
     fi
 
+    # Reverse-Proxy-Modus: der vorgelagerte Proxy terminiert SSL, unser Stack läuft intern
+    # per HTTP und vertraut dessen X-Forwarded-Proto. Sonst: reines HTTP ohne Proxy.
+    if [[ "$REVERSE_PROXY" == "true" ]]; then
+        USE_SSL=false
+        TRUST_PROXY_SSL_HEADER=true
+        log_info "Reverse-Proxy-Modus: USE_SSL=false, TRUST_PROXY_SSL_HEADER=true"
+        log_info "  -> Der vorgelagerte Proxy MUSS die Header X-Forwarded-Proto: https und Host setzen."
+    else
+        USE_SSL=false
+        TRUST_PROXY_SSL_HEADER=false
+    fi
+
     cat > "$INSTALL_DIR/.env" << EOF
 # =============================================================================
 # FLVS - Automatisch generierte Konfiguration
@@ -381,13 +395,14 @@ CELERY_RESULT_BACKEND=redis://redis:6379/0
 HTTP_PORT=80
 HTTPS_PORT=443
 
-# SSL (false für Erstinstallation ohne Zertifikat, nach SSL-Einrichtung auf true setzen)
-USE_SSL=false
+# SSL: terminiert unser eigener nginx das HTTPS? Bei einem vorgelagerten Reverse-Proxy
+# bleibt das false (der Proxy macht SSL), sonst false bis ein Zertifikat eingerichtet ist.
+USE_SSL=$USE_SSL
 
 # Betrieb hinter einem TLS-terminierenden Proxy (Proxy spricht außen HTTPS, intern HTTP):
-# auf true setzen, damit Django dem X-Forwarded-Proto-Header vertraut. Sonst scheitert die
-# Anmeldung mit "403 CSRF verification failed". Der Proxy muss X-Forwarded-Proto setzen.
-TRUST_PROXY_SSL_HEADER=false
+# true, damit Django dem X-Forwarded-Proto-Header vertraut. Sonst scheitert die Anmeldung
+# mit "403 CSRF verification failed". Der Proxy muss X-Forwarded-Proto: https setzen.
+TRUST_PROXY_SSL_HEADER=$TRUST_PROXY_SSL_HEADER
 
 # CSRF: wird automatisch aus DOMAIN abgeleitet (https und http). Nur setzen, wenn die
 # Anwendung unter weiteren Namen erreichbar ist – kommagetrennt MIT Schema, z.B.:
@@ -591,6 +606,10 @@ while [[ $# -gt 0 ]]; do
             IMAGE_BUNDLE="$2"
             shift 2
             ;;
+        --reverse-proxy)
+            REVERSE_PROXY=true
+            shift
+            ;;
         --help|-h)
             echo "Verwendung: $0 [OPTIONEN]"
             echo ""
@@ -603,6 +622,8 @@ while [[ $# -gt 0 ]]; do
             echo "  --offline             Offline-Modus: Images aus Bundle laden statt bauen"
             echo "                        (Repo muss lokal vorliegen, kein GitHub/Docker-Hub-Zugriff)"
             echo "  --image-bundle PFAD   Pfad zum Image-Bundle (Standard: <install-dir>/flvs-images.tar)"
+            echo "  --reverse-proxy       Betrieb hinter einem SSL-terminierenden Reverse-Proxy"
+            echo "                        (setzt USE_SSL=false, TRUST_PROXY_SSL_HEADER=true)"
             echo "  --help, -h            Diese Hilfe anzeigen"
             exit 0
             ;;
