@@ -137,3 +137,7 @@ sbom-*.json
 CLAUDE.md
 .cursorrules
 .cursor/
+
+# Selbstsigniertes internes TLS (pro Installation erzeugt, siehe enable-internal-https.sh)
+docker/certbot/conf/internal/
+docker/nginx/conf.d/https-internal.conf
