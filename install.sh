@@ -412,6 +412,10 @@ TRUST_PROXY_SSL_HEADER=$TRUST_PROXY_SSL_HEADER
 # Anwendung unter weiteren Namen erreichbar ist – kommagetrennt MIT Schema, z.B.:
 # CSRF_TRUSTED_ORIGINS=https://fwlager.rz.oberhausen.de,https://kurzname
 
+# Brute-Force-Schutz: sperrt ein Konto nach 5 Fehlversuchen für 1 Stunde. In einem
+# abgeschotteten internen Netz ohne Internetzugang kann er deaktiviert werden:
+AXES_ENABLED=true
+
 # Superuser (wird beim ersten Start erstellt)
 CREATE_SUPERUSER=true
 SUPERUSER_USERNAME=admin

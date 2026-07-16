@@ -1,0 +1,44 @@
+{% load static %}<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anmeldung gesperrt | FLVS</title>
+    <link rel="stylesheet" href="{% static 'dist/css/styles.css' %}">
+</head>
+<body class="bg-gradient-to-br from-orange-50 to-yellow-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-2xl w-full text-center">
+
+        <div class="mb-8">
+            <div class="inline-flex items-center justify-center">
+                <div class="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span class="text-5xl">⏳</span>
+                </div>
+            </div>
+        </div>
+
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Anmeldung vorübergehend gesperrt</h1>
+
+        <p class="text-lg text-gray-600 mb-2">
+            Es gab zu viele fehlgeschlagene Anmeldeversuche. Zum Schutz des Kontos ist die
+            Anmeldung für dieses Konto vorübergehend gesperrt.
+        </p>
+        <p class="text-gray-600 mb-8">
+            Die Sperre hebt sich nach <strong>einer Stunde</strong> automatisch auf.
+            Wenn es schneller gehen muss, wende dich an die Administration –
+            sie kann die Sperre sofort zurücksetzen.
+        </p>
+
+        <div class="bg-white rounded-lg shadow p-6 text-left mb-8">
+            <h2 class="font-semibold text-gray-900 mb-2">Für Administratoren</h2>
+            <p class="text-sm text-gray-600 mb-2">Sperren sofort aufheben:</p>
+            <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-sm overflow-x-auto"><code>docker compose exec web python manage.py axes_reset</code></pre>
+        </div>
+
+        <a href="/" class="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+            Zurück zur Startseite
+        </a>
+    </div>
+</body>
+</html>

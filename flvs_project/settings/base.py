@@ -266,11 +266,24 @@ AUTHENTICATION_BACKENDS = (
 # DJANGO AXES (Brute-Force Protection)
 # ============================================================================
 
+# Abschaltbar über die .env (AXES_ENABLED=false) – gedacht für abgeschottete interne
+# Netze ohne Internetzugang (z.B. Stadt-VM), wo eine Login-Sperre mehr Betriebsstörung
+# als Schutz ist. Standard: aktiv. Ein leer durchgereichter Wert (Compose-Default für
+# "nicht gesetzt") zählt als "nicht gesetzt" und lässt den Schutz an.
+_axes_enabled = os.environ.get('AXES_ENABLED', '').strip()
+AXES_ENABLED = _axes_enabled.lower() not in ('false', '0', 'no', 'off') if _axes_enabled else True
+
 AXES_FAILURE_LIMIT = 5  # Anzahl fehlgeschlagene Login-Versuche
 AXES_COOLOFF_TIME = 1  # Stunden bis Reset
 AXES_ENABLE_ACCESS_FAILURE_LOG = True
 AXES_LOCK_OUT_AT_FAILURE = True
 AXES_RESET_ON_SUCCESS = True
+
+# Hinter einem Reverse-Proxy (oder lokalem nginx) sehen alle Clients für Django gleich
+# aus – eine einzige IP. Mit dem axes-Default "Sperre je IP" sperren 5 Fehlversuche von
+# IRGENDWEM sämtliche Nutzer aus. Deshalb je Kombination aus Benutzername UND IP sperren:
+# ein Konto lässt sich weiterhin nicht durchprobieren, aber niemand sperrt alle anderen.
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 
 
 # ============================================================================

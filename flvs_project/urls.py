@@ -20,9 +20,23 @@ def custom_permission_denied_view(request, exception=None):
     return render(request, '403.html', status=403)
 
 
+def locked_out(request):
+    """
+    Sperrseite des Brute-Force-Schutzes (django-axes).
+
+    production.py leitet mit AXES_LOCKOUT_URL hierher – diese URL existierte aber nie,
+    Gesperrte landeten auf einem 404 statt einer Erklärung. Den username-Query-Parameter
+    bewusst NICHT ins Template geben (Nutzereingabe).
+    """
+    return render(request, 'locked.html', status=403)
+
+
 urlpatterns = [
     # Health Check (for Docker)
     path('health/', health_check, name='health_check'),
+
+    # Sperrseite des Brute-Force-Schutzes (AXES_LOCKOUT_URL in production.py)
+    path('locked/', locked_out, name='locked_out'),
 
     # Admin Interface
     path('admin/', admin.site.urls),
