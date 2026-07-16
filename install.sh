@@ -435,24 +435,27 @@ create_directories() {
 
 setup_reverse_proxy_https() {
     # Nur im Reverse-Proxy-Modus: Port 443 gleich beim ersten Start aktivieren, damit ein
-    # Proxy, der das Backend über HTTPS anspricht, sofort verbindet. Liegt noch kein echtes
-    # Zertifikat vor, wird ein selbstsigniertes erzeugt (Fallback) – später über
-    # ./docker/scripts/enable-internal-https.sh --csr durch das Zertifikat der internen CA
-    # ersetzbar. Läuft VOR start_containers, sodass nginx direkt mit aktivem 443 hochkommt.
+    # Proxy, der das Backend über 443 anspricht, sofort verbindet – statt "connection
+    # refused" zu bekommen. Läuft VOR start_containers, nginx kommt direkt mit 443 hoch.
+    #
+    # Standardfall: Der Proxy terminiert SSL vollständig und spricht das Backend
+    # UNVERSCHLÜSSELT an (nur eben auf Port 443) -> Klartext-Listener, KEIN Zertifikat.
+    # Liegt bereits ein Zertifikat unter docker/certbot/conf/internal/ (z.B. vorab
+    # hinterlegt), wird stattdessen TLS mit diesem Zertifikat aktiviert.
     if [[ "$REVERSE_PROXY" != "true" ]]; then
         return 0
     fi
 
     local cert_dir="$INSTALL_DIR/docker/certbot/conf/internal"
     if [[ -f "$cert_dir/fullchain.pem" && -f "$cert_dir/privkey.pem" ]]; then
-        log_info "HTTPS/443: vorhandenes Zertifikat wird verwendet."
+        log_info "Port 443: vorhandenes Zertifikat gefunden -> TLS wird aktiviert."
         "$INSTALL_DIR/docker/scripts/enable-internal-https.sh" >/dev/null 2>&1 || true
     else
-        log_info "HTTPS/443: selbstsigniertes Fallback-Zertifikat wird erzeugt (später ersetzbar)."
-        "$INSTALL_DIR/docker/scripts/enable-internal-https.sh" --self-signed >/dev/null 2>&1 || true
+        log_info "Port 443: Klartext-Listener (Proxy übernimmt die SSL-Terminierung)."
+        "$INSTALL_DIR/docker/scripts/enable-internal-https.sh" --plain >/dev/null 2>&1 || true
     fi
-    log_info "  Port 443 ist ab dem Start aktiv. Echtes Zertifikat einspielen:"
-    log_info "    ./docker/scripts/enable-internal-https.sh --csr   (Antrag an die interne CA)"
+    log_info "  Falls der Proxy doch TLS zum Backend spricht (SSL-Bridging):"
+    log_info "    ./docker/scripts/enable-internal-https.sh --csr   (Zertifikat der internen CA)"
 }
 
 start_containers() {

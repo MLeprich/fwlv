@@ -1,27 +1,25 @@
 #!/bin/bash
 # =============================================================================
-# FLVS - Internes HTTPS (Port 443) für den Betrieb hinter einem Reverse-Proxy
+# FLVS - Port 443 für den Betrieb hinter einem Reverse-Proxy aktivieren
 # =============================================================================
 # Der interne nginx lauscht standardmäßig nur auf Port 80. Spricht der vorgelagerte
-# Reverse-Proxy das Backend über HTTPS/443 an, bekommt er "connection refused".
+# Reverse-Proxy das Backend über Port 443 an, bekommt er "connection refused".
 # Dieses Skript aktiviert einen 443-Server-Block. Port 80 bleibt erhalten.
 #
-# DREI Wege, an das interne Zertifikat zu kommen:
+# WICHTIG zuerst klären: Spricht der Proxy zum Backend TLS oder Klartext?
 #
-#   1) Zertifikat von der internen Stadt-CA (EMPFOHLEN, wenn vorhanden):
-#        ./enable-internal-https.sh --csr        # erzeugt Schlüssel + Antrag (CSR)
-#        # CSR beim Zertifikatsserver einreichen, signiertes Zertifikat als
-#        # docker/certbot/conf/internal/fullchain.pem ablegen, dann:
-#        ./enable-internal-https.sh              # aktiviert 443 mit diesem Zertifikat
-#      Vorteil: Der Proxy vertraut der Stadt-CA -> KEIN "SSL verify off" nötig.
+#   A) Proxy terminiert SSL vollständig und spricht das Backend UNVERSCHLÜSSELT an
+#      (nur eben auf Port 443) -> KEIN Zertifikat nötig:
+#        ./enable-internal-https.sh --plain
 #
-#   2) Fertiges Zertifikat einspielen (z.B. schon zugewiesen bekommen):
-#        ./enable-internal-https.sh --cert /pfad/cert.pem --key /pfad/key.pem
+#   B) Proxy verschlüsselt neu zum Backend (SSL-Bridging) -> Zertifikat nötig:
+#        --csr          Schlüssel + Antrag für die interne CA erzeugen; signiertes
+#                       Zertifikat als docker/certbot/conf/internal/fullchain.pem
+#                       ablegen, dann Skript ohne Option erneut ausführen.
+#        --cert/--key   fertiges Zertifikat einspielen.
+#        --self-signed  Fallback ohne CA (Proxy braucht dann SSL verify off).
 #
-#   3) Selbstsigniert (Fallback, ohne CA):
-#        ./enable-internal-https.sh --self-signed
-#      Der Proxy muss dann die Zertifikatsprüfung fürs Backend deaktivieren.
-#
+# Die Modi ersetzen einander: erneutes Ausführen mit anderer Option wechselt um.
 # Der private Schlüssel verlässt die VM NIE – nur der CSR geht zum Zertifikatsserver.
 # =============================================================================
 
@@ -30,12 +28,13 @@ cd "$(dirname "$0")/../.."
 
 CERT_DIR="docker/certbot/conf/internal"
 CONF_FILE="docker/nginx/conf.d/https-internal.conf"
-MODE=""           # csr | self-signed | (leer = aktivieren mit vorhandenem Zertifikat)
+MODE=""           # plain | csr | self-signed | (leer = aktivieren mit vorhandenem Zertifikat)
 CERT_IN=""
 KEY_IN=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --plain)       MODE="plain"; shift ;;
         --csr)         MODE="csr"; shift ;;
         --self-signed) MODE="self-signed"; shift ;;
         --cert)        CERT_IN="$2"; shift 2 ;;
@@ -52,6 +51,42 @@ DOMAIN="localhost"
 if [[ -f .env ]]; then
     d=$(grep -E '^DOMAIN=' .env | cut -d= -f2- | tr -d '"' | tr -d "'")
     [[ -n "$d" ]] && DOMAIN="$d"
+fi
+
+# ---------------------------------------------------------------------------
+# Modus A: Klartext auf 443 – der Proxy terminiert SSL vollständig, kein Zertifikat
+# ---------------------------------------------------------------------------
+if [[ "$MODE" == "plain" ]]; then
+    echo "[Plain] Aktiviere Port 443 ohne TLS (Proxy übernimmt die SSL-Terminierung)..."
+    cat > "$CONF_FILE" <<'NGINX'
+# =============================================================================
+# FLVS - Port 443 als Klartext-HTTP (Reverse-Proxy terminiert SSL vollständig)
+# Automatisch erzeugt von docker/scripts/enable-internal-https.sh --plain.
+# Der vorgelagerte Proxy spricht das Backend unverschlüsselt an, nutzt dafür aber
+# Port 443. Kein Zertifikat nötig. Für TLS zum Backend: Skript mit --csr/--cert/
+# --self-signed erneut ausführen (ersetzt diese Datei).
+# =============================================================================
+server {
+    listen 443;
+    server_name _;
+    include /etc/nginx/conf.d/app.include;
+}
+NGINX
+    echo "[nginx] Konfiguration prüfen und neu laden..."
+    if docker compose exec -T nginx nginx -t 2>/dev/null; then
+        docker compose exec -T nginx nginx -s reload 2>/dev/null || docker compose restart nginx
+        echo "  nginx neu geladen."
+    else
+        echo "  nginx-Container nicht erreichbar – Konfiguration liegt bereit und wird beim Start aktiv."
+    fi
+    echo ""
+    echo "Fertig. nginx lauscht jetzt auf Port 443 (Klartext-HTTP) und weiterhin auf Port 80."
+    echo ""
+    echo "Der Proxy muss beim Weiterleiten setzen: Host und X-Forwarded-Proto: https."
+    echo ""
+    echo "Prüfen von der VM aus (Klartext, daher http:// trotz Port 443):"
+    echo "  curl -o /dev/null -w '%{http_code}\\n' http://localhost:443/"
+    exit 0
 fi
 
 command -v openssl >/dev/null 2>&1 || { echo "FEHLER: openssl fehlt."; exit 1; }
