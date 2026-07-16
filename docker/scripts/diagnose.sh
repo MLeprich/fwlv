@@ -40,6 +40,70 @@ section "3. Lauscht nginx? (Ports auf dem Host)"
 { ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null; } | grep -E ':(80|443)\b' || echo "  Nichts auf 80/443 – lauscht der nginx-Container?"
 
 # ---------------------------------------------------------------------------
+section "3b. Port 443 im Detail"
+# Welcher Modus ist konfiguriert?
+CONF443="docker/nginx/conf.d/https-internal.conf"
+if [[ -f "$CONF443" ]]; then
+    if grep -qE 'listen 443 ssl' "$CONF443"; then MODE443="tls"; else MODE443="plain"; fi
+    echo "  Konfiguriert: $MODE443  ($CONF443)"
+else
+    MODE443="aus"
+    echo "  KEINE 443-Konfiguration vorhanden – nginx lauscht im Container nur auf 80."
+    echo "  (Der Host-Port 443 ist trotzdem offen: docker-proxy nimmt an, im Container"
+    echo "   verweigert dann aber niemand -> genau das ergibt 'connection refused'.)"
+    echo "  Aktivieren: ./docker/scripts/enable-internal-https.sh --plain"
+fi
+
+# Lauscht der LAUFENDE nginx wirklich auf 443? (nginx -T zeigt die geladene Konfig –
+# eine Datei auf der Platte nützt nichts, wenn nginx nie neu geladen wurde)
+echo "  listen-Direktiven im laufenden nginx:"
+listen_zeilen=$(docker compose exec -T nginx nginx -T 2>/dev/null | grep -E '^\s*listen' | sort -u)
+[[ -n "$listen_zeilen" ]] && echo "$listen_zeilen" | sed 's/^/    /' || echo "    nginx-Container nicht erreichbar."
+if [[ "$MODE443" != "aus" ]]; then
+    if ! docker compose exec -T nginx nginx -T 2>/dev/null | grep -qE '^\s*listen 443'; then
+        echo "    !! 443 ist konfiguriert, aber der laufende nginx kennt es NICHT."
+        echo "    !! -> docker compose restart nginx"
+    fi
+fi
+
+# Beide Protokolle real antesten – die Kombination verrät den Zustand
+pc=$(curl -s  -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:443/  2>/dev/null); pc=${pc:-000}
+tc=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 https://localhost:443/ 2>/dev/null); tc=${tc:-000}
+echo "  Klartext-HTTP gegen 443:  $pc"
+echo "  TLS gegen 443:            $tc"
+case "$MODE443" in
+    plain)
+        [[ "$pc" == 2* || "$pc" == 3* ]] \
+            && echo "  => Klartext OK. Der Proxy muss Protokoll HTTP (nicht HTTPS) zum Backend sprechen." \
+            || echo "  => Klartext antwortet NICHT – nginx-Log unten prüfen (Abschnitt 8) und ggf. restart." ;;
+    tls)
+        [[ "$tc" == 2* || "$tc" == 3* ]] \
+            && echo "  => TLS OK. Der Proxy muss HTTPS zum Backend sprechen." \
+            || echo "  => TLS antwortet NICHT – Zertifikat/Config prüfen (Abschnitt 8)." ;;
+esac
+
+# Spricht der Proxy das falsche Protokoll? TLS-Handshakes auf einem Klartext-Port
+# hinterlassen \x16\x03... im Access-Log.
+if docker compose logs --tail=200 nginx 2>/dev/null | grep -q 'x16.x03'; then
+    echo "  !! Im Log stehen TLS-Handshake-Bytes (\\x16\\x03...) auf dem Klartext-Port:"
+    echo "  !! Der Proxy spricht HTTPS, nginx erwartet dort HTTP. Entweder Proxy auf"
+    echo "  !! Protokoll HTTP stellen oder TLS aktivieren (--csr/--cert/--self-signed)."
+fi
+
+# localhost sagt nichts über den Weg von außen: gegen die eigene externe IP testen.
+# Geht localhost, aber die IP nicht, blockt eine Firewall auf der VM.
+VM_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+if [[ -n "$VM_IP" ]]; then
+    ic=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://$VM_IP:443/" 2>/dev/null); ic=${ic:-000}
+    echo "  Klartext gegen die VM-IP ($VM_IP:443): $ic"
+    if [[ ( "$pc" == 2* || "$pc" == 3* ) && "$ic" == 000 ]]; then
+        echo "  !! localhost geht, die eigene IP nicht -> Host-Firewall blockt 443 von außen."
+        echo "  !! Prüfen: ufw status / nft list ruleset / iptables -S | grep 443"
+    fi
+fi
+command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | head -6 | sed 's/^/  ufw: /'
+
+# ---------------------------------------------------------------------------
 section "4. Zugriff INTERN testen (an nginx vorbei am Proxy)"
 echo "  Erwartung: überall 200 oder 302. Ein 400 hier => das Problem liegt im Stack,"
 echo "  nicht am vorgelagerten Proxy."
