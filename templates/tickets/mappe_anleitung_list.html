@@ -22,7 +22,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto px-6 py-6">
+<div class="max-w-5xl mx-auto px-6 py-6" x-data="{ pdfUrl: null, pdfTitle: '' }">
 
     <!-- Header -->
     <div class="bg-gradient-to-br from-amber-600 to-amber-800 rounded-lg shadow-lg p-6 mb-6 text-white">
@@ -112,10 +112,10 @@
                         <p class="text-sm font-semibold text-gray-900">{{ item.title }}</p>
                         {% if item.content %}<p class="text-xs text-gray-500 truncate">{{ item.content|truncatewords:20 }}</p>{% endif %}
                         {% if item.pdf_datei %}
-                        <a href="{{ item.pdf_datei.url }}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="inline-flex items-center gap-1 mt-1 text-xs font-medium text-red-600 hover:text-red-800">
+                        <button type="button" @click="pdfUrl='{{ item.pdf_datei.url }}'; pdfTitle='{{ item.title|escapejs }}'" class="inline-flex items-center gap-1 mt-1 text-xs font-medium text-red-600 hover:text-red-800">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                             {{ item.pdf_filename }}
-                        </a>
+                        </button>
                         {% endif %}
                     </div>
                     {% if not item.is_active %}
@@ -149,6 +149,24 @@
             <p class="text-xs text-gray-400 mt-1">F&uuml;gen Sie oben die erste Anleitung hinzu.</p>
         </div>
         {% endif %}
+    </div>
+
+    <!-- PDF-Modal -->
+    <div x-show="pdfUrl" x-cloak x-transition.opacity @keydown.escape.window="pdfUrl = null" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.6);" @click.self="pdfUrl = null">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                <h3 class="text-sm font-semibold text-gray-900 truncate pr-4" x-text="pdfTitle"></h3>
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <a :href="pdfUrl" target="_blank" rel="noopener" class="text-xs font-medium text-gray-500 hover:text-gray-700">In neuem Tab &ouml;ffnen</a>
+                    <button type="button" @click="pdfUrl = null" class="text-gray-400 hover:text-gray-700 transition-colors" title="Schlie&szlig;en">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <template x-if="pdfUrl">
+                <iframe :src="pdfUrl" class="flex-1 w-full border-0" title="PDF-Vorschau"></iframe>
+            </template>
+        </div>
     </div>
 </div>
 {% endblock %}

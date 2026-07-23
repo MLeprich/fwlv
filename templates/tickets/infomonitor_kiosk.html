@@ -155,7 +155,7 @@
 </head>
 <body>
 
-<div x-data="{ view: 'dashboard', search: '', gvSelected: null }" class="h-screen flex flex-col p-4 gap-4">
+<div x-data="{ view: 'dashboard', search: '', gvSelected: null, pdfUrl: null, pdfTitle: '' }" class="h-screen flex flex-col p-4 gap-4">
 
     <!-- ==================== HEADER ==================== -->
     <div class="card flex items-center justify-between px-6 py-2.5 rounded-xl flex-shrink-0">
@@ -246,11 +246,11 @@
 
     <!-- ==================== DASHBOARD VIEW ==================== -->
     <template x-if="view === 'dashboard'">
-        <div class="flex-1 grid grid-rows-[1fr_auto_1fr] gap-4 min-h-0">
+        <div class="flex-1 flex flex-col gap-4 min-h-0">
 
             {% if monitor.show_bereitschaft or monitor.show_personal %}
             <!-- ZEILE 1: Bereitschaft + Personal -->
-            <div class="grid grid-cols-2 gap-4 min-h-0">
+            <div class="flex-1 grid grid-cols-2 gap-4 min-h-0">
 
                 {% if monitor.show_bereitschaft %}
                 <!-- BEREITSCHAFT -->
@@ -414,7 +414,7 @@
 
             {% if monitor.show_fahrzeuge or monitor.show_sonstiges %}
             <!-- ZEILE 2: Fahrzeuge + Sonstiges -->
-            <div class="grid grid-cols-2 gap-4 min-h-0">
+            <div class="flex-1 grid grid-cols-2 gap-4 min-h-0">
 
                 {% if monitor.show_fahrzeuge %}
                 <!-- FAHRZEUGE / GER&Auml;TE -->
@@ -623,10 +623,10 @@
                                 <p class="text-base val-secondary whitespace-pre-wrap leading-relaxed">{{ anleitung.content }}</p>
                                 {% endif %}
                                 {% if anleitung.pdf_datei %}
-                                <a href="{{ anleitung.pdf_datei.url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-500 font-medium hover:bg-red-500/20 transition-colors">
+                                <button type="button" @click="pdfUrl = '{{ anleitung.pdf_datei.url }}'; pdfTitle = '{{ anleitung.title|escapejs }}'" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-500 font-medium hover:bg-red-500/20 transition-colors">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                                     PDF &ouml;ffnen &middot; {{ anleitung.pdf_filename }}
-                                </a>
+                                </button>
                                 {% endif %}
                             </div>
                         </div>
@@ -795,6 +795,21 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- PDF-Modal (Anleitungen) -->
+    <template x-teleport="body">
+        <div x-show="pdfUrl" x-transition.opacity class="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-8" style="background: rgba(0,0,0,0.85);" @click.self="pdfUrl = null" @keydown.escape.window="pdfUrl = null">
+            <button @click="pdfUrl = null" class="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors z-10" title="Schlie&szlig;en">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <p class="text-white text-lg font-semibold mb-3 max-w-6xl w-full truncate px-1" x-text="pdfTitle"></p>
+            <div class="w-full max-w-6xl flex-1 min-h-0">
+                <template x-if="pdfUrl">
+                    <iframe :src="pdfUrl" class="w-full h-full rounded-lg bg-white shadow-2xl border-0" title="PDF-Vorschau"></iframe>
+                </template>
+            </div>
+        </div>
+    </template>
 
 </div>
 
