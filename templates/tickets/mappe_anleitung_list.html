@@ -56,7 +56,7 @@
             </h2>
         </div>
         <div class="p-6">
-            <form method="post" action="{% url 'tickets:mappe_anleitung_create' %}" class="space-y-4">
+            <form method="post" action="{% url 'tickets:mappe_anleitung_create' %}" enctype="multipart/form-data" class="space-y-4">
                 {% csrf_token %}
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                     <div class="md:col-span-6">
@@ -75,8 +75,13 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Inhalt *</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Inhalt</label>
                     {{ form.content }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">PDF-Datei (optional)</label>
+                    {{ form.pdf_datei }}
+                    <p class="text-xs text-gray-500 mt-1">Inhalt oder PDF-Datei angeben &ndash; mindestens eines ist erforderlich.</p>
                 </div>
                 <div class="flex justify-end">
                     <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors">
@@ -105,7 +110,13 @@
                     <span class="text-xs text-gray-400 font-mono w-6 text-right flex-shrink-0">{{ item.order }}</span>
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-gray-900">{{ item.title }}</p>
-                        <p class="text-xs text-gray-500 truncate">{{ item.content|truncatewords:20 }}</p>
+                        {% if item.content %}<p class="text-xs text-gray-500 truncate">{{ item.content|truncatewords:20 }}</p>{% endif %}
+                        {% if item.pdf_datei %}
+                        <a href="{{ item.pdf_datei.url }}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="inline-flex items-center gap-1 mt-1 text-xs font-medium text-red-600 hover:text-red-800">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            {{ item.pdf_filename }}
+                        </a>
+                        {% endif %}
                     </div>
                     {% if not item.is_active %}
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 flex-shrink-0">Inaktiv</span>

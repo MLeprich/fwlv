@@ -460,7 +460,14 @@ class MappeKontakt(models.Model):
 class MappeAnleitung(models.Model):
     """Anleitung / Maßnahme für die digitale Mappe der Leitstelle"""
     title = models.CharField(max_length=300, verbose_name=_('Titel'))
-    content = models.TextField(verbose_name=_('Inhalt'))
+    content = models.TextField(blank=True, verbose_name=_('Inhalt'))
+    pdf_datei = models.FileField(
+        upload_to='mappe/anleitungen/%Y/%m/',
+        blank=True,
+        null=True,
+        verbose_name=_('PDF-Datei'),
+        help_text=_('Optionales PDF-Dokument zur Anleitung')
+    )
     is_active = models.BooleanField(default=True, verbose_name=_('Aktiv'))
     order = models.PositiveIntegerField(default=0, verbose_name=_('Reihenfolge'))
 
@@ -471,6 +478,12 @@ class MappeAnleitung(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def pdf_filename(self):
+        """Dateiname des PDFs ohne Pfad."""
+        import os
+        return os.path.basename(self.pdf_datei.name) if self.pdf_datei else ''
 
 
 class FFZugStatus(models.TextChoices):
@@ -670,6 +683,16 @@ class InfoMonitor(models.Model):
     sonstiges_3 = models.TextField(blank=True, verbose_name=_('Sonstiges 3'))
     sonstiges_4 = models.TextField(blank=True, verbose_name=_('Sonstiges 4'))
     sonstiges_5 = models.TextField(blank=True, verbose_name=_('Sonstiges 5'))
+
+    # =========================================================================
+    # SICHTBARKEIT DER KACHELN (Display + Kiosk)
+    # =========================================================================
+    show_bereitschaft = models.BooleanField(default=True, verbose_name=_('Kachel „Bereitschaft“ anzeigen'))
+    show_personal = models.BooleanField(default=True, verbose_name=_('Kachel „Personal“ anzeigen'))
+    show_ff_zuege = models.BooleanField(default=True, verbose_name=_('Kachel „FF Züge“ anzeigen'))
+    show_fahrzeuge = models.BooleanField(default=True, verbose_name=_('Kachel „Fahrzeuge / Geräte“ anzeigen'))
+    show_laufband = models.BooleanField(default=True, verbose_name=_('Kachel „Laufband“ anzeigen'))
+    show_sonstiges = models.BooleanField(default=True, verbose_name=_('Kachel „Sonstiges“ anzeigen'))
 
     # =========================================================================
     # META

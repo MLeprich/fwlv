@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ dashboard.name }} - Großveranstaltungen - FLVS{% endblock %}
+{% block title %}{{ dashboard.name }} - Sonderobjekte und Großveranstaltungen - FLVS{% endblock %}
 
 {% block breadcrumb %}
 <div class="bg-white border-b border-gray-200 px-6 py-3">
@@ -15,7 +15,7 @@
             <li><span class="text-gray-400">/</span></li>
             <li><a href="{% url 'tickets:mappe_overview' %}" class="text-gray-500 hover:text-gray-700">Digitale Mappe</a></li>
             <li><span class="text-gray-400">/</span></li>
-            <li><a href="{% url 'tickets:mappe_dashboard_list' %}" class="text-gray-500 hover:text-gray-700">Gro&szlig;veranstaltungen</a></li>
+            <li><a href="{% url 'tickets:mappe_dashboard_list' %}" class="text-gray-500 hover:text-gray-700">Sonderobjekte und Gro&szlig;veranstaltungen</a></li>
             <li><span class="text-gray-400">/</span></li>
             <li><span class="text-gray-900 font-medium">{{ dashboard.name }}</span></li>
         </ol>

@@ -646,6 +646,15 @@ class InfoMonitorEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
             )
         # FF Züge Felder für Template
         form = context.get('form') or self.get_form()
+        # Sichtbarkeits-Checkboxen für die Kacheln
+        context['visibility_fields'] = [
+            {'label': 'Bereitschaft', 'field': form['show_bereitschaft']},
+            {'label': 'Personal', 'field': form['show_personal']},
+            {'label': 'FF Züge', 'field': form['show_ff_zuege']},
+            {'label': 'Fahrzeuge / Geräte', 'field': form['show_fahrzeuge']},
+            {'label': 'Laufband', 'field': form['show_laufband']},
+            {'label': 'Sonstiges', 'field': form['show_sonstiges']},
+        ]
         context['ff_zug_fields'] = [
             {'label': 'FF Sterkrade', 'field': form['ff_sterkrade_status'], 'fahrzeuge_field': form['ff_sterkrade_fahrzeuge']},
             {'label': 'FF Mitte', 'field': form['ff_mitte_status'], 'fahrzeuge_field': form['ff_mitte_fahrzeuge']},

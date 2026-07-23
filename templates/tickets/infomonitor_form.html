@@ -49,6 +49,28 @@
         <form method="post" class="space-y-6">
             {% csrf_token %}
 
+            <!-- 0. Sichtbarkeit der Kacheln -->
+            <div x-data="{ open: true }">
+                <button type="button" @click="open = !open" class="w-full flex items-center justify-between bg-indigo-50 border border-indigo-200 px-4 py-3 rounded-lg">
+                    <h2 class="text-base font-bold text-indigo-800 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        Sichtbarkeit der Kacheln
+                    </h2>
+                    <svg class="w-5 h-5 text-indigo-600 transform transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="open" x-collapse class="mt-4 px-2">
+                    <p class="text-sm text-gray-600 mb-3">Steuert, welche Kacheln auf dem Info-Monitor (Anzeige und Kiosk-Wandmonitor) angezeigt werden.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {% for vis in visibility_fields %}
+                        <label class="flex items-center gap-3 px-4 py-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            {{ vis.field }}
+                            <span class="text-sm font-medium text-gray-800">{{ vis.label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
             <!-- 1. Bereitschaft -->
             <div x-data="{ open: true }">
                 <button type="button" @click="open = !open" class="w-full flex items-center justify-between bg-amber-50 border border-amber-200 px-4 py-3 rounded-lg">

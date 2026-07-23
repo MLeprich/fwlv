@@ -47,15 +47,15 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
         <!-- Links -->
-        <a href="{% url 'tickets:mappe_link_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6 group">
+        <a href="{% url 'tickets:mappe_link_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6 group overflow-hidden">
             <div class="flex items-center gap-4 mb-4">
-                <div class="bg-blue-100 text-blue-600 p-3 rounded-lg group-hover:bg-blue-200 transition-colors">
+                <div class="bg-blue-100 text-blue-600 p-3 rounded-lg group-hover:bg-blue-200 transition-colors flex-shrink-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                     </svg>
                 </div>
-                <div>
-                    <h2 class="text-lg font-bold text-gray-900">Wichtige Links</h2>
+                <div class="min-w-0">
+                    <h2 class="text-lg font-bold text-gray-900 break-words hyphens-auto" lang="de">Wichtige Links</h2>
                     <p class="text-sm text-gray-500">{{ link_count }} Eintr&auml;ge</p>
                 </div>
             </div>
@@ -63,15 +63,15 @@
         </a>
 
         <!-- Kontakte -->
-        <a href="{% url 'tickets:mappe_kontakt_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6 group">
+        <a href="{% url 'tickets:mappe_kontakt_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6 group overflow-hidden">
             <div class="flex items-center gap-4 mb-4">
-                <div class="bg-green-100 text-green-600 p-3 rounded-lg group-hover:bg-green-200 transition-colors">
+                <div class="bg-green-100 text-green-600 p-3 rounded-lg group-hover:bg-green-200 transition-colors flex-shrink-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
                 </div>
-                <div>
-                    <h2 class="text-lg font-bold text-gray-900">Ansprechpartner</h2>
+                <div class="min-w-0">
+                    <h2 class="text-lg font-bold text-gray-900 break-words hyphens-auto" lang="de">Ansprechpartner</h2>
                     <p class="text-sm text-gray-500">{{ kontakt_count }} Eintr&auml;ge</p>
                 </div>
             </div>
@@ -79,15 +79,15 @@
         </a>
 
         <!-- Anleitungen -->
-        <a href="{% url 'tickets:mappe_anleitung_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6 group">
+        <a href="{% url 'tickets:mappe_anleitung_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6 group overflow-hidden">
             <div class="flex items-center gap-4 mb-4">
-                <div class="bg-amber-100 text-amber-600 p-3 rounded-lg group-hover:bg-amber-200 transition-colors">
+                <div class="bg-amber-100 text-amber-600 p-3 rounded-lg group-hover:bg-amber-200 transition-colors flex-shrink-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
-                <div>
-                    <h2 class="text-lg font-bold text-gray-900">Anleitungen</h2>
+                <div class="min-w-0">
+                    <h2 class="text-lg font-bold text-gray-900 break-words hyphens-auto" lang="de">Anleitungen</h2>
                     <p class="text-sm text-gray-500">{{ anleitung_count }} Eintr&auml;ge</p>
                 </div>
             </div>
@@ -103,11 +103,11 @@
                     </svg>
                 </div>
                 <div class="min-w-0">
-                    <h2 class="text-lg font-bold text-gray-900 break-words hyphens-auto" lang="de">Gro&szlig;veranstaltungen</h2>
+                    <h2 class="text-lg font-bold text-gray-900 break-words hyphens-auto" lang="de">Sonderobjekte und Gro&szlig;veranstaltungen</h2>
                     <p class="text-sm text-gray-500">{{ dashboard_count }} Dashboard{{ dashboard_count|pluralize:"s" }}</p>
                 </div>
             </div>
-            <p class="text-sm text-gray-600">Dashboards f&uuml;r Gro&szlig;veranstaltungen verwalten.</p>
+            <p class="text-sm text-gray-600">Dashboards f&uuml;r Sonderobjekte und Gro&szlig;veranstaltungen verwalten.</p>
         </a>
 
     </div>

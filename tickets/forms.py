@@ -231,6 +231,13 @@ class InfoMonitorForm(forms.ModelForm):
         self.fields['laufband_text'].widget = forms.Textarea(attrs={'class': tw, 'rows': 2, 'placeholder': 'Text für das Laufband...'})
         self.fields['laufband_geschwindigkeit'].widget = forms.NumberInput(attrs={'class': tw, 'min': '5', 'max': '60'})
 
+        # Sichtbarkeits-Checkboxen der Kacheln
+        for vis_field in ['show_bereitschaft', 'show_personal', 'show_ff_zuege',
+                          'show_fahrzeuge', 'show_laufband', 'show_sonstiges']:
+            self.fields[vis_field].widget.attrs.update({
+                'class': 'h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
+            })
+
 
 class InfoMonitorVehicleForm(forms.ModelForm):
     """Formular für einen Fahrzeug-Slot im Info-Monitor"""
@@ -358,13 +365,31 @@ class MappeAnleitungForm(forms.ModelForm):
 
     class Meta:
         model = MappeAnleitung
-        fields = ['title', 'content', 'is_active', 'order']
+        fields = ['title', 'content', 'pdf_datei', 'is_active', 'order']
         widgets = {
             'title': forms.TextInput(attrs={'class': TW, 'placeholder': 'Titel der Anleitung'}),
             'content': forms.Textarea(attrs={'class': TW, 'rows': 6, 'placeholder': 'Inhalt der Anleitung...'}),
+            'pdf_datei': forms.ClearableFileInput(attrs={'class': TW, 'accept': '.pdf,application/pdf'}),
             'is_active': forms.CheckboxInput(attrs={'class': TW_CB}),
             'order': forms.NumberInput(attrs={'class': TW, 'min': 0}),
         }
+
+    def clean_pdf_datei(self):
+        pdf = self.cleaned_data.get('pdf_datei')
+        # Nur bei neuem Upload (UploadedFile) prüfen, nicht bei bestehender Datei
+        if pdf and hasattr(pdf, 'content_type'):
+            name = (pdf.name or '').lower()
+            if not name.endswith('.pdf') or pdf.content_type not in ('application/pdf', 'application/x-pdf', 'application/octet-stream'):
+                raise forms.ValidationError('Bitte eine PDF-Datei hochladen.')
+        return pdf
+
+    def clean(self):
+        cleaned_data = super().clean()
+        content = (cleaned_data.get('content') or '').strip()
+        pdf = cleaned_data.get('pdf_datei')
+        if not content and not pdf:
+            raise forms.ValidationError('Bitte einen Inhalt eingeben oder eine PDF-Datei hochladen.')
+        return cleaned_data
 
 
 class GrossveranstaltungDashboardForm(forms.ModelForm):

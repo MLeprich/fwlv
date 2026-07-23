@@ -67,6 +67,7 @@
         </div>
     </div>
 
+    {% if monitor.show_bereitschaft %}
     <!-- 1. Bereitschaft -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div class="bg-amber-50 border-b border-amber-200 px-6 py-3 rounded-t-lg">
@@ -132,7 +133,9 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
+    {% if monitor.show_personal %}
     <!-- 2. Personal -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div class="bg-green-50 border-b border-green-200 px-6 py-3 rounded-t-lg">
@@ -180,7 +183,9 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
+    {% if monitor.show_ff_zuege %}
     <!-- 3. FF Züge -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div class="bg-orange-50 border-b border-orange-200 px-6 py-3 rounded-t-lg">
@@ -210,7 +215,9 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
+    {% if monitor.show_fahrzeuge %}
     <!-- 4. Fahrzeuge / Geräte -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div class="bg-red-50 border-b border-red-200 px-6 py-3 rounded-t-lg">
@@ -252,8 +259,9 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
-    {% if monitor.laufband_text %}
+    {% if monitor.show_laufband and monitor.laufband_text %}
     <!-- 3b. Laufband -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div class="bg-purple-50 border-b border-purple-200 px-6 py-3 rounded-t-lg">
@@ -275,6 +283,7 @@
     </div>
     {% endif %}
 
+    {% if monitor.show_sonstiges %}
     <!-- 4. Sonstiges -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div class="bg-blue-50 border-b border-blue-200 px-6 py-3 rounded-t-lg">
@@ -299,6 +308,7 @@
             {% endfor %}
         </div>
     </div>
+    {% endif %}
 
     <!-- Zuletzt aktualisiert -->
     <div class="text-center text-sm text-gray-500">
