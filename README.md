@@ -53,8 +53,10 @@ curl -L -o flvs-images.tar \
 Der Offline-Modus greift an keiner Stelle ins Netz: kein Klon, kein `apt`, kein Build.
 Kommt die VM nicht einmal an GitHub, werden Repository und Bundle per `scp`/USB kopiert.
 
-> **`git pull` aktualisiert die Anwendung nicht.** Der Code steckt im Image – ein Update ist
-> immer ein neues Bundle plus der passende Tag.
+> **Updates:** Der Code ist als Bind-Mount (`.:/app`) eingebunden. Code-, Template- und
+> Migrations-Änderungen kommen daher per `git pull` + `./docker/scripts/update-offline.sh`
+> auf die VM – **ohne** Rebuild und **ohne** neues Bundle. Ein neues Image-Bundle ist nur
+> nötig, wenn sich Abhängigkeiten ändern (`requirements.txt`/`Dockerfile`).
 
 Details und Fallstricke: [docs/DOCKER_INSTALLATION.md](docs/DOCKER_INSTALLATION.md#installation-ohne-internet-air-gap--stadt-vm)
 

@@ -288,8 +288,33 @@ noch gar nicht kennt. Dann `git pull` und erneut starten.
 
 ### Updates auf der VM
 
-Ein Update ist immer **ein neues Bundle** – `git pull` allein ändert nichts an der
-laufenden Anwendung, weil der Code im Image steckt (siehe oben).
+Der Code ist als **Bind-Mount** (`- .:/app` bei web/celery in der `docker-compose.yml`)
+eingebunden. Dadurch gibt es **zwei** Update-Wege – je nachdem, was sich geändert hat.
+
+#### A) Code, Templates, Migrationen (der Normalfall) – ohne Bundle, ohne Build
+
+`git pull` + Neustart genügt, weil der laufende Container den Code direkt aus dem
+Repository liest:
+
+```bash
+cd /opt/flvs
+./docker/scripts/update-offline.sh
+```
+
+Das Skript macht: **DB-Backup → `git pull origin main` → Container-Neustart** (lädt den
+neuen Code) **→ `migrate`**. Einziger Netzzugriff ist `git pull` (GitHub über den Proxy),
+kein Docker Hub / PyPI / apt.
+
+> **Voraussetzung:** Der Bind-Mount `- .:/app` steht in der `docker-compose.yml` (ab
+> diesem Stand vorhanden). Hat eine ältere VM ihn noch nicht, einmalig `git pull` und
+> `docker compose up -d` – danach greift der Bind-Mount.
+>
+> ⚠️ **Nicht** `docker/scripts/update.sh` verwenden – das ruft intern `docker compose build`
+> auf und scheitert im abgeschotteten Netz.
+
+#### B) Neue Abhängigkeiten (`requirements.txt` oder `Dockerfile`) – neues Bundle
+
+Nur wenn sich pip-Pakete oder OS-Pakete ändern, wird ein neues Image gebraucht:
 
 ```bash
 cd /opt/flvs
@@ -309,8 +334,8 @@ docker compose exec web python manage.py migrate
 ```
 
 > Der Tag beim `git checkout` und der Tag des Bundles müssen **derselbe** sein. Sonst
-> laufen die Container mit dem Code aus dem Image, während `docker-compose.yml` und die
-> nginx-Konfiguration von einem anderen Stand stammen.
+> laufen die Container mit einem Image, dessen Abhängigkeiten nicht zu `docker-compose.yml`
+> und der nginx-Konfiguration des ausgecheckten Stands passen.
 
 ---
 
@@ -624,10 +649,15 @@ cat backup.sql | docker compose exec -T db psql -U flvs flvs
 
 ## Updates
 
+> **Abgeschottete VM (Air-Gap)?** Dieser Abschnitt gilt für Hosts **mit** Internetzugang.
+> `update.sh` und `docker compose build` brauchen Docker Hub / PyPI / apt. Auf einer
+> abgeschotteten VM stattdessen `./docker/scripts/update-offline.sh` verwenden – siehe
+> [Updates auf der VM](#updates-auf-der-vm).
+
 ### Schnelles Update mit Script
 
 ```bash
-# Automatisches Update mit Backup
+# Automatisches Update mit Backup (baut Images neu – braucht Internet)
 ./docker/scripts/update.sh
 ```
 
@@ -672,7 +702,9 @@ Im Verzeichnis `docker/scripts/` befinden sich folgende Hilfsskripte:
 | `init-ssl.sh` | SSL-Zertifikat mit Let's Encrypt | `./docker/scripts/init-ssl.sh domain.de email@domain.de` |
 | `backup.sh` | Manuelles Datenbank-Backup | `docker compose exec backup /backup.sh` |
 | `restore-backup.sh` | Backup wiederherstellen | `docker compose exec web ./docker/scripts/restore-backup.sh backup_file.sql.gz` |
-| `update.sh` | System aktualisieren | `./docker/scripts/update.sh` |
+| `update.sh` | System aktualisieren (**baut neu – braucht Internet**) | `./docker/scripts/update.sh` |
+| `update-offline.sh` | Offline-Update ohne Build (Bind-Mount): Backup → git pull → restart → migrate. Für abgeschottete VMs | `./docker/scripts/update-offline.sh` |
+| `build-offline-bundle.sh` | Image-Bundle bauen (auf Internet-Maschine) für Air-Gap-Installationen | `./docker/scripts/build-offline-bundle.sh` |
 
 ### Datenbank-Initialisierung
 
