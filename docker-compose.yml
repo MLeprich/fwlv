@@ -55,6 +55,12 @@ services:
     container_name: flvs-web
     restart: unless-stopped
     volumes:
+      # Code-Bind-Mount: Host-Repo liegt direkt im Container. Dadurch greifen
+      # Code-, Template- und Migrations-Änderungen nach `git pull` + restart OHNE
+      # Image-Rebuild – wichtig im abgeschotteten Netz ohne Docker-Hub/PyPI/apt.
+      # Die benannten Volumes darunter überlagern ihre Unterordner weiterhin.
+      # (Nur ein Rebuild nötig, wenn sich requirements.txt oder das Dockerfile ändern.)
+      - .:/app
       - static_files:/app/staticfiles
       - media_files:/app/media
       - log_files:/app/logs
@@ -107,6 +113,8 @@ services:
     container_name: flvs-celery-worker
     restart: unless-stopped
     volumes:
+      # Code-Bind-Mount (siehe web) – Worker läuft denselben App-Code.
+      - .:/app
       - media_files:/app/media
       - log_files:/app/logs
     environment:
@@ -144,6 +152,8 @@ services:
     container_name: flvs-celery-beat
     restart: unless-stopped
     volumes:
+      # Code-Bind-Mount (siehe web) – Beat läuft denselben App-Code.
+      - .:/app
       - log_files:/app/logs
     environment:
       - DJANGO_SETTINGS_MODULE=flvs_project.settings.production
