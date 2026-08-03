@@ -74,9 +74,12 @@ echo -e "${GREEN}  ✓ $CURRENT → $NEW${NC}"
 # ---------------------------------------------------------------------------
 # 3) Container neu starten -> lädt den neuen Code aus dem Bind-Mount.
 #    Der web-Entrypoint führt dabei automatisch migrate + collectstatic aus.
+#    nginx wird mit neu gestartet: löst 'web' beim Start neu auf. Wurde der
+#    web-Container zwischenzeitlich neu ERSTELLT (neue IP, z.B. durch ein
+#    'docker compose up -d'), zeigt nginx sonst auf die alte IP -> 502.
 # ---------------------------------------------------------------------------
 echo -e "\n${BLUE}[4/6]${NC} Starte Container neu (lädt neuen Code)..."
-docker compose restart web celery-worker celery-beat
+docker compose restart web celery-worker celery-beat nginx
 echo -e "${GREEN}  ✓ Neustart ausgelöst${NC}"
 
 # ---------------------------------------------------------------------------
