@@ -375,11 +375,17 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Ergänzung</label>
-                            {{ form.personal_fw1_ergaenzung }}
+                            <label class="flex items-center gap-2 mt-1 cursor-pointer">
+                                {{ form.personal_fw1_ergaenzung }}
+                                <span class="text-xs font-medium text-gray-700">vorhanden</span>
+                            </label>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">LZ RTW</label>
-                            {{ form.personal_fw1_5_rtw }}
+                            <label class="flex items-center gap-2 mt-1 cursor-pointer">
+                                {{ form.personal_fw1_5_rtw }}
+                                <span class="text-xs font-medium text-gray-700">Verfügbar</span>
+                            </label>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Taucher</label>
@@ -402,11 +408,17 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Ergänzung</label>
-                            {{ form.personal_fw2_ergaenzung }}
+                            <label class="flex items-center gap-2 mt-1 cursor-pointer">
+                                {{ form.personal_fw2_ergaenzung }}
+                                <span class="text-xs font-medium text-gray-700">vorhanden</span>
+                            </label>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">LZ RTW</label>
-                            {{ form.personal_fw2_5_rtw }}
+                            <label class="flex items-center gap-2 mt-1 cursor-pointer">
+                                {{ form.personal_fw2_5_rtw }}
+                                <span class="text-xs font-medium text-gray-700">Verfügbar</span>
+                            </label>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Taucher</label>
@@ -441,19 +453,17 @@
                     <svg class="w-5 h-5 text-orange-600 transform transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
                 <div x-show="open" x-collapse class="mt-4 px-2">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {% for ff_field in ff_zug_fields %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% for z in ff_zuege %}
                         <div class="bg-gray-50 rounded-lg p-4">
-                            <p class="text-sm font-semibold text-gray-700 mb-3">{{ ff_field.label }}</p>
+                            <p class="text-sm font-semibold text-gray-700 mb-3">{{ z.label }}</p>
                             <div class="space-y-2">
-                                {% for radio in ff_field.field %}
+                                {% for radio in z.status_field %}
                                 <label class="flex items-center gap-3 cursor-pointer px-3 py-2 rounded-lg transition-colors hover:bg-gray-100">
                                     {{ radio.tag }}
                                     <span class="flex items-center gap-2 text-sm font-medium">
                                         {% if radio.data.value == 'einsatzbereit' %}
                                         <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
-                                        {% elif radio.data.value == 'im_anmarsch' %}
-                                        <span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span>
                                         {% else %}
                                         <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
                                         {% endif %}
@@ -463,8 +473,27 @@
                                 {% endfor %}
                             </div>
                             <div class="mt-3">
-                                <label class="block text-xs font-medium text-gray-500 mb-1">Fahrzeuge</label>
-                                {{ ff_field.fahrzeuge_field }}
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-xs font-medium text-gray-500">Fahrzeuge</label>
+                                    <span class="text-xs text-gray-400">Fahrzeug · Stärke</span>
+                                </div>
+                                {{ z.formset.management_form }}
+                                <div id="ff-rows-{{ z.key }}" class="space-y-2">
+                                    {% for ff in z.formset %}
+                                    <div class="ff-row flex items-center gap-2">
+                                        <div class="hidden">{{ ff.id }}{{ ff.position }}{{ ff.DELETE }}</div>
+                                        <div class="flex-1 min-w-0">{{ ff.fahrzeug }}</div>
+                                        <div class="w-24 flex-shrink-0">{{ ff.staerke }}</div>
+                                        <button type="button" onclick="removeFFRow(this)" class="px-2 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0" title="Entfernen">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                                        </button>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <button type="button" onclick="addFFRow('{{ z.key }}')" class="mt-2 flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    Fahrzeug hinzuf&uuml;gen
+                                </button>
                             </div>
                         </div>
                         {% endfor %}
@@ -654,6 +683,35 @@
             </div>
         </form>
         <script>
+        // === FF-Fahrzeuge dynamisch (pro Zug) ===
+        function removeFFRow(btn) {
+            const row = btn.closest('.ff-row');
+            const del = row.querySelector('input[type=checkbox][name$="-DELETE"]');
+            if (del) { del.checked = true; row.style.display = 'none'; }
+            else { row.remove(); }
+        }
+        function addFFRow(zug) {
+            const container = document.getElementById('ff-rows-' + zug);
+            const total = document.getElementById('id_ff_' + zug + '-TOTAL_FORMS');
+            const idx = parseInt(total.value);
+            const tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
+            const div = document.createElement('div');
+            div.className = 'ff-row flex items-center gap-2';
+            div.innerHTML = `
+                <div class="hidden">
+                    <input type="hidden" name="ff_${zug}-${idx}-id" id="id_ff_${zug}-${idx}-id" value="">
+                    <input type="hidden" name="ff_${zug}-${idx}-position" id="id_ff_${zug}-${idx}-position" value="${idx}">
+                    <input type="checkbox" name="ff_${zug}-${idx}-DELETE" id="id_ff_${zug}-${idx}-DELETE">
+                </div>
+                <div class="flex-1 min-w-0"><input type="text" name="ff_${zug}-${idx}-fahrzeug" id="id_ff_${zug}-${idx}-fahrzeug" class="${tw}" placeholder="Fahrzeug (z.B. 5HLF20-1)"></div>
+                <div class="w-24 flex-shrink-0"><input type="text" name="ff_${zug}-${idx}-staerke" id="id_ff_${zug}-${idx}-staerke" class="${tw}" placeholder="St&auml;rke"></div>
+                <button type="button" onclick="removeFFRow(this)" class="px-2 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0" title="Entfernen">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                </button>`;
+            container.appendChild(div);
+            total.value = idx + 1;
+        }
+
         function removeVehicleRow(btn) {
             const row = btn.closest('.vehicle-row');
             // If it has an existing DB id, mark for deletion and hide

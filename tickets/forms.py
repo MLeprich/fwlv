@@ -10,7 +10,8 @@ from django.forms import ClearableFileInput, inlineformset_factory
 from .models import (Ticket, TicketComment, TicketImage, CommentImage, TicketStatus, TicketPriority,
                       TicketCategory, InfoMonitor, InfoMonitorVehicle, InfoMonitorSonstiges,
                       BereitschaftPerson, BereitschaftPool, MappeLink, MappeKontakt,
-                      MappeAnleitung, GrossveranstaltungDashboard, GrossveranstaltungAbschnitt)
+                      MappeAnleitung, GrossveranstaltungDashboard, GrossveranstaltungAbschnitt,
+                      InfoMonitorFFFahrzeug)
 
 User = get_user_model()
 
@@ -295,6 +296,37 @@ InfoMonitorSonstigesFormSet = inlineformset_factory(
     extra=1,
     can_delete=True,
 )
+
+
+class InfoMonitorFFFahrzeugForm(forms.ModelForm):
+    """Formular für ein FF-Fahrzeug (Fahrzeug + Freitext-Stärke)."""
+
+    class Meta:
+        model = InfoMonitorFFFahrzeug
+        fields = ['fahrzeug', 'staerke', 'position']
+        widgets = {
+            'position': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
+        self.fields['fahrzeug'].widget.attrs.update({'class': tw, 'placeholder': 'Fahrzeug (z.B. 5HLF20-1)'})
+        self.fields['staerke'].widget.attrs.update({'class': tw, 'placeholder': 'Stärke (z.B. 1/8)'})
+
+
+def make_ff_fahrzeug_formset():
+    """inline-Formset für FF-Fahrzeuge (pro Zug separat instanziiert)."""
+    return inlineformset_factory(
+        InfoMonitor,
+        InfoMonitorFFFahrzeug,
+        form=InfoMonitorFFFahrzeugForm,
+        extra=0,
+        can_delete=True,
+    )
+
+
+InfoMonitorFFFahrzeugFormSet = make_ff_fahrzeug_formset()
 
 
 class BereitschaftPersonForm(forms.ModelForm):

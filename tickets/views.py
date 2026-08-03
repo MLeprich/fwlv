@@ -606,11 +606,14 @@ class InfoMonitorDisplayView(LoginRequiredMixin, UserPassesTestMixin, DetailView
         ).order_by('position')
         context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
         # FF Züge
+        _ffv = list(self.object.ff_fahrzeuge.all())
+        def _veh(z, _l=_ffv):
+            return [{'fahrzeug': v.fahrzeug, 'staerke': v.staerke} for v in _l if v.zug == z]
         context['ff_zuege'] = [
-            {'name': 'FF Sterkrade', 'status': self.object.ff_sterkrade_status, 'label': self.object.get_ff_sterkrade_status_display(), 'fahrzeuge': self.object.ff_sterkrade_fahrzeuge},
-            {'name': 'FF Mitte', 'status': self.object.ff_mitte_status, 'label': self.object.get_ff_mitte_status_display(), 'fahrzeuge': self.object.ff_mitte_fahrzeuge},
-            {'name': 'FF S\u00fcd', 'status': self.object.ff_sued_status, 'label': self.object.get_ff_sued_status_display(), 'fahrzeuge': self.object.ff_sued_fahrzeuge},
-            {'name': 'FF K\u00d6', 'status': self.object.ff_koe_status, 'label': self.object.get_ff_koe_status_display(), 'fahrzeuge': self.object.ff_koe_fahrzeuge},
+            {'name': 'FF Sterkrade', 'status': self.object.ff_sterkrade_status, 'label': self.object.get_ff_sterkrade_status_display(), 'fahrzeuge': _veh('sterkrade')},
+            {'name': 'FF Mitte', 'status': self.object.ff_mitte_status, 'label': self.object.get_ff_mitte_status_display(), 'fahrzeuge': _veh('mitte')},
+            {'name': 'FF S\u00fcd', 'status': self.object.ff_sued_status, 'label': self.object.get_ff_sued_status_display(), 'fahrzeuge': _veh('sued')},
+            {'name': 'FF K\u00d6', 'status': self.object.ff_koe_status, 'label': self.object.get_ff_koe_status_display(), 'fahrzeuge': _veh('koe')},
         ]
         return context
 
@@ -655,26 +658,44 @@ class InfoMonitorEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
             {'label': 'Laufband', 'field': form['show_laufband']},
             {'label': 'Sonstiges', 'field': form['show_sonstiges']},
         ]
-        context['ff_zug_fields'] = [
-            {'label': 'FF Sterkrade', 'field': form['ff_sterkrade_status'], 'fahrzeuge_field': form['ff_sterkrade_fahrzeuge']},
-            {'label': 'FF Mitte', 'field': form['ff_mitte_status'], 'fahrzeuge_field': form['ff_mitte_fahrzeuge']},
-            {'label': 'FF S\u00fcd', 'field': form['ff_sued_status'], 'fahrzeuge_field': form['ff_sued_fahrzeuge']},
-            {'label': 'FF K\u00d6', 'field': form['ff_koe_status'], 'fahrzeuge_field': form['ff_koe_fahrzeuge']},
-        ]
+        # FF Z\u00fcge: Status-Radio + dynamisches Fahrzeug-Formset pro Zug
+        from .forms import InfoMonitorFFFahrzeugFormSet
+        ff_zuege = []
+        _zuege = [('sterkrade', 'FF Sterkrade'), ('mitte', 'FF Mitte'), ('sued', 'FF S\u00fcd'), ('koe', 'FF K\u00d6')]
+        for key, label in _zuege:
+            prefix = f'ff_{key}'
+            qs = self.object.ff_fahrzeuge.filter(zug=key)
+            if self.request.POST:
+                fs = InfoMonitorFFFahrzeugFormSet(self.request.POST, instance=self.object, prefix=prefix, queryset=qs)
+            else:
+                fs = InfoMonitorFFFahrzeugFormSet(instance=self.object, prefix=prefix, queryset=qs)
+            ff_zuege.append({'key': key, 'label': label, 'status_field': form[f'ff_{key}_status'], 'formset': fs})
+        context['ff_zuege'] = ff_zuege
         return context
 
     def form_valid(self, form):
         context = self.get_context_data()
         vehicle_formset = context['vehicle_formset']
         sonstiges_formset = context['sonstiges_formset']
+        ff_zuege = context['ff_zuege']
+        ff_valid = all(z['formset'].is_valid() for z in ff_zuege)
 
-        if vehicle_formset.is_valid() and sonstiges_formset.is_valid():
+        if vehicle_formset.is_valid() and sonstiges_formset.is_valid() and ff_valid:
             form.instance.updated_by = self.request.user
             self.object = form.save()
             vehicle_formset.instance = self.object
             vehicle_formset.save()
             sonstiges_formset.instance = self.object
             sonstiges_formset.save()
+            for z in ff_zuege:
+                fs = z['formset']
+                fs.instance = self.object
+                for obj in fs.save(commit=False):
+                    obj.monitor = self.object
+                    obj.zug = z['key']
+                    obj.save()
+                for obj in fs.deleted_objects:
+                    obj.delete()
             from django.core.cache import cache
             cache.delete('infomonitor')
             messages.success(self.request, 'Info-Monitor wurde aktualisiert.')
@@ -710,11 +731,14 @@ class InfoMonitorKioskView(DetailView):
         context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
         # FF Züge für Kiosk-Ansicht
         from .models import FFZugStatus
+        _ffv = list(self.object.ff_fahrzeuge.all())
+        def _veh(z, _l=_ffv):
+            return [{'fahrzeug': v.fahrzeug, 'staerke': v.staerke} for v in _l if v.zug == z]
         context['ff_zuege'] = [
-            {'name': 'FF Sterkrade', 'status': self.object.ff_sterkrade_status, 'label': self.object.get_ff_sterkrade_status_display(), 'fahrzeuge': self.object.ff_sterkrade_fahrzeuge},
-            {'name': 'FF Mitte', 'status': self.object.ff_mitte_status, 'label': self.object.get_ff_mitte_status_display(), 'fahrzeuge': self.object.ff_mitte_fahrzeuge},
-            {'name': 'FF S\u00fcd', 'status': self.object.ff_sued_status, 'label': self.object.get_ff_sued_status_display(), 'fahrzeuge': self.object.ff_sued_fahrzeuge},
-            {'name': 'FF K\u00d6', 'status': self.object.ff_koe_status, 'label': self.object.get_ff_koe_status_display(), 'fahrzeuge': self.object.ff_koe_fahrzeuge},
+            {'name': 'FF Sterkrade', 'status': self.object.ff_sterkrade_status, 'label': self.object.get_ff_sterkrade_status_display(), 'fahrzeuge': _veh('sterkrade')},
+            {'name': 'FF Mitte', 'status': self.object.ff_mitte_status, 'label': self.object.get_ff_mitte_status_display(), 'fahrzeuge': _veh('mitte')},
+            {'name': 'FF S\u00fcd', 'status': self.object.ff_sued_status, 'label': self.object.get_ff_sued_status_display(), 'fahrzeuge': _veh('sued')},
+            {'name': 'FF K\u00d6', 'status': self.object.ff_koe_status, 'label': self.object.get_ff_koe_status_display(), 'fahrzeuge': _veh('koe')},
         ]
         context['FFZugStatus'] = FFZugStatus
         return context

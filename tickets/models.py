@@ -488,7 +488,6 @@ class MappeAnleitung(models.Model):
 
 class FFZugStatus(models.TextChoices):
     EINSATZBEREIT = 'einsatzbereit', _('Einsatzbereit')
-    IM_ANMARSCH = 'im_anmarsch', _('Im Anmarsch')
     NICHT_EINSATZBEREIT = 'nicht_einsatzbereit', _('Nicht Einsatzbereit')
 
 
@@ -592,16 +591,16 @@ class InfoMonitor(models.Model):
     # =========================================================================
     personal_fw1_loeschzug = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Löschzug'))
     personal_fw1_gal_hlf = models.BooleanField(default=False, verbose_name=_('FW1 GAL-HLF'))
-    personal_fw1_ergaenzung = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Ergänzung'))
-    personal_fw1_5_rtw = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 RTW'))
+    personal_fw1_ergaenzung = models.BooleanField(default=False, verbose_name=_('FW1 Ergänzung'))
+    personal_fw1_5_rtw = models.BooleanField(default=False, verbose_name=_('FW1 LZ RTW verfügbar'))
     personal_fw1_taucher = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Taucher'))
     personal_fw1_hoehenretter = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Höhenretter'))
 
     # PERSONAL – FW2
     personal_fw2_loeschzug = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Löschzug'))
     personal_fw2_gal_hlf = models.BooleanField(default=False, verbose_name=_('FW2 GAL-HLF'))
-    personal_fw2_ergaenzung = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Ergänzung'))
-    personal_fw2_5_rtw = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 RTW'))
+    personal_fw2_ergaenzung = models.BooleanField(default=False, verbose_name=_('FW2 Ergänzung'))
+    personal_fw2_5_rtw = models.BooleanField(default=False, verbose_name=_('FW2 LZ RTW verfügbar'))
     personal_fw2_taucher = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Taucher'))
     personal_fw2_hoehenretter = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Höhenretter'))
 
@@ -618,19 +617,11 @@ class InfoMonitor(models.Model):
         default=FFZugStatus.EINSATZBEREIT,
         verbose_name=_('FF Sterkrade')
     )
-    ff_sterkrade_fahrzeuge = models.CharField(
-        max_length=200, blank=True, default='',
-        verbose_name=_('FF Sterkrade Fahrzeuge')
-    )
     ff_mitte_status = models.CharField(
         max_length=25,
         choices=FFZugStatus.choices,
         default=FFZugStatus.EINSATZBEREIT,
         verbose_name=_('FF Mitte')
-    )
-    ff_mitte_fahrzeuge = models.CharField(
-        max_length=200, blank=True, default='',
-        verbose_name=_('FF Mitte Fahrzeuge')
     )
     ff_sued_status = models.CharField(
         max_length=25,
@@ -638,19 +629,11 @@ class InfoMonitor(models.Model):
         default=FFZugStatus.EINSATZBEREIT,
         verbose_name=_('FF Süd')
     )
-    ff_sued_fahrzeuge = models.CharField(
-        max_length=200, blank=True, default='',
-        verbose_name=_('FF Süd Fahrzeuge')
-    )
     ff_koe_status = models.CharField(
         max_length=25,
         choices=FFZugStatus.choices,
         default=FFZugStatus.EINSATZBEREIT,
         verbose_name=_('FF KÖ')
-    )
-    ff_koe_fahrzeuge = models.CharField(
-        max_length=200, blank=True, default='',
-        verbose_name=_('FF KÖ Fahrzeuge')
     )
 
     # =========================================================================
@@ -838,6 +821,64 @@ class InfoMonitorSonstiges(models.Model):
 
     def __str__(self):
         return f'Sonstiges {self.position + 1}: {self.text[:50]}' if self.text else f'Sonstiges {self.position + 1}'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        cache.delete('infomonitor')
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        cache.delete('infomonitor')
+
+
+class FFZug(models.TextChoices):
+    """Die vier festen FF-Züge."""
+    STERKRADE = 'sterkrade', _('FF Sterkrade')
+    MITTE = 'mitte', _('FF Mitte')
+    SUED = 'sued', _('FF Süd')
+    KOE = 'koe', _('FF KÖ')
+
+
+class InfoMonitorFFFahrzeug(models.Model):
+    """
+    Einzelnes Fahrzeug eines FF-Zugs im Info-Monitor, mit Freitext-Stärke.
+    Pro Zug beliebig viele Einträge (dynamisch hinzufügbar).
+    """
+    monitor = models.ForeignKey(
+        InfoMonitor,
+        on_delete=models.CASCADE,
+        related_name='ff_fahrzeuge',
+        verbose_name=_('Info-Monitor')
+    )
+    zug = models.CharField(
+        max_length=20,
+        choices=FFZug.choices,
+        verbose_name=_('Zug')
+    )
+    fahrzeug = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        verbose_name=_('Fahrzeug')
+    )
+    staerke = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        verbose_name=_('Fahrzeugstärke')
+    )
+    position = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Position')
+    )
+
+    class Meta:
+        verbose_name = _('Info-Monitor FF-Fahrzeug')
+        verbose_name_plural = _('Info-Monitor FF-Fahrzeuge')
+        ordering = ['zug', 'position']
+
+    def __str__(self):
+        return f'{self.get_zug_display()}: {self.fahrzeug or "—"}'
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
