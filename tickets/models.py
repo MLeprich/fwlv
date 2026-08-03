@@ -748,18 +748,16 @@ class InfoMonitorVehicle(models.Model):
         related_name='monitor_vehicles',
         verbose_name=_('Info-Monitor')
     )
-    fahrzeug_ad = models.ForeignKey(
-        'vehicles.Vehicle',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='+',
+    fahrzeug_ad = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
         verbose_name=_('Außer Dienst')
     )
-    ersetzt_mit = models.ForeignKey(
-        'vehicles.Vehicle',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='+',
+    ersetzt_mit = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
         verbose_name=_('Ersatz')
     )
     bemerkung = models.CharField(

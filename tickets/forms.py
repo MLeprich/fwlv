@@ -252,13 +252,9 @@ class InfoMonitorVehicleForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from vehicles.models import Vehicle
         tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
-        vehicle_qs = Vehicle.objects.filter(is_active=True).order_by('name')
-        self.fields['fahrzeug_ad'].queryset = vehicle_qs
-        self.fields['fahrzeug_ad'].widget.attrs.update({'class': tw})
-        self.fields['ersetzt_mit'].queryset = vehicle_qs
-        self.fields['ersetzt_mit'].widget.attrs.update({'class': tw})
+        self.fields['fahrzeug_ad'].widget.attrs.update({'class': tw, 'placeholder': 'Fahrzeug außer Dienst'})
+        self.fields['ersetzt_mit'].widget.attrs.update({'class': tw, 'placeholder': 'Ersatzfahrzeug'})
         self.fields['bemerkung'].widget.attrs.update({'class': tw, 'placeholder': 'Bemerkung...'})
 
 
