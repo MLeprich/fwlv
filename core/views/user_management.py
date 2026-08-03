@@ -621,6 +621,10 @@ def _map_user_columns(header):
             col['email'] = idx
         elif 'personalnummer' in n or n == 'pn':
             col['personnel_number'] = idx
+        elif 'ticket' in n and ('erstell' in n or 'anleg' in n):
+            col['ticket_create'] = idx
+        elif 'ticket' in n and ('bearbeit' in n or 'process' in n):
+            col['ticket_process'] = idx
         elif 'rolle' in n:
             col['roles'] = idx
         elif n in ('aktiv', 'active', 'status'):
@@ -652,8 +656,9 @@ def user_import_template(request):
         '# Benutzer-Rollen: kommagetrennt, exakt wie hier gelistet:',
         '# ' + ', '.join(roles),
         '# Aktiv: Ja/Nein (Standard: Ja). Zeilen mit # werden ignoriert.',
-        'Benutzername;Vorname;Nachname;E-Mail;Personalnummer;Benutzer-Rollen;Aktiv',
-        ';Max;Mustermann;max.mustermann@example.com;12345;Standard-Nutzer;Ja',
+        '# Ticket erstellen / Ticket bearbeiten: Ja/Nein – Einzelberechtigungen (keine Rolle).',
+        'Benutzername;Vorname;Nachname;E-Mail;Personalnummer;Benutzer-Rollen;Aktiv;Ticket erstellen;Ticket bearbeiten',
+        ';Max;Mustermann;max.mustermann@example.com;12345;Standard-Nutzer;Ja;Ja;Nein',
     ]
     body = '﻿' + '\r\n'.join(lines) + '\r\n'
     resp = HttpResponse(body, content_type='text/csv; charset=utf-8')
@@ -729,6 +734,8 @@ def user_import_validate(request):
                 row_errors.append(f'Personalnummer „{pn}" bereits vergeben')
 
         active = _parse_bool(get('active'), default=True)
+        ticket_create = _parse_bool(get('ticket_create'), default=False)
+        ticket_process = _parse_bool(get('ticket_process'), default=False)
 
         if not row_errors:
             taken.add(username)
@@ -743,6 +750,8 @@ def user_import_validate(request):
             'personnel_number': pn,
             'roles': role_names,
             'active': active,
+            'ticket_create': ticket_create,
+            'ticket_process': ticket_process,
             'errors': row_errors,
         })
 
@@ -798,6 +807,15 @@ def user_import_execute(request):
                 if role_names:
                     groups = Group.objects.filter(name__in=role_names)
                     user.groups.add(*groups)
+                perm_codes = []
+                if r.get('ticket_create'):
+                    perm_codes.append('create_ticket')
+                if r.get('ticket_process'):
+                    perm_codes.append('process_ticket')
+                if perm_codes:
+                    from django.contrib.auth.models import Permission
+                    perms = Permission.objects.filter(codename__in=perm_codes, content_type__app_label='tickets')
+                    user.user_permissions.add(*perms)
             created += 1
         except Exception:
             failed += 1

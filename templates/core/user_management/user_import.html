@@ -33,6 +33,7 @@
                 <li>CSV mit Trennzeichen <strong>Semikolon (;)</strong>. Spalten: Benutzername, Vorname, Nachname, E-Mail, Personalnummer, Benutzer-Rollen, Aktiv.</li>
                 <li><strong>Benutzername</strong> ist optional – wird sonst aus Vor-/Nachname erzeugt.</li>
                 <li><strong>Benutzer-Rollen</strong> kommagetrennt, exakt wie in der Rollenliste unten.</li>
+                <li><strong>Ticket erstellen</strong> / <strong>Ticket bearbeiten</strong> (Ja/Nein) vergeben die gleichnamigen Einzelberechtigungen – das sind keine Rollen.</li>
                 <li>Neue Benutzer erhalten das <strong>Standardpasswort</strong> und müssen es beim <strong>ersten Login</strong> ändern.</li>
             </ul>
         </div>
@@ -91,6 +92,7 @@
                         <th class="px-3 py-2 font-medium">Name</th>
                         <th class="px-3 py-2 font-medium">E-Mail</th>
                         <th class="px-3 py-2 font-medium">Rollen</th>
+                        <th class="px-3 py-2 font-medium">Ticket</th>
                         <th class="px-3 py-2 font-medium">Aktiv</th>
                         <th class="px-3 py-2 font-medium">Hinweis</th>
                     </tr>
@@ -109,6 +111,10 @@
                         <td class="px-3 py-2 text-gray-700">{{ r.first_name }} {{ r.last_name }}</td>
                         <td class="px-3 py-2 text-gray-500">{{ r.email }}</td>
                         <td class="px-3 py-2 text-gray-700">{{ r.roles|join:", " }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap">
+                            {% if r.ticket_create %}<span class="inline-block px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-xs" title="Ticket erstellen">erstellen</span>{% endif %}
+                            {% if r.ticket_process %}<span class="inline-block px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-xs" title="Ticket bearbeiten">bearbeiten</span>{% endif %}
+                        </td>
                         <td class="px-3 py-2">{% if r.active %}Ja{% else %}Nein{% endif %}</td>
                         <td class="px-3 py-2 text-red-600">{{ r.errors|join:"; " }}</td>
                     </tr>
