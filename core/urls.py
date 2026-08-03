@@ -90,6 +90,10 @@ urlpatterns = [
     # User Management (Admins only)
     path('verwaltung/users/', user_management.UserListView.as_view(), name='user_list'),
     path('verwaltung/users/create/', user_management.UserCreateView.as_view(), name='user_create'),
+    path('verwaltung/users/import/', user_management.user_import_page, name='user_import'),
+    path('verwaltung/users/import/template/', user_management.user_import_template, name='user_import_template'),
+    path('verwaltung/users/import/validate/', user_management.user_import_validate, name='user_import_validate'),
+    path('verwaltung/users/import/execute/', user_management.user_import_execute, name='user_import_execute'),
     path('verwaltung/users/<int:pk>/', user_management.UserDetailView.as_view(), name='user_detail'),
     path('verwaltung/users/<int:pk>/edit/', user_management.UserUpdateView.as_view(), name='user_edit'),
     path('verwaltung/users/<int:pk>/set-password/', user_management.UserSetPasswordView.as_view(), name='user_set_password'),

@@ -3,14 +3,23 @@ User Management Views für Administratoren
 Benutzerverwaltung, Rollen-Zuweisung, Permission-Management
 """
 
+import csv
+import io
+import re
+import unicodedata
+from uuid import uuid4
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.urls import reverse_lazy
+from django.db import transaction
 from django.db.models import Q, Prefetch
+from django.conf import settings
 from django import forms
+from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
@@ -555,3 +564,255 @@ class UserWBFSettingsView(RoleRequiredMixin, View):
             f'WBF-Einstellungen für {user_obj.get_full_name()} wurden aktualisiert.'
         )
         return redirect('core:user_detail', pk=user_obj.pk)
+
+
+# =============================================================================
+# CSV-Benutzer-Import
+# =============================================================================
+
+def _import_user_is_admin(user):
+    """Nur Administratoren/Superuser dürfen importieren."""
+    return user.is_authenticated and (user.is_superuser or user.has_role(Roles.ADMINISTRATOR))
+
+
+def _default_import_password():
+    return getattr(settings, 'PERSONNEL_DEFAULT_PASSWORD', 'Feuerwehr.0112')
+
+
+def _parse_bool(value, default=True):
+    v = (value or '').strip().lower()
+    if not v:
+        return default
+    return v in ('ja', 'yes', 'y', '1', 'true', 'wahr', 'x', 'aktiv', 'active')
+
+
+def _normalize_username_part(text):
+    text = (text or '').strip().lower()
+    for a, b in (('ä', 'ae'), ('ö', 'oe'), ('ü', 'ue'), ('ß', 'ss')):
+        text = text.replace(a, b)
+    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+    return re.sub(r'[^a-z0-9]', '', text)
+
+
+def _generate_username(first_name, last_name, taken):
+    base = (_normalize_username_part(first_name) + '.' + _normalize_username_part(last_name)).strip('.')
+    if not base:
+        base = 'benutzer'
+    username = base
+    counter = 1
+    while username in taken or User.objects.filter(username=username).exists():
+        counter += 1
+        username = f'{base}{counter}'
+    return username
+
+
+def _map_user_columns(header):
+    """Fuzzy-Mapping der CSV-Spalten (deutsch) auf Feldnamen."""
+    col = {}
+    for idx, name in enumerate(header):
+        n = (name or '').strip().lower()
+        if n in ('benutzername', 'username', 'login', 'benutzer'):
+            col['username'] = idx
+        elif n in ('vorname', 'first name', 'firstname'):
+            col['first_name'] = idx
+        elif n in ('nachname', 'last name', 'lastname', 'name'):
+            col['last_name'] = idx
+        elif 'mail' in n:
+            col['email'] = idx
+        elif 'personalnummer' in n or n == 'pn':
+            col['personnel_number'] = idx
+        elif 'rolle' in n:
+            col['roles'] = idx
+        elif n in ('aktiv', 'active', 'status'):
+            col['active'] = idx
+    return col
+
+
+def user_import_page(request):
+    """Startseite des Benutzer-Imports (Upload-Formular)."""
+    if not _import_user_is_admin(request.user):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('core:dashboard')
+    context = {
+        'current_module': 'administration',
+        'default_password': _default_import_password(),
+        'available_roles': sorted(Group.objects.values_list('name', flat=True)),
+    }
+    return render(request, 'core/user_management/user_import.html', context)
+
+
+def user_import_template(request):
+    """CSV-Vorlage zum Download."""
+    if not _import_user_is_admin(request.user):
+        return redirect('core:dashboard')
+    roles = sorted(Group.objects.values_list('name', flat=True))
+    lines = [
+        '# FLVS – Benutzer-Import (CSV, Trennzeichen Semikolon)',
+        '# Pflicht: Vorname und Nachname (Benutzername wird sonst automatisch erzeugt).',
+        '# Benutzer-Rollen: kommagetrennt, exakt wie hier gelistet:',
+        '# ' + ', '.join(roles),
+        '# Aktiv: Ja/Nein (Standard: Ja). Zeilen mit # werden ignoriert.',
+        'Benutzername;Vorname;Nachname;E-Mail;Personalnummer;Benutzer-Rollen;Aktiv',
+        ';Max;Mustermann;max.mustermann@example.com;12345;Standard-Nutzer;Ja',
+    ]
+    body = '﻿' + '\r\n'.join(lines) + '\r\n'
+    resp = HttpResponse(body, content_type='text/csv; charset=utf-8')
+    resp['Content-Disposition'] = 'attachment; filename="benutzer-import-vorlage.csv"'
+    return resp
+
+
+def user_import_validate(request):
+    """CSV parsen, validieren, Vorschau anzeigen (gültige Zeilen in Session)."""
+    if not _import_user_is_admin(request.user):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('core:dashboard')
+    if request.method != 'POST':
+        return redirect('core:user_import')
+
+    upload = request.FILES.get('import_file')
+    default_password = (request.POST.get('default_password') or '').strip() or _default_import_password()
+
+    if not upload:
+        messages.error(request, 'Bitte eine CSV-Datei auswählen.')
+        return redirect('core:user_import')
+    if not upload.name.lower().endswith('.csv'):
+        messages.error(request, 'Bitte eine CSV-Datei (.csv) hochladen.')
+        return redirect('core:user_import')
+
+    raw = upload.read()
+    try:
+        content = raw.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        content = raw.decode('latin-1')
+
+    reader = csv.reader(io.StringIO(content), delimiter=';')
+    rows = [r for r in reader if r and any(c.strip() for c in r) and not r[0].strip().startswith('#')]
+    if len(rows) < 2:
+        messages.error(request, 'Die Datei enthält keine Datenzeilen.')
+        return redirect('core:user_import')
+
+    header = rows[0]
+    col = _map_user_columns(header)
+    valid_groups = set(Group.objects.values_list('name', flat=True))
+
+    preview = []
+    taken = set()
+    existing_pn = set()
+    for line in rows[1:]:
+        def get(key):
+            return line[col[key]].strip() if key in col and col[key] < len(line) else ''
+
+        first = get('first_name')
+        last = get('last_name')
+        username = get('username')
+        email = get('email')
+        pn = get('personnel_number')
+        roles_raw = get('roles')
+        row_errors = []
+
+        if not username and not (first or last):
+            row_errors.append('Weder Benutzername noch Vor-/Nachname angegeben')
+
+        if username:
+            if username in taken or User.objects.filter(username=username).exists():
+                row_errors.append(f'Benutzername „{username}" existiert bereits')
+        else:
+            username = _generate_username(first, last, taken)
+
+        role_names = [r.strip() for r in roles_raw.split(',') if r.strip()] if roles_raw else []
+        unknown = [r for r in role_names if r not in valid_groups]
+        if unknown:
+            row_errors.append('Unbekannte Rolle(n): ' + ', '.join(unknown))
+
+        if pn:
+            if pn in existing_pn or User.objects.filter(personnel_number=pn).exists():
+                row_errors.append(f'Personalnummer „{pn}" bereits vergeben')
+
+        active = _parse_bool(get('active'), default=True)
+
+        if not row_errors:
+            taken.add(username)
+            if pn:
+                existing_pn.add(pn)
+
+        preview.append({
+            'username': username,
+            'first_name': first,
+            'last_name': last,
+            'email': email,
+            'personnel_number': pn,
+            'roles': role_names,
+            'active': active,
+            'errors': row_errors,
+        })
+
+    valid_rows = [p for p in preview if not p['errors']]
+    session_key = 'userimport_' + uuid4().hex
+    request.session[session_key] = {'rows': valid_rows, 'default_password': default_password}
+    request.session.modified = True
+
+    context = {
+        'current_module': 'administration',
+        'preview': preview,
+        'valid_count': len(valid_rows),
+        'error_count': len(preview) - len(valid_rows),
+        'session_key': session_key,
+        'default_password': default_password,
+        'available_roles': sorted(valid_groups),
+    }
+    return render(request, 'core/user_management/user_import.html', context)
+
+
+def user_import_execute(request):
+    """Angelegte, validierte Zeilen als Benutzer anlegen."""
+    if not _import_user_is_admin(request.user):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('core:dashboard')
+    if request.method != 'POST':
+        return redirect('core:user_import')
+
+    session_key = request.POST.get('session_key', '')
+    payload = request.session.get(session_key)
+    if not payload:
+        messages.error(request, 'Import-Sitzung abgelaufen. Bitte die Datei erneut hochladen.')
+        return redirect('core:user_import')
+
+    rows = payload.get('rows', [])
+    default_password = payload.get('default_password') or _default_import_password()
+    created = 0
+    failed = 0
+    for r in rows:
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=r['username'],
+                    email=r.get('email') or '',
+                    password=default_password,
+                    first_name=r.get('first_name') or '',
+                    last_name=r.get('last_name') or '',
+                    password_must_change=True,
+                    is_active=r.get('active', True),
+                    personnel_number=(r.get('personnel_number') or None),
+                )
+                role_names = r.get('roles') or []
+                if role_names:
+                    groups = Group.objects.filter(name__in=role_names)
+                    user.groups.add(*groups)
+            created += 1
+        except Exception:
+            failed += 1
+
+    try:
+        del request.session[session_key]
+        request.session.modified = True
+    except KeyError:
+        pass
+
+    if created:
+        msg = f'{created} Benutzer wurden angelegt (Standardpasswort, Änderung beim ersten Login erforderlich).'
+        if failed:
+            msg += f' {failed} Zeile(n) fehlgeschlagen.'
+        messages.success(request, msg)
+    else:
+        messages.error(request, 'Es wurden keine Benutzer angelegt.')
+    return redirect('core:user_list')
