@@ -601,9 +601,7 @@ class InfoMonitorDisplayView(LoginRequiredMixin, UserPassesTestMixin, DetailView
         context = super().get_context_data(**kwargs)
         context['can_edit'] = self.request.user.has_perm('tickets.edit_infomonitor')
         context['can_edit_mappe'] = _has_mappe_access(self.request.user)
-        context['monitor_vehicles'] = self.object.monitor_vehicles.select_related(
-            'fahrzeug_ad', 'ersetzt_mit'
-        ).order_by('position')
+        context['monitor_vehicles'] = self.object.monitor_vehicles.order_by('position')
         context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
         # FF Züge
         _ffv = list(self.object.ff_fahrzeuge.all())
@@ -724,9 +722,7 @@ class InfoMonitorKioskView(DetailView):
         context['gv_dashboards'] = GrossveranstaltungDashboard.objects.filter(
             is_active=True
         ).prefetch_related('abschnitte').order_by('-created_at')
-        context['monitor_vehicles'] = self.object.monitor_vehicles.select_related(
-            'fahrzeug_ad', 'ersetzt_mit'
-        ).order_by('position')
+        context['monitor_vehicles'] = self.object.monitor_vehicles.order_by('position')
         context['vehicle_count'] = context['monitor_vehicles'].count()
         context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
         # FF Züge für Kiosk-Ansicht
