@@ -1,0 +1,127 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Zugangs-Zettel: {{ survey.title }}</title>
+    <style>
+        /* Maße bewusst in mm – WeasyPrint rechnet damit exakt für den Druck. */
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+
+        body {
+            font-family: "DejaVu Sans", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #111827;
+        }
+
+        .sheet {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        /* Umbruch nach jeder vollen Seite; die letzte Seite darf keinen
+           Leerumbruch erzeugen. */
+        .sheet + .sheet {
+            page-break-before: always;
+        }
+
+        .slip {
+            width: 93mm;
+            height: 68mm;
+            box-sizing: border-box;
+            border: 1px dashed #9ca3af;
+            padding: 5mm;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            page-break-inside: avoid;
+        }
+
+        .slip-text {
+            flex: 1;
+            padding-right: 4mm;
+            overflow: hidden;
+        }
+
+        .slip-title {
+            font-size: 10pt;
+            font-weight: bold;
+            margin: 0 0 2mm 0;
+        }
+
+        .slip-intro {
+            font-size: 7.5pt;
+            line-height: 1.35;
+            margin: 0 0 2mm 0;
+            white-space: pre-line;
+        }
+
+        .slip-label {
+            font-size: 7pt;
+            font-weight: bold;
+            margin: 0 0 1mm 0;
+        }
+
+        .slip-hint {
+            font-size: 6.5pt;
+            color: #4b5563;
+            margin: 0;
+        }
+
+        .slip-qr {
+            width: 34mm;
+            text-align: center;
+        }
+
+        .slip-qr img {
+            width: 32mm;
+            height: 32mm;
+            display: block;
+        }
+
+        .slip-code {
+            font-family: "DejaVu Sans Mono", monospace;
+            font-size: 5.5pt;
+            word-break: break-all;
+            margin-top: 1mm;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    {% for page in pages %}
+    <div class="sheet">
+        {% for slip in page %}
+        <div class="slip">
+            <div class="slip-text">
+                <p class="slip-title">{{ survey.title }}</p>
+
+                {% if slip.invitation.label %}
+                <p class="slip-label">{{ slip.invitation.label }}</p>
+                {% endif %}
+
+                {% if survey.pdf_intro_text %}
+                <p class="slip-intro">{{ survey.pdf_intro_text }}</p>
+                {% endif %}
+
+                <p class="slip-hint">
+                    QR-Code scannen und Fragebogen ausfüllen.
+                    Dieser Zugang funktioniert nur ein einziges Mal.
+                    {% if survey.is_anonymous %}Die Umfrage ist anonym.{% endif %}
+                </p>
+            </div>
+
+            <div class="slip-qr">
+                <img src="{{ slip.qr }}" alt="QR-Code">
+                <p class="slip-code">{{ slip.invitation.token }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</body>
+</html>

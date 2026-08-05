@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Auswertung: {{ survey.title }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'surveys:list' %}" class="text-gray-500 hover:text-gray-700">Umfragen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Auswertung</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+
+    <!-- Kopf -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ survey.title }}</h1>
+                <div class="flex items-center gap-2 flex-wrap mt-2">
+                    {% if survey.is_anonymous %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Anonym</span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Personalisiert</span>
+                    {% endif %}
+                    <span class="text-sm text-gray-600">{{ response_count }} Antwort{{ response_count|pluralize:"en" }}</span>
+                </div>
+            </div>
+            <div class="flex flex-col gap-2 flex-shrink-0">
+                {% if is_conductor %}
+                <a href="{% url 'surveys:detail' survey.pk %}"
+                   class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors text-center">
+                    Zur Umfrage
+                </a>
+                {% if results_unlocked %}
+                <a href="{% url 'surveys:export' survey.pk %}"
+                   class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors text-center">
+                    Excel-Export
+                </a>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if not results_unlocked %}
+    <!-- Sperre bei kleinen Fallzahlen -->
+    <div class="bg-white rounded-lg shadow p-12 text-center">
+        <span class="text-4xl">🔒</span>
+        <h2 class="text-lg font-semibold text-gray-900 mt-4">Auswertung noch gesperrt</h2>
+        <p class="text-sm text-gray-600 mt-2 max-w-xl mx-auto">
+            Zum Schutz der Teilnehmenden wird die Auswertung erst ab
+            {{ survey.min_responses_for_results }} Antworten freigegeben. Bei sehr wenigen
+            Antworten ließen sich sonst Rückschlüsse auf einzelne Personen ziehen.
+        </p>
+        <p class="text-sm font-medium text-gray-900 mt-4">
+            Aktuell: {{ response_count }} von {{ survey.min_responses_for_results }} Antworten
+            – es fehlen noch {{ missing_for_unlock }}.
+        </p>
+    </div>
+
+    {% else %}
+
+    {% if survey.is_anonymous %}
+    <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg mb-6">
+        <p class="text-sm text-green-800">
+            Anonyme Umfrage: Die Antworten sind keiner Person zugeordnet. Freitextantworten
+            werden alphabetisch sortiert ausgegeben, damit sich aus der Reihenfolge keine
+            Rückschlüsse ziehen lassen.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="space-y-6">
+        {% for entry in statistics %}
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div>
+                    <h2 class="text-base font-semibold text-gray-900">
+                        {{ forloop.counter }}. {{ entry.question.text }}
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ entry.question.get_question_type_display }} ·
+                        {{ entry.answer_count }} Antwort{{ entry.answer_count|pluralize:"en" }}
+                        {% if entry.average is not None %} · Durchschnitt: {{ entry.average }}{% endif %}
+                    </p>
+                    {% if entry.question.has_condition %}
+                    <p class="text-xs text-purple-700 bg-purple-50 rounded px-2 py-1 mt-2 inline-block">
+                        ⤷ {{ entry.question.condition_description }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if entry.suppressed %}
+            <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+                <p class="text-sm text-amber-800">
+                    <strong>Einzelergebnisse gesperrt.</strong> Auf diese Frage liegen nur
+                    {{ entry.answer_count }} Antwort{{ entry.answer_count|pluralize:"en" }} vor –
+                    weniger als die eingestellte Mindestanzahl von {{ entry.threshold }}.
+                    {% if entry.question.has_condition %}
+                    Bedingte Fragen sehen naturgemäß weniger Teilnehmende.
+                    {% endif %}
+                    Bei so kleinen Zahlen ließen sich Antworten einzelnen Personen zuordnen.
+                </p>
+            </div>
+
+            {% elif entry.kind == 'chart' %}
+                {% if entry.answer_count %}
+                <div class="mb-4" style="height: 16rem;">
+                    <canvas id="chart-{{ entry.question.pk }}"></canvas>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase">
+                                <th class="py-2 pr-4">Antwort</th>
+                                <th class="py-2 pr-4">Anzahl</th>
+                                <th class="py-2">Anteil</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for label, count, percent in entry.rows %}
+                            <tr>
+                                <td class="py-2 pr-4 text-gray-800">{{ label }}</td>
+                                <td class="py-2 pr-4 text-gray-800">{{ count }}</td>
+                                <td class="py-2 text-gray-600">{{ percent }} %</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500">Keine Antworten auf diese Frage.</p>
+                {% endif %}
+
+            {% elif entry.kind == 'text' %}
+                {% if entry.texts %}
+                <div class="space-y-2">
+                    {% for text in entry.texts %}
+                    <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-800">{{ text|linebreaksbr }}</div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500">Keine Antworten auf diese Frage.</p>
+                {% endif %}
+
+            {% else %}
+                {% if entry.stats %}
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-xs text-gray-500">Minimum</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ entry.stats.min }}</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-xs text-gray-500">Maximum</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ entry.stats.max }}</p>
+                    </div>
+                    {% if entry.stats.avg is not None %}
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-xs text-gray-500">Durchschnitt</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ entry.stats.avg }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-gray-500">Einzelwerte: {{ entry.values|join:", " }}</p>
+                {% else %}
+                <p class="text-sm text-gray-500">Keine Antworten auf diese Frage.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="bg-white rounded-lg shadow p-12 text-center">
+            <p class="text-sm text-gray-500">Diese Umfrage enthält keine Fragen.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {{ chart_data|json_script:"survey-chart-data" }}
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if results_unlocked %}
+<script src="{% static 'vendor/js/chart.min.js' %}"></script>
+<script>
+(function () {
+    const dataElement = document.getElementById('survey-chart-data');
+    if (!dataElement || typeof Chart === 'undefined') {
+        return;
+    }
+
+    const chartData = JSON.parse(dataElement.textContent);
+    const palette = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed',
+                     '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4b5563'];
+
+    Object.entries(chartData).forEach(function ([questionId, entry]) {
+        const canvas = document.getElementById('chart-' + questionId);
+        if (!canvas) {
+            return;
+        }
+
+        new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: entry.labels,
+                datasets: [{
+                    label: 'Antworten',
+                    data: entry.counts,
+                    backgroundColor: entry.labels.map(function (_, index) {
+                        return palette[index % palette.length];
+                    }),
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 },
+                    },
+                },
+            },
+        });
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

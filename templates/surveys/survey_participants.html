@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Teilnahmen: {{ survey.title }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'surveys:list' %}" class="text-gray-500 hover:text-gray-700">Umfragen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'surveys:detail' survey.pk %}" class="text-gray-500 hover:text-gray-700">{{ survey.title|truncatechars:30 }}</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Teilnahmen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6">
+
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Teilnahmen</h1>
+    <p class="text-sm text-gray-500 mb-6">{{ survey.title }}</p>
+
+    {% if survey.is_anonymous %}
+    <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg mb-6">
+        <p class="text-sm text-green-800">
+            <strong>Anonyme Umfrage.</strong> Diese Seite zeigt ausschließlich, <em>wer</em>
+            teilgenommen hat. Welche Antworten die jeweilige Person gegeben hat, ist nicht
+            feststellbar – diese Verbindung wird nicht gespeichert. Das Teilnahmedatum wird
+            bewusst nur tagesgenau erfasst.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Teilgenommen -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-5 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Teilgenommen</h2>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    {{ participations|length }}
+                </span>
+            </div>
+            {% if participations %}
+            <div class="divide-y divide-gray-100">
+                {% for participation in participations %}
+                <div class="px-5 py-3 flex items-center justify-between">
+                    <span class="text-sm text-gray-800">
+                        {{ participation.user.get_full_name|default:participation.user.username }}
+                    </span>
+                    <span class="text-xs text-gray-500">{{ participation.participated_on|date:"d.m.Y" }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="p-8 text-center text-sm text-gray-500">Noch keine Teilnahmen.</p>
+            {% endif %}
+        </div>
+
+        <!-- Ausstehend -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-5 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Ausstehend</h2>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                    {{ missing|length }}
+                </span>
+            </div>
+            {% if missing %}
+            <div class="divide-y divide-gray-100">
+                {% for user in missing %}
+                <div class="px-5 py-3">
+                    <span class="text-sm text-gray-800">{{ user.get_full_name|default:user.username }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="p-8 text-center text-sm text-gray-500">Alle aus der Zielgruppe haben teilgenommen.</p>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

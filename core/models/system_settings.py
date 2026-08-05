@@ -123,6 +123,12 @@ class SystemSettings(models.Model):
         help_text="Erfassung und Verwaltung von Unfall-/Verletzungsmeldungen im Dienst"
     )
 
+    surveys_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Umfragen",
+        help_text="Formularbasierte Umfragen, wahlweise anonym oder personalisiert"
+    )
+
     # ============================================================================
     # PERSONAL - TAB VISIBILITY
     # ============================================================================

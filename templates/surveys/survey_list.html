@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}Umfragen - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Umfragen</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Umfragen</h1>
+            <p class="text-sm text-gray-500 mt-1">
+                {% if is_conductor %}
+                    Umfragen erstellen, freischalten und auswerten
+                {% else %}
+                    Umfragen, an denen Sie teilnehmen können
+                {% endif %}
+            </p>
+        </div>
+        {% if perms.surveys.conduct_survey %}
+        <a href="{% url 'surveys:create' %}"
+           class="bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-sm">
+            + Neue Umfrage
+        </a>
+        {% endif %}
+    </div>
+
+    {% if is_conductor %}
+    <div class="bg-white rounded-lg shadow mb-6 p-4">
+        <form method="get" class="flex flex-wrap gap-4 items-end">
+            <div class="w-56">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select name="status" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <option value="">Alle</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">
+                Filtern
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if surveys %}
+    <div class="space-y-3">
+        {% for survey in surveys %}
+        <div class="bg-white rounded-lg shadow p-5">
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h2 class="text-lg font-semibold text-gray-900">{{ survey.title }}</h2>
+
+                        {% if survey.is_anonymous %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Anonym
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Personalisiert
+                        </span>
+                        {% endif %}
+
+                        {% if is_conductor %}
+                            {% if survey.status == 'active' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aktiv</span>
+                            {% elif survey.status == 'draft' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Entwurf</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Geschlossen</span>
+                            {% endif %}
+                        {% endif %}
+
+                        {% if survey.pk in participated_ids %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
+                            Teilgenommen
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {% if survey.description %}
+                    <p class="text-sm text-gray-600 mt-2">{{ survey.description|truncatechars:200 }}</p>
+                    {% endif %}
+
+                    <div class="flex flex-wrap gap-4 mt-3 text-xs text-gray-500">
+                        <span>{{ survey.question_count }} Frage{{ survey.question_count|pluralize:"n" }}</span>
+                        {% if is_conductor %}
+                        <span>{{ survey.answer_count }} Antwort{{ survey.answer_count|pluralize:"en" }}</span>
+                        {% endif %}
+                        {% if survey.end_date %}
+                        <span>Läuft bis {{ survey.end_date|date:"d.m.Y H:i" }}</span>
+                        {% endif %}
+                        {% if survey.target_groups.exists %}
+                        <span>Zielgruppe:
+                            {% for group in survey.target_groups.all %}{{ group.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2 flex-shrink-0">
+                    {% if survey.status == 'active' and not survey.is_token_mode %}
+                        {% if survey.pk not in participated_ids or survey.allow_multiple_responses %}
+                        <a href="{% url 'surveys:fill' survey.pk %}"
+                           class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors text-center">
+                            Teilnehmen
+                        </a>
+                        {% endif %}
+                    {% endif %}
+
+                    {% if is_conductor %}
+                    <a href="{% url 'surveys:detail' survey.pk %}"
+                       class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors text-center">
+                        Verwalten
+                    </a>
+                    {% elif survey.show_results_to_participants and survey.pk in participated_ids %}
+                    <a href="{% url 'surveys:results' survey.pk %}"
+                       class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors text-center">
+                        Auswertung
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+    <div class="mt-6 flex justify-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}"
+           class="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Zurück</a>
+        {% endif %}
+        <span class="px-3 py-2 text-sm text-gray-600">
+            Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+        </span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}"
+           class="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Weiter</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-12 text-center">
+        <span class="text-4xl">📋</span>
+        <h2 class="text-lg font-semibold text-gray-900 mt-4">Keine Umfragen vorhanden</h2>
+        <p class="text-sm text-gray-500 mt-1">
+            {% if is_conductor %}
+                Legen Sie die erste Umfrage an.
+            {% else %}
+                Aktuell läuft keine Umfrage, an der Sie teilnehmen können.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

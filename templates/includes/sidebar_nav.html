@@ -625,6 +625,29 @@
     {% endif %}
     {% endif %}
 
+    <!-- Umfragen (eigenständiger Menüpunkt: Teilnahme ist eine Aufgabe mit Frist,
+         keine Nachschlage-Funktion – gehört deshalb nicht in "Information") -->
+    {% if modules.surveys_enabled %}
+    {% if perms.surveys.conduct_survey or perms.surveys.participate_survey %}
+    <a
+        href="{% url 'surveys:list' %}"
+        class="flex items-center py-2 mx-2 rounded-lg transition-colors mt-4
+               {% if current_module == 'surveys' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+        :class="$store.sidebar.expanded ? 'gap-3 px-3' : 'justify-center'"
+        x-tooltip="'Umfragen'"
+    >
+        <span class="text-xl flex-shrink-0">📋</span>
+        <span
+            class="text-sm font-medium truncate transition-all duration-200"
+            x-show="$store.sidebar.expanded"
+            x-transition
+        >
+            Umfragen
+        </span>
+    </a>
+    {% endif %}
+    {% endif %}
+
     <!-- Kategorie 4: Information -->
     {% if modules.wiki_enabled or modules.info_monitors_enabled %}
     <div class="mt-4">
@@ -695,6 +718,7 @@
                 </span>
             </a>
             {% endif %}
+
         </div>
     </div>
     {% endif %}

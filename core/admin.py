@@ -132,6 +132,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
                 'procurement_enabled',
                 'inventory_check_enabled',
                 'info_monitors_enabled',
+                'surveys_enabled',
             ),
             'description': 'Aktivieren oder deaktivieren Sie Module für Ihre Organisation.'
         }),

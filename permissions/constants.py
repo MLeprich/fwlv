@@ -35,6 +35,7 @@ class Roles:
     MODUL_DEFECT_MANAGEMENT = 'Modulverantwortlicher Defect Management'
     MODUL_CIVIL_PROTECTION = 'Modulverantwortlicher Civil Protection'
     MODUL_OBJEKTVERWALTUNG = 'Modulverantwortlicher Objektverwaltung'
+    MODUL_SURVEYS = 'Modulverantwortlicher Umfragen'
 
     # Sachbearbeiter pro Modul (view + add)
     SACHBEARBEITER_MEDICAL = 'Sachbearbeiter Medical'
@@ -96,6 +97,7 @@ class Roles:
             cls.MODUL_DEFECT_MANAGEMENT,
             cls.MODUL_CIVIL_PROTECTION,
             cls.MODUL_OBJEKTVERWALTUNG,
+            cls.MODUL_SURVEYS,
             cls.SACHBEARBEITER_MEDICAL,
             cls.SACHBEARBEITER_CLOTHING,
             cls.SACHBEARBEITER_MAGAZINE,
@@ -145,6 +147,7 @@ class Roles:
             cls.MODUL_DEFECT_MANAGEMENT,
             cls.MODUL_CIVIL_PROTECTION,
             cls.MODUL_OBJEKTVERWALTUNG,
+            cls.MODUL_SURVEYS,
         ]
 
     @classmethod
@@ -227,6 +230,9 @@ class Modules:
     # Objektverwaltung
     OBJEKTVERWALTUNG = 'objektverwaltung'
 
+    # Umfragen
+    SURVEYS = 'surveys'
+
     @classmethod
     def get_all_modules(cls):
         """Alle Module"""
@@ -258,6 +264,7 @@ class Modules:
             cls.CIVIL_PROTECTION,
             cls.IDCARDS,
             cls.OBJEKTVERWALTUNG,
+            cls.SURVEYS,
         ]
 
     @classmethod

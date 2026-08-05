@@ -1,0 +1,20 @@
+{% extends 'public_base.html' %}
+
+{% block title %}Zugang nicht gültig - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto px-4 py-12">
+    <div class="bg-white rounded-lg shadow p-10 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-4">
+            <span class="text-3xl">⚠️</span>
+        </div>
+
+        <h1 class="text-xl font-bold text-gray-900">{{ headline }}</h1>
+        <p class="text-sm text-gray-600 mt-3">{{ text }}</p>
+
+        {% if survey %}
+        <p class="text-xs text-gray-400 mt-6">Umfrage: {{ survey.title }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

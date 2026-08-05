@@ -1,0 +1,47 @@
+{% extends base_template|default:'base.html' %}
+
+{% block title %}Vielen Dank - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-12">
+    <div class="bg-white rounded-lg shadow p-10 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+            <span class="text-3xl">✓</span>
+        </div>
+
+        <h1 class="text-2xl font-bold text-gray-900">Vielen Dank für Ihre Teilnahme</h1>
+        <p class="text-sm text-gray-600 mt-3">
+            Ihre Antworten zu „{{ survey.title }}" wurden gespeichert.
+        </p>
+
+        {% if survey.is_anonymous %}
+        <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg mt-6 text-left">
+            <p class="text-sm text-green-800">
+                Ihre Antworten wurden ohne Personenbezug gespeichert.
+                {% if token_mode %}
+                Ihr Zugangs-Zettel ist damit verbraucht und lässt sich nicht erneut verwenden.
+                {% else %}
+                Vermerkt ist lediglich, dass Sie teilgenommen haben – nicht, wie Sie
+                geantwortet haben.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+
+        <div class="flex justify-center gap-3 mt-8">
+            {% if not token_mode %}
+            <a href="{% url 'surveys:list' %}"
+               class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                Zur Übersicht
+            </a>
+            {% endif %}
+            {% if can_view_results %}
+            <a href="{% url 'surveys:results' survey.pk %}"
+               class="bg-primary-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors">
+                Auswertung ansehen
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

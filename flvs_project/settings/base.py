@@ -104,6 +104,7 @@ LOCAL_APPS = [
     'idcards.apps.IdcardsConfig',
     'objektverwaltung.apps.ObjektverwaltungConfig',
     'accident_report.apps.AccidentReportConfig',
+    'surveys.apps.SurveysConfig',
     # Weitere Apps werden hier hinzugefuegt
 ]
 

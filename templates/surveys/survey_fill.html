@@ -1,0 +1,229 @@
+{# base_template: 'base.html' im Login-Weg, 'public_base.html' beim QR-Zettel #}
+{% extends base_template|default:'base.html' %}
+
+{% block title %}{{ survey.title }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'surveys:list' %}" class="text-gray-500 hover:text-gray-700">Umfragen</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ survey.title|truncatechars:40 }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-6">
+
+    <!-- Kopf -->
+    <div class="bg-white rounded-lg shadow p-6 mb-4">
+        <h1 class="text-2xl font-bold text-gray-900">{{ survey.title }}</h1>
+        {% if survey.description %}
+        <p class="text-sm text-gray-600 mt-3">{{ survey.description|linebreaksbr }}</p>
+        {% endif %}
+        {% if survey.end_date %}
+        <p class="text-xs text-gray-500 mt-3">Teilnahme möglich bis {{ survey.end_date|date:"d.m.Y H:i" }} Uhr</p>
+        {% endif %}
+    </div>
+
+    <!-- Anonymitätshinweis: muss vor dem Ausfüllen unmissverständlich sein -->
+    {% if survey.is_anonymous %}
+    <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg mb-6">
+        <p class="text-sm text-green-800">
+            <strong>Diese Umfrage ist anonym.</strong>
+            {% if token_mode %}
+            Ihr Zugangs-Zettel ist keiner Person zugeordnet. Nach dem Absenden wird er
+            lediglich als „verbraucht" markiert – wer ihn benutzt hat, wird nicht gespeichert.
+            {% else %}
+            Ihre Antworten werden ohne Bezug zu Ihrem Benutzerkonto gespeichert. Getrennt
+            davon wird lediglich vermerkt, dass Sie teilgenommen haben – damit Sie nicht
+            erneut aufgefordert werden. Eine Verbindung zwischen Ihnen und Ihren Antworten
+            existiert nicht.
+            {% endif %}
+        </p>
+    </div>
+    {% else %}
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg mb-6">
+        <p class="text-sm text-blue-800">
+            <strong>Diese Umfrage ist nicht anonym.</strong> Ihre Antworten werden zusammen mit
+            Ihrem Namen gespeichert und sind für die Auswertenden namentlich einsehbar.
+        </p>
+    </div>
+    {% endif %}
+
+    {% if token_mode %}
+    <div class="bg-white rounded-lg shadow p-4 mb-4">
+        <p class="text-sm text-gray-600">
+            Dieser Zugang lässt sich nur ein einziges Mal verwenden. Bitte füllen Sie den
+            Fragebogen vollständig aus, bevor Sie ihn absenden.
+        </p>
+    </div>
+    {% endif %}
+
+    {{ condition_config|json_script:"survey-conditions" }}
+
+    {# Das Ein-/Ausblenden hier ist reiner Komfort. Verbindlich entscheidet der Server
+       (surveys/conditions.py) – auch darüber, welche Antworten gespeichert werden. #}
+    <form method="post" action="{{ form_action|default:'' }}" class="space-y-4"
+          x-data="surveyConditions()" x-init="sync()" @change="sync()">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+            <p class="text-sm font-medium text-red-800">Bitte prüfen Sie Ihre Eingaben</p>
+            <p class="text-sm text-red-700 mt-1">Einige Pflichtfragen sind noch nicht beantwortet.</p>
+        </div>
+        {% endif %}
+
+        {% for field, question in field_pairs %}
+        <div class="bg-white rounded-lg shadow p-6"
+             x-show="isVisible('{{ field.name }}')"
+             x-transition>
+            <p class="text-base font-medium text-gray-900">
+                <span x-text="positionOf('{{ field.name }}')"></span>. {{ question.text }}
+                {% if question.is_required %}<span class="text-red-600">*</span>{% endif %}
+            </p>
+            {% if question.help_text %}
+            <p class="text-sm text-gray-500 mt-1">{{ question.help_text }}</p>
+            {% endif %}
+
+            <div class="mt-4">
+                {% if question.question_type == 'radio' or question.question_type == 'checkbox' %}
+                    <div class="space-y-2">
+                        {% for choice in field %}
+                        <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            {{ choice.tag }}
+                            <span class="text-sm text-gray-800">{{ choice.choice_label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+
+                {% elif question.question_type == 'scale' %}
+                    <div class="flex flex-wrap items-end gap-4">
+                        {% for choice in field %}
+                        <label class="flex flex-col items-center gap-2 cursor-pointer">
+                            <span class="text-sm font-medium text-gray-700">{{ choice.choice_label }}</span>
+                            {{ choice.tag }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% if question.min_label or question.max_label %}
+                    <div class="flex justify-between mt-2 text-xs text-gray-500">
+                        <span>{{ question.min_label }}</span>
+                        <span>{{ question.max_label }}</span>
+                    </div>
+                    {% endif %}
+
+                {% elif question.question_type == 'yesno' %}
+                    <div class="flex gap-6">
+                        {% for choice in field %}
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            {{ choice.tag }}
+                            <span class="text-sm text-gray-800">{{ choice.choice_label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+
+                {% else %}
+                    {{ field }}
+                {% endif %}
+            </div>
+
+            {% if field.errors %}
+            <p class="text-sm text-red-600 mt-2">{{ field.errors.0 }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="bg-white rounded-lg shadow p-6 flex items-center justify-between gap-4">
+            <p class="text-xs text-gray-500">Mit <span class="text-red-600">*</span> markierte Fragen sind Pflichtfragen.</p>
+            <div class="flex gap-3">
+                {% if not token_mode %}
+                <a href="{% url 'surveys:list' %}"
+                   class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                    Abbrechen
+                </a>
+                {% endif %}
+                <button type="submit"
+                        class="bg-primary-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors">
+                    Absenden
+                </button>
+            </div>
+        </div>
+    </form>
+
+</div>
+
+<script>
+/**
+ * Bedingte Anzeige im Browser.
+ *
+ * Spiegelt surveys/conditions.py. Verbindlich ist ausschließlich die Serverprüfung –
+ * dieses Skript sorgt nur dafür, dass niemand Fragen sieht, die ihn nichts angehen.
+ */
+function surveyConditions() {
+    return {
+        rules: {},
+        answers: {},
+        order: [],
+
+        init() {
+            const element = document.getElementById('survey-conditions');
+            this.rules = element ? JSON.parse(element.textContent) : {};
+            this.order = Array.from(this.$el.querySelectorAll('[name^="question_"]'))
+                .map(input => input.name)
+                .filter((name, index, all) => all.indexOf(name) === index);
+        },
+
+        /** Aktuelle Antworten aus dem Formular einlesen */
+        sync() {
+            if (!this.order.length) {
+                this.init();
+            }
+            const data = new FormData(this.$el);
+            const collected = {};
+            for (const [key, value] of data.entries()) {
+                if (!key.startsWith('question_')) continue;
+                if (collected[key] === undefined) {
+                    collected[key] = [value];
+                } else {
+                    collected[key].push(value);
+                }
+            }
+            this.answers = collected;
+        },
+
+        /**
+         * Sichtbarkeit inklusive Ketten: Ist die Bezugsfrage selbst ausgeblendet,
+         * zählt ihre Antwort nicht mehr – dann verschwindet auch diese Frage.
+         */
+        isVisible(name) {
+            const rule = this.rules[name];
+            if (!rule) return true;
+            if (!this.isVisible(rule.source)) return false;
+
+            const given = this.answers[rule.source] || [];
+            if (!given.length) return false;
+
+            const matched = given.some(value => rule.values.includes(value));
+            return rule.operator === 'none_of' ? !matched : matched;
+        },
+
+        /** Fortlaufende Nummer über die aktuell sichtbaren Fragen */
+        positionOf(name) {
+            let position = 0;
+            for (const candidate of this.order) {
+                if (this.isVisible(candidate)) position += 1;
+                if (candidate === name) return position;
+            }
+            return position;
+        },
+    };
+}
+</script>
+{% endblock %}

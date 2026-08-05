@@ -60,6 +60,7 @@ class Command(BaseCommand):
                 self._setup_approval_groups()
                 self._setup_lst_infomonitor()
                 self._setup_ff_roles()
+                self._setup_survey_participation()
                 self._cleanup_legacy_groups()
 
                 if options['dry_run']:
@@ -200,6 +201,7 @@ class Command(BaseCommand):
             Modules.DEFECT_MANAGEMENT: 'Defect Management',
             Modules.CIVIL_PROTECTION: 'Civil Protection',
             Modules.OBJEKTVERWALTUNG: 'Objektverwaltung',
+            Modules.SURVEYS: 'Umfragen',
         }
 
         for module_name, display_name in modules.items():
@@ -463,6 +465,47 @@ class Command(BaseCommand):
                 f'  ✓ {status} ({perms_added} Permissions)'
             )
         )
+
+    def _setup_survey_participation(self):
+        """
+        Teilnahme an Umfragen für alle operativen Rollen.
+
+        Läuft bewusst NACH den anderen Setups – die leeren ihre Gruppen zu Beginn per
+        `permissions.clear()`, die Permission würde sonst wieder verschwinden.
+
+        Wer welche Umfrage tatsächlich sieht, steuert die Zielgruppe der Umfrage; diese
+        Permission entscheidet nur, ob der Menüpunkt überhaupt erscheint.
+        """
+        self.stdout.write('\nUmfragen-Teilnahme...')
+
+        try:
+            participate = Permission.objects.get(
+                content_type__app_label=Modules.SURVEYS,
+                codename='participate_survey'
+            )
+        except Permission.DoesNotExist:
+            self.stdout.write(self.style.WARNING(
+                '  ! Permission "participate_survey" fehlt – bitte zuerst migrieren'
+            ))
+            return
+
+        target_roles = [
+            Roles.STANDARD_USER,
+            Roles.SACHBEARBEITER,
+            Roles.LAGERVERWALTER,
+            Roles.WACHLEITER,
+            Roles.BEREICHSLEITUNG,
+            Roles.FF_EINHEITSFUEHRER,
+            Roles.FF_VERTRETER,
+        ]
+
+        for role_name in target_roles:
+            group, _ = Group.objects.get_or_create(name=role_name)
+            group.permissions.add(participate)
+
+        self.stdout.write(self.style.SUCCESS(
+            f'  ✓ {len(target_roles)} Rollen dürfen an Umfragen teilnehmen'
+        ))
 
     def _setup_approval_groups(self):
         """Freigabe-Gruppen für Bestellwesen (Stufe 1/2/3)"""
