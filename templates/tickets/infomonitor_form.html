@@ -453,15 +453,11 @@
                         {% for z in ff_zuege %}
                         <div class="bg-gray-50 rounded-lg p-4">
                             <p class="text-sm font-semibold text-gray-700 mb-3">{{ z.label }}</p>
-                            <div class="flex items-center gap-4" x-data="{ sel: '{{ z.status_field.value|default:'einsatzbereit' }}' }">
+                            <div class="flex items-center gap-4" data-ff-group>
                                 {% for radio in z.status_field %}
-                                <label class="cursor-pointer" title="{{ radio.choice_label }}">
-                                    <input type="radio" name="{{ radio.data.name }}" value="{{ radio.data.value }}" x-model="sel" class="hidden"{% if radio.data.selected %} checked{% endif %}>
-                                    <span class="inline-block w-9 h-9 rounded-full"
-                                          style="background: {% if radio.data.value == 'einsatzbereit' %}#22c55e{% elif radio.data.value == 'nicht_einsatzbereit' %}#ef4444{% else %}#9ca3af{% endif %}; {% if radio.data.selected %}box-shadow: 0 0 0 3px #fff, 0 0 0 5px #4b5563;{% else %}opacity: 0.3;{% endif %}"
-                                          :style="sel === '{{ radio.data.value }}'
-                                              ? 'box-shadow: 0 0 0 3px #fff, 0 0 0 5px #4b5563; opacity: 1;'
-                                              : 'box-shadow: none; opacity: 0.3;'"></span>
+                                <label class="cursor-pointer" title="{{ radio.choice_label }}" onclick="selectFFColor(this)">
+                                    <input type="radio" name="{{ radio.data.name }}" value="{{ radio.data.value }}" class="hidden"{% if radio.data.selected %} checked{% endif %}>
+                                    <span style="display: inline-block; width: 2.25rem; height: 2.25rem; border-radius: 9999px; background: {% if radio.data.value == 'einsatzbereit' %}#22c55e{% elif radio.data.value == 'nicht_einsatzbereit' %}#ef4444{% else %}#9ca3af{% endif %}; {% if radio.data.selected %}box-shadow: 0 0 0 3px #fff, 0 0 0 5px #4b5563; opacity: 1;{% else %}opacity: 0.3;{% endif %}"></span>
                                 </label>
                                 {% endfor %}
                             </div>
@@ -638,6 +634,21 @@
             </div>
         </form>
         <script>
+        // === FF-Status: Farbauswahl (ohne Alpine, damit die Kreise immer sichtbar sind) ===
+        function selectFFColor(label) {
+            const group = label.closest('[data-ff-group]');
+            if (!group) return;
+            const input = label.querySelector('input[type=radio]');
+            if (input) input.checked = true;
+            group.querySelectorAll('label').forEach(function (l) {
+                const dot = l.querySelector('span');
+                if (!dot) return;
+                const active = (l === label);
+                dot.style.boxShadow = active ? '0 0 0 3px #fff, 0 0 0 5px #4b5563' : 'none';
+                dot.style.opacity = active ? '1' : '0.3';
+            });
+        }
+
         // === FF-Fahrzeuge dynamisch (pro Zug) ===
         function removeFFRow(btn) {
             const row = btn.closest('.ff-row');
