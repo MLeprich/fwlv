@@ -357,7 +357,7 @@
                                     <td class="py-3 pr-4 font-bold val-primary text-xl">FW 1</td>
                                     <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw1_loeschzug|default:"&mdash;" }}</td>
                                     <td class="py-3 px-3 text-center">
-                                        {% if monitor.personal_fw1_gal_hlf %}<span class="inline-block w-8 h-8 rounded-full" title="GAL-HLF: verfügbar" style="background: #22c55e; box-shadow: 0 0 14px rgba(34,197,94,0.65);"></span>{% else %}<span class="inline-block w-8 h-8 rounded-full" title="GAL-HLF: nicht verfügbar" style="background: #ef4444; box-shadow: 0 0 14px rgba(239,68,68,0.65);"></span>{% endif %}
+                                        {% if monitor.gal_hlf %}<span class="inline-block w-8 h-8 rounded-full" title="GAL-HLF: verfügbar" style="background: #22c55e; box-shadow: 0 0 14px rgba(34,197,94,0.65);"></span>{% else %}<span class="inline-block w-8 h-8 rounded-full" title="GAL-HLF: nicht verfügbar" style="background: #ef4444; box-shadow: 0 0 14px rgba(239,68,68,0.65);"></span>{% endif %}
                                     </td>
                                     <td class="py-3 px-3 text-center">
                                         {% if monitor.personal_fw1_ergaenzung %}<span class="inline-block w-8 h-8 rounded-full" title="Ergänzung: verfügbar" style="background: #22c55e; box-shadow: 0 0 14px rgba(34,197,94,0.65);"></span>{% else %}<span class="inline-block w-8 h-8 rounded-full" title="Ergänzung: nicht verfügbar" style="background: #ef4444; box-shadow: 0 0 14px rgba(239,68,68,0.65);"></span>{% endif %}
@@ -372,7 +372,7 @@
                                     <td class="py-3 pr-4 font-bold val-primary text-xl">FW 2</td>
                                     <td class="py-3 px-3 text-center font-mono text-4xl font-bold val-green">{{ monitor.personal_fw2_loeschzug|default:"&mdash;" }}</td>
                                     <td class="py-3 px-3 text-center">
-                                        {% if monitor.personal_fw2_gal_hlf %}<span class="inline-block w-8 h-8 rounded-full" title="GAL-HLF: verfügbar" style="background: #22c55e; box-shadow: 0 0 14px rgba(34,197,94,0.65);"></span>{% else %}<span class="inline-block w-8 h-8 rounded-full" title="GAL-HLF: nicht verfügbar" style="background: #ef4444; box-shadow: 0 0 14px rgba(239,68,68,0.65);"></span>{% endif %}
+                                        {% if monitor.gal_hlf %}<span class="inline-block w-8 h-8 rounded-full" title="GAL-HLF: verfügbar" style="background: #22c55e; box-shadow: 0 0 14px rgba(34,197,94,0.65);"></span>{% else %}<span class="inline-block w-8 h-8 rounded-full" title="GAL-HLF: nicht verfügbar" style="background: #ef4444; box-shadow: 0 0 14px rgba(239,68,68,0.65);"></span>{% endif %}
                                     </td>
                                     <td class="py-3 px-3 text-center">
                                         {% if monitor.personal_fw2_ergaenzung %}<span class="inline-block w-8 h-8 rounded-full" title="Ergänzung: verfügbar" style="background: #22c55e; box-shadow: 0 0 14px rgba(34,197,94,0.65);"></span>{% else %}<span class="inline-block w-8 h-8 rounded-full" title="Ergänzung: nicht verfügbar" style="background: #ef4444; box-shadow: 0 0 14px rgba(239,68,68,0.65);"></span>{% endif %}

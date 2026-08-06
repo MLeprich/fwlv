@@ -590,7 +590,6 @@ class InfoMonitor(models.Model):
     # PERSONAL – FW1
     # =========================================================================
     personal_fw1_loeschzug = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Löschzug'))
-    personal_fw1_gal_hlf = models.BooleanField(default=False, verbose_name=_('FW1 GAL-HLF'))
     personal_fw1_ergaenzung = models.BooleanField(default=False, verbose_name=_('FW1 Ergänzung'))
     personal_fw1_5_rtw = models.BooleanField(default=False, verbose_name=_('FW1 LZ RTW verfügbar'))
     personal_fw1_taucher = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW1 Taucher'))
@@ -598,11 +597,13 @@ class InfoMonitor(models.Model):
 
     # PERSONAL – FW2
     personal_fw2_loeschzug = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Löschzug'))
-    personal_fw2_gal_hlf = models.BooleanField(default=False, verbose_name=_('FW2 GAL-HLF'))
     personal_fw2_ergaenzung = models.BooleanField(default=False, verbose_name=_('FW2 Ergänzung'))
     personal_fw2_5_rtw = models.BooleanField(default=False, verbose_name=_('FW2 LZ RTW verfügbar'))
     personal_fw2_taucher = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Taucher'))
     personal_fw2_hoehenretter = models.CharField(max_length=20, blank=True, default='', verbose_name=_('FW2 Höhenretter'))
+
+    # GAL-HLF fährt für BEIDE Wachen -> ein gemeinsamer Status, in beiden Zeilen angezeigt
+    gal_hlf = models.BooleanField(default=False, verbose_name=_('GAL-HLF (beide Wachen)'))
 
     # Sonderfunktionen im Dienst
     taucher_im_dienst = models.BooleanField(default=False, verbose_name=_('Taucher im Dienst'))
