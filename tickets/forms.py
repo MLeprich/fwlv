@@ -426,11 +426,12 @@ class GrossveranstaltungDashboardForm(forms.ModelForm):
     class Meta:
         from .models import GrossveranstaltungDashboard
         model = GrossveranstaltungDashboard
-        fields = ['name', 'description', 'dashboard_type', 'pdf_file', 'map_image', 'info_datei', 'is_active']
+        fields = ['name', 'description', 'dashboard_type', 'layout_split', 'pdf_file', 'map_image', 'info_datei', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={'class': TW, 'placeholder': 'Name der Großveranstaltung'}),
             'description': forms.Textarea(attrs={'class': TW, 'rows': 2, 'placeholder': 'Optionale Beschreibung...'}),
             'dashboard_type': forms.RadioSelect(attrs={'class': 'mr-2'}),
+            'layout_split': forms.Select(attrs={'class': TW}),
             'pdf_file': forms.ClearableFileInput(attrs={'class': TW, 'accept': '.pdf'}),
             'map_image': forms.ClearableFileInput(attrs={'class': TW, 'accept': 'image/*'}),
             'info_datei': forms.ClearableFileInput(attrs={'class': TW, 'accept': 'image/*,.pdf'}),

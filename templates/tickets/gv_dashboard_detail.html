@@ -77,10 +77,10 @@
 
     {% else %}
     <!-- ===== Dynamischer Modus ===== -->
-    <div class="flex gap-6">
+    <div class="flex flex-col md:flex-row gap-6">
 
-        <!-- Linke Spalte (25%) -->
-        <div class="w-1/4 flex-shrink-0 space-y-6">
+        <!-- Linke Spalte (Breite je nach Einstellung) -->
+        <div class="flex-shrink-0 space-y-6 w-full" style="flex-basis: {{ dashboard.layout_split|default:'25' }}%; max-width: 100%;">
 
             <!-- Kartenausschnitt -->
             {% if dashboard.map_image %}
@@ -109,12 +109,10 @@
                 </div>
                 <div class="p-2">
                     {% if dashboard.info_datei.name|lower|slice:"-4:" == ".pdf" %}
-                    <a href="{{ dashboard.info_datei.url }}" target="_blank" class="flex items-center gap-2 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <svg class="w-8 h-8 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                        <div>
-                            <p class="text-sm font-medium text-gray-800">PDF &ouml;ffnen</p>
-                            <p class="text-xs text-gray-500">Klicken zum &Ouml;ffnen in neuem Tab</p>
-                        </div>
+                    <iframe src="{{ dashboard.info_datei.url }}" class="w-full border-0 rounded" style="height: 60vh; min-height: 340px;" title="Info-Datei"></iframe>
+                    <a href="{{ dashboard.info_datei.url }}" target="_blank" rel="noopener" class="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-800">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        In neuem Tab &ouml;ffnen
                     </a>
                     {% else %}
                     <img src="{{ dashboard.info_datei.url }}" alt="Info-Datei" class="w-full rounded object-cover cursor-pointer hover:opacity-80 transition-opacity" @click="infoOpen = true" title="Klicken zum Vergr&ouml;&szlig;ern">
@@ -137,8 +135,8 @@
             {% endif %}
         </div>
 
-        <!-- Rechte Spalte (75%) -->
-        <div class="w-3/4 space-y-4">
+        <!-- Rechte Spalte (Rest) -->
+        <div class="flex-1 min-w-0 space-y-4">
             {% if abschnitte %}
                 {% for abschnitt in abschnitte %}
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">

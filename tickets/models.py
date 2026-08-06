@@ -947,6 +947,12 @@ class GrossveranstaltungDashboard(models.Model):
         PDF = 'pdf', _('PDF-Dokument')
         DYNAMIC = 'dynamic', _('Dynamisches Layout')
 
+    class LayoutSplit(models.TextChoices):
+        """Breite der linken Spalte (Karte/Info-Datei) im dynamischen Layout."""
+        S25 = '25', _('25 % / 75 %')
+        S33 = '33', _('33 % / 67 %')
+        S50 = '50', _('50 % / 50 %')
+
     name = models.CharField(
         max_length=200,
         verbose_name=_('Name')
@@ -960,6 +966,13 @@ class GrossveranstaltungDashboard(models.Model):
         choices=DashboardType.choices,
         default=DashboardType.DYNAMIC,
         verbose_name=_('Dashboard-Typ')
+    )
+    layout_split = models.CharField(
+        max_length=2,
+        choices=LayoutSplit.choices,
+        default=LayoutSplit.S25,
+        verbose_name=_('Aufteilung Karte/Text'),
+        help_text=_('Breite der linken Spalte im dynamischen Layout')
     )
     pdf_file = models.FileField(
         upload_to='grossveranstaltungen/pdfs/%Y/%m/',

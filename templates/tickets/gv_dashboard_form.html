@@ -129,6 +129,13 @@
                 <!-- Dynamik-Sektion -->
                 <div x-show="dashboardType === 'dynamic'" x-collapse class="space-y-6">
 
+                    <!-- Aufteilung -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Aufteilung Karte/Text</label>
+                        {{ form.layout_split }}
+                        <p class="text-xs text-gray-500 mt-1">Breite der linken Spalte (Karte / Info-Datei) gegen&uuml;ber den Textabschnitten.</p>
+                    </div>
+
                     <!-- Karte & Info-Datei -->
                     <div class="space-y-4">
                         <h2 class="text-base font-semibold text-gray-800 border-b border-gray-200 pb-2">Karte &amp; Info-Datei (linke Spalte)</h2>
