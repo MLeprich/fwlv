@@ -211,12 +211,14 @@
                 <div class="flex items-start gap-3">
                     {% if ff.status == 'einsatzbereit' %}
                     <span class="inline-block w-4 h-4 rounded-full bg-green-500 flex-shrink-0 mt-1"></span>
-                    {% else %}
+                    {% elif ff.status == 'nicht_einsatzbereit' %}
                     <span class="inline-block w-4 h-4 rounded-full bg-red-500 flex-shrink-0 mt-1"></span>
+                    {% else %}
+                    <span class="inline-block w-4 h-4 rounded-full bg-gray-400 flex-shrink-0 mt-1"></span>
                     {% endif %}
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-gray-900">{{ ff.name }}</p>
-                        <p class="text-xs {% if ff.status == 'einsatzbereit' %}text-green-600{% else %}text-red-600{% endif %}">{{ ff.label }}</p>
+                        <p class="text-xs {% if ff.status == 'einsatzbereit' %}text-green-600{% elif ff.status == 'nicht_einsatzbereit' %}text-red-600{% else %}text-gray-500{% endif %}">{{ ff.label }}</p>
                         {% if ff.fahrzeuge %}
                         <ul class="mt-1 space-y-0.5">
                             {% for v in ff.fahrzeuge %}

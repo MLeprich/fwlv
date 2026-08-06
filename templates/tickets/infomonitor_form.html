@@ -453,18 +453,14 @@
                         {% for z in ff_zuege %}
                         <div class="bg-gray-50 rounded-lg p-4">
                             <p class="text-sm font-semibold text-gray-700 mb-3">{{ z.label }}</p>
-                            <div class="space-y-2">
+                            <div class="flex items-center gap-4" x-data="{ sel: '{{ z.status_field.value|default:'einsatzbereit' }}' }">
                                 {% for radio in z.status_field %}
-                                <label class="flex items-center gap-3 cursor-pointer px-3 py-2 rounded-lg transition-colors hover:bg-gray-100">
-                                    {{ radio.tag }}
-                                    <span class="flex items-center gap-2 text-sm font-medium">
-                                        {% if radio.data.value == 'einsatzbereit' %}
-                                        <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
-                                        {% else %}
-                                        <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
-                                        {% endif %}
-                                        {{ radio.choice_label }}
-                                    </span>
+                                <label class="cursor-pointer" title="{{ radio.choice_label }}">
+                                    <input type="radio" name="{{ radio.data.name }}" value="{{ radio.data.value }}" x-model="sel" class="hidden">
+                                    <span class="inline-block w-9 h-9 rounded-full transition-all"
+                                          :style="sel === '{{ radio.data.value }}'
+                                              ? 'background: {% if radio.data.value == 'einsatzbereit' %}#22c55e{% elif radio.data.value == 'nicht_einsatzbereit' %}#ef4444{% else %}#9ca3af{% endif %}; box-shadow: 0 0 0 3px #fff, 0 0 0 5px #4b5563;'
+                                              : 'background: {% if radio.data.value == 'einsatzbereit' %}#22c55e{% elif radio.data.value == 'nicht_einsatzbereit' %}#ef4444{% else %}#9ca3af{% endif %}; opacity: 0.3;'"></span>
                                 </label>
                                 {% endfor %}
                             </div>

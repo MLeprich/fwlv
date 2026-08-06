@@ -487,8 +487,10 @@ class MappeAnleitung(models.Model):
 
 
 class FFZugStatus(models.TextChoices):
-    EINSATZBEREIT = 'einsatzbereit', _('Einsatzbereit')
-    NICHT_EINSATZBEREIT = 'nicht_einsatzbereit', _('Nicht Einsatzbereit')
+    """Status eines FF-Zugs – im Kiosk nur als Farbe dargestellt."""
+    EINSATZBEREIT = 'einsatzbereit', _('Grün')
+    NICHT_EINSATZBEREIT = 'nicht_einsatzbereit', _('Rot')
+    NEUTRAL = 'grau', _('Grau')
 
 
 class InfoMonitor(models.Model):
