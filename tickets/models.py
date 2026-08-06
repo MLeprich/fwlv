@@ -952,6 +952,7 @@ class GrossveranstaltungDashboard(models.Model):
         S25 = '25', _('25 % / 75 %')
         S33 = '33', _('33 % / 67 %')
         S50 = '50', _('50 % / 50 %')
+        S75 = '75', _('75 % / 25 %')
 
     name = models.CharField(
         max_length=200,
