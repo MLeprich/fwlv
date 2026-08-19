@@ -137,6 +137,9 @@ urlpatterns = [
     # Surveys App (Umfragen)
     path('umfragen/', include('surveys.urls')),
 
+    # IUK App (Drohnenstaffel)
+    path('iuk/', include('iuk.urls')),
+
     # Placeholder für zukünftige Apps
     # path('workshop/', include('workshop.urls')),
     # path('notifications/', include('notifications.urls')),

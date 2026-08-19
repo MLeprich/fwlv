@@ -1,0 +1,18 @@
+{% comment %}Ampel-Badge für einen Drohnenführerschein. Erwartet: license{% endcomment %}
+{% if license.state == 'expired' %}
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+    Abgelaufen ({{ license.days_until_expiry|cut:"-" }} Tage)
+</span>
+{% elif license.state == 'critical' %}
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+    Noch {{ license.days_until_expiry }} Tage
+</span>
+{% elif license.state == 'warning' %}
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+    Noch {{ license.days_until_expiry }} Tage
+</span>
+{% else %}
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+    Gültig
+</span>
+{% endif %}

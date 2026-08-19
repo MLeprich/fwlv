@@ -648,6 +648,28 @@
     {% endif %}
     {% endif %}
 
+    <!-- IUK / Drohnenstaffel (eigenständiger Menüpunkt) -->
+    {% if modules.iuk_enabled %}
+    {% if perms.iuk.view_drone %}
+    <a
+        href="{% url 'iuk:dashboard' %}"
+        class="flex items-center py-2 mx-2 rounded-lg transition-colors mt-1
+               {% if current_module == 'iuk' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+        :class="$store.sidebar.expanded ? 'gap-3 px-3' : 'justify-center'"
+        x-tooltip="'IUK – Drohnenstaffel'"
+    >
+        <span class="text-xl flex-shrink-0">🚁</span>
+        <span
+            class="text-sm font-medium truncate transition-all duration-200"
+            x-show="$store.sidebar.expanded"
+            x-transition
+        >
+            IUK
+        </span>
+    </a>
+    {% endif %}
+    {% endif %}
+
     <!-- Kategorie 4: Information -->
     {% if modules.wiki_enabled or modules.info_monitors_enabled %}
     <div class="mt-4">

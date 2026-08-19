@@ -36,6 +36,7 @@ class Roles:
     MODUL_CIVIL_PROTECTION = 'Modulverantwortlicher Civil Protection'
     MODUL_OBJEKTVERWALTUNG = 'Modulverantwortlicher Objektverwaltung'
     MODUL_SURVEYS = 'Modulverantwortlicher Umfragen'
+    MODUL_IUK = 'Modulverantwortlicher IUK'
 
     # Sachbearbeiter pro Modul (view + add)
     SACHBEARBEITER_MEDICAL = 'Sachbearbeiter Medical'
@@ -54,6 +55,7 @@ class Roles:
     SACHBEARBEITER_DEFECT_MANAGEMENT = 'Sachbearbeiter Defect Management'
     SACHBEARBEITER_CIVIL_PROTECTION = 'Sachbearbeiter Civil Protection'
     SACHBEARBEITER_OBJEKTVERWALTUNG = 'Sachbearbeiter Objektverwaltung'
+    SACHBEARBEITER_IUK = 'Sachbearbeiter IUK'
 
     # Freigabe-Gruppen (Procurement Approval)
     FREIGABE_STUFE_1 = 'Freigabe Stufe 1'  # bis 1.000€
@@ -98,6 +100,7 @@ class Roles:
             cls.MODUL_CIVIL_PROTECTION,
             cls.MODUL_OBJEKTVERWALTUNG,
             cls.MODUL_SURVEYS,
+            cls.MODUL_IUK,
             cls.SACHBEARBEITER_MEDICAL,
             cls.SACHBEARBEITER_CLOTHING,
             cls.SACHBEARBEITER_MAGAZINE,
@@ -114,6 +117,7 @@ class Roles:
             cls.SACHBEARBEITER_DEFECT_MANAGEMENT,
             cls.SACHBEARBEITER_CIVIL_PROTECTION,
             cls.SACHBEARBEITER_OBJEKTVERWALTUNG,
+            cls.SACHBEARBEITER_IUK,
             cls.LST_INFOMONITOR,
             cls.FREIGABE_STUFE_1,
             cls.FREIGABE_STUFE_2,
@@ -148,6 +152,7 @@ class Roles:
             cls.MODUL_CIVIL_PROTECTION,
             cls.MODUL_OBJEKTVERWALTUNG,
             cls.MODUL_SURVEYS,
+            cls.MODUL_IUK,
         ]
 
     @classmethod
@@ -170,6 +175,7 @@ class Roles:
             cls.SACHBEARBEITER_DEFECT_MANAGEMENT,
             cls.SACHBEARBEITER_CIVIL_PROTECTION,
             cls.SACHBEARBEITER_OBJEKTVERWALTUNG,
+            cls.SACHBEARBEITER_IUK,
         ]
 
     @classmethod
@@ -233,6 +239,9 @@ class Modules:
     # Umfragen
     SURVEYS = 'surveys'
 
+    # IUK / Drohnenstaffel
+    IUK = 'iuk'
+
     @classmethod
     def get_all_modules(cls):
         """Alle Module"""
@@ -265,6 +274,7 @@ class Modules:
             cls.IDCARDS,
             cls.OBJEKTVERWALTUNG,
             cls.SURVEYS,
+            cls.IUK,
         ]
 
     @classmethod
@@ -728,6 +738,7 @@ def get_module_from_role(role_name):
             'Defect Management': Modules.DEFECT_MANAGEMENT,
             'Civil Protection': Modules.CIVIL_PROTECTION,
             'Objektverwaltung': Modules.OBJEKTVERWALTUNG,
+            'IUK': Modules.IUK,
         }
         return mapping.get(module_display)
     return None

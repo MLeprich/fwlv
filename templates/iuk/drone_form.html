@@ -1,0 +1,91 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}{% if object %}Drohne bearbeiten{% else %}Neue Drohne{% endif %}{% endblock %}
+{% block iuk_heading %}{% if object %}Drohne bearbeiten{% else %}Neue Drohne{% endif %}{% endblock %}
+{% block iuk_subtitle %}{% if object %}{{ object.designation }}{% else %}Ger&auml;t der Drohnenstaffel anlegen{% endif %}{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:drone_list' %}" class="text-gray-500 hover:text-gray-700">Drohnen</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neu{% endif %}</span></li>
+{% endblock %}
+
+{% block iuk_content %}
+<form method="post" class="space-y-6">
+    {% csrf_token %}
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Drohne</h2>
+        {% include 'iuk/_form_fields.html' %}
+    </div>
+
+    <!-- Zubeh&ouml;r -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-1">Zubeh&ouml;r</h2>
+        <p class="text-sm text-gray-500 mb-4">
+            Akkus, Fernsteuerung, Kameras, Ladeger&auml;te, Koffer &hellip; &ndash; alles, was zur Drohne
+            geh&ouml;rt und mitinventarisiert werden soll. Nicht ben&ouml;tigte Zeilen einfach leer lassen.
+        </p>
+
+        {{ accessory_formset.management_form }}
+        {% if accessory_formset.non_form_errors %}
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {% for error in accessory_formset.non_form_errors %}<p>{{ error }}</p>{% endfor %}
+        </div>
+        {% endif %}
+
+        <div id="accessory-rows" class="space-y-4">
+            {% for accessory_form in accessory_formset %}
+            {% include 'iuk/_accessory_row.html' with form=accessory_form %}
+            {% endfor %}
+        </div>
+
+        <template id="accessory-empty-row">
+            {% include 'iuk/_accessory_row.html' with form=accessory_formset.empty_form %}
+        </template>
+
+        <button type="button" onclick="addAccessoryRow()"
+                class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-blue-700 border border-blue-300 bg-blue-50 hover:bg-blue-100 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Weiteres Zubeh&ouml;r
+        </button>
+    </div>
+
+    <div class="flex items-center gap-3">
+        <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">Speichern</button>
+        <a href="{% url 'iuk:drone_list' %}" class="px-5 py-2 rounded-lg text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors">Abbrechen</a>
+    </div>
+</form>
+
+<script>
+(function () {
+    var prefix = '{{ accessory_formset.prefix }}';
+
+    window.addAccessoryRow = function () {
+        var total = document.getElementById('id_' + prefix + '-TOTAL_FORMS');
+        var index = parseInt(total.value, 10);
+        var html = document.getElementById('accessory-empty-row').innerHTML
+                       .replace(/__prefix__/g, index);
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = html.trim();
+        document.getElementById('accessory-rows').appendChild(wrapper.firstElementChild);
+        total.value = index + 1;
+    };
+
+    window.removeAccessoryRow = function (button) {
+        var row = button.closest('[data-accessory-row]');
+        var remove = row.querySelector('input[name$="-DELETE"]');
+        if (remove) {
+            remove.checked = true;
+        }
+        row.querySelectorAll('input, select, textarea').forEach(function (field) {
+            if (field.name.indexOf('-DELETE') === -1 && field.name.indexOf('-id') === -1) {
+                if (field.type === 'checkbox') { field.checked = false; } else { field.value = ''; }
+            }
+        });
+        row.style.display = 'none';
+    };
+})();
+</script>
+{% endblock %}

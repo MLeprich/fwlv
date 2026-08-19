@@ -1,0 +1,154 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}Flugbuch{% endblock %}
+{% block iuk_heading %}Flugbuch{% endblock %}
+{% block iuk_subtitle %}Nachweis aller Fl&uuml;ge der Drohnenstaffel{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">Flugbuch</span></li>
+{% endblock %}
+
+{% block iuk_actions %}
+<a href="{% url 'iuk:flight_statistics' %}{% if filter_query %}?{{ filter_query }}{% endif %}"
+   class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    Flugstunden
+</a>
+{% if perms.iuk.view_dronechecklist %}
+<a href="{% url 'iuk:checklist_list' %}" class="bg-white text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+    Checklisten
+</a>
+{% endif %}
+<a href="{% url 'iuk:flight_book_pdf' %}{% if filter_query %}?{{ filter_query }}{% endif %}" target="_blank" rel="noopener"
+   class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-400 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2z"/></svg>
+    Flugbuch als PDF
+</a>
+{% if can_add %}
+<a href="{% url 'iuk:flight_create' %}" class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Flug eintragen
+</a>
+{% endif %}
+{% endblock %}
+
+{% block iuk_content %}
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Fl&uuml;ge</p>
+        <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Flugzeit gesamt</p>
+        <p class="text-2xl font-bold text-blue-600">{{ stats.minutes }}<span class="text-base font-medium text-gray-400"> min</span></p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Eins&auml;tze</p>
+        <p class="text-2xl font-bold text-indigo-600">{{ stats.einsaetze }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Mit Vorkommnis</p>
+        <p class="text-2xl font-bold text-red-600">{{ stats.incidents }}</p>
+    </div>
+</div>
+
+<form method="get" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <input type="text" name="search" value="{{ search }}" placeholder="Ort, Einsatznummer oder Pilot…"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <select name="drone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Drohnen</option>
+            {% for drone in drones %}
+            <option value="{{ drone.pk }}" {% if active_drone == drone.pk|stringformat:"s" %}selected{% endif %}>{{ drone.designation }}</option>
+            {% endfor %}
+        </select>
+        <select name="operation_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Anl&auml;sse</option>
+            {% for value, label in type_choices %}
+            <option value="{{ value }}" {% if active_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Von</label>
+            <input type="date" name="from" value="{{ date_from }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Bis</label>
+            <input type="date" name="to" value="{{ date_to }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div class="flex items-end gap-3">
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="incidents" value="1" {% if only_incidents %}checked{% endif %} class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                nur mit Vorkommnis
+            </label>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">Filtern</button>
+        </div>
+    </div>
+</form>
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    {% if flights %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flug-Nr.</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Drohne</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Anlass</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ort</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pilot</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dauer</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vorkommnis</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for flight in flights %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-5 py-3 text-sm font-mono font-medium">
+                        <a href="{% url 'iuk:flight_detail' flight.pk %}" class="text-blue-600 hover:text-blue-800">{{ flight.flight_label }}</a>
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ flight.flight_date|date:"d.m.Y" }}<span class="text-xs text-gray-400"> {{ flight.takeoff_time|time:"H:i" }}</span></td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ flight.drone.designation }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">
+                        {{ flight.get_operation_type_display }}
+                        {% if flight.operation_number %}<span class="block text-xs text-gray-400">{{ flight.operation_number }}</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ flight.location }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ flight.pilot_display }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ flight.duration_display }}</td>
+                    <td class="px-5 py-3 text-sm">
+                        {% if flight.has_incident %}
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">ja</span>
+                        {% if flight.reported_to_lba %}<span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">LBA</span>{% endif %}
+                        {% else %}
+                        <span class="text-xs text-gray-400">nein</span>
+                        {% endif %}
+                        {% if flight.has_checklist_findings %}
+                        <span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700" title="Offene Punkte in der Checkliste">Checkliste</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-right whitespace-nowrap">
+                        <a href="{% url 'iuk:flight_detail' flight.pk %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Details</a>
+                        <a href="{% url 'iuk:flight_pdf' flight.pk %}" target="_blank" rel="noopener" class="ml-3 text-gray-500 hover:text-gray-700 text-sm font-medium">PDF</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <p class="text-base font-semibold text-gray-700 mb-1">Keine Fl&uuml;ge gefunden</p>
+        <p class="text-sm text-gray-500">Tragen Sie den ersten Flug ins Flugbuch ein.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'iuk/_pagination.html' %}
+
+{% endblock %}

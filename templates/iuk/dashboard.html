@@ -1,0 +1,177 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}IUK &ndash; Drohnenstaffel{% endblock %}
+{% block iuk_heading %}IUK{% endblock %}
+{% block iuk_subtitle %}Drohnenstaffel &ndash; Ger&auml;te, Flugbuch, F&uuml;hrerscheine und Gutscheine{% endblock %}
+
+{% block iuk_content %}
+
+<!-- Kennzahlen -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+    <!-- Drohnen -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-700">Drohnen</h2>
+            {% if perms.iuk.view_drone %}
+            <a href="{% url 'iuk:drone_list' %}" class="text-xs font-medium text-blue-600 hover:text-blue-800">Alle anzeigen</a>
+            {% endif %}
+        </div>
+        <div class="p-5">
+            <p class="text-3xl font-bold text-gray-900">{{ drone_stats.total }}</p>
+            <div class="mt-3 space-y-1 text-sm">
+                <div class="flex justify-between"><span class="text-gray-600">Einsatzbereit</span><span class="font-semibold text-green-600">{{ drone_stats.einsatzbereit }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">In Wartung</span><span class="font-semibold text-yellow-600">{{ drone_stats.wartung }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">Au&szlig;er Dienst</span><span class="font-semibold text-gray-500">{{ drone_stats.ausser_dienst }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flugbuch -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-700">Flugbuch {{ flight_stats.year }}</h2>
+            {% if perms.iuk.view_flightlog %}
+            <a href="{% url 'iuk:flight_list' %}" class="text-xs font-medium text-blue-600 hover:text-blue-800">Alle anzeigen</a>
+            {% endif %}
+        </div>
+        <div class="p-5">
+            <p class="text-3xl font-bold text-gray-900">{{ flight_stats.total }}<span class="text-base font-medium text-gray-400"> Fl&uuml;ge</span></p>
+            <div class="mt-3 space-y-1 text-sm">
+                <div class="flex justify-between"><span class="text-gray-600">Flugzeit</span><span class="font-semibold text-blue-600">{{ flight_stats.minutes }} min</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">Eins&auml;tze</span><span class="font-semibold text-indigo-600">{{ flight_stats.einsaetze }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">Mit Vorkommnis</span><span class="font-semibold text-red-600">{{ flight_stats.incidents }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Führerscheine -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-700">Drohnenf&uuml;hrerscheine</h2>
+            {% if perms.iuk.view_dronelicense %}
+            <a href="{% url 'iuk:license_list' %}" class="text-xs font-medium text-blue-600 hover:text-blue-800">Alle anzeigen</a>
+            {% endif %}
+        </div>
+        <div class="p-5">
+            <p class="text-3xl font-bold text-gray-900">{{ license_stats.total }}</p>
+            <div class="mt-3 space-y-1 text-sm">
+                <div class="flex justify-between"><span class="text-gray-600">G&uuml;ltig</span><span class="font-semibold text-green-600">{{ license_stats.ok }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">L&auml;uft bald ab (&le; {{ warning_days }} Tage)</span><span class="font-semibold text-yellow-600">{{ license_stats.warning }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">Dringend (&le; {{ critical_days }} Tage)</span><span class="font-semibold text-orange-600">{{ license_stats.critical }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">Abgelaufen</span><span class="font-semibold text-red-600">{{ license_stats.expired }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gutscheine -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-700">Gutscheincodes</h2>
+            {% if perms.iuk.view_voucher %}
+            <a href="{% url 'iuk:voucher_list' %}" class="text-xs font-medium text-blue-600 hover:text-blue-800">Alle anzeigen</a>
+            {% endif %}
+        </div>
+        <div class="p-5">
+            <p class="text-3xl font-bold text-gray-900">{{ voucher_stats.offen }}<span class="text-base font-medium text-gray-400"> / {{ voucher_stats.total }} verf&uuml;gbar</span></p>
+            <div class="mt-3 space-y-1 text-sm">
+                <div class="flex justify-between"><span class="text-gray-600">Vergeben</span><span class="font-semibold text-yellow-600">{{ voucher_stats.vergeben }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">Genutzt</span><span class="font-semibold text-blue-600">{{ voucher_stats.genutzt }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">Verfallen</span><span class="font-semibold text-gray-500">{{ voucher_stats.verfallen }}</span></div>
+                {% if voucher_stats.ueberfaellig %}
+                <div class="flex justify-between"><span class="text-gray-600">Nicht eingel&ouml;st, aber abgelaufen</span><span class="font-semibold text-red-600">{{ voucher_stats.ueberfaellig }}</span></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Führerscheine, die Aufmerksamkeit brauchen -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <div class="bg-gray-50 border-b border-gray-200 px-5 py-3">
+        <h2 class="text-sm font-semibold text-gray-700">Verl&auml;ngerung erforderlich</h2>
+    </div>
+    {% if attention_licenses %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-5 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fernpilot</th>
+                    <th class="px-5 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nachweis</th>
+                    <th class="px-5 py-2 text-left text-xs font-medium text-gray-500 uppercase">G&uuml;ltig bis</th>
+                    <th class="px-5 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for license in attention_licenses %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-5 py-3 text-sm font-medium text-gray-900">{{ license.pilot_display }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ license.get_license_type_display }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ license.expiry_date|date:"d.m.Y" }}</td>
+                    <td class="px-5 py-3 text-sm">
+                        {% include 'iuk/_license_badge.html' with license=license %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center">
+        <p class="text-sm text-gray-500">Alle Drohnenf&uuml;hrerscheine sind g&uuml;ltig.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Drohnen-Kurzliste -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gray-50 border-b border-gray-200 px-5 py-3">
+            <h2 class="text-sm font-semibold text-gray-700">Drohnen</h2>
+        </div>
+        {% if drones %}
+        <ul class="divide-y divide-gray-100">
+            {% for drone in drones %}
+            <li class="px-5 py-3 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-900">{{ drone.designation }}</p>
+                    <p class="text-xs text-gray-500">{{ drone.model }} &middot; SN {{ drone.serial_number }}</p>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full
+                    {% if drone.status == 'einsatzbereit' %}bg-green-100 text-green-700
+                    {% elif drone.status == 'wartung' %}bg-yellow-100 text-yellow-700
+                    {% else %}bg-gray-100 text-gray-600{% endif %}">
+                    {{ drone.get_status_display }}
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-8 text-center"><p class="text-sm text-gray-500">Noch keine Drohnen erfasst.</p></div>
+        {% endif %}
+    </div>
+
+    <!-- Zuletzt genutzte Gutscheine -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gray-50 border-b border-gray-200 px-5 py-3">
+            <h2 class="text-sm font-semibold text-gray-700">Zuletzt genutzte Gutscheine</h2>
+        </div>
+        {% if recent_vouchers %}
+        <ul class="divide-y divide-gray-100">
+            {% for voucher in recent_vouchers %}
+            <li class="px-5 py-3 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-mono font-medium text-gray-900">{{ voucher.code }}</p>
+                    <p class="text-xs text-gray-500">{{ voucher.used_by_display }}</p>
+                </div>
+                <span class="text-xs text-gray-500">{{ voucher.used_at|date:"d.m.Y"|default:"—" }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-8 text-center"><p class="text-sm text-gray-500">Noch kein Gutschein eingel&ouml;st.</p></div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}Flug {{ flight.flight_label }}{% endblock %}
+{% block iuk_heading %}Flug {{ flight.flight_label }}{% endblock %}
+{% block iuk_subtitle %}{{ flight.flight_date|date:"d.m.Y" }} &middot; {{ flight.drone.designation }} &middot; {{ flight.get_operation_type_display }}{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:flight_list' %}" class="text-gray-500 hover:text-gray-700">Flugbuch</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">{{ flight.flight_label }}</span></li>
+{% endblock %}
+
+{% block iuk_actions %}
+<a href="{% url 'iuk:flight_pdf' flight.pk %}" target="_blank" rel="noopener"
+   class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2z"/></svg>
+    Als PDF drucken
+</a>
+{% endblock %}
+
+{% block iuk_content %}
+
+<div class="bg-gray-100 border border-gray-200 rounded-lg px-4 py-3 mb-6 text-sm text-gray-700">
+    Eingetragen am {{ flight.created_at|date:"d.m.Y H:i" }} von
+    <strong>{{ flight.created_by|default:"System" }}</strong>.
+    Der Eintrag ist unver&auml;nderlich &ndash; Korrekturen stehen als Nachtrag unten.
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">Flug</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-sm">
+        <div><p class="text-gray-500">Flug-Nr.</p><p class="font-mono font-semibold text-gray-900">{{ flight.flight_label }}</p></div>
+        <div><p class="text-gray-500">Drohne</p><p class="font-medium text-gray-900">{{ flight.drone }}</p></div>
+        <div>
+            <p class="text-gray-500">Anlass</p>
+            <p class="font-medium text-gray-900">{{ flight.get_operation_type_display }}{% if flight.operation_number %} <span class="text-gray-500">(Einsatz-Nr. {{ flight.operation_number }})</span>{% endif %}</p>
+        </div>
+        <div class="md:col-span-3"><p class="text-gray-500">Ort</p><p class="font-medium text-gray-900">{{ flight.location }}</p></div>
+        <div><p class="text-gray-500">Datum</p><p class="font-medium text-gray-900">{{ flight.flight_date|date:"d.m.Y" }}</p></div>
+        <div><p class="text-gray-500">Start / Landung</p><p class="font-medium text-gray-900">{{ flight.takeoff_time|time:"H:i" }} &ndash; {{ flight.landing_time|time:"H:i" }} Uhr</p></div>
+        <div><p class="text-gray-500">Flugdauer</p><p class="font-medium text-gray-900">{{ flight.duration_display }}</p></div>
+        <div><p class="text-gray-500">Flugmodus</p><p class="font-medium text-gray-900">{{ flight.get_flight_mode_display }}</p></div>
+        <div><p class="text-gray-500">Nutzlast</p><p class="font-medium text-gray-900">{{ flight.payload|default:"—" }}</p></div>
+        <div>
+            <p class="text-gray-500">Vor-/Nachflugkontrolle</p>
+            <p class="font-medium text-gray-900">
+                {% if flight.preflight_check %}Vorflug ✓{% else %}<span class="text-red-600">Vorflug ✗</span>{% endif %} &middot;
+                {% if flight.postflight_check %}Nachflug ✓{% else %}<span class="text-red-600">Nachflug ✗</span>{% endif %}
+            </p>
+        </div>
+    </div>
+    {% if flight.description %}
+    <div class="mt-5 pt-5 border-t border-gray-200 text-sm">
+        <p class="text-gray-500">Beschreibung Einsatz</p>
+        <p class="text-gray-900 whitespace-pre-line">{{ flight.description }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">Besatzung</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-sm">
+        <div><p class="text-gray-500">Pilot</p><p class="font-medium text-gray-900">{{ flight.pilot_display }}</p></div>
+        <div><p class="text-gray-500">Kamerabeobachter</p><p class="font-medium text-gray-900">{{ flight.camera_operator_display }}</p></div>
+        <div><p class="text-gray-500">Luftraumbeobachter</p><p class="font-medium text-gray-900">{{ flight.airspace_observer_display }}</p></div>
+        <div><p class="text-gray-500">F&uuml;hrungskraft Drohne</p><p class="font-medium text-gray-900">{{ flight.drone_lead_display }}</p></div>
+        <div><p class="text-gray-500">Gesamteinsatzleiter</p><p class="font-medium text-gray-900">{{ flight.overall_commander|default:"—" }}</p></div>
+    </div>
+</div>
+
+{% if flight.preflight_results or flight.postflight_results %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">Checklisten</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for label, checklist, results in flight_checklists %}
+        <div>
+            <p class="text-sm font-semibold text-gray-700 mb-2">{{ label }}
+                {% if checklist %}<span class="font-normal text-gray-500">&ndash; {{ checklist.name }}</span>{% endif %}
+            </p>
+            {% if results %}
+            <ul class="rounded-lg border border-gray-200 divide-y divide-gray-100 text-sm">
+                {% for item in results %}
+                <li class="px-3 py-2 flex items-start gap-2">
+                    <span class="{% if item.ok %}text-green-600{% else %}text-red-600{% endif %} font-semibold">{% if item.ok %}&#10003;{% else %}&#10007;{% endif %}</span>
+                    <span class="flex-1">
+                        <span class="{% if not item.ok %}text-red-700{% else %}text-gray-800{% endif %}">{{ item.text }}</span>
+                        {% if item.note %}<span class="block text-xs text-gray-500">Bemerkung: {{ item.note }}</span>{% endif %}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-sm text-gray-500">Keine Checkliste verwendet.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="bg-white rounded-lg shadow-sm border {% if flight.has_incident %}border-red-300{% else %}border-gray-200{% endif %} p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">Vorkommnisse</h2>
+    {% if flight.has_incident %}
+    <p class="text-sm text-gray-900 whitespace-pre-line mb-4">{{ flight.incident_description }}</p>
+    <p class="text-sm"><span class="text-gray-500">Meldung an das LBA:</span>
+        <span class="font-medium {% if flight.reported_to_lba %}text-orange-700{% else %}text-gray-900{% endif %}">{{ flight.get_lba_report_display }}</span></p>
+    {% else %}
+    <p class="text-sm text-gray-500">Keine Vorkommnisse.</p>
+    {% endif %}
+</div>
+
+<!-- Korrekturen / Nachtr&auml;ge -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-base font-semibold text-gray-900">Korrekturen &amp; Nachtr&auml;ge</h2>
+        <p class="text-sm text-gray-500">Der Eintrag selbst bleibt unver&auml;ndert &ndash; Erg&auml;nzungen erscheinen hier und im Ausdruck.</p>
+    </div>
+
+    {% if comments %}
+    <ul class="divide-y divide-gray-100">
+        {% for comment in comments %}
+        <li class="px-6 py-4">
+            <p class="text-sm text-gray-900 whitespace-pre-line">{{ comment.text }}</p>
+            <p class="mt-1 text-xs text-gray-500">{{ comment.created_at|date:"d.m.Y H:i" }} &middot; {{ comment.created_by|default:"System" }}</p>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-6 py-4 text-sm text-gray-500">Noch keine Nachtr&auml;ge.</p>
+    {% endif %}
+
+    {% if can_comment %}
+    <form method="post" class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        {% csrf_token %}
+        <label for="{{ comment_form.text.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ comment_form.text.label }}</label>
+        {{ comment_form.text }}
+        {% for error in comment_form.text.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+        <button type="submit" class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">Nachtrag speichern</button>
+    </form>
+    {% endif %}
+</div>
+
+{% endblock %}

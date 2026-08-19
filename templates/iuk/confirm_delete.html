@@ -1,0 +1,32 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}{{ object_label }} l&ouml;schen{% endblock %}
+{% block iuk_heading %}{{ object_label }} l&ouml;schen{% endblock %}
+{% block iuk_subtitle %}{{ object_name }}{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">L&ouml;schen</span></li>
+{% endblock %}
+
+{% block iuk_content %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div class="flex items-start gap-3 mb-6">
+        <span class="text-3xl">⚠️</span>
+        <div>
+            <p class="text-base font-semibold text-gray-900">Wirklich l&ouml;schen?</p>
+            <p class="text-sm text-gray-600 mt-1">
+                {{ object_label }} <strong>{{ object_name }}</strong> wird endg&uuml;ltig entfernt.
+                Dieser Schritt kann nicht r&uuml;ckg&auml;ngig gemacht werden.
+            </p>
+        </div>
+    </div>
+    <form method="post">
+        {% csrf_token %}
+        <div class="flex items-center gap-3">
+            <button type="submit" class="bg-red-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">Endg&uuml;ltig l&ouml;schen</button>
+            <a href="{{ cancel_url }}" class="px-5 py-2 rounded-lg text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors">Abbrechen</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

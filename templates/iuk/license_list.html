@@ -1,0 +1,116 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}Drohnenf&uuml;hrerscheine{% endblock %}
+{% block iuk_heading %}Drohnenf&uuml;hrerscheine{% endblock %}
+{% block iuk_subtitle %}Nachweise der Fernpiloten inkl. Ablauf&uuml;berwachung{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">Drohnenf&uuml;hrerscheine</span></li>
+{% endblock %}
+
+{% block iuk_actions %}
+{% if can_add %}
+<a href="{% url 'iuk:license_create' %}" class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Neuer Nachweis
+</a>
+{% endif %}
+{% endblock %}
+
+{% block iuk_content %}
+
+<!-- Ampel-Kennzahlen -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">G&uuml;ltig</p>
+        <p class="text-2xl font-bold text-green-600">{{ stats.ok }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">L&auml;uft bald ab</p>
+        <p class="text-2xl font-bold text-yellow-600">{{ stats.warning }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Dringend</p>
+        <p class="text-2xl font-bold text-orange-600">{{ stats.critical }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Abgelaufen</p>
+        <p class="text-2xl font-bold text-red-600">{{ stats.expired }}</p>
+    </div>
+</div>
+
+<form method="get" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <input type="text" name="search" value="{{ search }}" placeholder="Name oder Nachweisnummer…"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <select name="license_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Nachweisarten</option>
+            {% for value, label in type_choices %}
+            <option value="{{ value }}" {% if active_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select name="state" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Zust&auml;nde</option>
+            {% for value, label in state_choices %}
+            <option value="{{ value }}" {% if active_state == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">Filtern</button>
+    </div>
+</form>
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    {% if licenses %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fernpilot</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nachweis</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nummer</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ausgestellt</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">G&uuml;ltig bis</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for license in licenses %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-5 py-3 text-sm font-medium text-gray-900">
+                        {{ license.pilot_display }}
+                        {% if not license.person %}<span class="ml-1 text-xs text-gray-400">(extern)</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ license.get_license_type_display }}</td>
+                    <td class="px-5 py-3 text-sm font-mono text-gray-600">{{ license.license_number|default:"—" }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ license.issued_date|date:"d.m.Y" }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ license.expiry_date|date:"d.m.Y" }}</td>
+                    <td class="px-5 py-3 text-sm">{% include 'iuk/_license_badge.html' with license=license %}</td>
+                    <td class="px-5 py-3 text-right whitespace-nowrap">
+                        {% if license.document %}
+                        <a href="{{ license.document.url }}" target="_blank" rel="noopener" class="text-gray-500 hover:text-gray-700 text-sm font-medium">Dokument</a>
+                        {% endif %}
+                        {% if can_change %}
+                        <a href="{% url 'iuk:license_edit' license.pk %}" class="ml-3 text-blue-600 hover:text-blue-800 text-sm font-medium">Bearbeiten</a>
+                        {% endif %}
+                        {% if can_delete %}
+                        <a href="{% url 'iuk:license_delete' license.pk %}" class="ml-3 text-red-600 hover:text-red-800 text-sm font-medium">L&ouml;schen</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <p class="text-base font-semibold text-gray-700 mb-1">Keine Nachweise gefunden</p>
+        <p class="text-sm text-gray-500">Erfassen Sie den ersten Drohnenf&uuml;hrerschein.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'iuk/_pagination.html' %}
+
+{% endblock %}

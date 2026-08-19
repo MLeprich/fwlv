@@ -105,6 +105,7 @@ LOCAL_APPS = [
     'objektverwaltung.apps.ObjektverwaltungConfig',
     'accident_report.apps.AccidentReportConfig',
     'surveys.apps.SurveysConfig',
+    'iuk.apps.IukConfig',
     # Weitere Apps werden hier hinzugefuegt
 ]
 

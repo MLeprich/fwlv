@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% comment %}
+Gemeinsames Gerüst aller IUK-Seiten: Breadcrumb, Kopfbereich mit Reitern.
+Kind-Templates füllen `iuk_title`, `iuk_subtitle`, `iuk_actions` und `iuk_content`.
+{% endcomment %}
+
+{% block title %}{% block iuk_title %}IUK{% endblock %} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'iuk:dashboard' %}" class="text-gray-500 hover:text-gray-700">IUK</a></li>
+            {% block iuk_breadcrumb %}{% endblock %}
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Kopfbereich -->
+    <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-4xl">🚁</span>
+                <div>
+                    <h1 class="text-2xl font-bold">{% block iuk_heading %}IUK{% endblock %}</h1>
+                    <p class="text-blue-100">{% block iuk_subtitle %}Drohnenstaffel{% endblock %}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">{% block iuk_actions %}{% endblock %}</div>
+        </div>
+    </div>
+
+    <!-- Reiter -->
+    <div class="flex flex-wrap gap-2 mb-6">
+        {% url 'iuk:dashboard' as url_dashboard %}
+        {% url 'iuk:drone_list' as url_drones %}
+        {% url 'iuk:flight_list' as url_flights %}
+        {% url 'iuk:license_list' as url_licenses %}
+        {% url 'iuk:voucher_list' as url_vouchers %}
+        <a href="{{ url_dashboard }}" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if iuk_tab == 'dashboard' %}bg-blue-600 text-white{% else %}bg-white text-gray-700 border border-gray-200 hover:bg-gray-50{% endif %}">Übersicht</a>
+        {% if perms.iuk.view_drone %}
+        <a href="{{ url_drones }}" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if iuk_tab == 'drones' %}bg-blue-600 text-white{% else %}bg-white text-gray-700 border border-gray-200 hover:bg-gray-50{% endif %}">Drohnen</a>
+        {% endif %}
+        {% if perms.iuk.view_flightlog %}
+        <a href="{{ url_flights }}" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if iuk_tab == 'flights' %}bg-blue-600 text-white{% else %}bg-white text-gray-700 border border-gray-200 hover:bg-gray-50{% endif %}">Flugbuch</a>
+        {% endif %}
+        {% if perms.iuk.view_dronelicense %}
+        <a href="{{ url_licenses }}" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if iuk_tab == 'licenses' %}bg-blue-600 text-white{% else %}bg-white text-gray-700 border border-gray-200 hover:bg-gray-50{% endif %}">Drohnenführerscheine</a>
+        {% endif %}
+        {% if perms.iuk.view_voucher %}
+        <a href="{{ url_vouchers }}" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if iuk_tab == 'vouchers' %}bg-blue-600 text-white{% else %}bg-white text-gray-700 border border-gray-200 hover:bg-gray-50{% endif %}">Gutscheincodes</a>
+        {% endif %}
+    </div>
+
+    {% block iuk_content %}{% endblock %}
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends 'iuk/pdf/_pdf_base.html' %}
+
+{% block pdf_title %}Flugbuch {{ flight.flight_label }}{% endblock %}
+
+{% block pdf_content %}
+<div class="header">
+    <h1>Flugbuch &ndash; Eintrag {{ flight.flight_label }}</h1>
+    <div class="meta">
+        Drohnenstaffel &middot; {{ flight.flight_date|date:"d.m.Y" }} &middot;
+        {{ flight.get_operation_type_display }}{% if flight.operation_number %} (Einsatz-Nr. {{ flight.operation_number }}){% endif %}
+        &middot; Ausdruck vom {{ printed_at|date:"d.m.Y H:i" }} Uhr
+    </div>
+</div>
+
+<h2>Flug</h2>
+<table class="grid">
+    <tr>
+        <td style="width:33%"><span class="label">Flug-Nr.</span><span class="value">{{ flight.flight_label }}</span></td>
+        <td style="width:33%"><span class="label">Drohne</span><span class="value">{{ flight.drone.designation }}</span></td>
+        <td><span class="label">Modell / Seriennummer</span><span class="value">{{ flight.drone.model }} / {{ flight.drone.serial_number }}</span></td>
+    </tr>
+    <tr>
+        <td><span class="label">Anlass</span><span class="value">{{ flight.get_operation_type_display }}</span></td>
+        <td><span class="label">Einsatznummer</span><span class="value">{{ flight.operation_number|default:"—" }}</span></td>
+        <td><span class="label">Flugmodus</span><span class="value">{{ flight.get_flight_mode_display }}</span></td>
+    </tr>
+    <tr>
+        <td colspan="3"><span class="label">Ort (Adresse)</span><span class="value">{{ flight.location }}</span></td>
+    </tr>
+    <tr>
+        <td><span class="label">Datum</span><span class="value">{{ flight.flight_date|date:"d.m.Y" }}</span></td>
+        <td><span class="label">Start / Landung</span><span class="value">{{ flight.takeoff_time|time:"H:i" }} &ndash; {{ flight.landing_time|time:"H:i" }} Uhr</span></td>
+        <td><span class="label">Flugdauer</span><span class="value">{{ flight.duration_display }}</span></td>
+    </tr>
+    <tr>
+        <td><span class="label">Nutzlast</span><span class="value">{{ flight.payload|default:"—" }}</span></td>
+        <td><span class="label">Vorflugkontrolle</span><span class="value">{% if flight.preflight_check %}ja{% else %}nein{% endif %}</span></td>
+        <td><span class="label">Nachflugkontrolle</span><span class="value">{% if flight.postflight_check %}ja{% else %}nein{% endif %}</span></td>
+    </tr>
+</table>
+
+<h2>Besatzung</h2>
+<table class="grid">
+    <tr>
+        <td style="width:33%"><span class="label">Pilot</span><span class="value">{{ flight.pilot_display }}</span></td>
+        <td style="width:33%"><span class="label">Kamerabeobachter</span><span class="value">{{ flight.camera_operator_display }}</span></td>
+        <td><span class="label">Luftraumbeobachter</span><span class="value">{{ flight.airspace_observer_display }}</span></td>
+    </tr>
+    <tr>
+        <td><span class="label">F&uuml;hrungskraft Drohne</span><span class="value">{{ flight.drone_lead_display }}</span></td>
+        <td colspan="2"><span class="label">Gesamteinsatzleiter</span><span class="value">{{ flight.overall_commander|default:"—" }}</span></td>
+    </tr>
+</table>
+
+{% if flight.description %}
+<h2>Beschreibung Einsatz</h2>
+<p style="white-space: pre-line; margin: 0;">{{ flight.description }}</p>
+{% endif %}
+
+{% for label, checklist, results in flight_checklists %}{% if results %}
+<h2>{{ label }}{% if checklist %} &ndash; {{ checklist.name }}{% endif %}</h2>
+<table class="rows">
+    <thead><tr><th style="width:10mm">OK</th><th>Pr&uuml;fpunkt</th><th style="width:60mm">Bemerkung</th></tr></thead>
+    <tbody>
+        {% for item in results %}
+        <tr>
+            <td style="text-align:center">{% if item.ok %}&#10003;{% else %}&#10007;{% endif %}</td>
+            <td>{{ item.text }}</td>
+            <td>{{ item.note|default:"" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}{% endfor %}
+
+<h2>Vorkommnisse</h2>
+{% if flight.has_incident %}
+<div class="note warn">
+    <p style="white-space: pre-line; margin: 0;">{{ flight.incident_description }}</p>
+    <div class="meta">Meldung an das Luftfahrt-Bundesamt: {{ flight.get_lba_report_display }}</div>
+</div>
+{% else %}
+<p style="margin: 0;">Keine Vorkommnisse. Meldung an das Luftfahrt-Bundesamt: nein.</p>
+{% endif %}
+
+{% if comments %}
+<h2>Korrekturen &amp; Nachtr&auml;ge</h2>
+{% for comment in comments %}
+<div class="note">
+    <p style="white-space: pre-line; margin: 0;">{{ comment.text }}</p>
+    <div class="meta">{{ comment.created_at|date:"d.m.Y H:i" }} Uhr &middot; {{ comment.created_by|default:"System" }}</div>
+</div>
+{% endfor %}
+{% endif %}
+
+<table class="sign">
+    <tr>
+        <td style="width:48%"><div class="line">Datum, Unterschrift Pilot</div></td>
+        <td style="width:4%"></td>
+        <td style="width:48%"><div class="line">Datum, Unterschrift F&uuml;hrungskraft Drohne</div></td>
+    </tr>
+</table>
+
+<div class="footer-note">
+    Eintrag erfasst am {{ flight.created_at|date:"d.m.Y H:i" }} Uhr von {{ flight.created_by|default:"System" }}.
+    Flugbucheintr&auml;ge sind im System unver&auml;nderlich gespeichert; Korrekturen erfolgen ausschlie&szlig;lich
+    als Nachtrag und sind oben vollst&auml;ndig aufgef&uuml;hrt.
+</div>
+{% endblock %}

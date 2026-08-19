@@ -1,0 +1,29 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}Nachweis bearbeiten{% endblock %}
+{% block iuk_heading %}Drohnenf&uuml;hrerschein bearbeiten{% endblock %}
+{% block iuk_subtitle %}{{ object.pilot_display }}{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:license_list' %}" class="text-gray-500 hover:text-gray-700">Drohnenf&uuml;hrerscheine</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">Bearbeiten</span></li>
+{% endblock %}
+
+{% block iuk_content %}
+<div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 text-sm text-blue-900">
+    W&auml;hlen Sie entweder eine Person aus der Personalverwaltung <em>oder</em> tragen Sie
+    bei externen Piloten den Namen als Freitext ein. EU-Kompetenznachweise sind in der Regel
+    f&uuml;nf Jahre g&uuml;ltig; vor Ablauf wird automatisch erinnert.
+</div>
+
+<form method="post" enctype="multipart/form-data" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    {% csrf_token %}
+    {% include 'iuk/_form_fields.html' %}
+    <div class="mt-6 flex items-center gap-3">
+        <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">Speichern</button>
+        <a href="{% url 'iuk:license_list' %}" class="px-5 py-2 rounded-lg text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors">Abbrechen</a>
+    </div>
+</form>
+{% endblock %}

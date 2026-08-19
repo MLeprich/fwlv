@@ -1,0 +1,59 @@
+{% extends 'iuk/pdf/_pdf_base.html' %}
+
+{% block pdf_title %}Flugbuch{% endblock %}
+{% block page_size %}A4 landscape{% endblock %}
+
+{% block pdf_content %}
+<div class="header">
+    <h1>Flugbuch der Drohnenstaffel</h1>
+    <div class="meta">
+        {% if date_from or date_to %}Zeitraum {{ date_from|default:"Beginn" }} bis {{ date_to|default:"heute" }} &middot; {% endif %}
+        {{ flights|length }} Fl&uuml;ge &middot; Gesamtflugzeit {{ total_minutes }} Minuten &middot;
+        Ausdruck vom {{ printed_at|date:"d.m.Y H:i" }} Uhr
+    </div>
+</div>
+
+<table class="rows">
+    <thead>
+        <tr>
+            <th>Flug-Nr.</th>
+            <th>Datum</th>
+            <th>Start</th>
+            <th>Land.</th>
+            <th>Dauer</th>
+            <th>Drohne</th>
+            <th>Anlass / Einsatz-Nr.</th>
+            <th>Ort</th>
+            <th>Pilot</th>
+            <th>Modus</th>
+            <th>Vor/Nach</th>
+            <th>Vorkommnis</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for flight in flights %}
+        <tr>
+            <td>{{ flight.flight_label }}</td>
+            <td>{{ flight.flight_date|date:"d.m.Y" }}</td>
+            <td>{{ flight.takeoff_time|time:"H:i" }}</td>
+            <td>{{ flight.landing_time|time:"H:i" }}</td>
+            <td>{{ flight.duration_minutes }} min</td>
+            <td>{{ flight.drone.designation }}</td>
+            <td>{{ flight.get_operation_type_display }}{% if flight.operation_number %}<br>{{ flight.operation_number }}{% endif %}</td>
+            <td>{{ flight.location }}</td>
+            <td>{{ flight.pilot_display }}</td>
+            <td>{{ flight.flight_mode|upper }}</td>
+            <td>{% if flight.preflight_check %}✓{% else %}✗{% endif %} / {% if flight.postflight_check %}✓{% else %}✗{% endif %}</td>
+            <td>{% if flight.has_incident %}ja{% if flight.reported_to_lba %} (LBA){% endif %}{% else %}nein{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="12">Keine Fl&uuml;ge im gew&auml;hlten Zeitraum.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="footer-note">
+    Die Eintr&auml;ge sind im System unver&auml;nderlich gespeichert. Korrekturen und Nachtr&auml;ge stehen
+    im Einzelausdruck des jeweiligen Fluges.
+</div>
+{% endblock %}

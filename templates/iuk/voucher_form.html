@@ -1,0 +1,30 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}{% if object %}Gutschein bearbeiten{% else %}Neuer Gutschein{% endif %}{% endblock %}
+{% block iuk_heading %}{% if object %}Gutschein bearbeiten{% else %}Neuer Gutschein{% endif %}{% endblock %}
+{% block iuk_subtitle %}{% if object %}{{ object.code }}{% else %}Code der Beh&ouml;rde erfassen{% endif %}{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:voucher_list' %}" class="text-gray-500 hover:text-gray-700">Gutscheincodes</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neu{% endif %}</span></li>
+{% endblock %}
+
+{% block iuk_content %}
+<div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 text-sm text-blue-900">
+    Solange der Status <strong>Verf&uuml;gbar</strong> ist, ist der Gutschein noch niemandem zugeteilt.
+    Wird er an eine Person ausgegeben, bitte &uuml;ber die Aktion &bdquo;Vergeben&ldquo; in der &Uuml;bersicht
+    eintragen, <strong>wer</strong> ihn erhalten hat und <strong>f&uuml;r welchen Nachweis</strong> er gilt.
+    Nach der Einl&ouml;sung beim LBA folgt die Aktion &bdquo;Einl&ouml;sen&ldquo;.
+</div>
+
+<form method="post" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    {% csrf_token %}
+    {% include 'iuk/_form_fields.html' %}
+    <div class="mt-6 flex items-center gap-3">
+        <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">Speichern</button>
+        <a href="{% url 'iuk:voucher_list' %}" class="px-5 py-2 rounded-lg text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors">Abbrechen</a>
+    </div>
+</form>
+{% endblock %}

@@ -88,9 +88,13 @@ EOF
     # Setup module-specific permissions
     for cmd in setup_medical_permissions setup_clothing_permissions setup_equipment_permissions \
                setup_magazine_permissions setup_height_rescue_permissions setup_diving_permissions \
-               setup_workshop_permissions setup_it_hardware_permissions; do
+               setup_workshop_permissions setup_it_hardware_permissions setup_iuk_permissions; do
         python manage.py $cmd 2>/dev/null || true
     done
+
+    # Wiederkehrende Aufgaben in Celery-Beat eintragen (idempotent)
+    echo "Setting up scheduled tasks..."
+    python manage.py setup_iuk_schedule 2>/dev/null || true
 
     echo ""
     echo "Startup tasks completed!"

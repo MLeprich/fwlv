@@ -1,0 +1,100 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}Drohnen{% endblock %}
+{% block iuk_heading %}Drohnen{% endblock %}
+{% block iuk_subtitle %}Ger&auml;te der Drohnenstaffel{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">Drohnen</span></li>
+{% endblock %}
+
+{% block iuk_actions %}
+{% if can_add %}
+<a href="{% url 'iuk:drone_create' %}" class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Neue Drohne
+</a>
+{% endif %}
+{% endblock %}
+
+{% block iuk_content %}
+
+<form method="get" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <input type="text" name="search" value="{{ search }}" placeholder="Bezeichnung, Modell, Seriennummer, LBA-Nummer…"
+               class="md:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Status</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if active_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">Filtern</button>
+    </div>
+</form>
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    {% if drones %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bezeichnung</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modell</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Seriennummer</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">LBA-Registrierung</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Standort</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zubeh&ouml;r</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for drone in drones %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-5 py-3 text-sm font-medium text-gray-900">{{ drone.designation }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ drone.model }}</td>
+                    <td class="px-5 py-3 text-sm font-mono text-gray-600">{{ drone.serial_number }}</td>
+                    <td class="px-5 py-3 text-sm font-mono text-gray-600">{{ drone.lba_registration_number|default:"—" }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ drone.location|default:"—" }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">
+                        {% if drone.accessory_count %}
+                        <span title="{% for item in drone.accessories.all %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                            {{ drone.accessory_count }} Position{{ drone.accessory_count|pluralize:"en" }}
+                            <span class="text-xs text-gray-400">({{ drone.accessory_total }} St&uuml;ck)</span>
+                        </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm">
+                        <span class="text-xs px-2 py-0.5 rounded-full
+                            {% if drone.status == 'einsatzbereit' %}bg-green-100 text-green-700
+                            {% elif drone.status == 'wartung' %}bg-yellow-100 text-yellow-700
+                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ drone.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-5 py-3 text-right whitespace-nowrap">
+                        {% if can_change %}
+                        <a href="{% url 'iuk:drone_edit' drone.pk %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Bearbeiten</a>
+                        {% endif %}
+                        {% if can_delete %}
+                        <a href="{% url 'iuk:drone_delete' drone.pk %}" class="ml-3 text-red-600 hover:text-red-800 text-sm font-medium">L&ouml;schen</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <p class="text-base font-semibold text-gray-700 mb-1">Keine Drohnen gefunden</p>
+        <p class="text-sm text-gray-500">Legen Sie die erste Drohne der Staffel an.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'iuk/_pagination.html' %}
+
+{% endblock %}

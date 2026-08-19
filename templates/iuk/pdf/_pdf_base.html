@@ -1,0 +1,44 @@
+{% comment %}Gemeinsames Seitenlayout der Flugbuch-PDFs.{% endcomment %}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>{% block pdf_title %}Flugbuch{% endblock %}</title>
+    <style>
+        @page {
+            size: {% block page_size %}A4 portrait{% endblock %};
+            margin: 14mm 12mm 16mm 12mm;
+            @bottom-center {
+                content: "Seite " counter(page) " von " counter(pages);
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #666;
+            }
+        }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 9.5pt; color: #111; }
+        h1 { font-size: 15pt; margin: 0 0 2mm 0; }
+        h2 { font-size: 10.5pt; margin: 5mm 0 2mm 0; padding-bottom: 1mm;
+             border-bottom: 1px solid #999; text-transform: uppercase; letter-spacing: .4pt; }
+        .header { border-bottom: 2px solid #111; padding-bottom: 3mm; margin-bottom: 4mm; }
+        .header .meta { font-size: 8.5pt; color: #555; }
+        table { width: 100%; border-collapse: collapse; }
+        .grid td { vertical-align: top; padding: 1.2mm 2mm 1.2mm 0; }
+        .label { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .3pt; color: #666; display: block; }
+        .value { font-size: 10pt; }
+        .rows th { background: #eee; border: 1px solid #999; padding: 1.5mm; font-size: 8pt;
+                   text-align: left; text-transform: uppercase; }
+        .rows td { border: 1px solid #bbb; padding: 1.5mm; font-size: 8.5pt; }
+        .rows tr { page-break-inside: avoid; }
+        .note { border: 1px solid #bbb; padding: 2mm; margin-top: 2mm; page-break-inside: avoid; }
+        .note .meta { font-size: 7.5pt; color: #555; margin-top: 1mm; }
+        .warn { border: 1px solid #a00; background: #fdf0f0; }
+        .footer-note { margin-top: 6mm; font-size: 7.5pt; color: #555; border-top: 1px solid #ccc; padding-top: 2mm; }
+        .sign { margin-top: 10mm; }
+        .sign td { padding-top: 12mm; font-size: 8pt; color: #444; }
+        .sign .line { border-top: 1px solid #666; padding-top: 1mm; }
+    </style>
+</head>
+<body>
+{% block pdf_content %}{% endblock %}
+</body>
+</html>

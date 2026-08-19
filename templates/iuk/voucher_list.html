@@ -1,0 +1,145 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}Gutscheincodes{% endblock %}
+{% block iuk_heading %}Gutscheincodes{% endblock %}
+{% block iuk_subtitle %}Codes der Beh&ouml;rde zur Einl&ouml;sung beim LBA{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">Gutscheincodes</span></li>
+{% endblock %}
+
+{% block iuk_actions %}
+{% if can_add %}
+<a href="{% url 'iuk:voucher_import' %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-400 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+    CSV importieren
+</a>
+<a href="{% url 'iuk:voucher_create' %}" class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Neuer Gutschein
+</a>
+{% endif %}
+{% endblock %}
+
+{% block iuk_content %}
+
+<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Gesamt</p>
+        <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Verf&uuml;gbar</p>
+        <p class="text-2xl font-bold text-green-600">{{ stats.offen }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Vergeben</p>
+        <p class="text-2xl font-bold text-yellow-600">{{ stats.vergeben }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Genutzt</p>
+        <p class="text-2xl font-bold text-blue-600">{{ stats.genutzt }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Verfallen</p>
+        <p class="text-2xl font-bold text-gray-500">{{ stats.verfallen }}</p>
+    </div>
+</div>
+
+<form method="get" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <input type="text" name="search" value="{{ search }}" placeholder="Code, Ausgeber oder Person…"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Status</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if active_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select name="intended_use" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Nachweise</option>
+            {% for value, label in type_choices %}
+            <option value="{{ value }}" {% if active_use == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">Filtern</button>
+    </div>
+</form>
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    {% if vouchers %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Person</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">F&uuml;r Nachweis</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">G&uuml;ltig bis</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vergeben am</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Genutzt am</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for voucher in vouchers %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-5 py-3 text-sm font-mono font-medium">
+                        <a href="{% url 'iuk:voucher_detail' voucher.pk %}" class="text-blue-600 hover:text-blue-800">{{ voucher.code }}</a>
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-600">
+                        {{ voucher.person_display }}
+                        {% if voucher.assigned_to_name and not voucher.assigned_to %}<span class="ml-1 text-xs text-gray-400">(extern)</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ voucher.intended_use_display }}</td>
+                    <td class="px-5 py-3 text-sm {% if voucher.is_overdue %}text-red-600 font-medium{% else %}text-gray-600{% endif %}">
+                        {{ voucher.valid_until|date:"d.m.Y"|default:"—" }}
+                    </td>
+                    <td class="px-5 py-3 text-sm">
+                        <span class="text-xs px-2 py-0.5 rounded-full
+                            {% if voucher.status == 'offen' %}bg-green-100 text-green-700
+                            {% elif voucher.status == 'vergeben' %}bg-yellow-100 text-yellow-700
+                            {% elif voucher.status == 'genutzt' %}bg-blue-100 text-blue-700
+                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ voucher.get_status_display }}
+                        </span>
+                        {% if voucher.is_overdue %}
+                        <span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">abgelaufen</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ voucher.assigned_at|date:"d.m.Y"|default:"—" }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ voucher.used_at|date:"d.m.Y"|default:"—" }}</td>
+                    <td class="px-5 py-3 text-right whitespace-nowrap">
+                        {% if can_change and voucher.status == 'offen' %}
+                        <a href="{% url 'iuk:voucher_assign' voucher.pk %}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Vergeben</a>
+                        {% endif %}
+                        {% if can_change and voucher.status == 'offen' or can_change and voucher.status == 'vergeben' %}
+                        <a href="{% url 'iuk:voucher_use' voucher.pk %}" class="ml-3 text-green-600 hover:text-green-800 text-sm font-medium">Einl&ouml;sen</a>
+                        {% endif %}
+                        <a href="{% url 'iuk:voucher_detail' voucher.pk %}" class="ml-3 text-gray-500 hover:text-gray-700 text-sm font-medium">Verlauf</a>
+                        {% if can_change %}
+                        <a href="{% url 'iuk:voucher_edit' voucher.pk %}" class="ml-3 text-blue-600 hover:text-blue-800 text-sm font-medium">Bearbeiten</a>
+                        {% endif %}
+                        {% if can_delete %}
+                        <a href="{% url 'iuk:voucher_delete' voucher.pk %}" class="ml-3 text-red-600 hover:text-red-800 text-sm font-medium">L&ouml;schen</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <p class="text-base font-semibold text-gray-700 mb-1">Keine Gutscheine gefunden</p>
+        <p class="text-sm text-gray-500">Erfassen Sie die Codes, die Sie von der Beh&ouml;rde erhalten haben &ndash;
+            einzeln oder als <a href="{% url 'iuk:voucher_import' %}" class="text-blue-600 hover:text-blue-800 font-medium">CSV-Import</a>.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'iuk/_pagination.html' %}
+
+{% endblock %}

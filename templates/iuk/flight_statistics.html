@@ -1,0 +1,101 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}Flugstunden{% endblock %}
+{% block iuk_heading %}Flugstunden{% endblock %}
+{% block iuk_subtitle %}Auswertung je Drohne und je Pilot{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:flight_list' %}" class="text-gray-500 hover:text-gray-700">Flugbuch</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">Flugstunden</span></li>
+{% endblock %}
+
+{% block iuk_actions %}
+<a href="{% url 'iuk:flight_statistics_csv' %}{% if filter_query %}?{{ filter_query }}{% endif %}"
+   class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+    Als CSV speichern
+</a>
+{% endblock %}
+
+{% block iuk_content %}
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Fl&uuml;ge im Zeitraum</p>
+        <p class="text-2xl font-bold text-gray-900">{{ totals.flights }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Gesamtflugzeit</p>
+        <p class="text-2xl font-bold text-blue-600">{{ totals.hours }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <p class="text-sm text-gray-500">Minuten gesamt</p>
+        <p class="text-2xl font-bold text-gray-900">{{ totals.minutes }}</p>
+    </div>
+</div>
+
+<form method="get" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <input type="text" name="search" value="{{ search }}" placeholder="Ort, Einsatznr., Pilot…"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <select name="drone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Drohnen</option>
+            {% for drone in drones %}
+            <option value="{{ drone.pk }}" {% if active_drone == drone.pk|stringformat:"s" %}selected{% endif %}>{{ drone.designation }}</option>
+            {% endfor %}
+        </select>
+        <select name="operation_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Anl&auml;sse</option>
+            {% for value, label in type_choices %}
+            <option value="{{ value }}" {% if active_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <input type="date" name="from" value="{{ date_from }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <div class="flex gap-3">
+            <input type="date" name="to" value="{{ date_to }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">Filtern</button>
+        </div>
+    </div>
+</form>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {% for title, rows, empty in datasets %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200">
+            <h2 class="text-base font-semibold text-gray-900">{{ title }}</h2>
+        </div>
+        {% if rows %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fl&uuml;ge</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flugzeit</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Letzter Flug</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-100">
+                    {% for row in rows %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-5 py-3 text-sm font-medium text-gray-900">
+                            {{ row.name }}
+                            {% if row.detail %}<span class="block text-xs text-gray-400">{{ row.detail }}</span>{% endif %}
+                        </td>
+                        <td class="px-5 py-3 text-sm text-gray-600">{{ row.flights }}</td>
+                        <td class="px-5 py-3 text-sm font-medium text-gray-900">{{ row.hours }}<span class="text-xs text-gray-400"> ({{ row.minutes }} min)</span></td>
+                        <td class="px-5 py-3 text-sm text-gray-600">{{ row.last_flight|date:"d.m.Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-8 text-center text-sm text-gray-500">{{ empty }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

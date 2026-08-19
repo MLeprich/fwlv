@@ -1,0 +1,18 @@
+{% if is_paginated %}
+<div class="mt-4 flex items-center justify-between">
+    <p class="text-sm text-gray-500">
+        Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+        ({{ page_obj.paginator.count }} Eintr&auml;ge)
+    </p>
+    <div class="flex gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?{% if request.GET.search %}search={{ request.GET.search|urlencode }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status|urlencode }}&{% endif %}{% if request.GET.state %}state={{ request.GET.state|urlencode }}&{% endif %}{% if request.GET.license_type %}license_type={{ request.GET.license_type|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}"
+           class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Zur&uuml;ck</a>
+        {% endif %}
+        {% if page_obj.has_next %}
+        <a href="?{% if request.GET.search %}search={{ request.GET.search|urlencode }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status|urlencode }}&{% endif %}{% if request.GET.state %}state={{ request.GET.state|urlencode }}&{% endif %}{% if request.GET.license_type %}license_type={{ request.GET.license_type|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}"
+           class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Weiter</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

@@ -129,6 +129,12 @@ class SystemSettings(models.Model):
         help_text="Formularbasierte Umfragen, wahlweise anonym oder personalisiert"
     )
 
+    iuk_enabled = models.BooleanField(
+        default=False,
+        verbose_name="IUK",
+        help_text="Drohnenstaffel: Drohnen, Drohnenführerscheine und Gutscheincodes"
+    )
+
     # ============================================================================
     # PERSONAL - TAB VISIBILITY
     # ============================================================================
@@ -371,4 +377,8 @@ class SystemSettings(models.Model):
             modules.append('objektverwaltung')
         if self.accident_report_enabled:
             modules.append('accident_report')
+        if self.surveys_enabled:
+            modules.append('surveys')
+        if self.iuk_enabled:
+            modules.append('iuk')
         return modules
