@@ -1,0 +1,15 @@
+{# Vergrößern/Schließen-Button für Dashboard-Kacheln. Erwartet: key (String), Alpine-Variable `zoom` im Scope #}
+<button type="button"
+        @click="zoom = (zoom === '{{ key }}' ? null : '{{ key }}')"
+        class="flex-shrink-0 ml-2 inline-flex items-center gap-1.5 rounded-lg transition-opacity hover:opacity-70"
+        :class="zoom === '{{ key }}' ? 'px-3 py-1.5 bg-red-600 text-white shadow' : 'p-1.5 text-gray-400'"
+        :title="zoom === '{{ key }}' ? 'Schließen (Esc)' : 'Auf volle Größe vergrößern'"
+        :aria-label="zoom === '{{ key }}' ? 'Schließen' : 'Vergrößern'">
+    <svg x-show="zoom !== '{{ key }}'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+    </svg>
+    <svg x-show="zoom === '{{ key }}'" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+    <span x-show="zoom === '{{ key }}'" x-cloak class="text-sm font-semibold whitespace-nowrap">Schlie&szlig;en</span>
+</button>

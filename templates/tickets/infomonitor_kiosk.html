@@ -151,11 +151,43 @@
             0%   { transform: translateX(0); }
             100% { transform: translateX(-100%); }
         }
+
+        /* ===== Vollbild-Kachel (Informationen) ===== */
+        .gv-zoomed {
+            position: fixed;
+            top: 0; right: 0; bottom: 0; left: 0;
+            z-index: 9990;
+            /* schlägt Inline-Höhen wie "calc(100vh - 160px)" der Kachel */
+            height: 100vh !important;
+            max-height: none !important;
+            margin: 0;
+            border-radius: 0;
+            background: var(--bg-card);
+            display: flex;
+            flex-direction: column;
+        }
+        .gv-zoomed .gv-tile-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .gv-zoomed .gv-media {
+            flex: 1 1 auto;
+            width: 100%;
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
 
-<div x-data="{ view: 'dashboard', search: '', gvSelected: null, pdfUrl: null, pdfTitle: '' }" class="h-screen flex flex-col p-4 gap-4">
+<div x-data="{ view: 'dashboard', search: '', gvSelected: null, pdfUrl: null, pdfTitle: '', zoom: null }"
+     @keydown.escape.window="zoom = null"
+     class="h-screen flex flex-col p-4 gap-4">
 
     <!-- ==================== HEADER ==================== -->
     <div class="card flex items-center justify-between px-6 py-2.5 rounded-xl flex-shrink-0">
@@ -193,7 +225,7 @@
                 </span>
             </button>
             {% if gv_dashboards %}
-            <button @click="view = 'gv'; search = ''; gvSelected = null" class="nav-pill val-secondary" :class="{ 'active': view === 'gv' }">
+            <button @click="view = 'gv'; search = ''; gvSelected = null; zoom = null" class="nav-pill val-secondary" :class="{ 'active': view === 'gv' }">
                 <span class="flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     Informationen
@@ -705,7 +737,7 @@
                 <div>
                     <!-- Zur&uuml;ck-Button -->
                     <div class="mb-4">
-                        <button @click="gvSelected = null" class="card rounded-lg px-4 py-2 val-secondary text-sm font-medium flex items-center gap-2 hover:opacity-80 transition-opacity">
+                        <button @click="gvSelected = null; zoom = null" class="card rounded-lg px-4 py-2 val-secondary text-sm font-medium flex items-center gap-2 hover:opacity-80 transition-opacity">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                             Zur&uuml;ck zur &Uuml;bersicht
                         </button>
@@ -714,8 +746,15 @@
                     {% if gvd.dashboard_type == 'pdf' %}
                     <!-- PDF-Modus -->
                     {% if gvd.pdf_file %}
-                    <div class="card rounded-xl overflow-hidden" style="height: calc(100vh - 160px);">
-                        <iframe src="{{ gvd.pdf_file.url }}" class="w-full h-full border-0"></iframe>
+                    <div class="card rounded-xl overflow-hidden flex flex-col" style="height: calc(100vh - 160px);"
+                         :class="{ 'gv-zoomed': zoom === 'pdf' }">
+                        <div class="section-header-red border-b px-4 py-2 flex items-center justify-between flex-shrink-0">
+                            <h3 class="text-sm font-bold section-heading-red uppercase tracking-wide">{{ gvd.name }}</h3>
+                            {% include 'tickets/includes/gv_zoom_button.html' with key='pdf' %}
+                        </div>
+                        <div class="flex-1 min-h-0 gv-tile-body">
+                            <iframe src="{{ gvd.pdf_file.url }}" class="w-full h-full border-0 gv-media"></iframe>
+                        </div>
                     </div>
                     {% else %}
                     <div class="card rounded-xl p-12 text-center">
@@ -730,12 +769,15 @@
                         <!-- Linke Spalte (Breite je nach Einstellung) -->
                         <div class="flex-shrink-0 flex flex-col gap-4 overflow-auto" style="flex-basis: {{ gvd.layout_split|default:'25' }}%;">
                             {% if gvd.map_image %}
-                            <div class="card rounded-xl overflow-hidden flex-shrink-0" x-data="{ mapOpen: false }">
-                                <div class="section-header-red border-b px-4 py-2">
+                            <div class="card rounded-xl overflow-hidden flex-shrink-0" x-data="{ mapOpen: false }"
+                                 x-show="zoom === null || zoom === 'map'"
+                                 :class="{ 'gv-zoomed': zoom === 'map' }">
+                                <div class="section-header-red border-b px-4 py-2 flex items-center justify-between">
                                     <h3 class="text-sm font-bold section-heading-red uppercase tracking-wide">Kartenausschnitt</h3>
+                                    {% include 'tickets/includes/gv_zoom_button.html' with key='map' %}
                                 </div>
-                                <div class="p-2">
-                                    <img src="{{ gvd.map_image.url }}" alt="Karte" class="w-full rounded object-cover cursor-pointer hover:opacity-80 transition-opacity" @click="mapOpen = true" title="Klicken zum Vergr&ouml;&szlig;ern">
+                                <div class="p-2 gv-tile-body">
+                                    <img src="{{ gvd.map_image.url }}" alt="Karte" class="w-full rounded object-cover cursor-pointer hover:opacity-80 transition-opacity gv-media" @click="mapOpen = true" title="Klicken zum Vergr&ouml;&szlig;ern">
                                 </div>
                                 <!-- Lightbox -->
                                 <template x-teleport="body">
@@ -750,17 +792,20 @@
                             {% endif %}
 
                             {% if gvd.info_datei %}
-                            <div class="card rounded-xl overflow-hidden flex-1" x-data="{ infoOpen: false }">
-                                <div class="section-header-red border-b px-4 py-2">
+                            <div class="card rounded-xl overflow-hidden flex-1 flex flex-col" x-data="{ infoOpen: false }"
+                                 x-show="zoom === null || zoom === 'info'"
+                                 :class="{ 'gv-zoomed': zoom === 'info' }">
+                                <div class="section-header-red border-b px-4 py-2 flex items-center justify-between flex-shrink-0">
                                     <h3 class="text-sm font-bold section-heading-red uppercase tracking-wide">Info-Datei</h3>
+                                    {% include 'tickets/includes/gv_zoom_button.html' with key='info' %}
                                 </div>
                                 {% if gvd.info_datei.name|lower|slice:"-4:" == ".pdf" %}
-                                <div class="p-2 flex-1 min-h-0">
-                                    <iframe src="{{ gvd.info_datei.url }}" class="w-full h-full border-0 rounded" style="min-height: 300px;"></iframe>
+                                <div class="p-2 flex-1 min-h-0 gv-tile-body">
+                                    <iframe src="{{ gvd.info_datei.url }}" class="w-full h-full border-0 rounded gv-media" style="min-height: 300px;"></iframe>
                                 </div>
                                 {% else %}
-                                <div class="p-2">
-                                    <img src="{{ gvd.info_datei.url }}" alt="Info-Datei" class="w-full rounded object-cover cursor-pointer hover:opacity-80 transition-opacity" @click="infoOpen = true" title="Klicken zum Vergr&ouml;&szlig;ern">
+                                <div class="p-2 gv-tile-body">
+                                    <img src="{{ gvd.info_datei.url }}" alt="Info-Datei" class="w-full rounded object-cover cursor-pointer hover:opacity-80 transition-opacity gv-media" @click="infoOpen = true" title="Klicken zum Vergr&ouml;&szlig;ern">
                                 </div>
                                 <template x-teleport="body">
                                     <div x-show="infoOpen" x-transition.opacity class="fixed inset-0 z-[9999] flex items-center justify-center p-8" style="background: rgba(0,0,0,0.85);" @click.self="infoOpen = false" @keydown.escape.window="infoOpen = false">
@@ -778,16 +823,21 @@
                         <!-- Rechte Spalte (Rest) -->
                         <div class="flex-1 min-w-0 overflow-auto flex flex-col gap-4">
                             {% for abschnitt in gvd.abschnitte.all %}
-                            <div class="card rounded-xl overflow-hidden flex-shrink-0">
-                                <div class="section-header-amber border-b px-5 py-2.5">
+                            {% with abschnitt_key=forloop.counter|stringformat:"s"|add:"-abschnitt" %}
+                            <div class="card rounded-xl overflow-hidden flex-shrink-0"
+                                 x-show="zoom === null || zoom === '{{ forloop.counter }}-abschnitt'"
+                                 :class="{ 'gv-zoomed': zoom === '{{ forloop.counter }}-abschnitt' }">
+                                <div class="section-header-amber border-b px-5 py-2.5 flex items-center justify-between">
                                     <h3 class="text-base font-bold section-heading-amber">{{ abschnitt.title }}</h3>
+                                    {% include 'tickets/includes/gv_zoom_button.html' with key=abschnitt_key %}
                                 </div>
-                                <div class="p-5">
-                                    <p class="text-base val-secondary whitespace-pre-wrap leading-relaxed">{{ abschnitt.content }}</p>
+                                <div class="p-5 gv-tile-body">
+                                    <p class="val-secondary whitespace-pre-wrap leading-relaxed" :class="zoom === '{{ forloop.counter }}-abschnitt' ? 'text-2xl' : 'text-base'">{{ abschnitt.content }}</p>
                                 </div>
                             </div>
+                            {% endwith %}
                             {% empty %}
-                            <div class="card rounded-xl p-12 text-center">
+                            <div class="card rounded-xl p-12 text-center" x-show="zoom === null">
                                 <p class="text-lg val-muted">Keine Abschnitte vorhanden.</p>
                             </div>
                             {% endfor %}
