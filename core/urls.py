@@ -94,6 +94,7 @@ urlpatterns = [
     path('verwaltung/users/import/template/', user_management.user_import_template, name='user_import_template'),
     path('verwaltung/users/import/validate/', user_management.user_import_validate, name='user_import_validate'),
     path('verwaltung/users/import/execute/', user_management.user_import_execute, name='user_import_execute'),
+    path('verwaltung/users/import/passwords/', user_management.user_import_passwords, name='user_import_passwords'),
     path('verwaltung/users/<int:pk>/', user_management.UserDetailView.as_view(), name='user_detail'),
     path('verwaltung/users/<int:pk>/edit/', user_management.UserUpdateView.as_view(), name='user_edit'),
     path('verwaltung/users/<int:pk>/set-password/', user_management.UserSetPasswordView.as_view(), name='user_set_password'),

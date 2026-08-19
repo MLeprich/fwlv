@@ -575,8 +575,19 @@ def _import_user_is_admin(user):
     return user.is_authenticated and (user.is_superuser or user.has_role(Roles.ADMINISTRATOR))
 
 
-def _default_import_password():
-    return getattr(settings, 'PERSONNEL_DEFAULT_PASSWORD', 'Feuerwehr.0112')
+def _generate_import_password(length=12):
+    """Zufallspasswort für importierte Benutzer (ohne verwechselbare Zeichen)."""
+    import secrets
+    alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ' 'abcdefghijkmnopqrstuvwxyz' '23456789'
+    specials = '!$%&*+-?'
+    rng = secrets.SystemRandom()
+    while True:
+        chars = [rng.choice(alphabet) for _ in range(length - 1)] + [rng.choice(specials)]
+        rng.shuffle(chars)
+        pw = ''.join(chars)
+        # Mindestens ein Groß-, ein Kleinbuchstabe und eine Ziffer
+        if any(c.isupper() for c in pw) and any(c.islower() for c in pw) and any(c.isdigit() for c in pw):
+            return pw
 
 
 def _parse_bool(value, default=True):
@@ -637,9 +648,13 @@ def user_import_page(request):
     if not _import_user_is_admin(request.user):
         messages.error(request, 'Keine Berechtigung.')
         return redirect('core:dashboard')
+    # Passwörter eines früheren Imports nicht länger als nötig in der Session halten
+    for key in [k for k in request.session.keys() if k.startswith('userimportpw_')]:
+        del request.session[key]
+        request.session.modified = True
+
     context = {
         'current_module': 'administration',
-        'default_password': _default_import_password(),
         'available_roles': sorted(Group.objects.values_list('name', flat=True)),
     }
     return render(request, 'core/user_management/user_import.html', context)
@@ -675,7 +690,6 @@ def user_import_validate(request):
         return redirect('core:user_import')
 
     upload = request.FILES.get('import_file')
-    default_password = (request.POST.get('default_password') or '').strip() or _default_import_password()
 
     if not upload:
         messages.error(request, 'Bitte eine CSV-Datei auswählen.')
@@ -757,7 +771,7 @@ def user_import_validate(request):
 
     valid_rows = [p for p in preview if not p['errors']]
     session_key = 'userimport_' + uuid4().hex
-    request.session[session_key] = {'rows': valid_rows, 'default_password': default_password}
+    request.session[session_key] = {'rows': valid_rows}
     request.session.modified = True
 
     context = {
@@ -766,7 +780,6 @@ def user_import_validate(request):
         'valid_count': len(valid_rows),
         'error_count': len(preview) - len(valid_rows),
         'session_key': session_key,
-        'default_password': default_password,
         'available_roles': sorted(valid_groups),
     }
     return render(request, 'core/user_management/user_import.html', context)
@@ -787,16 +800,17 @@ def user_import_execute(request):
         return redirect('core:user_import')
 
     rows = payload.get('rows', [])
-    default_password = payload.get('default_password') or _default_import_password()
     created = 0
     failed = 0
+    credentials = []
     for r in rows:
+        password = _generate_import_password()
         try:
             with transaction.atomic():
                 user = User.objects.create_user(
                     username=r['username'],
                     email=r.get('email') or '',
-                    password=default_password,
+                    password=password,
                     first_name=r.get('first_name') or '',
                     last_name=r.get('last_name') or '',
                     password_must_change=True,
@@ -817,6 +831,12 @@ def user_import_execute(request):
                     perms = Permission.objects.filter(codename__in=perm_codes, content_type__app_label='tickets')
                     user.user_permissions.add(*perms)
             created += 1
+            credentials.append({
+                'username': user.username,
+                'name': f"{r.get('first_name') or ''} {r.get('last_name') or ''}".strip(),
+                'email': r.get('email') or '',
+                'password': password,
+            })
         except Exception:
             failed += 1
 
@@ -826,11 +846,49 @@ def user_import_execute(request):
     except KeyError:
         pass
 
-    if created:
-        msg = f'{created} Benutzer wurden angelegt (Standardpasswort, Änderung beim ersten Login erforderlich).'
-        if failed:
-            msg += f' {failed} Zeile(n) fehlgeschlagen.'
-        messages.success(request, msg)
-    else:
+    if not created:
         messages.error(request, 'Es wurden keine Benutzer angelegt.')
+        return redirect('core:user_import')
+
+    msg = f'{created} Benutzer wurden angelegt (Zufallspasswort, Änderung beim ersten Login erforderlich).'
+    if failed:
+        msg += f' {failed} Zeile(n) fehlgeschlagen.'
+    messages.success(request, msg)
+
+    pw_key = 'userimportpw_' + uuid4().hex
+    request.session[pw_key] = credentials
+    request.session.modified = True
+
+    context = {
+        'current_module': 'administration',
+        'credentials': credentials,
+        'created_count': created,
+        'failed_count': failed,
+        'password_key': pw_key,
+    }
+    return render(request, 'core/user_management/user_import.html', context)
+
+
+def user_import_passwords(request):
+    """Die generierten Zugangsdaten des letzten Imports als CSV herunterladen."""
+    if not _import_user_is_admin(request.user):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('core:dashboard')
+
+    pw_key = request.GET.get('key', '')
+    credentials = request.session.get(pw_key) if pw_key.startswith('userimportpw_') else None
+    if not credentials:
+        messages.error(request, 'Die Zugangsdaten sind nicht mehr verfügbar. Passwörter bitte einzeln neu setzen.')
+        return redirect('core:user_list')
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, delimiter=';', lineterminator='\r\n')
+    writer.writerow(['Benutzername', 'Name', 'E-Mail', 'Passwort'])
+    for c in credentials:
+        writer.writerow([c['username'], c['name'], c['email'], c['password']])
+
+    resp = HttpResponse('﻿' + buf.getvalue(), content_type='text/csv; charset=utf-8')
+    resp['Content-Disposition'] = 'attachment; filename="benutzer-zugangsdaten.csv"'
+    resp['Cache-Control'] = 'no-store'
+    return resp
     return redirect('core:user_list')

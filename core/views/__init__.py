@@ -447,6 +447,7 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.objektverwaltung_enabled = request.POST.get('objektverwaltung_enabled') == 'true'
                 sys_settings.accident_report_enabled = request.POST.get('accident_report_enabled') == 'true'
                 sys_settings.surveys_enabled = request.POST.get('surveys_enabled') == 'true'
+                sys_settings.iuk_enabled = request.POST.get('iuk_enabled') == 'true'
                 sys_settings.person_tab_duty_hours_visible = request.POST.get('person_tab_duty_hours_visible') == 'true'
                 sys_settings.person_tab_qualifications_visible = request.POST.get('person_tab_qualifications_visible') == 'true'
                 sys_settings.person_tab_inspections_visible = request.POST.get('person_tab_inspections_visible') == 'true'
