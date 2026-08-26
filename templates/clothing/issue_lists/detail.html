@@ -8,7 +8,7 @@
     <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">📝 {{ issue_list.title }}</h1>
-            <div class="text-gray-600 mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            <div class="text-gray-600 mt-1 flex flex-wrap gap-x-6 gap-y-2 text-sm">
                 <span>👤 <a href="{% url 'personnel:detail' issue_list.person.pk %}" class="font-medium text-gray-900 hover:text-blue-700">{{ issue_list.person.last_name }}, {{ issue_list.person.first_name }}</a> ({{ issue_list.person.personnel_number }})</span>
                 <span>📅 {{ issue_list.issue_date|date:"d.m.Y" }}</span>
                 {% if issue_list.template %}<span>📋 Vorlage: <a href="{% url 'clothing:issue_template_detail' issue_list.template.pk %}" class="hover:text-blue-700">{{ issue_list.template.name }}</a></span>{% endif %}

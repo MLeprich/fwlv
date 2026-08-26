@@ -9,7 +9,7 @@
         <span class="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">Offen</span>
         {% endif %}
         <div class="flex items-center gap-2">
-            <div class="w-40 bg-gray-200 rounded-full h-2.5">
+            <div class="w-48 bg-gray-200 rounded-full h-2.5">
                 {% with total=done_count|add:open_count %}
                 <div class="h-2.5 rounded-full {% if issue_list.status == 'completed' %}bg-green-500{% else %}bg-blue-500{% endif %}" style="width: {% if total %}{% widthratio done_count total 100 %}{% else %}0{% endif %}%"></div>
                 {% endwith %}
