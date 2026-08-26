@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Ausgabevorlagen - Kleiderkammer - FLVS{% endblock %}
+{% block breadcrumb %}{% include 'clothing/issue_lists/partials/breadcrumb.html' with crumb_current='Ausgabevorlagen' %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-5xl">📋</span>
+                <div>
+                    <h1 class="text-3xl font-bold">Ausgabevorlagen</h1>
+                    <p class="text-white/80 text-lg mt-1">Standard-Ausstattungen, z.B. „Neueinstellung BF“</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'clothing:issue_list_list' %}" class="bg-white/10 hover:bg-white/20 text-white rounded-lg px-4 py-2 font-medium text-sm">Ausgabelisten →</a>
+                {% if perms.clothing.add_clothingissuetemplate %}
+                <a href="{% url 'clothing:issue_template_create' %}" class="bg-white text-blue-700 hover:bg-blue-50 rounded-lg px-4 py-2 font-medium text-sm">+ Neue Vorlage</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vorlage</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Positionen</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Verwendet</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for template in templates %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <a href="{% url 'clothing:issue_template_detail' template.pk %}" class="font-medium text-gray-900 hover:text-blue-700">{{ template.name }}</a>
+                        {% if template.description %}<div class="text-xs text-gray-500 mt-0.5">{{ template.description|truncatechars:100 }}</div>{% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ template.position_count }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ template.list_count }}× </td>
+                    <td class="px-6 py-4">
+                        {% if template.is_active %}
+                        <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Aktiv</span>
+                        {% else %}
+                        <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">Inaktiv</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right text-sm whitespace-nowrap">
+                        {% if perms.clothing.add_clothingissuelist and template.is_active %}
+                        <a href="{% url 'clothing:issue_list_create' %}?template={{ template.pk }}" class="text-blue-600 hover:text-blue-800 font-medium mr-3">Ausgabe erstellen</a>
+                        {% endif %}
+                        <a href="{% url 'clothing:issue_template_pdf' template.pk %}" target="_blank" class="text-gray-600 hover:text-gray-900 mr-3">PDF</a>
+                        <a href="{% url 'clothing:issue_template_detail' template.pk %}" class="text-gray-600 hover:text-gray-900">Öffnen</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                    Noch keine Vorlagen.
+                    {% if perms.clothing.add_clothingissuetemplate %}<a href="{% url 'clothing:issue_template_create' %}" class="text-blue-600 hover:underline">Erste Vorlage anlegen</a>{% endif %}
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

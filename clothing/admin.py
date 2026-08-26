@@ -936,3 +936,48 @@ class ClothingProductTypeAdmin(admin.ModelAdmin):
             obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
+
+
+# ============================================================================
+# AUSGABELISTEN
+# ============================================================================
+
+from .models import (  # noqa: E402
+    ClothingIssueList,
+    ClothingIssueListItem,
+    ClothingIssueTemplate,
+    ClothingIssueTemplateItem,
+)
+
+
+class ClothingIssueTemplateItemInline(admin.TabularInline):
+    model = ClothingIssueTemplateItem
+    extra = 0
+    autocomplete_fields = ['item']
+    fields = ['sort_order', 'item', 'quantity', 'notes']
+
+
+@admin.register(ClothingIssueTemplate)
+class ClothingIssueTemplateAdmin(admin.ModelAdmin):
+    list_display = ['name', 'is_active', 'updated_at']
+    list_filter = ['is_active']
+    search_fields = ['name', 'description']
+    inlines = [ClothingIssueTemplateItemInline]
+
+
+class ClothingIssueListItemInline(admin.TabularInline):
+    model = ClothingIssueListItem
+    extra = 0
+    autocomplete_fields = ['item']
+    fields = ['sort_order', 'item', 'quantity', 'notes', 'is_done', 'done_at', 'done_by', 'movement']
+    readonly_fields = ['is_done', 'done_at', 'done_by', 'movement']
+
+
+@admin.register(ClothingIssueList)
+class ClothingIssueListAdmin(admin.ModelAdmin):
+    list_display = ['title', 'person', 'issue_date', 'status', 'completed_at']
+    list_filter = ['status', 'issue_date']
+    search_fields = ['title', 'person__first_name', 'person__last_name', 'person__personnel_number']
+    autocomplete_fields = ['person']
+    readonly_fields = ['status', 'completed_at']
+    inlines = [ClothingIssueListItemInline]

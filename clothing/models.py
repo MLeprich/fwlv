@@ -7,6 +7,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
 from django.conf import settings
+from django.utils import timezone
 from decimal import Decimal
 
 from inventory_base.models import (
@@ -416,6 +417,17 @@ class ClothingItem(AbstractInventoryItem):
     def __str__(self):
         assigned = f" [{self.assigned_to}]" if self.assigned_to else ""
         return f"{self.get_clothing_type_display()} {self.size} - {self.item_number}{assigned}"
+
+    def size_variants(self):
+        """
+        Alle aktiven Größenvarianten desselben Produkts (gleicher Name und Typ),
+        einschließlich dieses Artikels – für die Größenwahl in Ausgabelisten.
+        """
+        return ClothingItem.objects.filter(
+            is_active=True,
+            name=self.name,
+            clothing_type=self.clothing_type,
+        ).order_by('size', 'item_number')
 
     def is_inspection_due(self):
         """Prüft ob Prüfung fällig ist"""
@@ -1257,3 +1269,400 @@ class ClothingItemInstance(AuditedModel):
             delta = self.next_inspection_date - timezone.now().date()
             return delta.days
         return None
+
+
+# ============================================================================
+# AUSGABELISTEN (Vorlagen + konkrete Ausgaben an eine Person)
+# ============================================================================
+
+class ClothingIssueTemplate(AuditedModel):
+    """
+    Vorlage für eine Kleiderausgabe, z.B. "Neueinstellung BF".
+
+    Eine Vorlage legt fest, *welche* Artikel in *welcher Menge* ausgegeben
+    werden. Die Größe wird erst beim Erstellen einer konkreten Ausgabeliste je
+    Person gewählt, weil Kleidung je nach Produkt unterschiedlich ausfällt.
+    """
+
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        verbose_name=_('Titel'),
+        help_text=_('z.B. "Neueinstellung BF", "Grundausstattung Praktikant"')
+    )
+
+    description = models.TextField(
+        blank=True,
+        verbose_name=_('Beschreibung')
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv')
+    )
+
+    class Meta:
+        verbose_name = _('Ausgabevorlage')
+        verbose_name_plural = _('Ausgabevorlagen')
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def total_quantity(self):
+        return sum((position.quantity for position in self.items.all()), Decimal('0'))
+
+
+class ClothingIssueTemplateItem(models.Model):
+    """
+    Position einer Ausgabevorlage.
+
+    `item` ist der Referenzartikel und legt das Produkt fest (Name + Typ). Beim
+    Erstellen einer Ausgabeliste wird daraus die passende Größenvariante für
+    die Person gewählt – siehe ClothingItem.size_variants().
+    """
+
+    template = models.ForeignKey(
+        ClothingIssueTemplate,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name=_('Vorlage')
+    )
+
+    item = models.ForeignKey(
+        ClothingItem,
+        on_delete=models.PROTECT,
+        related_name='issue_template_items',
+        verbose_name=_('Artikel')
+    )
+
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('1'),
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name=_('Anzahl')
+    )
+
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Reihenfolge')
+    )
+
+    notes = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_('Hinweis'),
+        help_text=_('z.B. "nur bei Atemschutzträgern"')
+    )
+
+    class Meta:
+        verbose_name = _('Vorlagenposition')
+        verbose_name_plural = _('Vorlagenpositionen')
+        ordering = ['sort_order', 'pk']
+
+    def __str__(self):
+        return f"{self.template.name}: {self.item.name} × {self.quantity:g}"
+
+
+class IssueListStatus(models.TextChoices):
+    OPEN = 'open', _('Offen')
+    PARTIAL = 'partial', _('Teilweise ausgegeben')
+    COMPLETED = 'completed', _('Abgeschlossen')
+
+
+class ClothingIssueList(AuditedModel):
+    """
+    Konkrete Ausgabeliste für eine Person.
+
+    Jede Position wird beim Abhaken als OUTGOING-Lagerbewegung auf die Person
+    gebucht; dadurch sinkt der Bestand und die Ausgabe erscheint in der
+    Personalakte (clothing.assignments leitet den Besitz aus den Bewegungen ab).
+    """
+
+    title = models.CharField(
+        max_length=200,
+        verbose_name=_('Titel'),
+        help_text=_('z.B. "Neueinstellung BF"')
+    )
+
+    person = models.ForeignKey(
+        'personnel.Person',
+        on_delete=models.PROTECT,
+        related_name='clothing_issue_lists',
+        verbose_name=_('Person')
+    )
+
+    template = models.ForeignKey(
+        ClothingIssueTemplate,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='issue_lists',
+        verbose_name=_('Vorlage')
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=IssueListStatus.choices,
+        default=IssueListStatus.OPEN,
+        verbose_name=_('Status')
+    )
+
+    issue_date = models.DateField(
+        default=timezone.localdate,
+        verbose_name=_('Ausgabedatum')
+    )
+
+    completed_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name=_('Abgeschlossen am')
+    )
+
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_('Notizen')
+    )
+
+    class Meta:
+        verbose_name = _('Ausgabeliste')
+        verbose_name_plural = _('Ausgabelisten')
+        ordering = ['-issue_date', '-pk']
+        indexes = [
+            models.Index(fields=['person', '-issue_date']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} – {self.person.get_full_name()} ({self.issue_date:%d.%m.%Y})"
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('clothing:issue_list_detail', kwargs={'pk': self.pk})
+
+    @property
+    def is_completed(self):
+        return self.status == IssueListStatus.COMPLETED
+
+    def done_count(self):
+        return self.items.filter(is_done=True).count()
+
+    def open_count(self):
+        return self.items.filter(is_done=False).count()
+
+    def update_status(self):
+        """Status aus den Positionen ableiten und speichern."""
+        total = self.items.count()
+        done = self.done_count()
+        if total and done == total:
+            neu = IssueListStatus.COMPLETED
+        elif done:
+            neu = IssueListStatus.PARTIAL
+        else:
+            neu = IssueListStatus.OPEN
+
+        felder = []
+        if neu != self.status:
+            self.status = neu
+            felder.append('status')
+        if neu == IssueListStatus.COMPLETED and not self.completed_at:
+            self.completed_at = timezone.now()
+            felder.append('completed_at')
+        elif neu != IssueListStatus.COMPLETED and self.completed_at:
+            self.completed_at = None
+            felder.append('completed_at')
+        if felder:
+            self.save(update_fields=felder + ['updated_at'])
+
+    def add_items_from_template(self, template):
+        """
+        Positionen der Vorlage übernehmen; Größe je Position aus den
+        hinterlegten Personengrößen vorbelegen, sonst Referenzartikel.
+        """
+        groessen = dict(
+            self.person.clothing_sizes.values_list('clothing_type', 'size')
+        )
+        positionen = []
+        for vorlage in template.items.select_related('item'):
+            artikel = vorlage.item
+            wunsch = groessen.get(artikel.clothing_type)
+            if wunsch and wunsch != artikel.size:
+                variante = artikel.size_variants().filter(size=wunsch).first()
+                if variante:
+                    artikel = variante
+            positionen.append(ClothingIssueListItem(
+                issue_list=self,
+                item=artikel,
+                quantity=vorlage.quantity,
+                sort_order=vorlage.sort_order,
+                notes=vorlage.notes,
+            ))
+        ClothingIssueListItem.objects.bulk_create(positionen)
+        return positionen
+
+
+class ClothingIssueListItem(models.Model):
+    """Position einer Ausgabeliste – ein Artikel in konkreter Größe und Menge."""
+
+    issue_list = models.ForeignKey(
+        ClothingIssueList,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name=_('Ausgabeliste')
+    )
+
+    item = models.ForeignKey(
+        ClothingItem,
+        on_delete=models.PROTECT,
+        related_name='issue_list_items',
+        verbose_name=_('Artikel')
+    )
+
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('1'),
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name=_('Anzahl')
+    )
+
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Reihenfolge')
+    )
+
+    notes = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_('Hinweis')
+    )
+
+    is_done = models.BooleanField(
+        default=False,
+        verbose_name=_('Ausgegeben')
+    )
+
+    done_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name=_('Ausgegeben am')
+    )
+
+    done_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+        verbose_name=_('Ausgegeben von')
+    )
+
+    movement = models.OneToOneField(
+        ClothingStockMovement,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='issue_list_item',
+        verbose_name=_('Lagerbewegung')
+    )
+
+    class Meta:
+        verbose_name = _('Ausgabeposition')
+        verbose_name_plural = _('Ausgabepositionen')
+        ordering = ['sort_order', 'pk']
+
+    def __str__(self):
+        return f"{self.item} × {self.quantity:g}"
+
+    @property
+    def stock_sufficient(self):
+        return self.item.quantity >= self.quantity
+
+    def book(self, user):
+        """
+        Position ausgeben: OUTGOING-Bewegung auf die Person anlegen.
+
+        Der Bestand wird über ClothingStockMovement.save() reduziert. Wirft
+        ValidationError, wenn der Bestand nicht reicht.
+        """
+        from django.core.exceptions import ValidationError
+        from django.db import transaction
+        from inventory_base.models import StockMovementType
+
+        with transaction.atomic():
+            position = ClothingIssueListItem.objects.select_for_update().select_related(
+                'issue_list', 'item'
+            ).get(pk=self.pk)
+            if position.is_done:
+                return position
+
+            artikel = ClothingItem.objects.select_for_update().get(pk=position.item_id)
+            if artikel.quantity < position.quantity:
+                raise ValidationError(
+                    _('Bestand von %(artikel)s reicht nicht: %(bestand)s vorhanden, %(menge)s benötigt.') % {
+                        'artikel': artikel,
+                        'bestand': f'{artikel.quantity:g}',
+                        'menge': f'{position.quantity:g}',
+                    }
+                )
+
+            bewegung = ClothingStockMovement(
+                item=artikel,
+                movement_type=StockMovementType.OUTGOING,
+                quantity=position.quantity,
+                unit=artikel.unit,
+                from_location=artikel.location,
+                person=position.issue_list.person,
+                reference_number=f'Ausgabeliste #{position.issue_list_id}',
+                notes=f'Ausgabeliste "{position.issue_list.title}"',
+                created_by=user,
+                updated_by=user,
+            )
+            bewegung.save()
+
+            position.movement = bewegung
+            position.is_done = True
+            position.done_at = timezone.now()
+            position.done_by = user
+            position.save(update_fields=['movement', 'is_done', 'done_at', 'done_by'])
+            position.issue_list.update_status()
+
+        self.refresh_from_db()
+        return self
+
+    def unbook(self, user):
+        """
+        Ausgabe zurücknehmen: RETURN-Bewegung anlegen, damit der Bestand
+        wieder stimmt und die Historie nachvollziehbar bleibt.
+        """
+        from django.db import transaction
+        from inventory_base.models import StockMovementType
+
+        with transaction.atomic():
+            position = ClothingIssueListItem.objects.select_for_update().select_related(
+                'issue_list', 'item', 'movement'
+            ).get(pk=self.pk)
+            if not position.is_done:
+                return position
+
+            artikel = ClothingItem.objects.select_for_update().get(pk=position.item_id)
+            menge = position.movement.quantity if position.movement else position.quantity
+            ClothingStockMovement(
+                item=artikel,
+                movement_type=StockMovementType.RETURN,
+                quantity=menge,
+                unit=artikel.unit,
+                to_location=artikel.location,
+                person=position.issue_list.person,
+                reference_number=f'Ausgabeliste #{position.issue_list_id}',
+                notes=f'Storno Ausgabeliste "{position.issue_list.title}"',
+                return_reason='Ausgabe in Ausgabeliste zurückgenommen',
+                created_by=user,
+                updated_by=user,
+            ).save()
+
+            position.movement = None
+            position.is_done = False
+            position.done_at = None
+            position.done_by = None
+            position.save(update_fields=['movement', 'is_done', 'done_at', 'done_by'])
+            position.issue_list.update_status()
+
+        self.refresh_from_db()
+        return self

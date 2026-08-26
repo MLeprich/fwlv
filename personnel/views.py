@@ -686,6 +686,10 @@ class PersonDetailView(LoginRequiredMixin, DetailView):
                 context['assigned_clothing'] = assigned_clothing
                 context['assigned_instances'] = assigned_instances
                 context['clothing_sizes'] = clothing_sizes
+                from clothing.models import ClothingIssueList
+                context['clothing_issue_lists'] = ClothingIssueList.objects.filter(
+                    person=self.object
+                ).select_related('template').order_by('-issue_date', '-pk')[:20]
                 context['clothing_stats'] = {
                     'total_items': total_items,
                     'total_value': total_value,

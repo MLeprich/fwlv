@@ -1,6 +1,34 @@
 <!-- Tab: Kleidung & PSA -->
 <div x-show="activeTab === 'equipment'" x-cloak>
 
+    {% if clothing_issue_lists %}
+    <!-- Ausgabelisten -->
+    <div class="bg-white rounded-lg border border-gray-200 mb-6">
+        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="font-semibold text-gray-900">📝 Ausgabelisten</h3>
+            {% if perms.clothing.add_clothingissuelist %}
+            <a href="{% url 'clothing:issue_list_create' %}?person={{ person.pk }}" class="text-sm text-blue-600 hover:underline">+ Neue Ausgabe</a>
+            {% endif %}
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+            <tbody class="divide-y divide-gray-200">
+                {% for liste in clothing_issue_lists %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-2 text-sm text-gray-600 whitespace-nowrap">{{ liste.issue_date|date:"d.m.Y" }}</td>
+                    <td class="px-4 py-2 text-sm"><a href="{{ liste.get_absolute_url }}" class="font-medium text-gray-900 hover:text-blue-700">{{ liste.title }}</a></td>
+                    <td class="px-4 py-2 text-sm">
+                        {% if liste.status == 'completed' %}<span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Abgeschlossen</span>
+                        {% elif liste.status == 'partial' %}<span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Teilweise</span>
+                        {% else %}<span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">Offen</span>{% endif %}
+                    </td>
+                    <td class="px-4 py-2 text-sm text-right"><a href="{% url 'clothing:issue_list_pdf' liste.pk %}" target="_blank" class="text-gray-500 hover:text-gray-900">PDF</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
     <!-- Header mit Statistiken -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">

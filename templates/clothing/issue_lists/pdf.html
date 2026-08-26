@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}{% if person %} – {{ person.get_full_name }}{% endif %}</title>
+    <style>
+        @page { size: A4; margin: 1.8cm 1.8cm 2.2cm 1.8cm;
+            @bottom-left { content: "FLVS Kleiderkammer · erstellt {{ export_date|date:'d.m.Y H:i' }}"; font-size: 8pt; color: #6B7280; }
+            @bottom-right { content: "Seite " counter(page) " / " counter(pages); font-size: 8pt; color: #6B7280; } }
+        body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 10pt; line-height: 1.4; color: #111827; }
+        h1 { color: #1D4ED8; font-size: 18pt; margin: 0 0 4px 0; }
+        .subtitle { color: #6B7280; font-size: 10pt; margin-bottom: 14px; }
+        .head { width: 100%; border-collapse: collapse; margin-bottom: 16px; background: #EFF6FF; border-left: 4px solid #1D4ED8; }
+        .head td { padding: 6px 10px; vertical-align: top; }
+        .head .label { font-weight: bold; width: 32%; color: #374151; }
+        .line { display: inline-block; border-bottom: 1px solid #111827; min-width: 240px; height: 14px; }
+        table.items { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+        table.items th { background: #1D4ED8; color: white; padding: 7px 6px; text-align: left; font-weight: bold; }
+        table.items td { padding: 7px 6px; border-bottom: 1px solid #E5E7EB; vertical-align: middle; }
+        table.items tr:nth-child(even) td { background: #F9FAFB; }
+        .box { display: inline-block; width: 11px; height: 11px; border: 1.5px solid #111827; border-radius: 2px; vertical-align: middle; }
+        .box.checked { background: #111827; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .size-blank { display: inline-block; border-bottom: 1px solid #9CA3AF; min-width: 50px; height: 12px; }
+        .signatures { margin-top: 40px; width: 100%; }
+        .signatures td { width: 50%; padding-top: 30px; }
+        .sig { border-top: 1px solid #111827; padding-top: 4px; font-size: 8.5pt; color: #374151; margin-right: 40px; }
+        .notes { margin-top: 12px; font-size: 9pt; color: #374151; white-space: pre-line; }
+        .summary { margin-top: 8px; font-size: 9pt; color: #6B7280; }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    <div class="subtitle">Ausgabeliste Kleiderkammer{% if blank %} – Vorlage{% endif %}</div>
+
+    <table class="head">
+        <tr>
+            <td class="label">Name</td>
+            <td>{% if person %}{{ person.last_name }}, {{ person.first_name }}{% else %}<span class="line"></span>{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">Personalnummer</td>
+            <td>{% if person %}{{ person.personnel_number }}{% else %}<span class="line" style="min-width:120px"></span>{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">Ausgabedatum</td>
+            <td>{% if issue_date %}{{ issue_date|date:"d.m.Y" }}{% else %}<span class="line" style="min-width:120px"></span>{% endif %}</td>
+        </tr>
+        {% if issue_list %}
+        <tr>
+            <td class="label">Status</td>
+            <td>{{ issue_list.get_status_display }} ({{ issue_list.done_count }} von {{ positions|length }} ausgegeben)</td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <table class="items">
+        <thead>
+            <tr>
+                <th style="width:28px" class="center">Nr.</th>
+                <th>Artikel</th>
+                <th style="width:90px">Größe</th>
+                <th style="width:55px" class="center">Anzahl</th>
+                <th style="width:120px">Hinweis</th>
+                <th style="width:60px" class="center">Erledigt</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for position in positions %}
+            <tr>
+                <td class="center">{{ forloop.counter }}</td>
+                <td>{{ position.item.name|default:position.item.get_clothing_type_display }}<br><span style="font-size:8pt;color:#6B7280">{{ position.item.item_number }}</span></td>
+                <td>{% if blank %}<span class="size-blank"></span>{% else %}{{ position.item.get_size_display }}{% endif %}</td>
+                <td class="center">{{ position.quantity|floatformat:"-2" }}</td>
+                <td style="font-size:8.5pt">{{ position.notes }}</td>
+                <td class="center"><span class="box {% if position.is_done %}checked{% endif %}"></span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="center" style="color:#6B7280;padding:20px">Keine Positionen</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if notes %}<div class="notes"><strong>Notizen:</strong> {{ notes }}</div>{% endif %}
+
+    <table class="signatures">
+        <tr>
+            <td><div class="sig">Datum, Unterschrift Ausgebende/r (Kleiderkammer)</div></td>
+            <td><div class="sig">Datum, Unterschrift Empfänger/in</div></td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<div id="issue-list-status" hx-get="{% url 'clothing:issue_list_status' issue_list.pk %}" hx-trigger="issueListChanged from:body" hx-swap="outerHTML"
+     class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+        {% if issue_list.status == 'completed' %}
+        <span class="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">✓ Abgeschlossen</span>
+        {% elif issue_list.status == 'partial' %}
+        <span class="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">Teilweise ausgegeben</span>
+        {% else %}
+        <span class="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">Offen</span>
+        {% endif %}
+        <div class="flex items-center gap-2">
+            <div class="w-40 bg-gray-200 rounded-full h-2.5">
+                {% with total=done_count|add:open_count %}
+                <div class="h-2.5 rounded-full {% if issue_list.status == 'completed' %}bg-green-500{% else %}bg-blue-500{% endif %}" style="width: {% if total %}{% widthratio done_count total 100 %}{% else %}0{% endif %}%"></div>
+                {% endwith %}
+            </div>
+            <span class="text-sm text-gray-600"><strong>{{ done_count }}</strong> ausgegeben · <strong>{{ open_count }}</strong> offen</span>
+        </div>
+        {% if issue_list.completed_at %}<span class="text-xs text-gray-500">abgeschlossen {{ issue_list.completed_at|date:"d.m.Y H:i" }}</span>{% endif %}
+    </div>
+    {% if can_book and open_count %}
+    <form method="post" action="{% url 'clothing:issue_list_book_all' issue_list.pk %}" onsubmit="return confirm('Alle {{ open_count }} offenen Positionen jetzt ausgeben und auf {{ issue_list.person.get_full_name }} buchen?')">
+        {% csrf_token %}
+        <button class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm">✓ Alle offenen ausgeben ({{ open_count }})</button>
+    </form>
+    {% endif %}
+</div>

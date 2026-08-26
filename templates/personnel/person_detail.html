@@ -225,6 +225,11 @@
                     <a href="{% url 'personnel:update' person.pk %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium text-center">
                         ✏️ Bearbeiten
                     </a>
+                    {% if perms.clothing.add_clothingissuelist %}
+                    <a href="{% url 'clothing:issue_list_create' %}?person={{ person.pk }}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium text-center">
+                        📝 Kleiderausgabe (Liste)
+                    </a>
+                    {% endif %}
                     {% if perms.idcards.view_idcard or perms.idcards.manage_idcards %}
                     <a href="{% url 'idcards:card_list_for_person' person.pk %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium text-center">
                         🪪 Dienstausweise

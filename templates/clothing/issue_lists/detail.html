@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}{{ issue_list.title }} – {{ issue_list.person.get_full_name }} - FLVS{% endblock %}
+{% block breadcrumb %}{% url 'clothing:issue_list_list' as parent_url %}{% include 'clothing/issue_lists/partials/breadcrumb.html' with crumb_parent='Ausgabelisten' crumb_parent_url=parent_url crumb_current=issue_list.title %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    {% csrf_token %}
+    <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">📝 {{ issue_list.title }}</h1>
+            <div class="text-gray-600 mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                <span>👤 <a href="{% url 'personnel:detail' issue_list.person.pk %}" class="font-medium text-gray-900 hover:text-blue-700">{{ issue_list.person.last_name }}, {{ issue_list.person.first_name }}</a> ({{ issue_list.person.personnel_number }})</span>
+                <span>📅 {{ issue_list.issue_date|date:"d.m.Y" }}</span>
+                {% if issue_list.template %}<span>📋 Vorlage: <a href="{% url 'clothing:issue_template_detail' issue_list.template.pk %}" class="hover:text-blue-700">{{ issue_list.template.name }}</a></span>{% endif %}
+                {% if issue_list.created_by %}<span class="text-gray-400">angelegt von {{ issue_list.created_by.get_full_name|default:issue_list.created_by.username }}</span>{% endif %}
+            </div>
+            {% if issue_list.notes %}<p class="text-sm text-gray-600 mt-2 whitespace-pre-line">{{ issue_list.notes }}</p>{% endif %}
+        </div>
+        <div class="flex gap-2 flex-wrap">
+            <a href="{% url 'clothing:issue_list_pdf' issue_list.pk %}" target="_blank" class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-medium text-sm">🖨️ Drucken (PDF)</a>
+            {% if can_edit %}<a href="{% url 'clothing:issue_list_update' issue_list.pk %}" class="px-4 py-2 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm">Bearbeiten</a>{% endif %}
+            {% if perms.clothing.delete_clothingissuelist and not done_count %}<a href="{% url 'clothing:issue_list_delete' issue_list.pk %}" class="px-4 py-2 border border-red-300 text-red-700 hover:bg-red-50 rounded-lg text-sm">Löschen</a>{% endif %}
+        </div>
+    </div>
+
+    <div class="mb-6">
+        {% include 'clothing/issue_lists/partials/status_header.html' %}
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="font-semibold text-gray-900">Artikel</h2>
+            <p class="text-xs text-gray-500 mt-1">Größe und Anzahl sind je Zeile änderbar, solange die Position offen ist. Abhaken bucht die Ausgabe sofort auf die Person und mindert den Bestand.</p>
+        </div>
+        <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase w-16">Erledigt</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Artikel</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Größe</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Anzahl</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Bestand</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hinweis</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Ausgegeben</th>
+                </tr>
+            </thead>
+            <tbody id="position-rows" class="divide-y divide-gray-200">
+                {% for position in positions %}
+                    {% include 'clothing/issue_lists/partials/position_row.html' %}
+                {% empty %}
+                <tr id="no-positions"><td colspan="7" class="px-6 py-10 text-center text-gray-500">Noch keine Artikel auf dieser Liste.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    {% if can_edit %}
+    <form method="post" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        {% csrf_token %}
+        <h2 class="font-semibold text-gray-900 mb-4">Artikel hinzufügen</h2>
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div class="md:col-span-3">
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ add_form.item.label }} *</label>
+                {% include 'clothing/issue_lists/partials/searchable_select.html' with field=add_form.item placeholder="Artikel suchen (Name, Nr., Größe)..." %}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ add_form.quantity.label }} *</label>
+                {{ add_form.quantity }}
+                {% if add_form.quantity.errors %}<p class="mt-1 text-sm text-red-600">{{ add_form.quantity.errors.0 }}</p>{% endif %}
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ add_form.notes.label }}</label>
+                {{ add_form.notes }}
+            </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm">+ Hinzufügen</button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

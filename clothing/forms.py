@@ -563,3 +563,120 @@ class ClothingItemInstanceForm(forms.ModelForm):
         if number:
             return number
         return ClothingItemInstance.generate_inventory_number()
+
+
+# ============================================================================
+# AUSGABELISTEN
+# ============================================================================
+
+from .models import (  # noqa: E402
+    ClothingIssueList,
+    ClothingIssueListItem,
+    ClothingIssueTemplate,
+    ClothingIssueTemplateItem,
+)
+
+INPUT_CLASS = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
+
+
+class ClothingIssueTemplateForm(forms.ModelForm):
+    """Kopfdaten einer Ausgabevorlage."""
+
+    class Meta:
+        model = ClothingIssueTemplate
+        fields = ['name', 'description', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'z.B. Neueinstellung BF'}),
+            'description': forms.Textarea(attrs={'class': INPUT_CLASS, 'rows': 3}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-blue-600 border-gray-300 rounded'}),
+        }
+
+
+class ClothingIssueTemplateItemForm(forms.ModelForm):
+    """Position einer Vorlage: Referenzartikel + Anzahl."""
+
+    item = ClothingItemChoiceField(
+        queryset=ClothingItem.objects.none(),
+        label=_('Artikel'),
+        empty_label='--- Artikel auswählen ---',
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+
+    class Meta:
+        model = ClothingIssueTemplateItem
+        fields = ['item', 'quantity', 'notes']
+        widgets = {
+            'quantity': forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': '1', 'step': '1'}),
+            'notes': forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'optionaler Hinweis'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['item'].queryset = (
+            ClothingItem.objects.filter(is_active=True).order_by('name', 'size')
+        )
+
+
+class ClothingIssueListForm(forms.ModelForm):
+    """Neue Ausgabeliste: Titel, Person, optional Vorlage."""
+
+    template = forms.ModelChoiceField(
+        queryset=ClothingIssueTemplate.objects.filter(is_active=True),
+        required=False,
+        label=_('Vorlage'),
+        empty_label='--- ohne Vorlage (leere Liste) ---',
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+
+    class Meta:
+        model = ClothingIssueList
+        fields = ['template', 'title', 'person', 'issue_date', 'notes']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'z.B. Neueinstellung BF'}),
+            'person': forms.Select(attrs={'class': INPUT_CLASS}),
+            'issue_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT_CLASS}),
+            'notes': forms.Textarea(attrs={'class': INPUT_CLASS, 'rows': 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['person'].queryset = (
+            self.fields['person'].queryset.filter(is_active=True).order_by('last_name', 'first_name')
+        )
+        self.fields['title'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Ohne eigenen Titel den Namen der Vorlage übernehmen
+        if not cleaned_data.get('title'):
+            template = cleaned_data.get('template')
+            if template:
+                cleaned_data['title'] = template.name
+            else:
+                self.add_error('title', _('Bitte einen Titel angeben oder eine Vorlage wählen.'))
+        return cleaned_data
+
+
+class ClothingIssueListItemForm(forms.ModelForm):
+    """Position zu einer Ausgabeliste hinzufügen."""
+
+    item = ClothingItemChoiceField(
+        queryset=ClothingItem.objects.none(),
+        label=_('Artikel'),
+        empty_label='--- Artikel auswählen ---',
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+
+    class Meta:
+        model = ClothingIssueListItem
+        fields = ['item', 'quantity', 'notes']
+        widgets = {
+            'quantity': forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': '1', 'step': '1'}),
+            'notes': forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'optionaler Hinweis'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['item'].queryset = (
+            ClothingItem.objects.filter(is_active=True).order_by('name', 'size')
+        )

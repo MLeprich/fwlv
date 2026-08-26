@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}Ausgabeliste bearbeiten{% else %}Neue Ausgabeliste{% endif %} - Kleiderkammer - FLVS{% endblock %}
+{% block breadcrumb %}{% url 'clothing:issue_list_list' as parent_url %}{% include 'clothing/issue_lists/partials/breadcrumb.html' with crumb_parent='Ausgabelisten' crumb_parent_url=parent_url crumb_current=object.title|default:'Neue Ausgabe' %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-1">{% if object %}Ausgabeliste bearbeiten{% else %}📝 Neue Ausgabeliste{% endif %}</h1>
+    {% if not object %}<p class="text-gray-600 mb-6">Vorlage und Person wählen – die Artikel werden übernommen, Größen aus den hinterlegten Personengrößen vorbelegt.</p>{% endif %}
+
+    <form method="post" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-5">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="bg-red-50 text-red-700 rounded-lg p-3 text-sm">{{ form.non_field_errors }}</div>{% endif %}
+
+        {% if form.template %}
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.template.label }}</label>
+            {{ form.template }}
+            {% if form.template.errors %}<p class="mt-1 text-sm text-red-600">{{ form.template.errors.0 }}</p>{% endif %}
+            <p class="mt-1 text-xs text-gray-500">Ohne Vorlage entsteht eine leere Liste, die du danach einzeln befüllst. <a href="{% url 'clothing:issue_template_list' %}" class="text-blue-600 hover:underline">Vorlagen verwalten</a></p>
+        </div>
+        {% endif %}
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.title.label }}</label>
+            {{ form.title }}
+            {% if form.title.errors %}<p class="mt-1 text-sm text-red-600">{{ form.title.errors.0 }}</p>{% endif %}
+            {% if form.template %}<p class="mt-1 text-xs text-gray-500">Leer lassen = Name der Vorlage wird übernommen.</p>{% endif %}
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.person.label }} *</label>
+            {% if form.person.field.disabled %}
+                <div class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">{{ object.person }}</div>
+                <div class="hidden">{{ form.person }}</div>
+                <p class="mt-1 text-xs text-gray-500">Person kann nicht mehr geändert werden, da bereits Ausgaben gebucht sind.</p>
+            {% else %}
+                {% include 'clothing/issue_lists/partials/searchable_select.html' with field=form.person placeholder="Person suchen (Name, Personalnummer)..." %}
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.issue_date.label }} *</label>
+                {{ form.issue_date }}
+                {% if form.issue_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.issue_date.errors.0 }}</p>{% endif %}
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.notes.label }}</label>
+            {{ form.notes }}
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'clothing:issue_list_list' %}{% endif %}" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">Abbrechen</a>
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">{% if object %}Speichern{% else %}Liste erstellen{% endif %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

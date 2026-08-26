@@ -23,6 +23,10 @@ class Command(BaseCommand):
             'clothingitemmaster',
             'clothingiteminstance',
             'clothingproducttype',
+            'clothingissuetemplate',
+            'clothingissuetemplateitem',
+            'clothingissuelist',
+            'clothingissuelistitem',
         ]
 
         # ====================================================================

@@ -270,6 +270,24 @@
                     </p>
                 </a>
 
+                <!-- Ausgabelisten -->
+                {% if perms.clothing.view_clothingissuelist %}
+                <a href="{% url 'clothing:issue_list_list' %}" class="bg-white rounded-lg shadow-sm border border-blue-200 hover:shadow-md hover:border-blue-400 transition-all p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-blue-100 rounded-lg p-2">
+                            <span class="text-2xl">📝</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">Ausgabelisten</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3">
+                        Vorlagen (z.B. Neueinstellung) je Person ausgeben, drucken & buchen
+                    </p>
+                    <p class="text-sm text-blue-600 font-medium">
+                        Ausgabelisten verwalten →
+                    </p>
+                </a>
+                {% endif %}
+
                 <!-- Inventur -->
                 <a href="{% url 'clothing:inventory_list' %}" class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-400 transition-all p-6">
                     <div class="flex items-center gap-3 mb-3">
@@ -365,6 +383,11 @@
                 <a href="{% url 'clothing:assignment_list' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
                     👤 Personenzuordnung
                 </a>
+                {% if perms.clothing.add_clothingissuelist %}
+                <a href="{% url 'clothing:issue_list_create' %}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
+                    📝 Neue Ausgabeliste
+                </a>
+                {% endif %}
                 <a href="{% url 'clothing:movement_create' %}" class="block w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 py-2.5 font-medium transition-colors text-sm">
                     📦 Bewegung erfassen
                 </a>

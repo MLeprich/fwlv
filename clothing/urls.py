@@ -6,6 +6,7 @@ URL-Konfiguration für Kleiderkammer
 from django.urls import path
 from . import views
 from .staff_management_views import ClothingStaffManagementView
+from . import issue_list_views as issue
 
 app_name = 'clothing'
 
@@ -112,4 +113,28 @@ urlpatterns = [
     # PERSONAL-VERWALTUNG (Staff Management)
     # ========================================================================
     path('staff-management/', ClothingStaffManagementView.as_view(), name='staff_management'),
+
+    # ========================================================================
+    # AUSGABELISTEN (Vorlagen + Ausgaben je Person)
+    # ========================================================================
+    path('issue-templates/', issue.IssueTemplateListView.as_view(), name='issue_template_list'),
+    path('issue-templates/create/', issue.IssueTemplateCreateView.as_view(), name='issue_template_create'),
+    path('issue-templates/<int:pk>/', issue.IssueTemplateDetailView.as_view(), name='issue_template_detail'),
+    path('issue-templates/<int:pk>/update/', issue.IssueTemplateUpdateView.as_view(), name='issue_template_update'),
+    path('issue-templates/<int:pk>/delete/', issue.IssueTemplateDeleteView.as_view(), name='issue_template_delete'),
+    path('issue-templates/<int:pk>/pdf/', issue.IssueTemplatePdfView.as_view(), name='issue_template_pdf'),
+    path('issue-templates/item/<int:pk>/delete/', issue.IssueTemplateItemDeleteView.as_view(), name='issue_template_item_delete'),
+    path('issue-templates/item/<int:pk>/move/<str:direction>/', issue.IssueTemplateItemMoveView.as_view(), name='issue_template_item_move'),
+
+    path('issue-lists/', issue.IssueListListView.as_view(), name='issue_list_list'),
+    path('issue-lists/create/', issue.IssueListCreateView.as_view(), name='issue_list_create'),
+    path('issue-lists/<int:pk>/', issue.IssueListDetailView.as_view(), name='issue_list_detail'),
+    path('issue-lists/<int:pk>/update/', issue.IssueListUpdateView.as_view(), name='issue_list_update'),
+    path('issue-lists/<int:pk>/delete/', issue.IssueListDeleteView.as_view(), name='issue_list_delete'),
+    path('issue-lists/<int:pk>/pdf/', issue.IssueListPdfView.as_view(), name='issue_list_pdf'),
+    path('issue-lists/<int:pk>/book-all/', issue.IssueListBookAllView.as_view(), name='issue_list_book_all'),
+    path('issue-lists/<int:pk>/status/', issue.IssueListStatusPartialView.as_view(), name='issue_list_status'),
+    path('issue-lists/item/<int:pk>/update/', issue.IssueListItemUpdateView.as_view(), name='issue_list_item_update'),
+    path('issue-lists/item/<int:pk>/book/', issue.IssueListItemBookView.as_view(), name='issue_list_item_book'),
+    path('issue-lists/item/<int:pk>/delete/', issue.IssueListItemDeleteView.as_view(), name='issue_list_item_delete'),
 ]
