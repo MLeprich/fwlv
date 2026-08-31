@@ -559,30 +559,38 @@ class Command(BaseCommand):
             )
 
     def _setup_lst_infomonitor(self):
-        """LST Infomonitor Gruppe"""
-        self.stdout.write('\n10. LST Infomonitor...')
+        """LST Infomonitor und LST Mappe Gruppen"""
+        self.stdout.write('\n10. LST Infomonitor / LST Mappe...')
 
-        group, created = Group.objects.get_or_create(name=Roles.LST_INFOMONITOR)
-        group.permissions.clear()
+        # edit_mappe gehört bewusst NICHT zu LST Infomonitor:
+        # die Digitale Mappe hat eine eigene Rolle (LST Mappe)
+        lst_groups = {
+            Roles.LST_INFOMONITOR: ['edit_infomonitor', 'view_infomonitor'],
+            Roles.LST_MAPPE: ['edit_mappe', 'view_infomonitor'],
+        }
 
-        perms_added = 0
-        for codename in ['edit_infomonitor', 'view_infomonitor']:
-            try:
-                perm = Permission.objects.get(
-                    content_type__app_label='tickets',
-                    codename=codename
+        for group_name, codenames in lst_groups.items():
+            group, created = Group.objects.get_or_create(name=group_name)
+            group.permissions.clear()
+
+            perms_added = 0
+            for codename in codenames:
+                try:
+                    perm = Permission.objects.get(
+                        content_type__app_label='tickets',
+                        codename=codename
+                    )
+                    group.permissions.add(perm)
+                    perms_added += 1
+                except Permission.DoesNotExist:
+                    pass
+
+            status = 'erstellt' if created else 'aktualisiert'
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'  ✓ {group_name}: {status} ({perms_added} Permissions)'
                 )
-                group.permissions.add(perm)
-                perms_added += 1
-            except Permission.DoesNotExist:
-                pass
-
-        status = 'erstellt' if created else 'aktualisiert'
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'  ✓ {status} ({perms_added} Permissions)'
             )
-        )
 
     def _setup_ff_roles(self):
         """FF Einheitsführer und FF Vertreter Gruppen"""

@@ -64,6 +64,7 @@ class Roles:
 
     # Leitstelle
     LST_INFOMONITOR = 'LST Infomonitor'
+    LST_MAPPE = 'LST Mappe'
 
     # Operative Rollen
     BEREICHSLEITUNG = 'Bereichsleitung'
@@ -119,6 +120,7 @@ class Roles:
             cls.SACHBEARBEITER_OBJEKTVERWALTUNG,
             cls.SACHBEARBEITER_IUK,
             cls.LST_INFOMONITOR,
+            cls.LST_MAPPE,
             cls.FREIGABE_STUFE_1,
             cls.FREIGABE_STUFE_2,
             cls.FREIGABE_STUFE_3,

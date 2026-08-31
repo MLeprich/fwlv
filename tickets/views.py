@@ -44,9 +44,12 @@ def _has_monitor_access(user):
 
 
 def _has_mappe_access(user):
-    """Prüft ob der User Zugang zur Digitalen Mappe hat."""
-    return (user.has_perm('tickets.edit_mappe') or
-            user.has_perm('tickets.edit_infomonitor'))
+    """Prüft ob der User Zugang zur Digitalen Mappe hat.
+
+    Bewusst NUR edit_mappe: Wer den Infomonitor bearbeiten darf
+    (LST Infomonitor), soll die Mappe nicht automatisch bearbeiten können.
+    """
+    return user.has_perm('tickets.edit_mappe')
 
 
 class TicketListView(LoginRequiredMixin, TicketPermissionMixin, ListView):
