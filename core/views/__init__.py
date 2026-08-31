@@ -26,7 +26,7 @@ from core.forms import (
 
 # Imports für Profil-Ausrüstungsübersicht
 try:
-    from clothing.models import ClothingItem, ClothingStockMovement
+    from clothing.models import ClothingItem, ClothingItemInstance, ClothingStockMovement
     CLOTHING_AVAILABLE = True
 except ImportError:
     CLOTHING_AVAILABLE = False
@@ -204,14 +204,29 @@ class ProfileView(LoginRequiredMixin, UpdateView):
                 # Mengenartikel werden aus den Lagerbewegungen abgeleitet
                 assigned_clothing = issued_items_for_person(person)
                 context['assigned_clothing'] = assigned_clothing
+
+                # Persönlich zugewiesene Einzelstücke (Stammdaten/Exemplar)
+                assigned_instances = list(
+                    ClothingItemInstance.objects.filter(
+                        assigned_to=person,
+                        is_active=True,
+                    ).select_related('master', 'master__category').order_by(
+                        'master__name', 'size'
+                    )
+                )
+                context['assigned_instances'] = assigned_instances
+
                 context['assigned_clothing_count'] = int(
                     sum(item.issued_quantity for item in assigned_clothing)
-                )
+                ) + len(assigned_instances)
 
                 # Gesamtwert der ausgegebenen Teile
                 context['assigned_clothing_value'] = sum(
                     (item.unit_price or 0) * item.issued_quantity
                     for item in assigned_clothing
+                ) + sum(
+                    instance.master.unit_price or 0
+                    for instance in assigned_instances
                 )
 
                 # Letzte Kleidungs-Bewegungen (Ausgaben an diese Person)
@@ -221,6 +236,7 @@ class ProfileView(LoginRequiredMixin, UpdateView):
                 context['clothing_movements'] = clothing_movements
             else:
                 context['assigned_clothing'] = []
+                context['assigned_instances'] = []
                 context['assigned_clothing_count'] = 0
                 context['assigned_clothing_value'] = 0
                 context['clothing_movements'] = []
@@ -236,6 +252,7 @@ class ProfileView(LoginRequiredMixin, UpdateView):
         else:
             # Keine Person verknüpft
             context['assigned_clothing'] = []
+            context['assigned_instances'] = []
             context['assigned_clothing_count'] = 0
             context['assigned_clothing_value'] = 0
             context['clothing_movements'] = []

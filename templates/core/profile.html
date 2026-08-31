@@ -452,7 +452,80 @@
                                     </tbody>
                                 </table>
                             </div>
-                            {% else %}
+                            {% endif %}
+
+                            {% if assigned_instances %}
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4 mt-8 flex items-center">
+                                <span class="text-xl mr-2">🏷️</span>
+                                Persönlich zugewiesene Einzelstücke
+                            </h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artikel</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inventarnr.</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Größe</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zustand</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zugewiesen seit</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        {% for instance in assigned_instances %}
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    {% if perms.clothing.view_clothingiteminstance %}
+                                                    <a href="{% url 'clothing:instance_detail' instance.pk %}" class="hover:text-purple-600">{{ instance.master.name }}</a>
+                                                    {% else %}
+                                                    {{ instance.master.name }}
+                                                    {% endif %}
+                                                </div>
+                                                {% if instance.master.manufacturer %}
+                                                <div class="text-xs text-gray-500">{{ instance.master.manufacturer }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-mono text-purple-600">
+                                                {{ instance.inventory_number }}
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                {{ instance.get_size_display|default:"-" }}
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                {{ instance.get_condition_display|default:"-" }}
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                {{ instance.assignment_date|date:"d.m.Y"|default:"-" }}
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                {% if instance.master.is_psa %}
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                                    PSA
+                                                </span>
+                                                {% endif %}
+                                                {% if instance.is_inspection_due %}
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                    Prüfung fällig
+                                                </span>
+                                                {% elif instance.master.requires_inspection %}
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    Geprüft
+                                                </span>
+                                                {% else %}
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                    OK
+                                                </span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% endif %}
+
+                            {% if not assigned_clothing and not assigned_instances %}
                             <div class="text-center py-8 bg-gray-50 rounded-lg">
                                 <span class="text-4xl mb-2 block">👕</span>
                                 <p class="text-gray-500">Keine Kleidungsstücke zugeordnet.</p>
