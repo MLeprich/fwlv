@@ -1635,8 +1635,11 @@ class ClothingIssueListItem(models.Model):
         from inventory_base.models import StockMovementType
 
         with transaction.atomic():
+            # movement nicht per select_related joinen: die FK ist nullable und
+            # PostgreSQL erlaubt FOR UPDATE nicht auf der Nullable-Seite eines
+            # Outer Joins (NotSupportedError).
             position = ClothingIssueListItem.objects.select_for_update().select_related(
-                'issue_list', 'item', 'movement'
+                'issue_list', 'item'
             ).get(pk=self.pk)
             if not position.is_done:
                 return position
