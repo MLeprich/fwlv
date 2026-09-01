@@ -301,16 +301,16 @@
                             <span class="text-xs val-muted font-medium">Auto-Scroll</span>
                         </label>
                     </div>
-                    <div id="bereitschaft-scroll-container" class="px-6 py-1 flex-1 overflow-y-auto min-h-0" style="max-height: 45vh;">
-                        <div class="{% if not monitor.show_personal %}grid grid-cols-2 gap-x-6{% endif %}">
+                    <div id="bereitschaft-scroll-container" class="px-6 py-1 flex-1 overflow-y-auto min-h-0" style="max-height: 50vh;">
+                        <div class="grid grid-cols-2 gap-x-6">
                             {% for e in bereitschaft_entries %}
                             <div class="flex items-start gap-3 py-1.5 border-b border-table-light">
-                                <p class="w-36 flex-shrink-0 text-sm uppercase tracking-wider val-muted font-medium pt-1">{{ e.label }}</p>
+                                <p class="flex-shrink-0 text-xs uppercase tracking-wider val-muted font-medium pt-1" style="width: 7.5rem;">{{ e.label }}</p>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-lg font-bold val-primary leading-snug">{{ e.value|default:"&mdash;" }}</p>
                                     {% if e.note %}<p class="text-sm val-accent italic mt-0.5">{{ e.note }}</p>{% endif %}
+                                    {% if e.changed_at %}<p class="text-xs val-muted mt-0.5 whitespace-nowrap" title="Zuletzt ge&auml;ndert">&#x1F552; {{ e.changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
                                 </div>
-                                {% if e.changed_at %}<p class="text-xs val-muted flex-shrink-0 pt-1 whitespace-nowrap" title="Zuletzt ge&auml;ndert">&#x1F552; {{ e.changed_at|date:"d.m.Y H:i" }}</p>{% endif %}
                             </div>
                             {% endfor %}
                         </div>
