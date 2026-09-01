@@ -879,37 +879,58 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 
-// Auto-Refresh: Seite neu laden, aber Alpine.js-View aus localStorage wiederherstellen
-setInterval(() => {
+// Auto-Refresh: Seite alle 30 s neu laden, damit Fahrzeug-/Bereitschaftsdaten aktuell bleiben.
+// Nur auf der Übersicht (view === 'dashboard') – in den anderen Ansichten (z. B. geöffnete
+// PDF unter "Informationen") würde ein Reload das iframe zerstören und die PDF jedes Mal
+// komplett neu laden. Wird zurück zur Übersicht gewechselt, wird nachgeholt, falls der
+// letzte Reload länger als das Intervall her ist.
+const KIOSK_REFRESH_MS = 30000;
+const kioskLoadedAt = Date.now();
+
+function kioskRootData() {
+    const root = document.querySelector('[x-data]');
+    return (root && window.Alpine) ? Alpine.$data(root) : null;
+}
+
+function kioskReload() {
     // View-State vor dem Reload speichern
-    const alpineRoot = document.querySelector('[x-data]');
-    if (alpineRoot && window.Alpine) {
-        const data = Alpine.$data(alpineRoot);
-        if (data) {
-            localStorage.setItem('kiosk-view', data.view);
-            localStorage.setItem('kiosk-gv-selected', data.gvSelected || '');
-        }
+    const data = kioskRootData();
+    if (data) {
+        localStorage.setItem('kiosk-view', data.view);
+        localStorage.setItem('kiosk-gv-selected', data.gvSelected || '');
+        localStorage.setItem('kiosk-zoom', data.zoom || '');
     }
     location.reload();
-}, 30000);
+}
 
-// View-State nach Reload wiederherstellen
+setInterval(() => {
+    const data = kioskRootData();
+    if (data && data.view !== 'dashboard') return;
+    kioskReload();
+}, KIOSK_REFRESH_MS);
+
+// View-State nach Reload wiederherstellen + Nachhol-Reload beim Rückwechsel zur Übersicht
 document.addEventListener('alpine:init', () => {
     const savedView = localStorage.getItem('kiosk-view');
     const savedGv = localStorage.getItem('kiosk-gv-selected');
-    if (savedView) {
-        // Kurz warten bis Alpine initialisiert ist, dann View setzen
-        setTimeout(() => {
-            const root = document.querySelector('[x-data]');
-            if (root && window.Alpine) {
-                const data = Alpine.$data(root);
-                if (data) {
-                    data.view = savedView;
-                    if (savedGv) data.gvSelected = savedGv;
-                }
+    const savedZoom = localStorage.getItem('kiosk-zoom');
+    // Kurz warten bis Alpine initialisiert ist
+    setTimeout(() => {
+        const data = kioskRootData();
+        if (!data) return;
+        if (savedView) {
+            data.view = savedView;
+            if (savedGv) data.gvSelected = savedGv;
+            if (savedZoom) data.zoom = savedZoom;
+        }
+        // Wenn von einer anderen Ansicht zurück zur Übersicht gewechselt wird und die
+        // Daten älter als ein Intervall sind → sofort einmal neu laden.
+        Alpine.effect(() => {
+            if (data.view === 'dashboard' && Date.now() - kioskLoadedAt > KIOSK_REFRESH_MS) {
+                kioskReload();
             }
-        }, 50);
-    }
+        });
+    }, 50);
 });
 
 // Auto-Scroll für Kachel-Container (Endlos-Loop)
