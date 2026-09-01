@@ -728,6 +728,19 @@ class InfoMonitorKioskView(DetailView):
         context['monitor_vehicles'] = self.object.monitor_vehicles.order_by('position')
         context['vehicle_count'] = context['monitor_vehicles'].count()
         context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
+        m = self.object
+        context['bereitschaft_entries'] = [
+            {'label': label, 'value': getattr(m, f'bereitschaft_{key}'),
+             'note': getattr(m, f'bereitschaft_{key}_note'),
+             'changed_at': getattr(m, f'bereitschaft_{key}_changed_at')}
+            for key, label in [
+                ('a1_dienst', 'A1-Dienst'), ('a2_dienst', 'A2-Dienst'),
+                ('b_dienst', 'B-Dienst'), ('c_dienst', 'C-Dienst'),
+                ('lagedienst', 'Lagedienst'), ('lna', 'LNA'),
+                ('o_amt', 'Ordnungsamt'), ('g_amt', 'Gesundheitsamt'),
+                ('veterinaeramt', 'Veterinäramt'),
+            ]
+        ]
         # FF Züge für Kiosk-Ansicht
         from .models import FFZugStatus
         _ffv = list(self.object.ff_fahrzeuge.all())
