@@ -92,3 +92,23 @@ class EditChildViewTests(TestCase):
         self.assertTrue(plan.file.name.endswith('.pdf'))
         self.assertEqual(plan.updated_by, self.user)
         self.assertEqual(plan.created_by, other)
+
+    def test_all_edit_pages_render(self):
+        from .models import CompensationMeasure, EscapeRoute, FireAlarmPanel, FireSuppressionSystem
+        floor = Floor.objects.create(building=self.building, level=0, name='EG')
+        route = EscapeRoute.objects.create(building=self.building, floor=floor, name='West')
+        bmz = FireAlarmPanel.objects.create(building=self.building, designation='BMZ 1')
+        system = FireSuppressionSystem.objects.create(building=self.building, designation='Sprinkler')
+        measure = CompensationMeasure.objects.create(
+            building=self.building, title='Wache', escape_route=route, suppression_system=system,
+        )
+        plan = BuildingPlan.objects.create(
+            building=self.building, title='LK', file=SimpleUploadedFile('a.pdf', b'%PDF'),
+            created_by=self.user, updated_by=self.user,
+        )
+        for name, obj in [('edit_floor', floor), ('edit_escape_route', route), ('edit_fire_alarm_panel', bmz),
+                          ('edit_suppression', system), ('edit_compensation', measure), ('edit_plan', plan),
+                          ('edit_contact', self.contact)]:
+            response = self.client.get(reverse(f'objektverwaltung:{name}', args=[obj.pk]))
+            self.assertEqual(response.status_code, 200, name)
+            self.assertContains(response, 'Speichern')
