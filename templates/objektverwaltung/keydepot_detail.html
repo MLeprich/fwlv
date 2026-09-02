@@ -10,7 +10,7 @@
             <li><span class="text-gray-400">/</span></li>
             <li><a href="{% url 'objektverwaltung:list' %}" class="text-gray-500 hover:text-gray-700">Objekte</a></li>
             <li><span class="text-gray-400">/</span></li>
-            <li><a href="{{ building.get_absolute_url }}" class="text-gray-500 hover:text-gray-700">{{ building.name|truncatechars:40 }}</a></li>
+            <li><a href="{{ building.get_absolute_url }}#technik" class="text-gray-500 hover:text-gray-700">{{ building.name|truncatechars:40 }}</a></li>
             <li><span class="text-gray-400">/</span></li>
             <li><span class="text-gray-900 font-medium">{{ depot.designation|truncatechars:40 }}</span></li>
         </ol>
@@ -26,7 +26,7 @@
             <div class="flex flex-wrap items-center gap-3 mt-2">
                 <span class="text-sm text-gray-500">{{ depot.get_depot_type_display }}</span>
                 <span class="text-sm text-gray-400">|</span>
-                <a href="{{ building.get_absolute_url }}" class="text-sm text-primary-600 hover:text-primary-800">{{ building.object_number }} – {{ building.name }}</a>
+                <a href="{{ building.get_absolute_url }}#technik" class="text-sm text-primary-600 hover:text-primary-800">{{ building.object_number }} – {{ building.name }}</a>
                 <span class="text-sm text-gray-400">|</span>
                 {% if not depot.is_active %}
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inaktiv</span>
@@ -145,7 +145,7 @@
             </div>
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Objekt</h3>
-                <a href="{{ building.get_absolute_url }}" class="text-sm font-medium text-primary-600 hover:text-primary-800">{{ building.name }}</a>
+                <a href="{{ building.get_absolute_url }}#technik" class="text-sm font-medium text-primary-600 hover:text-primary-800">{{ building.name }}</a>
                 <p class="text-xs text-gray-500">{{ building.object_number }}</p>
                 {% if building.full_address %}<p class="text-xs text-gray-500 mt-1">{{ building.full_address }}</p>{% endif %}
             </div>

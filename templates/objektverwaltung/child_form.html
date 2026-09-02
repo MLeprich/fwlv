@@ -26,6 +26,7 @@
 
         <form method="post" enctype="multipart/form-data" class="space-y-4">
             {% csrf_token %}
+            <input type="hidden" name="tab" value="{{ request.GET.tab }}">
 
             {% if form.non_field_errors %}
             <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg text-sm text-red-700">
@@ -50,7 +51,7 @@
             {% endfor %}
 
             <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                <a href="{{ building.get_absolute_url }}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                <a href="{{ building.get_absolute_url }}{% if request.GET.tab %}#{{ request.GET.tab }}{% endif %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
                     Abbrechen
                 </a>
                 <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">

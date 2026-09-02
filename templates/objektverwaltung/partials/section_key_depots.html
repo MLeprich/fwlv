@@ -30,10 +30,10 @@
             <div class="flex items-center gap-3 flex-shrink-0">
                 <a href="{{ depot.get_absolute_url }}" class="text-xs text-gray-600 hover:text-gray-900">Prüfberichte ({{ depot.inspection_reports.count }})</a>
                 {% if perms.objektverwaltung.change_buildingobject %}
-                <a href="{% url 'objektverwaltung:edit_key_depot' depot.pk %}" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
+                <a href="{% url 'objektverwaltung:edit_key_depot' depot.pk %}?tab=technik" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
                 <form method="post" action="{% url 'objektverwaltung:delete_key_depot' depot.pk %}"
                       onsubmit="return confirm('Schlüsseldepot samt Prüfberichten löschen?');">
-                    {% csrf_token %}
+                    {% csrf_token %}<input type="hidden" name="tab" value="technik">
                     <button type="submit" class="text-xs text-red-600 hover:text-red-800">Löschen</button>
                 </form>
                 {% endif %}
@@ -48,7 +48,7 @@
     {% if perms.objektverwaltung.change_buildingobject %}
     <form method="post" action="{% url 'objektverwaltung:add_key_depot' object.pk %}"
           x-show="addOpen" x-cloak class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-3">
-        {% csrf_token %}
+        {% csrf_token %}<input type="hidden" name="tab" value="technik">
         <div><label class="block text-xs text-gray-500 mb-1">Typ</label>{{ key_depot_form.depot_type }}</div>
         <div><label class="block text-xs text-gray-500 mb-1">Bezeichnung</label>{{ key_depot_form.designation }}</div>
         <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Standort</label>{{ key_depot_form.location_description }}</div>

@@ -46,86 +46,163 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Linke Spalte: Stammdaten + Unterobjekte -->
-        <div class="lg:col-span-2 space-y-6">
+    {% with floors_n=object.floors.count routes_n=object.escape_routes.count bmz_n=object.fire_alarm_panels.count sys_n=object.suppression_systems.count fsd_n=object.key_depots.count comp_n=object.compensation_measures.count plans_n=object.plans.count %}
+    <div x-data="{
+            tabs: ['uebersicht', 'gebaeude', 'technik', 'kompensation', 'plaene'],
+            tab: 'uebersicht',
+            init() {
+                const h = location.hash.replace('#', '');
+                if (this.tabs.includes(h)) this.tab = h;
+                this.$watch('tab', t => history.replaceState(null, '', '#' + t));
+            }
+         }">
 
-            <!-- Adresse & Gebäudeinfo -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-3">Adresse &amp; Gebäude</h2>
-                <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                    <div><dt class="text-gray-500 inline">Anschrift:</dt> <dd class="text-gray-900 inline">{{ object.full_address|default:"—" }}</dd></div>
-                    <div><dt class="text-gray-500 inline">Brandmeldeanlage:</dt> <dd class="text-gray-900 inline">{% if object.has_fire_alarm_system %}Ja{% else %}Nein{% endif %}</dd></div>
-                    <div><dt class="text-gray-500 inline">Obergeschosse:</dt> <dd class="text-gray-900 inline">{{ object.floor_count|default:"—" }}</dd></div>
-                    <div><dt class="text-gray-500 inline">Untergeschosse:</dt> <dd class="text-gray-900 inline">{{ object.basement_count|default:"—" }}</dd></div>
-                    {% if object.latitude and object.longitude %}
-                    <div class="col-span-2"><dt class="text-gray-500 inline">Koordinaten:</dt> <dd class="text-gray-900 inline">{{ object.latitude }}, {{ object.longitude }}</dd></div>
+        <!-- Reiter -->
+        <div class="bg-white rounded-lg shadow mb-6 overflow-x-auto">
+            <nav class="flex min-w-max border-b border-gray-200 px-2" aria-label="Bereiche">
+                <button type="button" @click="tab = 'uebersicht'"
+                        :class="tab === 'uebersicht' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap">
+                    Übersicht
+                </button>
+                <button type="button" @click="tab = 'gebaeude'"
+                        :class="tab === 'gebaeude' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-2">
+                    Gebäude
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ floors_n|add:routes_n }}</span>
+                </button>
+                <button type="button" @click="tab = 'technik'"
+                        :class="tab === 'technik' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-2">
+                    Brandschutztechnik
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ bmz_n|add:sys_n|add:fsd_n }}</span>
+                </button>
+                <button type="button" @click="tab = 'kompensation'"
+                        :class="tab === 'kompensation' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-2">
+                    Kompensation
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs {% if comp_n %}bg-yellow-100 text-yellow-800{% else %}bg-gray-100 text-gray-600{% endif %}">{{ comp_n }}</span>
+                </button>
+                <button type="button" @click="tab = 'plaene'"
+                        :class="tab === 'plaene' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-2">
+                    Pläne &amp; Laufkarten
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ plans_n }}</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Übersicht -->
+        <div x-show="tab === 'uebersicht'" x-cloak class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Adresse & Gebäudeinfo -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">Adresse &amp; Gebäude</h2>
+                    <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                        <div><dt class="text-gray-500 inline">Anschrift:</dt> <dd class="text-gray-900 inline">{{ object.full_address|default:"—" }}</dd></div>
+                        <div><dt class="text-gray-500 inline">Brandmeldeanlage:</dt> <dd class="text-gray-900 inline">{% if object.has_fire_alarm_system %}Ja{% else %}Nein{% endif %}</dd></div>
+                        <div><dt class="text-gray-500 inline">Obergeschosse:</dt> <dd class="text-gray-900 inline">{{ object.floor_count|default:"—" }}</dd></div>
+                        <div><dt class="text-gray-500 inline">Untergeschosse:</dt> <dd class="text-gray-900 inline">{{ object.basement_count|default:"—" }}</dd></div>
+                        {% if object.latitude and object.longitude %}
+                        <div class="col-span-2"><dt class="text-gray-500 inline">Koordinaten:</dt> <dd class="text-gray-900 inline">{{ object.latitude }}, {{ object.longitude }}</dd></div>
+                        {% endif %}
+                    </dl>
+                    {% if object.notes %}
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <p class="text-xs text-gray-500 mb-1">Hinweise</p>
+                        <p class="text-sm text-gray-700 whitespace-pre-line">{{ object.notes }}</p>
+                    </div>
                     {% endif %}
-                </dl>
-                {% if object.notes %}
-                <div class="mt-4 pt-4 border-t border-gray-100">
-                    <p class="text-xs text-gray-500 mb-1">Hinweise</p>
-                    <p class="text-sm text-gray-700 whitespace-pre-line">{{ object.notes }}</p>
                 </div>
-                {% endif %}
+
+                <!-- Kurzübersicht der Bereiche -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button type="button" @click="tab = 'gebaeude'" class="bg-white rounded-lg shadow p-4 text-left hover:bg-gray-50">
+                        <p class="text-xs text-gray-500">Etagen / Fluchtwege</p>
+                        <p class="text-xl font-bold text-gray-900">{{ floors_n }} / {{ routes_n }}</p>
+                    </button>
+                    <button type="button" @click="tab = 'technik'" class="bg-white rounded-lg shadow p-4 text-left hover:bg-gray-50">
+                        <p class="text-xs text-gray-500">BMZ / Löschanlagen / FSD</p>
+                        <p class="text-xl font-bold text-gray-900">{{ bmz_n }} / {{ sys_n }} / {{ fsd_n }}</p>
+                    </button>
+                    <button type="button" @click="tab = 'kompensation'" class="bg-white rounded-lg shadow p-4 text-left hover:bg-gray-50">
+                        <p class="text-xs text-gray-500">Kompensationsmaßnahmen</p>
+                        <p class="text-xl font-bold {% if comp_n %}text-yellow-700{% else %}text-gray-900{% endif %}">{{ comp_n }}</p>
+                    </button>
+                    <button type="button" @click="tab = 'plaene'" class="bg-white rounded-lg shadow p-4 text-left hover:bg-gray-50">
+                        <p class="text-xs text-gray-500">Pläne &amp; Laufkarten</p>
+                        <p class="text-xl font-bold text-gray-900">{{ plans_n }}</p>
+                    </button>
+                </div>
+
+                {% for depot in object.key_depots.all %}{% if depot.is_active and depot.inspection_status != 'ok' and depot.inspection_status != 'unknown' %}
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 {% if depot.inspection_status == 'overdue' %}border-red-500{% else %}border-yellow-400{% endif %} flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">FSD-Prüfung {% if depot.inspection_status == 'overdue' %}überfällig{% else %}bald fällig{% endif %}: {{ depot.designation }}</p>
+                        <p class="text-xs text-gray-500">Nächste Prüfung: {{ depot.next_inspection|date:"d.m.Y" }}</p>
+                    </div>
+                    <a href="{{ depot.get_absolute_url }}" class="text-sm text-primary-600 hover:text-primary-800 whitespace-nowrap">Zum Depot</a>
+                </div>
+                {% endif %}{% endfor %}
             </div>
 
-            <!-- Etagen -->
+            <div class="space-y-6">
+                <!-- Ansprechpartner -->
+                {% include 'objektverwaltung/partials/section_contacts.html' %}
+
+                <!-- Abonnenten -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">
+                        Abonnenten ({{ object.followers.count }})
+                    </h3>
+                    {% if object.followers.all %}
+                    <div class="space-y-1">
+                        {% for follower in object.followers.all|slice:":8" %}
+                        <p class="text-sm text-gray-600">{{ follower.get_full_name|default:follower.username }}</p>
+                        {% endfor %}
+                        {% if object.followers.count > 8 %}
+                        <p class="text-xs text-gray-500 pt-1">+{{ object.followers.count|add:"-8" }} weitere</p>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500">Noch keine Abonnenten.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Meta -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Verwaltung</h3>
+                    <dl class="space-y-2 text-sm">
+                        <div><dt class="text-xs text-gray-500">Erstellt</dt><dd class="text-gray-900">{{ object.created_at|date:"d.m.Y H:i" }}</dd></div>
+                        <div><dt class="text-xs text-gray-500">Geändert</dt><dd class="text-gray-900">{{ object.updated_at|date:"d.m.Y H:i" }}</dd></div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gebäude: Etagen, Fluchtwege -->
+        <div x-show="tab === 'gebaeude'" x-cloak class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             {% include 'objektverwaltung/partials/section_floors.html' %}
-
-            <!-- Fluchtwege -->
             {% include 'objektverwaltung/partials/section_escape_routes.html' %}
+        </div>
 
-            <!-- Brandmeldezentralen -->
+        <!-- Brandschutztechnik: BMZ, Löschanlagen, Schlüsseldepots -->
+        <div x-show="tab === 'technik'" x-cloak class="space-y-6">
             {% include 'objektverwaltung/partials/section_fire_alarms.html' %}
-
-            <!-- Löschanlagen -->
             {% include 'objektverwaltung/partials/section_suppression.html' %}
-
-            <!-- Feuerwehrschlüsseldepots -->
             {% include 'objektverwaltung/partials/section_key_depots.html' %}
+        </div>
 
-            <!-- Kompensationsmaßnahmen -->
+        <!-- Kompensationsmaßnahmen -->
+        <div x-show="tab === 'kompensation'" x-cloak>
             {% include 'objektverwaltung/partials/section_compensation.html' %}
+        </div>
 
-            <!-- Pläne / Laufkarten -->
+        <!-- Pläne / Laufkarten -->
+        <div x-show="tab === 'plaene'" x-cloak>
             {% include 'objektverwaltung/partials/section_plans.html' %}
         </div>
-
-        <!-- Rechte Spalte: Ansprechpartner, Abonnenten, Meta -->
-        <div class="space-y-6">
-
-            <!-- Ansprechpartner -->
-            {% include 'objektverwaltung/partials/section_contacts.html' %}
-
-            <!-- Abonnenten -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">
-                    Abonnenten ({{ object.followers.count }})
-                </h3>
-                {% if object.followers.all %}
-                <div class="space-y-1">
-                    {% for follower in object.followers.all|slice:":8" %}
-                    <p class="text-sm text-gray-600">{{ follower.get_full_name|default:follower.username }}</p>
-                    {% endfor %}
-                    {% if object.followers.count > 8 %}
-                    <p class="text-xs text-gray-500 pt-1">+{{ object.followers.count|add:"-8" }} weitere</p>
-                    {% endif %}
-                </div>
-                {% else %}
-                <p class="text-sm text-gray-500">Noch keine Abonnenten.</p>
-                {% endif %}
-            </div>
-
-            <!-- Meta -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Verwaltung</h3>
-                <dl class="space-y-2 text-sm">
-                    <div><dt class="text-xs text-gray-500">Erstellt</dt><dd class="text-gray-900">{{ object.created_at|date:"d.m.Y H:i" }}</dd></div>
-                    <div><dt class="text-xs text-gray-500">Geändert</dt><dd class="text-gray-900">{{ object.updated_at|date:"d.m.Y H:i" }}</dd></div>
-                </dl>
-            </div>
-        </div>
     </div>
+    {% endwith %}
 </div>
 {% endblock %}

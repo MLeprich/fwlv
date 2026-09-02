@@ -206,6 +206,18 @@ class ToggleFollowView(LoginRequiredMixin, View):
 # UNTEROBJEKTE: Hinzufügen (POST) + Löschen
 # ============================================================================
 
+_DETAIL_TABS = ('uebersicht', 'gebaeude', 'technik', 'kompensation', 'plaene')
+
+
+def _redirect_to_building(request, building):
+    """Zurück zur Detailseite, im zuletzt aktiven Reiter (Feld 'tab' im POST)."""
+    tab = request.POST.get('tab', '')
+    url = building.get_absolute_url()
+    if tab in _DETAIL_TABS:
+        url += f'#{tab}'
+    return redirect(url)
+
+
 def _require_change(request):
     return request.user.has_perm('objektverwaltung.change_buildingobject')
 
@@ -234,7 +246,7 @@ class _AddChildMixin(LoginRequiredMixin, PermissionRequiredMixin, View):
                 f'{field}: {", ".join(errs)}' for field, errs in form.errors.items()
             )
             messages.error(request, f'Eingabe fehlerhaft: {errors}')
-        return redirect(building.get_absolute_url())
+        return _redirect_to_building(request, building)
 
     def before_save(self, child, request):
         pass
@@ -336,7 +348,7 @@ class _EditChildView(LoginRequiredMixin, PermissionRequiredMixin, View):
             return self._render(request, child, form)
         obj.save()
         messages.success(request, self.success_message)
-        return redirect(child.building.get_absolute_url())
+        return _redirect_to_building(request, child.building)
 
     def before_save(self, child, request):
         pass
@@ -415,7 +427,7 @@ class _DeleteChildView(LoginRequiredMixin, PermissionRequiredMixin, View):
         building = child.building
         child.delete()
         messages.success(request, self.deleted_message)
-        return redirect(building.get_absolute_url())
+        return _redirect_to_building(request, building)
 
 
 class DeleteFloorView(_DeleteChildView):

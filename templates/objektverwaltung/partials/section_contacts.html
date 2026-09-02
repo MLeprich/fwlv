@@ -22,10 +22,10 @@
             </div>
             {% if perms.objektverwaltung.change_buildingobject %}
             <div class="flex items-center gap-3 flex-shrink-0">
-            <a href="{% url 'objektverwaltung:edit_contact' contact.pk %}" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
+            <a href="{% url 'objektverwaltung:edit_contact' contact.pk %}?tab=uebersicht" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
             <form method="post" action="{% url 'objektverwaltung:delete_contact' contact.pk %}"
                   onsubmit="return confirm('Ansprechpartner löschen?');">
-                {% csrf_token %}
+                {% csrf_token %}<input type="hidden" name="tab" value="uebersicht">
                 <button type="submit" class="text-xs text-red-600 hover:text-red-800">✕</button>
             </form>
             </div>
@@ -40,7 +40,7 @@
     {% if perms.objektverwaltung.change_buildingobject %}
     <form method="post" action="{% url 'objektverwaltung:add_contact' object.pk %}"
           x-show="addOpen" x-cloak class="mt-4 pt-4 border-t border-gray-100 space-y-2">
-        {% csrf_token %}
+        {% csrf_token %}<input type="hidden" name="tab" value="uebersicht">
         <div><label class="block text-xs text-gray-500 mb-1">Name</label>{{ contact_form.name }}</div>
         <div><label class="block text-xs text-gray-500 mb-1">Funktion</label>{{ contact_form.role }}</div>
         <div><label class="block text-xs text-gray-500 mb-1">Telefon</label>{{ contact_form.phone }}</div>

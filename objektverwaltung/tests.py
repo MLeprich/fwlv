@@ -250,3 +250,35 @@ class FireKeyDepotTests(TestCase):
         self.assertEqual(self.client.get(depot.get_absolute_url()).status_code, 200)
         self.assertEqual(self.client.get(reverse('objektverwaltung:fsd_report_add', args=[depot.pk])).status_code, 403)
         self.assertEqual(self.client.get(reverse('objektverwaltung:keydepot_blank_pdf', args=[depot.pk])).status_code, 200)
+
+
+class DetailTabTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw')
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label='objektverwaltung',
+                                       codename__in=['view_buildingobject', 'change_buildingobject'])
+        )
+        self.client.force_login(self.user)
+        self.building = BuildingObject.objects.create(
+            object_number='OBJ-1', name='Rathaus', created_by=self.user, updated_by=self.user,
+        )
+
+    def test_detail_has_tabs(self):
+        response = self.client.get(self.building.get_absolute_url())
+        for label in ('Übersicht', 'Gebäude', 'Brandschutztechnik', 'Kompensation', 'Pläne &amp; Laufkarten'):
+            self.assertContains(response, label)
+
+    def test_add_and_delete_redirect_to_active_tab(self):
+        response = self.client.post(reverse('objektverwaltung:add_floor', args=[self.building.pk]), {
+            'level': 0, 'name': 'EG', 'description': '', 'tab': 'gebaeude',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], self.building.get_absolute_url() + '#gebaeude')
+        floor = Floor.objects.get()
+        response = self.client.post(reverse('objektverwaltung:edit_floor', args=[floor.pk]), {
+            'level': 0, 'name': 'Erdgeschoss', 'description': '', 'tab': 'gebaeude',
+        })
+        self.assertEqual(response['Location'], self.building.get_absolute_url() + '#gebaeude')
+        response = self.client.post(reverse('objektverwaltung:delete_floor', args=[floor.pk]), {'tab': 'unbekannt'})
+        self.assertEqual(response['Location'], self.building.get_absolute_url())
