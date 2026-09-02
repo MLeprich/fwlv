@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - {{ building.name }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'objektverwaltung:list' %}" class="text-gray-500 hover:text-gray-700">Objekte</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{{ building.get_absolute_url }}" class="text-gray-500 hover:text-gray-700">{{ building.name|truncatechars:40 }}</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ title }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+        <p class="text-sm text-gray-500 mb-6">{{ building.object_number }} · {{ building.name }}</p>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg text-sm text-red-700">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            {% for field in form.visible_fields %}
+            <div>
+                {% if field.field.widget.input_type == 'checkbox' %}
+                <label class="flex items-center gap-2 cursor-pointer">
+                    {{ field }}
+                    <span class="text-sm font-medium text-gray-700">{{ field.label }}</span>
+                </label>
+                {% else %}
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {{ field }}
+                {% endif %}
+                {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                {% if field.errors %}<p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+            {% endfor %}
+
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <a href="{{ building.get_absolute_url }}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">
+                    Abbrechen
+                </a>
+                <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+                    Speichern
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

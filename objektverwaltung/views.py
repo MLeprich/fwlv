@@ -8,6 +8,7 @@ Abo-/Folgen-Funktion.
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -273,6 +274,115 @@ class AddPlanView(_AddChildMixin):
     def before_save(self, child, request):
         # BuildingPlan erbt AuditedModel -> created_by/updated_by erforderlich
         child.created_by = request.user
+        child.updated_by = request.user
+
+
+class _EditChildView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Unterobjekt bearbeiten: eigene Seite mit Formular, zurück zur Objekt-Detailseite."""
+    permission_required = 'objektverwaltung.change_buildingobject'
+    model = None
+    form_class = None
+    title = 'Eintrag bearbeiten'
+    success_message = 'Eintrag aktualisiert.'
+    pass_building_to_form = False
+    template_name = 'objektverwaltung/child_form.html'
+
+    def _form(self, child, data=None, files=None):
+        kwargs = {'instance': child}
+        if data is not None:
+            kwargs['data'] = data
+            kwargs['files'] = files
+        if self.pass_building_to_form:
+            kwargs['building'] = child.building
+        return self.form_class(**kwargs)
+
+    def _render(self, request, child, form):
+        return render(request, self.template_name, {
+            'current_module': 'objektverwaltung',
+            'building': child.building,
+            'child': child,
+            'form': form,
+            'title': self.title,
+        })
+
+    def get(self, request, pk):
+        child = get_object_or_404(self.model.objects.select_related('building'), pk=pk)
+        return self._render(request, child, self._form(child))
+
+    def post(self, request, pk):
+        child = get_object_or_404(self.model.objects.select_related('building'), pk=pk)
+        form = self._form(child, data=request.POST, files=request.FILES)
+        if not form.is_valid():
+            return self._render(request, child, form)
+        obj = form.save(commit=False)
+        self.before_save(obj, request)
+        # unique_together mit 'building' (z.B. Etagen-Ebene) prüft das ModelForm nicht,
+        # weil 'building' kein Formularfeld ist – deshalb hier explizit.
+        try:
+            obj.validate_unique()
+        except ValidationError as e:
+            form._update_errors(e)
+            return self._render(request, child, form)
+        obj.save()
+        messages.success(request, self.success_message)
+        return redirect(child.building.get_absolute_url())
+
+    def before_save(self, child, request):
+        pass
+
+
+class EditFloorView(_EditChildView):
+    model = Floor
+    form_class = FloorForm
+    title = 'Etage bearbeiten'
+    success_message = 'Etage aktualisiert.'
+
+
+class EditEscapeRouteView(_EditChildView):
+    model = EscapeRoute
+    form_class = EscapeRouteForm
+    title = 'Fluchtweg bearbeiten'
+    success_message = 'Fluchtweg aktualisiert.'
+    pass_building_to_form = True
+
+
+class EditFireAlarmPanelView(_EditChildView):
+    model = FireAlarmPanel
+    form_class = FireAlarmPanelForm
+    title = 'Brandmeldezentrale bearbeiten'
+    success_message = 'Brandmeldezentrale aktualisiert.'
+
+
+class EditContactView(_EditChildView):
+    model = BuildingContact
+    form_class = BuildingContactForm
+    title = 'Ansprechpartner bearbeiten'
+    success_message = 'Ansprechpartner aktualisiert.'
+
+
+class EditSuppressionSystemView(_EditChildView):
+    model = FireSuppressionSystem
+    form_class = FireSuppressionSystemForm
+    title = 'Löschanlage bearbeiten'
+    success_message = 'Löschanlage aktualisiert.'
+
+
+class EditCompensationMeasureView(_EditChildView):
+    model = CompensationMeasure
+    form_class = CompensationMeasureForm
+    title = 'Kompensationsmaßnahme bearbeiten'
+    success_message = 'Kompensationsmaßnahme aktualisiert.'
+    pass_building_to_form = True
+
+
+class EditPlanView(_EditChildView):
+    model = BuildingPlan
+    form_class = BuildingPlanForm
+    title = 'Plan / Laufkarte bearbeiten'
+    success_message = 'Plan/Laufkarte aktualisiert.'
+    pass_building_to_form = True
+
+    def before_save(self, child, request):
         child.updated_by = request.user
 
 

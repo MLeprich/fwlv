@@ -32,11 +32,14 @@
                 </p>
             </div>
             {% if perms.objektverwaltung.change_buildingobject %}
+            <div class="flex items-center gap-3 flex-shrink-0">
+            <a href="{% url 'objektverwaltung:edit_compensation' m.pk %}" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
             <form method="post" action="{% url 'objektverwaltung:delete_compensation' m.pk %}"
                   onsubmit="return confirm('Maßnahme löschen?');">
                 {% csrf_token %}
                 <button type="submit" class="text-xs text-red-600 hover:text-red-800 flex-shrink-0">Löschen</button>
             </form>
+            </div>
             {% endif %}
         </li>
         {% endfor %}

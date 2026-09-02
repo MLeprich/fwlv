@@ -31,6 +31,15 @@ urlpatterns = [
     path('objekte/<int:pk>/loeschanlage/neu/', views.AddSuppressionSystemView.as_view(), name='add_suppression'),
     path('objekte/<int:pk>/kompensation/neu/', views.AddCompensationMeasureView.as_view(), name='add_compensation'),
 
+    # Unterobjekte bearbeiten
+    path('etage/<int:pk>/bearbeiten/', views.EditFloorView.as_view(), name='edit_floor'),
+    path('fluchtweg/<int:pk>/bearbeiten/', views.EditEscapeRouteView.as_view(), name='edit_escape_route'),
+    path('bmz/<int:pk>/bearbeiten/', views.EditFireAlarmPanelView.as_view(), name='edit_fire_alarm_panel'),
+    path('ansprechpartner/<int:pk>/bearbeiten/', views.EditContactView.as_view(), name='edit_contact'),
+    path('plan/<int:pk>/bearbeiten/', views.EditPlanView.as_view(), name='edit_plan'),
+    path('loeschanlage/<int:pk>/bearbeiten/', views.EditSuppressionSystemView.as_view(), name='edit_suppression'),
+    path('kompensation/<int:pk>/bearbeiten/', views.EditCompensationMeasureView.as_view(), name='edit_compensation'),
+
     # Unterobjekte löschen
     path('etage/<int:pk>/loeschen/', views.DeleteFloorView.as_view(), name='delete_floor'),
     path('fluchtweg/<int:pk>/loeschen/', views.DeleteEscapeRouteView.as_view(), name='delete_escape_route'),

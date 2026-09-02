@@ -21,11 +21,14 @@
                 {% if sys.next_inspection %}<p class="text-xs text-gray-500">Nächste Prüfung: {{ sys.next_inspection|date:"d.m.Y" }}</p>{% endif %}
             </div>
             {% if perms.objektverwaltung.change_buildingobject %}
+            <div class="flex items-center gap-3 flex-shrink-0">
+            <a href="{% url 'objektverwaltung:edit_suppression' sys.pk %}" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
             <form method="post" action="{% url 'objektverwaltung:delete_suppression' sys.pk %}"
                   onsubmit="return confirm('Löschanlage löschen?');">
                 {% csrf_token %}
                 <button type="submit" class="text-xs text-red-600 hover:text-red-800">Löschen</button>
             </form>
+            </div>
             {% endif %}
         </li>
         {% endfor %}
