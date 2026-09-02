@@ -58,19 +58,15 @@
         <div class="p-6">
             <form method="post" action="{% url 'tickets:mappe_kontakt_create' %}" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                 {% csrf_token %}
-                <div class="md:col-span-2">
+                <div class="md:col-span-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                     {{ form.name }}
                 </div>
-                <div class="md:col-span-2">
+                <div class="md:col-span-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Funktion *</label>
                     {{ form.funktion }}
                 </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
-                    {{ form.phone }}
-                </div>
-                <div class="md:col-span-2">
+                <div class="md:col-span-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
                     {{ form.email }}
                 </div>
@@ -78,17 +74,73 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Reih.</label>
                     {{ form.order }}
                 </div>
-                <div class="md:col-span-1 flex items-center pt-1">
+                <div class="md:col-span-2 flex items-center pt-1">
                     <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                         {{ form.is_active }}
                         Aktiv
                     </label>
                 </div>
-                <div class="md:col-span-2">
+                <div class="md:col-span-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Festnetz</label>
+                    {{ form.phone }}
+                </div>
+                <div class="md:col-span-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mobil dienstlich</label>
+                    {{ form.phone_mobil_dienst }}
+                </div>
+                <div class="md:col-span-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mobil privat</label>
+                    {{ form.phone_mobil_privat }}
+                </div>
+                <div class="md:col-span-3">
                     <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors">
                         Hinzuf&uuml;gen
                     </button>
                 </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CSV-Import -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="bg-blue-50 border-b border-blue-200 px-6 py-3 rounded-t-lg">
+            <h2 class="text-base font-bold text-blue-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                CSV-Import
+            </h2>
+        </div>
+        <div class="p-6">
+            <p class="text-sm text-gray-600 mb-4">
+                Lade eine CSV-Datei hoch mit den Spalten
+                <code class="px-1 py-0.5 bg-gray-100 rounded text-xs">Name</code>,
+                <code class="px-1 py-0.5 bg-gray-100 rounded text-xs">Funktion</code> (Pflicht) sowie optional
+                <code class="px-1 py-0.5 bg-gray-100 rounded text-xs">Festnetz</code>,
+                <code class="px-1 py-0.5 bg-gray-100 rounded text-xs">Mobil dienstlich</code>,
+                <code class="px-1 py-0.5 bg-gray-100 rounded text-xs">Mobil privat</code>,
+                <code class="px-1 py-0.5 bg-gray-100 rounded text-xs">E-Mail</code>,
+                <code class="px-1 py-0.5 bg-gray-100 rounded text-xs">Reihenfolge</code> und
+                <code class="px-1 py-0.5 bg-gray-100 rounded text-xs">Aktiv</code> (Ja/Nein).
+                <br>
+                <span class="text-xs text-gray-500">Trennzeichen Semikolon oder Komma, Excel-Export (Windows-1252) wird erkannt. Kontakte mit gleichem Name und gleicher Funktion werden nicht doppelt angelegt; dort werden nur leere Felder erg&auml;nzt.</span>
+            </p>
+            <form method="post" action="{% url 'tickets:mappe_kontakt_import' %}" enctype="multipart/form-data" class="flex flex-col md:flex-row md:items-center gap-3">
+                {% csrf_token %}
+                <input type="file" name="csv_file" accept=".csv,text/csv" required
+                       class="flex-1 text-sm text-gray-700 file:mr-3 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:font-medium file:cursor-pointer hover:file:bg-blue-700">
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    Importieren
+                </button>
+                <a href="{% url 'tickets:mappe_kontakt_import_template' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Vorlage
+                </a>
             </form>
         </div>
     </div>
@@ -113,12 +165,14 @@
                         <p class="text-sm font-semibold text-gray-900">{{ item.name }}</p>
                         <p class="text-xs text-gray-500">{{ item.funktion }}</p>
                     </div>
-                    {% if item.phone %}
-                    <span class="text-xs text-gray-500">{{ item.phone }}</span>
-                    {% endif %}
-                    {% if item.email %}
-                    <span class="text-xs text-blue-600">{{ item.email }}</span>
-                    {% endif %}
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        {% for label, number in item.phone_entries %}
+                        <span class="text-xs text-gray-500"><span class="text-gray-400">{{ label }}:</span> {{ number }}</span>
+                        {% endfor %}
+                        {% if item.email %}
+                        <span class="text-xs text-blue-600">{{ item.email }}</span>
+                        {% endif %}
+                    </div>
                     {% if not item.is_active %}
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">Inaktiv</span>
                     {% endif %}

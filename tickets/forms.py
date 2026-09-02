@@ -377,11 +377,14 @@ class MappeKontaktForm(forms.ModelForm):
 
     class Meta:
         model = MappeKontakt
-        fields = ['name', 'funktion', 'phone', 'email', 'is_active', 'order']
+        fields = ['name', 'funktion', 'phone', 'phone_mobil_dienst', 'phone_mobil_privat',
+                  'email', 'is_active', 'order']
         widgets = {
             'name': forms.TextInput(attrs={'class': TW, 'placeholder': 'Name'}),
             'funktion': forms.TextInput(attrs={'class': TW, 'placeholder': 'Funktion / Rolle'}),
-            'phone': forms.TextInput(attrs={'class': TW, 'placeholder': 'Telefonnummer'}),
+            'phone': forms.TextInput(attrs={'class': TW, 'placeholder': 'Festnetz'}),
+            'phone_mobil_dienst': forms.TextInput(attrs={'class': TW, 'placeholder': 'Mobil dienstlich'}),
+            'phone_mobil_privat': forms.TextInput(attrs={'class': TW, 'placeholder': 'Mobil privat'}),
             'email': forms.EmailInput(attrs={'class': TW, 'placeholder': 'E-Mail-Adresse'}),
             'is_active': forms.CheckboxInput(attrs={'class': TW_CB}),
             'order': forms.NumberInput(attrs={'class': TW, 'min': 0}),

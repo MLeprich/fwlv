@@ -46,6 +46,8 @@ urlpatterns = [
 
     path('infomonitor/mappe/kontakte/', views.MappeKontaktListView.as_view(), name='mappe_kontakt_list'),
     path('infomonitor/mappe/kontakte/create/', views.MappeKontaktCreateView.as_view(), name='mappe_kontakt_create'),
+    path('infomonitor/mappe/kontakte/import/', views.mappe_kontakt_import, name='mappe_kontakt_import'),
+    path('infomonitor/mappe/kontakte/import/template/', views.mappe_kontakt_import_template, name='mappe_kontakt_import_template'),
     path('infomonitor/mappe/kontakte/<int:pk>/edit/', views.MappeKontaktUpdateView.as_view(), name='mappe_kontakt_edit'),
     path('infomonitor/mappe/kontakte/<int:pk>/delete/', views.mappe_kontakt_delete, name='mappe_kontakt_delete'),
 

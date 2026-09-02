@@ -31,8 +31,9 @@ class MappeLinkAdmin(admin.ModelAdmin):
 
 @admin.register(MappeKontakt)
 class MappeKontaktAdmin(admin.ModelAdmin):
-    list_display = ['name', 'funktion', 'phone', 'email', 'is_active', 'order']
+    list_display = ['name', 'funktion', 'phone', 'phone_mobil_dienst', 'phone_mobil_privat', 'email', 'is_active', 'order']
     list_filter = ['is_active']
+    search_fields = ['name', 'funktion', 'phone', 'phone_mobil_dienst', 'phone_mobil_privat', 'email']
     list_editable = ['is_active', 'order']
 
 

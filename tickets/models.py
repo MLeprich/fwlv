@@ -443,10 +443,19 @@ class MappeKontakt(models.Model):
     """Wichtiger Ansprechpartner für die digitale Mappe der Leitstelle"""
     name = models.CharField(max_length=200, verbose_name=_('Name'))
     funktion = models.CharField(max_length=200, verbose_name=_('Funktion / Rolle'))
-    phone = models.CharField(max_length=100, blank=True, verbose_name=_('Telefon'))
+    phone = models.CharField(max_length=100, blank=True, verbose_name=_('Festnetz'))
+    phone_mobil_dienst = models.CharField(max_length=100, blank=True, verbose_name=_('Mobil dienstlich'))
+    phone_mobil_privat = models.CharField(max_length=100, blank=True, verbose_name=_('Mobil privat'))
     email = models.EmailField(blank=True, verbose_name=_('E-Mail'))
     is_active = models.BooleanField(default=True, verbose_name=_('Aktiv'))
     order = models.PositiveIntegerField(default=0, verbose_name=_('Reihenfolge'))
+
+    # Reihenfolge und Beschriftung der Kontaktwege – für Templates und CSV-Import
+    PHONE_FIELDS = (
+        ('phone', 'Festnetz'),
+        ('phone_mobil_dienst', 'Mobil dienstlich'),
+        ('phone_mobil_privat', 'Mobil privat'),
+    )
 
     class Meta:
         verbose_name = _('Wichtiger Ansprechpartner')
@@ -455,6 +464,18 @@ class MappeKontakt(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def phone_entries(self):
+        """Liste (Beschriftung, Nummer) aller gefüllten Telefonfelder."""
+        return [(label, getattr(self, field)) for field, label in self.PHONE_FIELDS if getattr(self, field)]
+
+    @property
+    def search_text(self):
+        """Zusammengefasster Suchtext für die Kiosk-Suche."""
+        parts = [self.name, self.funktion, self.phone, self.phone_mobil_dienst,
+                 self.phone_mobil_privat, self.email]
+        return ' '.join(p for p in parts if p).lower()
 
 
 class MappeAnleitung(models.Model):

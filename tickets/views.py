@@ -1181,6 +1181,194 @@ def mappe_kontakt_delete(request, pk):
     return redirect('tickets:mappe_kontakt_list')
 
 
+def mappe_kontakt_import_template(request):
+    """CSV-Vorlage für den Kontakt-Import."""
+    if not _has_mappe_access(request.user):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:mappe_kontakt_list')
+
+    from django.http import HttpResponse
+    import csv, io
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=';')
+    w.writerow(['Name', 'Funktion', 'Festnetz', 'Mobil dienstlich', 'Mobil privat', 'E-Mail', 'Reihenfolge', 'Aktiv'])
+    w.writerow(['Max Mustermann', 'Leiter Feuerwehr', '0208-1234567', '0170-1234567', '', 'max.mustermann@example.de', '10', 'Ja'])
+    w.writerow(['Erika Beispiel', 'Pressesprecherin', '0208-2345678', '0171-2345678', '0172-3456789', 'erika.beispiel@example.de', '20', 'Ja'])
+    w.writerow(['Hans Schmidt', 'Hausmeister Wache 1', '', '0173-4567890', '', '', '30', 'Nein'])
+    response = HttpResponse(
+        '\ufeff' + buf.getvalue(),  # BOM für Excel
+        content_type='text/csv; charset=utf-8'
+    )
+    response['Content-Disposition'] = 'attachment; filename="ansprechpartner_vorlage.csv"'
+    return response
+
+
+def mappe_kontakt_import(request):
+    """
+    CSV-Upload für Ansprechpartner der Digitalen Mappe.
+
+    Spalten: Name, Funktion (Pflicht); Festnetz, Mobil dienstlich, Mobil privat,
+    E-Mail, Reihenfolge, Aktiv (optional). Gleicher Name + Funktion gilt als
+    vorhandener Kontakt: dort werden nur leere Felder ergänzt.
+    """
+    if not _has_mappe_access(request.user):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:mappe_kontakt_list')
+
+    if request.method != 'POST' or 'csv_file' not in request.FILES:
+        return redirect('tickets:mappe_kontakt_list')
+
+    import csv, io
+    from django.core.validators import validate_email
+    from django.core.exceptions import ValidationError
+
+    upload = request.FILES['csv_file']
+    try:
+        raw = upload.read()
+    except Exception as e:
+        messages.error(request, f'Datei konnte nicht gelesen werden: {e}')
+        return redirect('tickets:mappe_kontakt_list')
+
+    # Encoding-Erkennung: UTF-8 (mit/ohne BOM), sonst cp1252 (Excel DE)
+    text = None
+    for enc in ('utf-8-sig', 'utf-8', 'cp1252', 'latin-1'):
+        try:
+            text = raw.decode(enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    if text is None:
+        messages.error(request, 'Datei-Encoding konnte nicht erkannt werden (UTF-8 oder Windows-1252 erwartet).')
+        return redirect('tickets:mappe_kontakt_list')
+
+    # Trennzeichen erraten: bevorzugt ';', sonst ','
+    sample = text[:2048]
+    delimiter = ';' if sample.count(';') >= sample.count(',') else ','
+
+    reader = csv.reader(io.StringIO(text), delimiter=delimiter)
+    try:
+        header = next(reader)
+    except StopIteration:
+        messages.error(request, 'CSV ist leer.')
+        return redirect('tickets:mappe_kontakt_list')
+
+    def normkey(s):
+        s = s.strip().lower().replace('ä', 'ae').replace('ö', 'oe').replace('ü', 'ue').replace('ß', 'ss')
+        return ' '.join(s.replace('-', ' ').replace('_', ' ').replace('.', ' ').split())
+
+    col_map = {normkey(c): i for i, c in enumerate(header)}
+
+    def find_col(*names):
+        return next((col_map[normkey(n)] for n in names if normkey(n) in col_map), None)
+
+    idx = {
+        'name': find_col('Name', 'Vorname Nachname', 'Person', 'Ansprechpartner'),
+        'funktion': find_col('Funktion', 'Funktion / Rolle', 'Rolle', 'Position', 'Aufgabe'),
+        'phone': find_col('Festnetz', 'Telefon', 'Telefon Festnetz', 'Tel', 'Phone', 'Rufnummer', 'Dienstlich Festnetz'),
+        'phone_mobil_dienst': find_col('Mobil dienstlich', 'Mobil dienst', 'Mobil Dienstlich', 'Diensthandy', 'Handy dienstlich', 'Mobil (dienstlich)', 'Dienstlich mobil'),
+        'phone_mobil_privat': find_col('Mobil privat', 'Mobil Privat', 'Handy privat', 'Privathandy', 'Mobil (privat)', 'Privat mobil'),
+        'email': find_col('E-Mail', 'EMail', 'Mail', 'E Mail Adresse', 'E-Mail-Adresse'),
+        'order': find_col('Reihenfolge', 'Reih', 'Order', 'Sortierung', 'Nr'),
+        'is_active': find_col('Aktiv', 'Active'),
+    }
+    # "Mobil" ohne Zusatz gilt als dienstlich
+    if idx['phone_mobil_dienst'] is None:
+        idx['phone_mobil_dienst'] = find_col('Mobil', 'Handy', 'Mobiltelefon')
+
+    if idx['name'] is None or idx['funktion'] is None:
+        messages.error(request, 'CSV muss mindestens die Spalten "Name" und "Funktion" enthalten.')
+        return redirect('tickets:mappe_kontakt_list')
+
+    def cell(row, key):
+        i = idx[key]
+        return row[i].strip() if i is not None and i < len(row) else ''
+
+    created = 0
+    updated = 0
+    skipped = 0
+    rows_with_errors = []
+
+    for line_no, row in enumerate(reader, start=2):
+        if not row or not any(c.strip() for c in row):
+            continue
+        name = cell(row, 'name')
+        funktion = cell(row, 'funktion')
+        if not name and not funktion:
+            continue
+        if not name or not funktion:
+            rows_with_errors.append(f'Zeile {line_no}: Name und Funktion sind Pflicht')
+            continue
+
+        email = cell(row, 'email')
+        if email:
+            try:
+                validate_email(email)
+            except ValidationError:
+                rows_with_errors.append(f'Zeile {line_no} ({name}): ungültige E-Mail "{email}"')
+                continue
+
+        order_raw = cell(row, 'order')
+        order = None
+        if order_raw:
+            try:
+                order = max(0, int(float(order_raw.replace(',', '.'))))
+            except ValueError:
+                rows_with_errors.append(f'Zeile {line_no} ({name}): Reihenfolge "{order_raw}" ist keine Zahl')
+                continue
+
+        active_raw = cell(row, 'is_active').lower()
+        is_active = active_raw not in ('nein', 'n', 'no', '0', 'false', 'inaktiv', 'x')
+
+        values = {
+            'phone': cell(row, 'phone')[:100],
+            'phone_mobil_dienst': cell(row, 'phone_mobil_dienst')[:100],
+            'phone_mobil_privat': cell(row, 'phone_mobil_privat')[:100],
+            'email': email,
+        }
+
+        obj = MappeKontakt.objects.filter(name__iexact=name, funktion__iexact=funktion).first()
+        if obj is None:
+            MappeKontakt.objects.create(
+                name=name[:200],
+                funktion=funktion[:200],
+                is_active=is_active,
+                order=order if order is not None else 0,
+                **values,
+            )
+            created += 1
+            continue
+
+        # Vorhandener Kontakt: nur leere Felder ergänzen
+        changed = []
+        for field, value in values.items():
+            if value and not getattr(obj, field):
+                setattr(obj, field, value)
+                changed.append(field)
+        if changed:
+            obj.save(update_fields=changed)
+            updated += 1
+        else:
+            skipped += 1
+
+    msg_parts = [f'{created} Kontakte angelegt']
+    if updated:
+        msg_parts.append(f'{updated} vorhandene Kontakte ergänzt')
+    if skipped:
+        msg_parts.append(f'{skipped} bereits vorhanden (übersprungen)')
+    if rows_with_errors:
+        msg_parts.append(f'{len(rows_with_errors)} fehlerhafte Zeilen')
+
+    if created or updated:
+        messages.success(request, ' • '.join(msg_parts))
+    else:
+        messages.warning(request, ' • '.join(msg_parts))
+
+    for err in rows_with_errors[:10]:
+        messages.warning(request, err)
+
+    return redirect('tickets:mappe_kontakt_list')
+
+
 # =============================================================================
 # Digitale Mappe – Anleitungen
 # =============================================================================
