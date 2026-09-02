@@ -8,7 +8,7 @@ from django import forms
 from .models import (
     BuildingObject, Floor, EscapeRoute, FireAlarmPanel,
     BuildingContact, BuildingPlan, FireSuppressionSystem, CompensationMeasure,
-    FireKeyDepot, FSDInspectionReport,
+    FireKeyDepot, InspectionReport, InspectionType,
 )
 
 DATE = forms.DateInput(format='%Y-%m-%d', attrs={
@@ -83,12 +83,15 @@ class EscapeRouteForm(forms.ModelForm):
 class FireAlarmPanelForm(forms.ModelForm):
     class Meta:
         model = FireAlarmPanel
-        fields = ['designation', 'location_description', 'manufacturer', 'model', 'notes']
+        fields = ['designation', 'location_description', 'manufacturer', 'model',
+                  'inspection_interval_months', 'last_inspection', 'notes']
         widgets = {
             'designation': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'z.B. BMZ Haupteingang'}),
             'location_description': forms.TextInput(attrs={'class': INPUT}),
             'manufacturer': forms.TextInput(attrs={'class': INPUT}),
             'model': forms.TextInput(attrs={'class': INPUT}),
+            'inspection_interval_months': forms.NumberInput(attrs={'class': INPUT, 'min': 1, 'max': 120}),
+            'last_inspection': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT}),
             'notes': forms.Textarea(attrs={'class': INPUT, 'rows': 2}),
         }
 
@@ -132,15 +135,15 @@ class FireSuppressionSystemForm(forms.ModelForm):
     class Meta:
         model = FireSuppressionSystem
         fields = ['system_type', 'designation', 'location_description',
-                  'manufacturer', 'last_inspection', 'next_inspection',
+                  'manufacturer', 'inspection_interval_months', 'last_inspection',
                   'is_operational', 'notes']
         widgets = {
             'system_type': forms.Select(attrs={'class': INPUT}),
             'designation': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'z.B. Sprinkler Halle A'}),
             'location_description': forms.TextInput(attrs={'class': INPUT}),
             'manufacturer': forms.TextInput(attrs={'class': INPUT}),
+            'inspection_interval_months': forms.NumberInput(attrs={'class': INPUT, 'min': 1, 'max': 120}),
             'last_inspection': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT}),
-            'next_inspection': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT}),
             'is_operational': forms.CheckboxInput(attrs={'class': CHECKBOX}),
             'notes': forms.Textarea(attrs={'class': INPUT, 'rows': 2}),
         }
@@ -195,9 +198,12 @@ class FireKeyDepotForm(forms.ModelForm):
         }
 
 
-class FSDInspectionReportForm(forms.ModelForm):
+class InspectionReportForm(forms.ModelForm):
+    """Prüfbericht; Depot-Inhalt und Schlüssel-Bescheinigung nur bei FSD."""
+    FSD_ONLY = ('depot_contents', 'keys_match')
+
     class Meta:
-        model = FSDInspectionReport
+        model = InspectionReport
         fields = ['inspection_date', 'participant_operator', 'participant_fire_dept',
                   'participant_other', 'depot_contents', 'condition_report', 'result', 'keys_match']
         widgets = {
@@ -210,3 +216,22 @@ class FSDInspectionReportForm(forms.ModelForm):
             'result': forms.Select(attrs={'class': INPUT}),
             'keys_match': forms.CheckboxInput(attrs={'class': CHECKBOX}),
         }
+
+    def __init__(self, *args, asset_type=InspectionType.FSD, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.asset_type = asset_type
+        if asset_type != InspectionType.FSD:
+            for name in self.FSD_ONLY:
+                self.fields.pop(name, None)
+        if asset_type == InspectionType.BMZ:
+            self.fields['condition_report'].label = 'Prüfergebnis / Feststellungen'
+            self.fields['condition_report'].widget.attrs['placeholder'] = (
+                'z.B. Funktionsprüfung Melder, Übertragungseinrichtung, Störungen, Mängel …')
+        elif asset_type == InspectionType.LOESCHANLAGE:
+            self.fields['condition_report'].label = 'Prüfergebnis / Feststellungen'
+            self.fields['condition_report'].widget.attrs['placeholder'] = (
+                'z.B. Funktionsprüfung, Druck, Auslöseeinrichtungen, Mängel …')
+
+
+# Rückwärtskompatibler Name
+FSDInspectionReportForm = InspectionReportForm

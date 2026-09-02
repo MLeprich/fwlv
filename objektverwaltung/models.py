@@ -174,8 +174,115 @@ class EscapeRoute(TimeStampedModel):
         return self.name
 
 
-class FireAlarmPanel(TimeStampedModel):
+def add_months(date_value, months):
+    """Datum um n Monate verschieben (Monatsende wird abgeschnitten)."""
+    import calendar
+    month_index = date_value.month - 1 + months
+    year = date_value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(date_value.day, calendar.monthrange(year, month)[1])
+    return date_value.replace(year=year, month=month, day=day)
+
+
+class InspectionType(models.TextChoices):
+    """Prüfungsarten der Objektverwaltung (je Anlagentyp)"""
+    FSD = 'fsd', 'Feuerwehrschlüsseldepot'
+    BMZ = 'bmz', 'Brandmeldezentrale'
+    LOESCHANLAGE = 'loeschanlage', 'Löschanlage'
+
+
+class InspectableMixin(models.Model):
+    """
+    Prüfbare Anlage eines Objekts: Prüfintervall, letzte/nächste Prüfung,
+    Fälligkeitsstatus. Die nächste Prüfung wird aus letzter Prüfung
+    (bzw. Einbaudatum) + Intervall berechnet; ohne beides bleibt ein manuell
+    gesetzter Termin erhalten.
+    """
+    DUE_SOON_DAYS = 30
+    inspection_type = None  # in Unterklassen: InspectionType.*
+
+    inspection_interval_months = models.PositiveSmallIntegerField(
+        default=12, verbose_name="Prüfintervall (Monate)"
+    )
+    last_inspection = models.DateField(null=True, blank=True, verbose_name="Letzte Prüfung")
+    next_inspection = models.DateField(
+        null=True, blank=True, verbose_name="Nächste Prüfung",
+        help_text="Wird aus letzter Prüfung (bzw. Einbaudatum) und Intervall berechnet"
+    )
+
+    class Meta:
+        abstract = True
+
+    # --- Termine -----------------------------------------------------------
+    def compute_next_inspection(self):
+        base = self.last_inspection or getattr(self, 'installed_at', None)
+        if base is not None and self.inspection_interval_months:
+            return add_months(base, self.inspection_interval_months)
+        return self.next_inspection if not self.last_inspection else None
+
+    def save(self, *args, **kwargs):
+        self.next_inspection = self.compute_next_inspection()
+        super().save(*args, **kwargs)
+
+    def sync_from_reports(self):
+        """Letzte Prüfung aus den Prüfberichten übernehmen und speichern."""
+        latest = self.inspection_reports.order_by('-inspection_date').first()
+        self.last_inspection = latest.inspection_date if latest else None
+        if latest is None:
+            self.next_inspection = None  # kein Bericht mehr → kein berechneter Termin
+        self.save(update_fields=['last_inspection', 'next_inspection', 'updated_at'])
+
+    # --- Status ------------------------------------------------------------
+    @property
+    def days_until_inspection(self):
+        if not self.next_inspection:
+            return None
+        from django.utils import timezone
+        return (self.next_inspection - timezone.localdate()).days
+
+    @property
+    def inspection_status(self):
+        """'overdue' | 'due_soon' | 'ok' | 'unknown'"""
+        days = self.days_until_inspection
+        if days is None:
+            return 'unknown'
+        if days < 0:
+            return 'overdue'
+        if days <= self.DUE_SOON_DAYS:
+            return 'due_soon'
+        return 'ok'
+
+    @property
+    def inspection_status_display(self):
+        return {
+            'overdue': 'Prüfung überfällig',
+            'due_soon': 'Prüfung bald fällig',
+            'ok': 'Prüfung aktuell',
+            'unknown': 'Kein Prüftermin',
+        }[self.inspection_status]
+
+    @property
+    def inspection_type_label(self):
+        return InspectionType(self.inspection_type).label
+
+    @property
+    def inspection_active(self):
+        """Nur aktive Anlagen werden als fällig gemeldet."""
+        return getattr(self, 'is_active', True)
+
+    @property
+    def display_name(self):
+        return self.designation
+
+    def get_absolute_url(self):
+        return reverse('objektverwaltung:asset_detail',
+                       kwargs={'type': self.inspection_type, 'pk': self.pk})
+
+
+class FireAlarmPanel(InspectableMixin, TimeStampedModel):
     """Brandmeldezentrale (BMZ) eines Objekts"""
+    inspection_type = InspectionType.BMZ
+
     building = models.ForeignKey(
         BuildingObject, on_delete=models.CASCADE,
         related_name='fire_alarm_panels', verbose_name="Objekt"
@@ -210,8 +317,10 @@ class SuppressionSystemType(models.TextChoices):
     OTHER = 'other', 'Sonstige'
 
 
-class FireSuppressionSystem(TimeStampedModel):
+class FireSuppressionSystem(InspectableMixin, TimeStampedModel):
     """Lösch-/Sprinkleranlage eines Objekts"""
+    inspection_type = InspectionType.LOESCHANLAGE
+
     building = models.ForeignKey(
         BuildingObject, on_delete=models.CASCADE,
         related_name='suppression_systems', verbose_name="Objekt"
@@ -225,8 +334,6 @@ class FireSuppressionSystem(TimeStampedModel):
         max_length=255, blank=True, verbose_name="Standort / abgedeckter Bereich"
     )
     manufacturer = models.CharField(max_length=120, blank=True, verbose_name="Hersteller")
-    last_inspection = models.DateField(null=True, blank=True, verbose_name="Letzte Prüfung")
-    next_inspection = models.DateField(null=True, blank=True, verbose_name="Nächste Prüfung")
     is_operational = models.BooleanField(default=True, verbose_name="Funktionsfähig / in Betrieb")
     notes = models.TextField(blank=True, verbose_name="Hinweise")
 
@@ -246,19 +353,9 @@ class FSDType(models.TextChoices):
     FSD3 = 'fsd3', 'FSD 3'
 
 
-def add_months(date_value, months):
-    """Datum um n Monate verschieben (Monatsende wird abgeschnitten)."""
-    import calendar
-    month_index = date_value.month - 1 + months
-    year = date_value.year + month_index // 12
-    month = month_index % 12 + 1
-    day = min(date_value.day, calendar.monthrange(year, month)[1])
-    return date_value.replace(year=year, month=month, day=day)
-
-
-class FireKeyDepot(TimeStampedModel):
+class FireKeyDepot(InspectableMixin, TimeStampedModel):
     """Feuerwehrschlüsseldepot (FSD) eines Objekts mit Prüfintervall"""
-    DUE_SOON_DAYS = 30
+    inspection_type = InspectionType.FSD
 
     building = models.ForeignKey(
         BuildingObject, on_delete=models.CASCADE,
@@ -279,14 +376,6 @@ class FireKeyDepot(TimeStampedModel):
     manufacturer = models.CharField(max_length=120, blank=True, verbose_name="Hersteller")
     serial_number = models.CharField(max_length=100, blank=True, verbose_name="Serien-/Depot-Nr.")
     installed_at = models.DateField(null=True, blank=True, verbose_name="Einbaudatum")
-    inspection_interval_months = models.PositiveSmallIntegerField(
-        default=12, verbose_name="Prüfintervall (Monate)"
-    )
-    last_inspection = models.DateField(null=True, blank=True, verbose_name="Letzte Prüfung")
-    next_inspection = models.DateField(
-        null=True, blank=True, verbose_name="Nächste Prüfung",
-        help_text="Wird aus letzter Prüfung (bzw. Einbaudatum) und Intervall berechnet"
-    )
     contents = models.TextField(
         blank=True, verbose_name="Depot-Inhalt",
         help_text="Hinterlegte Schlüssel; wird als Vorbelegung in neue Prüfberichte übernommen"
@@ -302,65 +391,48 @@ class FireKeyDepot(TimeStampedModel):
     def __str__(self):
         return f"{self.get_depot_type_display()}: {self.designation}"
 
-    def get_absolute_url(self):
-        return reverse('objektverwaltung:keydepot_detail', kwargs={'pk': self.pk})
 
-    def compute_next_inspection(self):
-        base = self.last_inspection or self.installed_at
-        if base is None or not self.inspection_interval_months:
-            return None
-        return add_months(base, self.inspection_interval_months)
-
-    def save(self, *args, **kwargs):
-        self.next_inspection = self.compute_next_inspection()
-        super().save(*args, **kwargs)
-
-    def sync_from_reports(self):
-        """Letzte Prüfung aus den Prüfberichten übernehmen und speichern."""
-        latest = self.inspection_reports.order_by('-inspection_date').first()
-        self.last_inspection = latest.inspection_date if latest else None
-        self.save(update_fields=['last_inspection', 'next_inspection', 'updated_at'])
-
-    @property
-    def days_until_inspection(self):
-        if not self.next_inspection:
-            return None
-        from django.utils import timezone
-        return (self.next_inspection - timezone.localdate()).days
-
-    @property
-    def inspection_status(self):
-        """'overdue' | 'due_soon' | 'ok' | 'unknown'"""
-        days = self.days_until_inspection
-        if days is None:
-            return 'unknown'
-        if days < 0:
-            return 'overdue'
-        if days <= self.DUE_SOON_DAYS:
-            return 'due_soon'
-        return 'ok'
-
-    @property
-    def inspection_status_display(self):
-        return {
-            'overdue': 'Prüfung überfällig',
-            'due_soon': 'Prüfung bald fällig',
-            'ok': 'Prüfung aktuell',
-            'unknown': 'Kein Prüftermin',
-        }[self.inspection_status]
-
-
-class FSDInspectionResult(models.TextChoices):
+class InspectionResult(models.TextChoices):
     OK = 'ok', 'Ohne Mängel'
     DEFECTS = 'defects', 'Mit Mängeln'
 
 
-class FSDInspectionReport(AuditedModel):
-    """Überprüfungsbericht zu einem Feuerwehrschlüsseldepot (Vorlage: FSD-Überprüfungsbericht)"""
+# Rückwärtskompatibler Name
+FSDInspectionResult = InspectionResult
+
+
+class InspectionReport(AuditedModel):
+    """
+    Prüfbericht zu einer prüfbaren Anlage (Schlüsseldepot, BMZ, Löschanlage).
+    Genau eine der Anlagen-Referenzen ist gesetzt; ``building`` und
+    ``inspection_type`` werden daraus beim Speichern abgeleitet.
+    """
+    ASSET_FIELDS = {
+        InspectionType.FSD: 'depot',
+        InspectionType.BMZ: 'fire_alarm_panel',
+        InspectionType.LOESCHANLAGE: 'suppression_system',
+    }
+
+    building = models.ForeignKey(
+        BuildingObject, on_delete=models.CASCADE,
+        related_name='inspection_reports', verbose_name="Objekt"
+    )
+    inspection_type = models.CharField(
+        max_length=20, choices=InspectionType.choices, verbose_name="Prüfungsart"
+    )
     depot = models.ForeignKey(
-        FireKeyDepot, on_delete=models.CASCADE,
+        FireKeyDepot, on_delete=models.CASCADE, null=True, blank=True,
         related_name='inspection_reports', verbose_name="Schlüsseldepot"
     )
+    fire_alarm_panel = models.ForeignKey(
+        FireAlarmPanel, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='inspection_reports', verbose_name="Brandmeldezentrale"
+    )
+    suppression_system = models.ForeignKey(
+        FireSuppressionSystem, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='inspection_reports', verbose_name="Löschanlage"
+    )
+
     inspection_date = models.DateField(verbose_name="Überprüfungsdatum")
     participant_operator = models.CharField(
         max_length=200, blank=True, verbose_name="Teilnehmer Betrieb"
@@ -374,8 +446,8 @@ class FSDInspectionReport(AuditedModel):
     depot_contents = models.TextField(blank=True, verbose_name="Depot-Inhalt")
     condition_report = models.TextField(blank=True, verbose_name="Zustandsbericht")
     result = models.CharField(
-        max_length=10, choices=FSDInspectionResult.choices,
-        default=FSDInspectionResult.OK, verbose_name="Ergebnis"
+        max_length=10, choices=InspectionResult.choices,
+        default=InspectionResult.OK, verbose_name="Ergebnis"
     )
     keys_match = models.BooleanField(
         default=True, verbose_name="Schlüssel entsprechen der Schließanlage",
@@ -384,20 +456,41 @@ class FSDInspectionReport(AuditedModel):
     )
 
     class Meta:
-        verbose_name = "FSD-Prüfbericht"
-        verbose_name_plural = "FSD-Prüfberichte"
+        verbose_name = "Prüfbericht"
+        verbose_name_plural = "Prüfberichte"
         ordering = ['-inspection_date', '-created_at']
 
     def __str__(self):
-        return f"Prüfbericht {self.inspection_date:%d.%m.%Y} – {self.depot}"
+        return f"Prüfbericht {self.inspection_date:%d.%m.%Y} – {self.asset}"
 
     @property
-    def building(self):
-        return self.depot.building
+    def asset(self):
+        for field in self.ASSET_FIELDS.values():
+            value = getattr(self, field)
+            if value is not None:
+                return value
+        return None
+
+    @asset.setter
+    def asset(self, value):
+        for type_key, field in self.ASSET_FIELDS.items():
+            setattr(self, field, value if value is not None and value.inspection_type == type_key else None)
+        if value is not None:
+            self.inspection_type = value.inspection_type
+            self.building = value.building
 
     def save(self, *args, **kwargs):
+        asset = self.asset
+        if asset is not None:
+            self.inspection_type = asset.inspection_type
+            self.building_id = asset.building_id
         super().save(*args, **kwargs)
-        self.depot.sync_from_reports()
+        if asset is not None:
+            asset.sync_from_reports()
+
+
+# Rückwärtskompatibler Name
+FSDInspectionReport = InspectionReport
 
 
 class CompensationStatus(models.TextChoices):

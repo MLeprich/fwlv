@@ -53,12 +53,22 @@ urlpatterns = [
     path('loeschanlage/<int:pk>/loeschen/', views.DeleteSuppressionSystemView.as_view(), name='delete_suppression'),
     path('kompensation/<int:pk>/loeschen/', views.DeleteCompensationMeasureView.as_view(), name='delete_compensation'),
 
-    # Feuerwehrschlüsseldepots (FSD) & Prüfberichte
-    path('fsd/', views.KeyDepotListView.as_view(), name='keydepot_list'),
-    path('fsd/<int:pk>/', views.KeyDepotDetailView.as_view(), name='keydepot_detail'),
-    path('fsd/<int:pk>/pruefbericht/neu/', views.AddFSDReportView.as_view(), name='fsd_report_add'),
-    path('fsd/<int:pk>/pruefbericht-leer.pdf', views.KeyDepotBlankPdfView.as_view(), name='keydepot_blank_pdf'),
-    path('fsd-pruefbericht/<int:pk>/bearbeiten/', views.EditFSDReportView.as_view(), name='fsd_report_edit'),
-    path('fsd-pruefbericht/<int:pk>/loeschen/', views.DeleteFSDReportView.as_view(), name='fsd_report_delete'),
-    path('fsd-pruefbericht/<int:pk>/pdf/', views.FSDReportPdfView.as_view(), name='fsd_report_pdf'),
+    # Prüfungen: Übersicht, zentraler Einstieg, Anlagen, Prüfberichte
+    path('pruefungen/', views.InspectionOverviewView.as_view(), name='inspection_list'),
+    path('pruefungen/neu/', views.NewInspectionView.as_view(), name='inspection_new'),
+    path('anlage/<str:type>/<int:pk>/', views.AssetDetailView.as_view(), name='asset_detail'),
+    path('anlage/<str:type>/<int:pk>/pruefung/neu/', views.AddReportView.as_view(), name='report_add'),
+    path('anlage/<str:type>/<int:pk>/pruefbericht-leer.pdf', views.AssetBlankPdfView.as_view(), name='asset_blank_pdf'),
+    path('pruefung/<int:pk>/bearbeiten/', views.EditReportView.as_view(), name='report_edit'),
+    path('pruefung/<int:pk>/loeschen/', views.DeleteReportView.as_view(), name='report_delete'),
+    path('pruefung/<int:pk>/pdf/', views.ReportPdfView.as_view(), name='report_pdf'),
+
+    # Bisherige FSD-Adressen bleiben gültig
+    path('fsd/', views.InspectionOverviewView.as_view(), {'type': 'fsd'}, name='keydepot_list'),
+    path('fsd/<int:pk>/', views.AssetDetailView.as_view(), {'type': 'fsd'}, name='keydepot_detail'),
+    path('fsd/<int:pk>/pruefbericht/neu/', views.AddReportView.as_view(), {'type': 'fsd'}, name='fsd_report_add'),
+    path('fsd/<int:pk>/pruefbericht-leer.pdf', views.AssetBlankPdfView.as_view(), {'type': 'fsd'}, name='keydepot_blank_pdf'),
+    path('fsd-pruefbericht/<int:pk>/bearbeiten/', views.EditReportView.as_view(), name='fsd_report_edit'),
+    path('fsd-pruefbericht/<int:pk>/loeschen/', views.DeleteReportView.as_view(), name='fsd_report_delete'),
+    path('fsd-pruefbericht/<int:pk>/pdf/', views.ReportPdfView.as_view(), name='fsd_report_pdf'),
 ]

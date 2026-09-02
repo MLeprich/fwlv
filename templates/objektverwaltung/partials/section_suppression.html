@@ -14,22 +14,24 @@
         {% for sys in object.suppression_systems.all %}
         <li class="py-2 flex items-center justify-between">
             <div>
-                <span class="text-sm font-medium text-gray-900">{{ sys.designation }}</span>
+                <a href="{{ sys.get_absolute_url }}" class="text-sm font-medium text-primary-600 hover:text-primary-800">{{ sys.designation }}</a>
                 <span class="text-xs text-gray-500 ml-2">{{ sys.get_system_type_display }}</span>
+                {% if sys.inspection_status == 'overdue' %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-800">Prüfung überfällig</span>{% elif sys.inspection_status == 'due_soon' %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800">Prüfung bald fällig</span>{% endif %}
                 {% if not sys.is_operational %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-800">außer Betrieb</span>{% endif %}
                 {% if sys.location_description %}<p class="text-xs text-gray-500">{{ sys.location_description }}</p>{% endif %}
-                {% if sys.next_inspection %}<p class="text-xs text-gray-500">Nächste Prüfung: {{ sys.next_inspection|date:"d.m.Y" }}</p>{% endif %}
+                <p class="text-xs text-gray-500">Intervall: {{ sys.inspection_interval_months }} Monate{% if sys.last_inspection %} · Letzte Prüfung: {{ sys.last_inspection|date:"d.m.Y" }}{% endif %}{% if sys.next_inspection %} · Nächste Prüfung: {{ sys.next_inspection|date:"d.m.Y" }}{% endif %}</p>
             </div>
-            {% if perms.objektverwaltung.change_buildingobject %}
             <div class="flex items-center gap-3 flex-shrink-0">
+            <a href="{{ sys.get_absolute_url }}" class="text-xs text-gray-600 hover:text-gray-900">Prüfberichte ({{ sys.inspection_reports.count }})</a>
+            {% if perms.objektverwaltung.change_buildingobject %}
             <a href="{% url 'objektverwaltung:edit_suppression' sys.pk %}?tab=technik" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
             <form method="post" action="{% url 'objektverwaltung:delete_suppression' sys.pk %}"
                   onsubmit="return confirm('Löschanlage löschen?');">
                 {% csrf_token %}<input type="hidden" name="tab" value="technik">
                 <button type="submit" class="text-xs text-red-600 hover:text-red-800">Löschen</button>
             </form>
-            </div>
             {% endif %}
+            </div>
         </li>
         {% endfor %}
     </ul>
@@ -46,8 +48,8 @@
         <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Standort / abgedeckter Bereich</label>{{ suppression_form.location_description }}</div>
         <div><label class="block text-xs text-gray-500 mb-1">Hersteller</label>{{ suppression_form.manufacturer }}</div>
         <div class="grid grid-cols-2 gap-3">
+            <div><label class="block text-xs text-gray-500 mb-1">Prüfintervall (Monate)</label>{{ suppression_form.inspection_interval_months }}</div>
             <div><label class="block text-xs text-gray-500 mb-1">Letzte Prüfung</label>{{ suppression_form.last_inspection }}</div>
-            <div><label class="block text-xs text-gray-500 mb-1">Nächste Prüfung</label>{{ suppression_form.next_inspection }}</div>
         </div>
         <label class="flex items-center gap-2 cursor-pointer md:col-span-2">{{ suppression_form.is_operational }}<span class="text-xs text-gray-700">Funktionsfähig / in Betrieb</span></label>
         <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Hinweise</label>{{ suppression_form.notes }}</div>

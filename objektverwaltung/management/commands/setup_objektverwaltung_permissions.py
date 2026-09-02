@@ -23,7 +23,7 @@ class Command(BaseCommand):
         'buildingcontact',
         'buildingplan',
         'firekeydepot',
-        'fsdinspectionreport',
+        'inspectionreport',
     ]
 
     def handle(self, *args, **options):

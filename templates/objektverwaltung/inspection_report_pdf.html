@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Prüfbericht {{ asset.inspection_type_label }} {{ building.object_number }}</title>
+    <style>
+        @page { size: A4; margin: 15mm 18mm 15mm 18mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 10pt; color: #000; line-height: 1.3; }
+        .head { margin-bottom: 4mm; }
+        .head .org { font-weight: bold; font-size: 10.5pt; }
+        .head .dept { font-size: 9.5pt; }
+        .head .title { font-weight: bold; font-size: 11pt; margin-top: 3mm; }
+        .head .subtitle { font-size: 10pt; }
+        table.sheet { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.sheet td { border: 1px solid #000; vertical-align: top; padding: 1.2mm 2mm; }
+        td.label { background: #d9d9d9; width: 40mm; font-size: 10pt; }
+        td.sublabel { background: #d9d9d9; width: 22mm; font-size: 8.5pt; padding-top: 1.5mm; }
+        td.value { font-size: 10pt; }
+        td.objnr { background: #d9d9d9; width: 30mm; font-size: 9.5pt; }
+        td.line { height: 7.5mm; }
+        td.block { padding: 1.5mm 2mm; white-space: pre-wrap; }
+        td.block.condition { height: 95mm; }
+        td.block.ruled { background: repeating-linear-gradient(to bottom, transparent 0, transparent 7.2mm, #000 7.2mm, #000 7.45mm); }
+        .result { border: 1px solid #000; border-top: none; padding: 2.5mm 3mm; font-size: 9.5pt; }
+        .box { display: inline-block; width: 3.5mm; height: 3.5mm; border: 1px solid #000; vertical-align: middle; margin-right: 1.5mm; text-align: center; font-size: 8pt; line-height: 3.3mm; }
+        .foot { margin-top: 9mm; width: 100%; }
+        .foot td { vertical-align: bottom; font-size: 9.5pt; padding: 0; }
+        .sig { border-bottom: 1px solid #000; height: 9mm; }
+        .sig-label { font-size: 8pt; text-align: center; padding-top: 1mm; }
+        .stamp { font-size: 7pt; text-align: center; line-height: 1.25; }
+        .stamp b { font-size: 8pt; }
+        .meta { font-size: 7pt; color: #666; margin-top: 4mm; }
+    </style>
+</head>
+<body>
+    <div class="head">
+        <div class="org">Berufsfeuerwehr Oberhausen</div>
+        <div class="dept">Fachbereich 6 - 1 - 60 (Vorbeugender Brandschutz)</div>
+        <div class="title">{{ asset.inspection_type_label }}{% if asset.inspection_type == 'bmz' %} (BMZ){% endif %}</div>
+        <div class="subtitle">Überprüfungsbericht – {{ asset.display_name }}{% if asset.inspection_type == 'loeschanlage' %} ({{ asset.get_system_type_display }}){% endif %}</div>
+    </div>
+
+    <table class="sheet">
+        <tr>
+            <td class="label line">Firma / Objekt:</td>
+            <td class="value line" colspan="2">{{ building.name }}</td>
+        </tr>
+        <tr>
+            <td class="label line">Straße / Ort:</td>
+            <td class="value line">{{ building.full_address }}</td>
+            <td class="objnr">Objekt - Nr.:<br><span style="font-size:10pt">{{ building.object_number }}</span></td>
+        </tr>
+        <tr>
+            <td class="label line">Anlage / Standort:</td>
+            <td class="value line" colspan="2">{{ asset.display_name }}{% if asset.location_description %} – {{ asset.location_description }}{% endif %}{% if asset.manufacturer %} ({{ asset.manufacturer }}{% if asset.model %} {{ asset.model }}{% endif %}){% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label line">Überprüfungsdatum:</td>
+            <td class="value line" colspan="2">{% if report %}{{ report.inspection_date|date:"d.m.Y" }}{% endif %}</td>
+        </tr>
+    </table>
+
+    <table class="sheet" style="border-top: none;">
+        <tr>
+            <td class="label" rowspan="3" style="border-top:none; vertical-align: middle;">Teilnehmer :</td>
+            <td class="sublabel line" style="border-top:none;">Betrieb:</td>
+            <td class="value line" style="border-top:none;">{% if report %}{{ report.participant_operator }}{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="sublabel line">Feuerwehr:</td>
+            <td class="value line">{% if report %}{{ report.participant_fire_dept }}{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="sublabel line">Sonstige:</td>
+            <td class="value line">{% if report %}{{ report.participant_other }}{% endif %}</td>
+        </tr>
+    </table>
+
+    <table class="sheet" style="border-top: none;">
+        <tr>
+            <td class="label" style="width: 62mm; border-top:none; vertical-align: middle;">Prüfergebnis /<br>Feststellungen :</td>
+            <td class="block condition{% if not report %} ruled{% endif %}" style="border-top:none;">{% if report %}{{ report.condition_report }}{% endif %}</td>
+        </tr>
+    </table>
+
+    <div class="result">
+        <span class="box">{% if report and report.result == 'ok' %}X{% endif %}</span> Ohne Mängel
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        <span class="box">{% if report and report.result == 'defects' %}X{% endif %}</span> Mit Mängeln
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        Prüfintervall: {{ asset.inspection_interval_months }} Monate
+        {% if report and asset.next_inspection %} · Nächste Prüfung: {{ asset.next_inspection|date:"d.m.Y" }}{% endif %}
+    </div>
+
+    <table class="foot">
+        <tr>
+            <td style="width: 24mm;">Oberhausen,</td>
+            <td style="width: 45mm;"><div class="sig">{% if report %}<span style="font-size:10pt; padding-left:2mm;">{{ report.inspection_date|date:"d.m.Y" }}</span>{% endif %}</div></td>
+            <td></td>
+            <td style="width: 55mm;" class="stamp">
+                <b>Stadt Oberhausen</b><br>Der Oberbürgermeister<br>Bereich Feuerwehr<br>Brücktorstr. 30<br>46047 Oberhausen
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-top: 5mm;">Unterschriften:</td>
+            <td style="padding-top: 5mm;"><div class="sig"></div><div class="sig-label">(Firma / Objekt)</div></td>
+            <td style="width: 12mm;"></td>
+            <td style="padding-top: 5mm;"><div class="sig"></div><div class="sig-label">(Feuerwehr)</div></td>
+        </tr>
+    </table>
+
+    <div class="meta">
+        {% if report %}Erfasst im FLVS am {{ report.created_at|date:"d.m.Y H:i" }}{% if report.created_by %} von {{ report.created_by.get_full_name|default:report.created_by.username }}{% endif %}
+        {% else %}Leerformular, erzeugt im FLVS am {{ now|date:"d.m.Y" }}{% if asset.last_inspection %} · Letzte Prüfung: {{ asset.last_inspection|date:"d.m.Y" }}{% endif %}{% endif %}
+    </div>
+</body>
+</html>

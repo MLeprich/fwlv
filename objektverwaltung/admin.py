@@ -109,7 +109,7 @@ class BuildingContactAdmin(admin.ModelAdmin):
     search_fields = ('name', 'role', 'building__name')
 
 
-from .models import FireKeyDepot, FSDInspectionReport  # noqa: E402
+from .models import FireKeyDepot, InspectionReport  # noqa: E402
 
 
 @admin.register(FireKeyDepot)
@@ -121,8 +121,9 @@ class FireKeyDepotAdmin(admin.ModelAdmin):
     readonly_fields = ['next_inspection']
 
 
-@admin.register(FSDInspectionReport)
-class FSDInspectionReportAdmin(admin.ModelAdmin):
-    list_display = ['depot', 'inspection_date', 'result', 'created_by']
-    list_filter = ['result']
+@admin.register(InspectionReport)
+class InspectionReportAdmin(admin.ModelAdmin):
+    list_display = ['building', 'inspection_type', 'inspection_date', 'result', 'created_by']
+    list_filter = ['inspection_type', 'result']
     date_hierarchy = 'inspection_date'
+    readonly_fields = ['building', 'inspection_type']

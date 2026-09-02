@@ -14,20 +14,23 @@
         {% for bmz in object.fire_alarm_panels.all %}
         <li class="py-2 flex items-center justify-between">
             <div>
-                <span class="text-sm font-medium text-gray-900">{{ bmz.designation }}</span>
+                <a href="{{ bmz.get_absolute_url }}" class="text-sm font-medium text-primary-600 hover:text-primary-800">{{ bmz.designation }}</a>
+                {% if bmz.inspection_status == 'overdue' %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-800">Prüfung überfällig</span>{% elif bmz.inspection_status == 'due_soon' %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800">Prüfung bald fällig</span>{% endif %}
                 {% if bmz.location_description %}<p class="text-xs text-gray-500">Standort: {{ bmz.location_description }}</p>{% endif %}
                 {% if bmz.manufacturer or bmz.model %}<p class="text-xs text-gray-500">{{ bmz.manufacturer }} {{ bmz.model }}</p>{% endif %}
+                <p class="text-xs text-gray-500">Intervall: {{ bmz.inspection_interval_months }} Monate{% if bmz.last_inspection %} · Letzte Prüfung: {{ bmz.last_inspection|date:"d.m.Y" }}{% endif %}{% if bmz.next_inspection %} · Nächste Prüfung: {{ bmz.next_inspection|date:"d.m.Y" }}{% endif %}</p>
             </div>
-            {% if perms.objektverwaltung.change_buildingobject %}
             <div class="flex items-center gap-3 flex-shrink-0">
+            <a href="{{ bmz.get_absolute_url }}" class="text-xs text-gray-600 hover:text-gray-900">Prüfberichte ({{ bmz.inspection_reports.count }})</a>
+            {% if perms.objektverwaltung.change_buildingobject %}
             <a href="{% url 'objektverwaltung:edit_fire_alarm_panel' bmz.pk %}?tab=technik" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
             <form method="post" action="{% url 'objektverwaltung:delete_fire_alarm_panel' bmz.pk %}"
                   onsubmit="return confirm('Brandmeldezentrale löschen?');">
                 {% csrf_token %}<input type="hidden" name="tab" value="technik">
                 <button type="submit" class="text-xs text-red-600 hover:text-red-800">Löschen</button>
             </form>
-            </div>
             {% endif %}
+            </div>
         </li>
         {% endfor %}
     </ul>
@@ -43,6 +46,8 @@
         <div><label class="block text-xs text-gray-500 mb-1">Standort</label>{{ fire_alarm_form.location_description }}</div>
         <div><label class="block text-xs text-gray-500 mb-1">Hersteller</label>{{ fire_alarm_form.manufacturer }}</div>
         <div><label class="block text-xs text-gray-500 mb-1">Typ/Modell</label>{{ fire_alarm_form.model }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Prüfintervall (Monate)</label>{{ fire_alarm_form.inspection_interval_months }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Letzte Prüfung</label>{{ fire_alarm_form.last_inspection }}</div>
         <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Hinweise</label>{{ fire_alarm_form.notes }}</div>
         <div class="md:col-span-2 text-right">
             <button type="submit" class="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-primary-700">BMZ hinzufügen</button>

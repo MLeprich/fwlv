@@ -164,7 +164,7 @@ class FireKeyDepotTests(TestCase):
         self.assertContains(response, '>b<', html=False)
         self.assertNotContains(response, '>c<')
         response = self.client.get(reverse('objektverwaltung:dashboard'))
-        self.assertContains(response, 'Fällige FSD-Prüfungen')
+        self.assertContains(response, 'Fällige Prüfungen')
 
     def test_add_depot_via_detail_and_report_updates_dates(self):
         from datetime import date
@@ -212,7 +212,7 @@ class FireKeyDepotTests(TestCase):
         self.assertContains(response, 'Feuerwehrschlüsseldepots (1)')
         response = self.client.get(depot.get_absolute_url())
         self.assertContains(response, 'Mit Mängeln')
-        self.assertContains(response, reverse('objektverwaltung:fsd_report_pdf', args=[report.pk]))
+        self.assertContains(response, reverse('objektverwaltung:report_pdf', args=[report.pk]))
         response = self.client.get(reverse('objektverwaltung:fsd_report_edit', args=[report.pk]))
         self.assertContains(response, 'Schloss schwergängig')
         response = self.client.get(reverse('objektverwaltung:edit_key_depot', args=[depot.pk]))
@@ -356,7 +356,7 @@ class AkteTests(TestCase):
         entries = self._akte()
         pruefungen = [e for e in entries if e['kind'] == 'pruefung']
         self.assertEqual(len(pruefungen), 1)
-        self.assertIn('FSD-Prüfung „FSD Tor“', pruefungen[0]['title'])
+        self.assertIn('Feuerwehrschlüsseldepot „FSD Tor“ geprüft', pruefungen[0]['title'])
         self.assertEqual(pruefungen[0]['when'].date(), date(2026, 8, 15))
 
     def test_akte_tab_and_pdf(self):
@@ -408,7 +408,7 @@ class SearchTests(TestCase):
         response = self.client.get(url, {'q': 'hermosin'})
         self.assertContains(response, 'Rathaus')
         self.assertNotContains(response, 'Bahnhof')
-        response = self.client.get(url, {'filter': 'fsd_due'})
+        response = self.client.get(url, {'filter': 'due'})
         self.assertContains(response, 'Bahnhof')
         self.assertNotContains(response, 'Rathaus')
         response = self.client.get(url, {'filter': 'komp'})
@@ -420,3 +420,115 @@ class SearchTests(TestCase):
         BuildingContact.objects.create(building=self.a, name='Herr Hermosin')
         response = self.client.get(url, {'q': 'hermosin'})
         self.assertEqual(response.content.decode().count('>Rathaus<'), 1)
+
+
+
+class GenericInspectionTests(TestCase):
+    """Prüfungen für BMZ und Löschanlagen, zentraler Einstieg, Übersicht."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw', first_name='Max', last_name='Prüfer')
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label='objektverwaltung',
+                                       codename__in=['view_buildingobject', 'change_buildingobject'])
+        )
+        self.client.force_login(self.user)
+        self.building = BuildingObject.objects.create(
+            object_number='OBJ-3', name='Halle', created_by=self.user, updated_by=self.user,
+        )
+
+    def test_bmz_report_via_central_entry(self):
+        from datetime import date
+        from .models import FireAlarmPanel, InspectionReport
+        bmz = FireAlarmPanel.objects.create(building=self.building, designation='BMZ Foyer',
+                                            inspection_interval_months=36)
+        self.assertIsNone(bmz.next_inspection)
+        # Schritt 1+2: Objekt und Art wählen
+        response = self.client.get(reverse('objektverwaltung:inspection_new'), {'building': self.building.pk, 'type': 'bmz'})
+        add_url = reverse('objektverwaltung:report_add', args=['bmz', bmz.pk])
+        self.assertContains(response, 'BMZ Foyer')
+        self.assertContains(response, add_url)
+        # Formular ohne FSD-Felder
+        response = self.client.get(add_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Depot-Inhalt')
+        self.assertNotContains(response, 'Schließanlage')
+        # Schritt 3: Bericht speichern
+        response = self.client.post(add_url, {
+            'inspection_date': '2026-06-01', 'participant_operator': '', 'participant_fire_dept': 'Max',
+            'participant_other': '', 'condition_report': 'Melder geprüft, ÜE i.O.', 'result': 'ok',
+        })
+        self.assertRedirects(response, bmz.get_absolute_url())
+        report = InspectionReport.objects.get()
+        self.assertEqual(report.inspection_type, 'bmz')
+        self.assertEqual(report.building, self.building)
+        self.assertEqual(report.fire_alarm_panel, bmz)
+        self.assertIsNone(report.depot)
+        bmz.refresh_from_db()
+        self.assertEqual(bmz.last_inspection, date(2026, 6, 1))
+        self.assertEqual(bmz.next_inspection, date(2029, 6, 1))
+        # PDF (generisches Layout) und Anlagen-Detailseite
+        response = self.client.get(reverse('objektverwaltung:report_pdf', args=[report.pk]))
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('BMZ-Pruefbericht_OBJ-3_2026-06-01.pdf', response['Content-Disposition'])
+        response = self.client.get(bmz.get_absolute_url())
+        self.assertContains(response, 'Brandmeldezentrale')
+        self.assertContains(response, '01.06.2026')
+        # Akte
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Brandmeldezentrale „BMZ Foyer“ geprüft')
+
+    def test_suppression_interval_and_manual_next_date(self):
+        from datetime import date
+        from .models import FireSuppressionSystem
+        # Ohne letzte Prüfung bleibt ein manuell gesetzter Termin erhalten
+        sys_ = FireSuppressionSystem.objects.create(building=self.building, designation='Sprinkler',
+                                                    next_inspection=date(2027, 1, 1))
+        self.assertEqual(sys_.next_inspection, date(2027, 1, 1))
+        sys_.last_inspection = date(2026, 2, 1)
+        sys_.save()
+        self.assertEqual(sys_.next_inspection, date(2027, 2, 1))
+        self.assertEqual(sys_.inspection_type_label, 'Löschanlage')
+        response = self.client.post(reverse('objektverwaltung:add_suppression', args=[self.building.pk]), {
+            'system_type': 'gas', 'designation': 'Gaslöschanlage Serverraum', 'location_description': '',
+            'manufacturer': '', 'inspection_interval_months': 6, 'last_inspection': '2026-03-01',
+            'is_operational': 'on', 'notes': '', 'tab': 'technik',
+        })
+        self.assertEqual(response.status_code, 302)
+        gas = FireSuppressionSystem.objects.get(system_type='gas')
+        self.assertEqual(gas.next_inspection, date(2026, 9, 1))
+
+    def test_overview_lists_all_types_and_filters(self):
+        from datetime import date, timedelta
+        from django.utils import timezone
+        from .models import FireAlarmPanel, FireSuppressionSystem, FireKeyDepot
+        today = timezone.localdate()
+        FireKeyDepot.objects.create(building=self.building, designation='FSD Tor', last_inspection=today - timedelta(days=400))
+        FireAlarmPanel.objects.create(building=self.building, designation='BMZ Foyer', last_inspection=today - timedelta(days=10))
+        FireSuppressionSystem.objects.create(building=self.building, designation='Sprinkler')
+        url = reverse('objektverwaltung:inspection_list')
+        response = self.client.get(url)
+        for name in ('FSD Tor', 'BMZ Foyer', 'Sprinkler'):
+            self.assertContains(response, name)
+        response = self.client.get(url, {'status': 'overdue'})
+        self.assertContains(response, 'FSD Tor')
+        self.assertNotContains(response, 'BMZ Foyer')
+        response = self.client.get(url, {'type': 'bmz'})
+        self.assertContains(response, 'BMZ Foyer')
+        self.assertNotContains(response, 'FSD Tor')
+        response = self.client.get(url, {'status': 'open'})
+        self.assertContains(response, 'Sprinkler')
+        self.assertNotContains(response, 'BMZ Foyer')
+        # Alte FSD-Adresse zeigt nur Depots
+        response = self.client.get(reverse('objektverwaltung:keydepot_list'))
+        self.assertContains(response, 'FSD Tor')
+        self.assertNotContains(response, 'BMZ Foyer')
+        # Dashboard zählt über alle Arten
+        response = self.client.get(reverse('objektverwaltung:dashboard'))
+        self.assertContains(response, 'Fällige Prüfungen')
+        self.assertContains(response, 'FSD Tor')
+
+    def test_new_inspection_without_assets_hints_to_technik_tab(self):
+        response = self.client.get(reverse('objektverwaltung:inspection_new'), {'building': self.building.pk, 'type': 'loeschanlage'})
+        self.assertContains(response, 'noch keine Anlage dieser Art')
+        self.assertContains(response, self.building.get_absolute_url() + '#technik')

@@ -26,7 +26,7 @@ MAX_AUDIT_ENTRIES = 500
 
 # Fachliche Ereignisse, die eigene Zeitleisten-Einträge bekommen – deren
 # Audit-CREATE würde sonst doppelt erscheinen.
-_MODELS_WITH_OWN_EVENT = {'fsdinspectionreport', 'buildingplan'}
+_MODELS_WITH_OWN_EVENT = {'fsdinspectionreport', 'inspectionreport', 'buildingplan'}
 
 KIND_LABELS = {
     'stammdaten': 'Stammdaten',
@@ -44,6 +44,7 @@ _KIND_BY_MODEL = {
     'buildingplan': 'dokument',
     'compensationmeasure': 'kompensation',
     'fsdinspectionreport': 'pruefung',
+    'inspectionreport': 'pruefung',
     'firekeydepot': 'unterobjekt',
     'floor': 'unterobjekt',
     'escaperoute': 'unterobjekt',
@@ -193,7 +194,9 @@ def build_timeline(building):
         ))
 
     for report in building_reports(building):
-        depot = report.depot
+        asset = report.asset
+        if asset is None:
+            continue
         detail = []
         if report.participant_fire_dept:
             detail.append(f'Feuerwehr: {report.participant_fire_dept}')
@@ -203,9 +206,9 @@ def build_timeline(building):
             detail.append(report.condition_report)
         entries.append(_entry(
             _at(report.inspection_date), 'pruefung',
-            f'FSD-Prüfung „{depot.designation}“: {report.get_result_display()}',
+            f'{asset.inspection_type_label} „{asset.display_name}“ geprüft: {report.get_result_display()}',
             detail=' · '.join(detail), user=report.created_by, action='pruefung',
-            url=_safe_reverse('objektverwaltung:fsd_report_pdf', report.pk),
+            url=_safe_reverse('objektverwaltung:report_pdf', report.pk),
             badge='Prüfung' if report.result == 'ok' else 'Mängel',
         ))
 
@@ -241,9 +244,9 @@ def build_timeline(building):
 
 
 def building_reports(building):
-    from .models import FSDInspectionReport
-    return (FSDInspectionReport.objects.filter(depot__building=building)
-            .select_related('depot', 'created_by'))
+    from .models import InspectionReport
+    return (InspectionReport.objects.filter(building=building)
+            .select_related('depot', 'fire_alarm_panel', 'suppression_system', 'created_by'))
 
 
 def _safe_reverse(name, pk):

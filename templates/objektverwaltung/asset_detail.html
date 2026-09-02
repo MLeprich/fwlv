@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ depot.designation }} - Schlüsseldepot - FLVS{% endblock %}
+{% block title %}{{ asset.display_name }} - {{ asset.inspection_type_label }} - FLVS{% endblock %}
 
 {% block breadcrumb %}
 <div class="bg-white border-b border-gray-200 px-6 py-3">
@@ -12,7 +12,7 @@
             <li><span class="text-gray-400">/</span></li>
             <li><a href="{{ building.get_absolute_url }}#technik" class="text-gray-500 hover:text-gray-700">{{ building.name|truncatechars:40 }}</a></li>
             <li><span class="text-gray-400">/</span></li>
-            <li><span class="text-gray-900 font-medium">{{ depot.designation|truncatechars:40 }}</span></li>
+            <li><span class="text-gray-900 font-medium">{{ asset.display_name|truncatechars:40 }}</span></li>
         </ol>
     </nav>
 </div>
@@ -22,19 +22,19 @@
 <div class="max-w-5xl mx-auto px-6 py-6">
     <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ depot.designation }}</h1>
+            <h1 class="text-2xl font-bold text-gray-900">{{ asset.display_name }}</h1>
             <div class="flex flex-wrap items-center gap-3 mt-2">
-                <span class="text-sm text-gray-500">{{ depot.get_depot_type_display }}</span>
+                <span class="text-sm text-gray-500">{{ asset.inspection_type_label }}{% if depot %} · {{ depot.get_depot_type_display }}{% elif type_key == 'loeschanlage' %} · {{ asset.get_system_type_display }}{% endif %}</span>
                 <span class="text-sm text-gray-400">|</span>
                 <a href="{{ building.get_absolute_url }}#technik" class="text-sm text-primary-600 hover:text-primary-800">{{ building.object_number }} – {{ building.name }}</a>
                 <span class="text-sm text-gray-400">|</span>
-                {% if not depot.is_active %}
+                {% if not asset.inspection_active %}
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inaktiv</span>
-                {% elif depot.inspection_status == 'overdue' %}
+                {% elif asset.inspection_status == 'overdue' %}
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Prüfung überfällig</span>
-                {% elif depot.inspection_status == 'due_soon' %}
+                {% elif asset.inspection_status == 'due_soon' %}
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Prüfung bald fällig</span>
-                {% elif depot.inspection_status == 'ok' %}
+                {% elif asset.inspection_status == 'ok' %}
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Prüfung aktuell</span>
                 {% else %}
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Kein Prüftermin</span>
@@ -42,10 +42,10 @@
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-            <a href="{% url 'objektverwaltung:keydepot_blank_pdf' depot.pk %}" target="_blank" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Leerer Prüfbericht (PDF)</a>
+            <a href="{% url 'objektverwaltung:asset_blank_pdf' type_key asset.pk %}" target="_blank" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Leerer Prüfbericht (PDF)</a>
             {% if can_edit %}
-            <a href="{% url 'objektverwaltung:edit_key_depot' depot.pk %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Bearbeiten</a>
-            <a href="{% url 'objektverwaltung:fsd_report_add' depot.pk %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">+ Prüfbericht</a>
+            <a href="{{ edit_url }}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Bearbeiten</a>
+            <a href="{% url 'objektverwaltung:report_add' type_key asset.pk %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">+ Prüfbericht</a>
             {% endif %}
         </div>
     </div>
@@ -76,7 +76,7 @@
                                 {% else %}
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-800">{{ report.get_result_display }}</span>
                                 {% endif %}
-                                {% if not report.keys_match %}<span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800">Schlüssel abweichend</span>{% endif %}
+                                {% if type_key == 'fsd' and not report.keys_match %}<span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800">Schlüssel abweichend</span>{% endif %}
                             </td>
                             <td class="px-5 py-3 text-xs text-gray-600">
                                 {% if report.participant_fire_dept %}<div>FW: {{ report.participant_fire_dept }}</div>{% endif %}
@@ -84,10 +84,10 @@
                             </td>
                             <td class="px-5 py-3 text-right whitespace-nowrap">
                                 <div class="flex items-center justify-end gap-3">
-                                    <a href="{% url 'objektverwaltung:fsd_report_pdf' report.pk %}" target="_blank" class="text-xs text-primary-600 hover:text-primary-800">PDF</a>
+                                    <a href="{% url 'objektverwaltung:report_pdf' report.pk %}" target="_blank" class="text-xs text-primary-600 hover:text-primary-800">PDF</a>
                                     {% if can_edit %}
-                                    <a href="{% url 'objektverwaltung:fsd_report_edit' report.pk %}" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
-                                    <form method="post" action="{% url 'objektverwaltung:fsd_report_delete' report.pk %}" onsubmit="return confirm('Prüfbericht löschen?');">
+                                    <a href="{% url 'objektverwaltung:report_edit' report.pk %}" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
+                                    <form method="post" action="{% url 'objektverwaltung:report_delete' report.pk %}" onsubmit="return confirm('Prüfbericht löschen?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-xs text-red-600 hover:text-red-800">Löschen</button>
                                     </form>
@@ -101,21 +101,21 @@
                 {% else %}
                 <div class="p-8 text-center text-sm text-gray-500">
                     Noch kein Prüfbericht erfasst.
-                    {% if can_edit %}<a href="{% url 'objektverwaltung:fsd_report_add' depot.pk %}" class="text-primary-600 hover:text-primary-800 ml-1">Ersten Prüfbericht anlegen</a>{% endif %}
+                    {% if can_edit %}<a href="{% url 'objektverwaltung:report_add' type_key asset.pk %}" class="text-primary-600 hover:text-primary-800 ml-1">Ersten Prüfbericht anlegen</a>{% endif %}
                 </div>
                 {% endif %}
             </div>
 
-            {% if depot.contents %}
+            {% if depot and depot.contents %}
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-2">Depot-Inhalt</h3>
                 <p class="text-sm text-gray-700 whitespace-pre-line">{{ depot.contents }}</p>
             </div>
             {% endif %}
-            {% if depot.notes %}
+            {% if asset.notes %}
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-2">Hinweise</h3>
-                <p class="text-sm text-gray-700 whitespace-pre-line">{{ depot.notes }}</p>
+                <p class="text-sm text-gray-700 whitespace-pre-line">{{ asset.notes }}</p>
             </div>
             {% endif %}
         </div>
@@ -124,23 +124,34 @@
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Prüfung</h3>
                 <dl class="space-y-2 text-sm">
-                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Intervall</dt><dd class="text-gray-900">{{ depot.inspection_interval_months }} Monate</dd></div>
-                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Letzte Prüfung</dt><dd class="text-gray-900">{{ depot.last_inspection|date:"d.m.Y"|default:"–" }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Intervall</dt><dd class="text-gray-900">{{ asset.inspection_interval_months }} Monate</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Letzte Prüfung</dt><dd class="text-gray-900">{{ asset.last_inspection|date:"d.m.Y"|default:"–" }}</dd></div>
                     <div class="flex justify-between gap-2"><dt class="text-gray-500">Nächste Prüfung</dt>
-                        <dd class="{% if depot.inspection_status == 'overdue' %}text-red-600 font-medium{% elif depot.inspection_status == 'due_soon' %}text-yellow-700 font-medium{% else %}text-gray-900{% endif %}">{{ depot.next_inspection|date:"d.m.Y"|default:"–" }}</dd></div>
-                    {% if depot.days_until_inspection is not None %}
-                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Verbleibend</dt><dd class="text-gray-900">{{ depot.days_until_inspection }} Tage</dd></div>
+                        <dd class="{% if asset.inspection_status == 'overdue' %}text-red-600 font-medium{% elif asset.inspection_status == 'due_soon' %}text-yellow-700 font-medium{% else %}text-gray-900{% endif %}">{{ asset.next_inspection|date:"d.m.Y"|default:"–" }}</dd></div>
+                    {% if asset.days_until_inspection is not None %}
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Verbleibend</dt><dd class="text-gray-900">{{ asset.days_until_inspection }} Tage</dd></div>
                     {% endif %}
                 </dl>
             </div>
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Stammdaten</h3>
                 <dl class="space-y-2 text-sm">
+                    {% if depot %}
                     <div class="flex justify-between gap-2"><dt class="text-gray-500">Typ</dt><dd class="text-gray-900">{{ depot.get_depot_type_display }}</dd></div>
                     <div class="flex justify-between gap-2"><dt class="text-gray-500">Standort</dt><dd class="text-gray-900 text-right">{{ depot.location_description|default:"–" }}</dd></div>
                     <div class="flex justify-between gap-2"><dt class="text-gray-500">Hersteller</dt><dd class="text-gray-900">{{ depot.manufacturer|default:"–" }}</dd></div>
                     <div class="flex justify-between gap-2"><dt class="text-gray-500">Serien-/Depot-Nr.</dt><dd class="text-gray-900">{{ depot.serial_number|default:"–" }}</dd></div>
                     <div class="flex justify-between gap-2"><dt class="text-gray-500">Einbaudatum</dt><dd class="text-gray-900">{{ depot.installed_at|date:"d.m.Y"|default:"–" }}</dd></div>
+                    {% elif type_key == 'bmz' %}
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Standort</dt><dd class="text-gray-900 text-right">{{ asset.location_description|default:"–" }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Hersteller</dt><dd class="text-gray-900">{{ asset.manufacturer|default:"–" }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Typ/Modell</dt><dd class="text-gray-900">{{ asset.model|default:"–" }}</dd></div>
+                    {% else %}
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Art</dt><dd class="text-gray-900">{{ asset.get_system_type_display }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Standort / Bereich</dt><dd class="text-gray-900 text-right">{{ asset.location_description|default:"–" }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Hersteller</dt><dd class="text-gray-900">{{ asset.manufacturer|default:"–" }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500">Betrieb</dt><dd class="text-gray-900">{% if asset.is_operational %}in Betrieb{% else %}<span class="text-red-600">außer Betrieb</span>{% endif %}</dd></div>
+                    {% endif %}
                 </dl>
             </div>
             <div class="bg-white rounded-lg shadow p-6">

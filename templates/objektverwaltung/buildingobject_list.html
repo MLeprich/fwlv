@@ -97,8 +97,9 @@
                         <td class="px-6 py-4 text-sm text-gray-500">{{ obj.city }}</td>
                         <td class="px-6 py-4">
                             <div class="flex flex-wrap gap-1">
-                                {% if obj.bmz_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700" title="Brandmeldezentralen">BMZ {{ obj.bmz_count }}</span>{% endif %}
+                                {% if obj.bmz_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs {% if obj.bmz_due_count %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}" title="Brandmeldezentralen{% if obj.bmz_due_count %}, Prüfung fällig{% endif %}">BMZ {{ obj.bmz_count }}</span>{% endif %}
                                 {% if obj.fsd_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs {% if obj.fsd_due_count %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}" title="Schlüsseldepots{% if obj.fsd_due_count %}, Prüfung fällig{% endif %}">FSD {{ obj.fsd_count }}</span>{% endif %}
+                                {% if obj.sys_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs {% if obj.sys_due_count %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}" title="Löschanlagen{% if obj.sys_due_count %}, Prüfung fällig{% endif %}">Lösch. {{ obj.sys_count }}</span>{% endif %}
                                 {% if obj.komp_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800" title="Aktive Kompensationsmaßnahmen">Komp. {{ obj.komp_count }}</span>{% endif %}
                             </div>
                         </td>

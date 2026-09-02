@@ -142,15 +142,18 @@
                     </button>
                 </div>
 
-                {% for depot in object.key_depots.all %}{% if depot.is_active and depot.inspection_status != 'ok' and depot.inspection_status != 'unknown' %}
-                <div class="bg-white rounded-lg shadow p-4 border-l-4 {% if depot.inspection_status == 'overdue' %}border-red-500{% else %}border-yellow-400{% endif %} flex items-center justify-between gap-3">
+                {% for a in due_assets %}
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 {% if a.inspection_status == 'overdue' %}border-red-500{% else %}border-yellow-400{% endif %} flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-sm font-medium text-gray-900">FSD-Prüfung {% if depot.inspection_status == 'overdue' %}überfällig{% else %}bald fällig{% endif %}: {{ depot.designation }}</p>
-                        <p class="text-xs text-gray-500">Nächste Prüfung: {{ depot.next_inspection|date:"d.m.Y" }}</p>
+                        <p class="text-sm font-medium text-gray-900">Prüfung {% if a.inspection_status == 'overdue' %}überfällig{% else %}bald fällig{% endif %}: {{ a.inspection_type_label }} „{{ a.display_name }}“</p>
+                        <p class="text-xs text-gray-500">Nächste Prüfung: {{ a.next_inspection|date:"d.m.Y" }}</p>
                     </div>
-                    <a href="{{ depot.get_absolute_url }}" class="text-sm text-primary-600 hover:text-primary-800 whitespace-nowrap">Zum Depot</a>
+                    <div class="flex items-center gap-3 whitespace-nowrap">
+                        {% if perms.objektverwaltung.change_buildingobject %}<a href="{% url 'objektverwaltung:report_add' a.inspection_type a.pk %}" class="text-sm text-primary-600 hover:text-primary-800">Prüfbericht anlegen</a>{% endif %}
+                        <a href="{{ a.get_absolute_url }}" class="text-sm text-gray-600 hover:text-gray-900">Zur Anlage</a>
+                    </div>
                 </div>
-                {% endif %}{% endfor %}
+                {% endfor %}
             </div>
 
             <div class="space-y-6">
