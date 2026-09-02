@@ -18,6 +18,7 @@ urlpatterns = [
     path('objekte/<int:pk>/', views.BuildingObjectDetailView.as_view(), name='detail'),
     path('objekte/<int:pk>/bearbeiten/', views.BuildingObjectUpdateView.as_view(), name='update'),
     path('objekte/<int:pk>/loeschen/', views.BuildingObjectDeleteView.as_view(), name='delete'),
+    path('objekte/<int:pk>/akte.pdf', views.BuildingObjectAktePdfView.as_view(), name='akte_pdf'),
 
     # Abo / Folgen
     path('objekte/<int:pk>/folgen/', views.ToggleFollowView.as_view(), name='toggle_follow'),

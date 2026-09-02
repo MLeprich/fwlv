@@ -1170,6 +1170,44 @@ def global_search_view(request):
                     'url': obj.get_absolute_url(),
                     'icon': '🏢'
                 })
+
+            # Unterobjekte: Ansprechpartner, Schlüsseldepots, BMZ → führen zum Objekt
+            from objektverwaltung.models import BuildingContact, FireKeyDepot, FireAlarmPanel
+            contacts = BuildingContact.objects.filter(
+                Q(name__icontains=query) | Q(role__icontains=query) |
+                Q(phone__icontains=query) | Q(mobile__icontains=query) | Q(email__icontains=query)
+            ).select_related('building')[:max_results_per_type]
+            for contact in contacts:
+                results.append({
+                    'type': 'objektverwaltung',
+                    'title': f'{contact.name}{" (" + contact.role + ")" if contact.role else ""}',
+                    'description': f'Ansprechpartner - {contact.building.name}',
+                    'url': contact.building.get_absolute_url() + '#uebersicht',
+                    'icon': '🏢'
+                })
+            depots = FireKeyDepot.objects.filter(
+                Q(designation__icontains=query) | Q(serial_number__icontains=query)
+            ).select_related('building')[:max_results_per_type]
+            for depot in depots:
+                results.append({
+                    'type': 'objektverwaltung',
+                    'title': f'{depot.get_depot_type_display()} {depot.designation}',
+                    'description': f'Schlüsseldepot - {depot.building.name}'
+                                   + (f' • Nr. {depot.serial_number}' if depot.serial_number else ''),
+                    'url': depot.get_absolute_url(),
+                    'icon': '🔑'
+                })
+            panels = FireAlarmPanel.objects.filter(
+                Q(designation__icontains=query) | Q(manufacturer__icontains=query) | Q(model__icontains=query)
+            ).select_related('building')[:max_results_per_type]
+            for panel in panels:
+                results.append({
+                    'type': 'objektverwaltung',
+                    'title': panel.designation,
+                    'description': f'Brandmeldezentrale - {panel.building.name}',
+                    'url': panel.building.get_absolute_url() + '#technik',
+                    'icon': '🚨'
+                })
     except Exception as e:
         logger.error(f"Error searching objektverwaltung: {e}")
 

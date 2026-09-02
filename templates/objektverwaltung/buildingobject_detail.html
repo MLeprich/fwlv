@@ -48,7 +48,8 @@
 
     {% with floors_n=object.floors.count routes_n=object.escape_routes.count bmz_n=object.fire_alarm_panels.count sys_n=object.suppression_systems.count fsd_n=object.key_depots.count comp_n=object.compensation_measures.count plans_n=object.plans.count %}
     <div x-data="{
-            tabs: ['uebersicht', 'gebaeude', 'technik', 'kompensation', 'plaene'],
+            tabs: ['uebersicht', 'gebaeude', 'technik', 'kompensation', 'plaene', 'akte'],
+            akteKind: 'alle',
             tab: 'uebersicht',
             init() {
                 const h = location.hash.replace('#', '');
@@ -88,6 +89,12 @@
                         class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-2">
                     Pläne &amp; Laufkarten
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ plans_n }}</span>
+                </button>
+                <button type="button" @click="tab = 'akte'"
+                        :class="tab === 'akte' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-2">
+                    Akte
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ akte_entries|length }}</span>
                 </button>
             </nav>
         </div>
@@ -201,6 +208,64 @@
         <!-- Pläne / Laufkarten -->
         <div x-show="tab === 'plaene'" x-cloak>
             {% include 'objektverwaltung/partials/section_plans.html' %}
+        </div>
+
+        <!-- Akte: chronologische Historie -->
+        <div x-show="tab === 'akte'" x-cloak class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Akte</h2>
+                    <p class="text-xs text-gray-500">Chronologie aller Änderungen, Prüfungen und Dokumente. Vor Einführung der Akte gibt es nur das Anlagedatum.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <select x-model="akteKind" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+                        <option value="alle">Alle Einträge</option>
+                        {% for key, label in akte_kinds.items %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <a href="{% url 'objektverwaltung:akte_pdf' object.pk %}" target="_blank" class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-200">Aktenauszug (PDF)</a>
+                </div>
+            </div>
+            {% if akte_entries %}
+            <ol class="divide-y divide-gray-100">
+                {% for e in akte_entries %}
+                <li x-show="akteKind === 'alle' || akteKind === '{{ e.kind }}'" class="px-6 py-4 flex gap-4">
+                    <div class="w-36 flex-shrink-0">
+                        <p class="text-sm font-medium text-gray-900">{{ e.when|date:"d.m.Y" }}</p>
+                        <p class="text-xs text-gray-500">{{ e.when|date:"H:i" }} Uhr</p>
+                        {% if e.user %}<p class="text-xs text-gray-500 mt-1 truncate" title="{{ e.user.get_full_name|default:e.user.username }}">{{ e.user.get_full_name|default:e.user.username }}</p>{% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs
+                                {% if e.action == 'create' %}bg-green-100 text-green-800
+                                {% elif e.action == 'update' %}bg-blue-100 text-blue-800
+                                {% elif e.action == 'delete' %}bg-red-100 text-red-800
+                                {% elif e.action == 'pruefung' %}{% if e.badge == 'Mängel' %}bg-red-100 text-red-800{% else %}bg-emerald-100 text-emerald-800{% endif %}
+                                {% elif e.action == 'kompensation' %}bg-yellow-100 text-yellow-800
+                                {% elif e.action == 'dokument' %}bg-indigo-100 text-indigo-800
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">{{ e.badge }}</span>
+                            <span class="text-xs text-gray-400">{{ e.kind_label }}</span>
+                        </div>
+                        <p class="text-sm text-gray-900 mt-1">
+                            {% if e.url %}<a href="{{ e.url }}" target="_blank" class="hover:text-primary-600">{{ e.title }}</a>{% else %}{{ e.title }}{% endif %}
+                        </p>
+                        {% if e.detail %}<p class="text-xs text-gray-600 mt-1 whitespace-pre-line">{{ e.detail }}</p>{% endif %}
+                        {% if e.changes %}
+                        <dl class="mt-2 text-xs text-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5">
+                            {% for field, vals in e.changes.items %}
+                            <div><dt class="inline text-gray-500">{{ field }}:</dt> <dd class="inline"><span class="line-through text-gray-400">{{ vals.old }}</span> → <span class="text-gray-900">{{ vals.new }}</span></dd></div>
+                            {% endfor %}
+                        </dl>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <p class="p-8 text-sm text-gray-500 text-center">Noch keine Einträge.</p>
+            {% endif %}
         </div>
     </div>
     {% endwith %}

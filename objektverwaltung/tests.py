@@ -282,3 +282,141 @@ class DetailTabTests(TestCase):
         self.assertEqual(response['Location'], self.building.get_absolute_url() + '#gebaeude')
         response = self.client.post(reverse('objektverwaltung:delete_floor', args=[floor.pk]), {'tab': 'unbekannt'})
         self.assertEqual(response['Location'], self.building.get_absolute_url())
+
+
+class AkteTests(TestCase):
+    """e-Akte: Audit-Einträge, Zeitleiste, PDF-Auszug."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw', first_name='Max', last_name='Prüfer')
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label='objektverwaltung',
+                                       codename__in=['view_buildingobject', 'change_buildingobject',
+                                                     'add_buildingobject', 'delete_buildingobject'])
+        )
+        self.client.force_login(self.user)
+        self.building = BuildingObject.objects.create(
+            object_number='OBJ-9', name='Schule', city='Oberhausen', created_by=self.user, updated_by=self.user,
+        )
+
+    def _akte(self):
+        from .akte import build_timeline
+        return build_timeline(self.building)
+
+    def test_child_create_update_delete_are_logged_with_diff(self):
+        from audit.models import AuditLog
+        self.client.post(reverse('objektverwaltung:add_contact', args=[self.building.pk]), {
+            'name': 'Hr. Meier', 'role': 'Hausmeister', 'phone': '1', 'mobile': '', 'email': '', 'notes': '',
+        })
+        contact = BuildingContact.objects.get()
+        self.client.post(reverse('objektverwaltung:edit_contact', args=[contact.pk]), {
+            'name': 'Hr. Meier', 'role': 'Betreiber', 'phone': '1', 'mobile': '0170', 'email': '', 'notes': '',
+        })
+        self.client.post(reverse('objektverwaltung:delete_contact', args=[contact.pk]))
+
+        logs = AuditLog.objects.filter(extra_data__building_id=self.building.pk).order_by('timestamp')
+        self.assertEqual([l.action for l in logs], ['create', 'update', 'delete'])
+        update = logs[1]
+        self.assertEqual(update.changes['Funktion'], {'old': 'Hausmeister', 'new': 'Betreiber'})
+        self.assertEqual(update.changes['Mobil'], {'old': '–', 'new': '0170'})
+        self.assertNotIn('Name', update.changes)
+        self.assertEqual(update.user, self.user)
+
+        entries = self._akte()
+        # 3 Audit-Einträge + Anlage-Anker (kein CREATE-Log für das Objekt selbst)
+        self.assertEqual(len(entries), 4)
+        self.assertEqual(entries[0]['action'], 'delete')
+        self.assertEqual(entries[-1]['title'], 'Objekt im System angelegt')
+
+    def test_building_update_logs_changes_and_unchanged_save_logs_nothing(self):
+        from audit.models import AuditLog
+        data = {
+            'object_number': 'OBJ-9', 'name': 'Schule', 'usage_type': 'other', 'street': '', 'house_number': '',
+            'postal_code': '', 'city': 'Oberhausen', 'latitude': '', 'longitude': '', 'floor_count': '',
+            'basement_count': '', 'has_fire_alarm_system': '', 'notes': '', 'is_active': 'on',
+        }
+        self.client.post(reverse('objektverwaltung:update', args=[self.building.pk]), data)
+        self.assertEqual(AuditLog.objects.count(), 0)
+        data['name'] = 'Gesamtschule'
+        data['has_fire_alarm_system'] = 'on'
+        self.client.post(reverse('objektverwaltung:update', args=[self.building.pk]), data)
+        log = AuditLog.objects.get()
+        self.assertEqual(log.action, 'update')
+        self.assertEqual(log.changes['Bezeichnung'], {'old': 'Schule', 'new': 'Gesamtschule'})
+        self.assertEqual(log.changes['Brandmeldeanlage vorhanden'], {'old': 'Nein', 'new': 'Ja'})
+
+    def test_fsd_report_appears_once_as_pruefung(self):
+        from datetime import date
+        from .models import FireKeyDepot
+        depot = FireKeyDepot.objects.create(building=self.building, designation='FSD Tor', inspection_interval_months=12)
+        self.client.post(reverse('objektverwaltung:fsd_report_add', args=[depot.pk]), {
+            'inspection_date': '2026-08-15', 'participant_operator': '', 'participant_fire_dept': 'Max',
+            'participant_other': '', 'depot_contents': '', 'condition_report': 'i.O.', 'result': 'ok', 'keys_match': 'on',
+        })
+        entries = self._akte()
+        pruefungen = [e for e in entries if e['kind'] == 'pruefung']
+        self.assertEqual(len(pruefungen), 1)
+        self.assertIn('FSD-Prüfung „FSD Tor“', pruefungen[0]['title'])
+        self.assertEqual(pruefungen[0]['when'].date(), date(2026, 8, 15))
+
+    def test_akte_tab_and_pdf(self):
+        from audit.models import AuditLog
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Objekt im System angelegt')
+        self.assertContains(response, reverse('objektverwaltung:akte_pdf', args=[self.building.pk]))
+        response = self.client.get(reverse('objektverwaltung:akte_pdf', args=[self.building.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF'))
+        self.assertEqual(AuditLog.objects.filter(action='export').count(), 1)
+
+    def test_building_delete_is_logged(self):
+        from audit.models import AuditLog
+        self.client.post(reverse('objektverwaltung:delete', args=[self.building.pk]))
+        self.assertFalse(BuildingObject.objects.filter(pk=self.building.pk).exists())
+        log = AuditLog.objects.get()
+        self.assertEqual(log.action, 'delete')
+        self.assertIn('Schule', log.object_repr)
+
+
+class SearchTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw')
+        self.user.user_permissions.add(Permission.objects.get(codename='view_buildingobject'))
+        self.client.force_login(self.user)
+        self.a = BuildingObject.objects.create(object_number='A-1', name='Rathaus', created_by=self.user, updated_by=self.user)
+        self.b = BuildingObject.objects.create(object_number='B-2', name='Bahnhof', created_by=self.user, updated_by=self.user)
+        BuildingContact.objects.create(building=self.a, name='Frau Hermosin', role='Hausmeisterin')
+        from .models import FireKeyDepot, FireAlarmPanel, CompensationMeasure
+        from datetime import date
+        FireKeyDepot.objects.create(building=self.b, designation='FSD Ost', serial_number='SN-4711',
+                                    inspection_interval_months=12, last_inspection=date(2020, 1, 1))
+        FireAlarmPanel.objects.create(building=self.a, designation='BMZ Foyer')
+        CompensationMeasure.objects.create(building=self.a, title='Wache', status='active')
+
+    def test_global_search_finds_children(self):
+        response = self.client.get(reverse('core:global_search'), {'q': 'hermosin'})
+        self.assertContains(response, 'Frau Hermosin')
+        self.assertContains(response, 'Ansprechpartner - Rathaus')
+        response = self.client.get(reverse('core:global_search'), {'q': 'SN-4711'})
+        self.assertContains(response, 'Schlüsseldepot - Bahnhof')
+        response = self.client.get(reverse('core:global_search'), {'q': 'foyer'})
+        self.assertContains(response, 'Brandmeldezentrale - Rathaus')
+
+    def test_list_search_over_children_and_filters(self):
+        url = reverse('objektverwaltung:list')
+        response = self.client.get(url, {'q': 'hermosin'})
+        self.assertContains(response, 'Rathaus')
+        self.assertNotContains(response, 'Bahnhof')
+        response = self.client.get(url, {'filter': 'fsd_due'})
+        self.assertContains(response, 'Bahnhof')
+        self.assertNotContains(response, 'Rathaus')
+        response = self.client.get(url, {'filter': 'komp'})
+        self.assertContains(response, 'Komp. 1')
+        self.assertNotContains(response, 'Bahnhof')
+        response = self.client.get(url, {'filter': 'bmz'})
+        self.assertContains(response, 'BMZ 1')
+        # Objekt mit zwei passenden Kindern erscheint nur einmal
+        BuildingContact.objects.create(building=self.a, name='Herr Hermosin')
+        response = self.client.get(url, {'q': 'hermosin'})
+        self.assertEqual(response.content.decode().count('>Rathaus<'), 1)

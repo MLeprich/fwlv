@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Akte {{ building.object_number }} – {{ building.name }}</title>
+    <style>
+        @page { size: A4; margin: 18mm 16mm 18mm 16mm;
+            @bottom-right { content: "Seite " counter(page) " von " counter(pages); font-size: 8pt; color: #666; }
+            @bottom-left { content: "Aktenauszug {{ building.object_number }} · {{ now|date:"d.m.Y H:i" }}"; font-size: 8pt; color: #666; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 9.5pt; color: #222; line-height: 1.35; }
+        h1 { font-size: 16pt; margin-bottom: 2mm; }
+        .sub { color: #555; font-size: 9pt; margin-bottom: 6mm; }
+        table.meta { border-collapse: collapse; margin-bottom: 6mm; font-size: 9pt; }
+        table.meta td { padding: 0.8mm 6mm 0.8mm 0; vertical-align: top; }
+        table.meta td.k { color: #666; width: 32mm; }
+        table.tl { width: 100%; border-collapse: collapse; }
+        table.tl th { text-align: left; font-size: 8pt; text-transform: uppercase; color: #666; border-bottom: 1px solid #999; padding: 1.5mm 1.5mm; }
+        table.tl td { border-bottom: 1px solid #ddd; padding: 1.8mm 1.5mm; vertical-align: top; }
+        td.when { width: 26mm; white-space: nowrap; }
+        td.who { width: 30mm; font-size: 8.5pt; color: #444; }
+        td.kind { width: 27mm; font-size: 8pt; color: #666; }
+        .badge { display: inline-block; font-size: 7.5pt; padding: 0.3mm 1.5mm; border: 1px solid #bbb; border-radius: 2mm; margin-right: 1.5mm; color: #333; }
+        .detail { font-size: 8.5pt; color: #555; white-space: pre-wrap; margin-top: 0.8mm; }
+        .changes { font-size: 8pt; color: #444; margin-top: 0.8mm; }
+        .old { color: #999; text-decoration: line-through; }
+        tr { page-break-inside: avoid; }
+    </style>
+</head>
+<body>
+    <h1>Akte: {{ building.name }}</h1>
+    <div class="sub">Objektverwaltung · Aktenauszug vom {{ now|date:"d.m.Y H:i" }} Uhr · erstellt von {{ user.get_full_name|default:user.username }}</div>
+    <table class="meta">
+        <tr><td class="k">Objektnummer</td><td>{{ building.object_number }}</td></tr>
+        <tr><td class="k">Nutzungsart</td><td>{{ building.get_usage_type_display }}</td></tr>
+        <tr><td class="k">Anschrift</td><td>{{ building.full_address|default:"–" }}</td></tr>
+        <tr><td class="k">Status</td><td>{% if building.is_active %}Aktiv{% else %}Inaktiv{% endif %}</td></tr>
+        <tr><td class="k">Einträge</td><td>{{ entries|length }}</td></tr>
+    </table>
+
+    <table class="tl">
+        <thead><tr><th>Datum</th><th>Bearbeiter</th><th>Bereich</th><th>Vorgang</th></tr></thead>
+        <tbody>
+        {% for e in entries %}
+        <tr>
+            <td class="when">{{ e.when|date:"d.m.Y" }}<br><span style="color:#777;font-size:8pt">{{ e.when|date:"H:i" }}</span></td>
+            <td class="who">{% if e.user %}{{ e.user.get_full_name|default:e.user.username }}{% else %}–{% endif %}</td>
+            <td class="kind">{{ e.kind_label }}</td>
+            <td>
+                <span class="badge">{{ e.badge }}</span>{{ e.title }}
+                {% if e.detail %}<div class="detail">{{ e.detail }}</div>{% endif %}
+                {% if e.changes %}
+                <div class="changes">
+                    {% for field, vals in e.changes.items %}<div>{{ field }}: <span class="old">{{ vals.old }}</span> → {{ vals.new }}</div>{% endfor %}
+                </div>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">Keine Einträge.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

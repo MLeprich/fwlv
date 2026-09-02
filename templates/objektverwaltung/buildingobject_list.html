@@ -41,7 +41,7 @@
             <div class="flex-1 min-w-[200px]">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Suche</label>
                 <input type="text" name="q" value="{{ current_search }}"
-                       placeholder="Name, Nummer, Ort..."
+                       placeholder="Name, Nummer, Ort, Ansprechpartner, FSD, BMZ..."
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
             </div>
             <div class="w-56">
@@ -53,9 +53,18 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="w-64">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Merkmal</label>
+                <select name="filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+                    <option value="">Alle</option>
+                    {% for value, label in filter_choices %}
+                    <option value="{{ value }}" {% if current_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div>
                 <button type="submit" class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">Filtern</button>
-                {% if current_search or current_usage_type %}
+                {% if current_search or current_usage_type or current_filter %}
                 <a href="{% url 'objektverwaltung:list' %}" class="ml-2 text-sm text-gray-500 hover:text-gray-700">Zurücksetzen</a>
                 {% endif %}
             </div>
@@ -72,6 +81,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nutzungsart</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ort</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Technik</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
                     </tr>
@@ -85,6 +95,13 @@
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ obj.get_usage_type_display }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ obj.city }}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                {% if obj.bmz_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700" title="Brandmeldezentralen">BMZ {{ obj.bmz_count }}</span>{% endif %}
+                                {% if obj.fsd_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs {% if obj.fsd_due_count %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}" title="Schlüsseldepots{% if obj.fsd_due_count %}, Prüfung fällig{% endif %}">FSD {{ obj.fsd_count }}</span>{% endif %}
+                                {% if obj.komp_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800" title="Aktive Kompensationsmaßnahmen">Komp. {{ obj.komp_count }}</span>{% endif %}
+                            </div>
+                        </td>
                         <td class="px-6 py-4">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                 {% if obj.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
@@ -112,11 +129,11 @@
                 </div>
                 <div class="flex gap-2">
                     {% if page_obj.has_previous %}
-                    <a href="?page={{ page_obj.previous_page_number }}{% if current_search %}&q={{ current_search }}{% endif %}{% if current_usage_type %}&usage_type={{ current_usage_type }}{% endif %}"
+                    <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
                        class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">&laquo; Zurück</a>
                     {% endif %}
                     {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if current_search %}&q={{ current_search }}{% endif %}{% if current_usage_type %}&usage_type={{ current_usage_type }}{% endif %}"
+                    <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
                        class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">Weiter &raquo;</a>
                     {% endif %}
                 </div>

@@ -32,6 +32,8 @@ from .models import (
     FireKeyDepot, FSDInspectionReport,
 )
 from .resources import BuildingObjectResource
+from . import akte
+from audit.models import AuditAction
 
 
 # ============================================================================
@@ -67,27 +69,72 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
     permission_required = 'objektverwaltung.view_buildingobject'
     paginate_by = 25
 
+    FILTERS = (
+        ('bmz', 'mit Brandmeldezentrale'),
+        ('fsd', 'mit Schlüsseldepot'),
+        ('fsd_due', 'FSD-Prüfung fällig / überfällig'),
+        ('komp', 'aktive Kompensationsmaßnahme'),
+        ('inaktiv', 'nur inaktive Objekte'),
+    )
+
     def get_queryset(self):
-        qs = BuildingObject.objects.all().order_by('name')
+        from datetime import timedelta
+        from django.db.models import Count
+        from django.utils import timezone
+
+        qs = BuildingObject.objects.all()
         search = self.request.GET.get('q', '').strip()
         if search:
             qs = qs.filter(
                 Q(name__icontains=search) |
                 Q(object_number__icontains=search) |
                 Q(city__icontains=search) |
-                Q(street__icontains=search)
+                Q(street__icontains=search) |
+                Q(postal_code__icontains=search) |
+                Q(contacts__name__icontains=search) |
+                Q(contacts__role__icontains=search) |
+                Q(key_depots__designation__icontains=search) |
+                Q(key_depots__serial_number__icontains=search) |
+                Q(fire_alarm_panels__designation__icontains=search)
             )
         usage_type = self.request.GET.get('usage_type')
         if usage_type and usage_type in dict(UsageType.choices):
             qs = qs.filter(usage_type=usage_type)
-        return qs
+
+        f = self.request.GET.get('filter', '')
+        today = timezone.localdate()
+        if f == 'bmz':
+            qs = qs.filter(fire_alarm_panels__isnull=False)
+        elif f == 'fsd':
+            qs = qs.filter(key_depots__is_active=True)
+        elif f == 'fsd_due':
+            qs = qs.filter(key_depots__is_active=True,
+                           key_depots__next_inspection__lte=today + timedelta(days=FireKeyDepot.DUE_SOON_DAYS))
+        elif f == 'komp':
+            qs = qs.filter(compensation_measures__status='active')
+        elif f == 'inaktiv':
+            qs = qs.filter(is_active=False)
+
+        return qs.distinct().annotate(
+            bmz_count=Count('fire_alarm_panels', distinct=True),
+            fsd_count=Count('key_depots', filter=Q(key_depots__is_active=True), distinct=True),
+            fsd_due_count=Count('key_depots', filter=Q(
+                key_depots__is_active=True,
+                key_depots__next_inspection__lte=today + timedelta(days=FireKeyDepot.DUE_SOON_DAYS)), distinct=True),
+            komp_count=Count('compensation_measures', filter=Q(compensation_measures__status='active'), distinct=True),
+        ).order_by('name')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        params = self.request.GET.copy()
+        params.pop('page', None)
         context['current_module'] = 'objektverwaltung'
         context['current_search'] = self.request.GET.get('q', '')
         context['current_usage_type'] = self.request.GET.get('usage_type', '')
+        context['current_filter'] = self.request.GET.get('filter', '')
+        context['filter_choices'] = self.FILTERS
         context['usage_type_choices'] = UsageType.choices
+        context['query_string'] = params.urlencode()
         return context
 
 
@@ -118,6 +165,8 @@ class BuildingObjectDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['contact_form'] = BuildingContactForm()
         context['plan_form'] = BuildingPlanForm(building=self.object)
         context['key_depot_form'] = FireKeyDepotForm()
+        context['akte_entries'] = akte.build_timeline(self.object)
+        context['akte_kinds'] = akte.KIND_LABELS
         return context
 
 
@@ -139,6 +188,7 @@ class BuildingObjectCreateView(LoginRequiredMixin, PermissionRequiredMixin, Crea
         obj.save()
         form.save_m2m()
         self.object = obj
+        akte.log_created(self.request, obj, obj)
         messages.success(self.request, f'Objekt „{obj.name}" wurde angelegt.')
         return redirect(obj.get_absolute_url())
 
@@ -155,12 +205,18 @@ class BuildingObjectUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Upda
         context['is_update'] = True
         return context
 
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        self._old_snapshot = akte.snapshot(obj, BuildingObjectForm._meta.fields)
+        return obj
+
     def form_valid(self, form):
         obj = form.save(commit=False)
         obj.updated_by = self.request.user
         obj.save()
         form.save_m2m()
         self.object = obj
+        akte.log_updated(self.request, obj, obj, akte.diff(obj, getattr(self, '_old_snapshot', {})))
         messages.success(self.request, 'Objekt wurde aktualisiert.')
         return redirect(obj.get_absolute_url())
 
@@ -178,6 +234,7 @@ class BuildingObjectDeleteView(LoginRequiredMixin, PermissionRequiredMixin, Dele
         return context
 
     def form_valid(self, form):
+        akte.log_deleted(self.request, self.object, self.object)
         messages.success(self.request, f'Objekt „{self.object.name}" wurde gelöscht.')
         return super().form_valid(form)
 
@@ -240,6 +297,7 @@ class _AddChildMixin(LoginRequiredMixin, PermissionRequiredMixin, View):
             child.building = building
             self.before_save(child, request)
             child.save()
+            akte.log_created(request, building, child)
             messages.success(request, self.success_message)
         else:
             errors = '; '.join(
@@ -334,6 +392,7 @@ class _EditChildView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
     def post(self, request, pk):
         child = get_object_or_404(self.model.objects.select_related('building'), pk=pk)
+        old_snapshot = akte.snapshot(child, self.form_class._meta.fields)
         form = self._form(child, data=request.POST, files=request.FILES)
         if not form.is_valid():
             return self._render(request, child, form)
@@ -347,6 +406,7 @@ class _EditChildView(LoginRequiredMixin, PermissionRequiredMixin, View):
             form._update_errors(e)
             return self._render(request, child, form)
         obj.save()
+        akte.log_updated(request, child.building, obj, akte.diff(obj, old_snapshot))
         messages.success(request, self.success_message)
         return _redirect_to_building(request, child.building)
 
@@ -425,6 +485,7 @@ class _DeleteChildView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def post(self, request, pk):
         child = get_object_or_404(self.model, pk=pk)
         building = child.building
+        akte.log_deleted(request, building, child)
         child.delete()
         messages.success(request, self.deleted_message)
         return _redirect_to_building(request, building)
@@ -585,6 +646,9 @@ class AddFSDReportView(_FSDReportFormView):
         report.created_by = request.user
         report.updated_by = request.user
         report.save()
+        akte.log_akte(request, depot.building, AuditAction.CREATE,
+                      f'FSD-Prüfbericht vom {report.inspection_date:%d.%m.%Y} für „{depot.designation}“ erfasst '
+                      f'({report.get_result_display()})', obj=report)
         messages.success(request, 'Prüfbericht gespeichert. Nächste Prüfung: '
                          + (depot.next_inspection.strftime('%d.%m.%Y') if depot.next_inspection else '–'))
         return redirect(depot.get_absolute_url())
@@ -597,12 +661,14 @@ class EditFSDReportView(_FSDReportFormView):
 
     def post(self, request, pk):
         report = get_object_or_404(FSDInspectionReport.objects.select_related('depot__building'), pk=pk)
+        old_snapshot = akte.snapshot(report, FSDInspectionReportForm._meta.fields)
         form = FSDInspectionReportForm(data=request.POST, instance=report)
         if not form.is_valid():
             return self._render(request, report.depot, form, report)
         obj = form.save(commit=False)
         obj.updated_by = request.user
         obj.save()
+        akte.log_updated(request, report.depot.building, obj, akte.diff(obj, old_snapshot))
         messages.success(request, 'Prüfbericht aktualisiert.')
         return redirect(report.depot.get_absolute_url())
 
@@ -611,8 +677,9 @@ class DeleteFSDReportView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'objektverwaltung.change_buildingobject'
 
     def post(self, request, pk):
-        report = get_object_or_404(FSDInspectionReport.objects.select_related('depot'), pk=pk)
+        report = get_object_or_404(FSDInspectionReport.objects.select_related('depot__building'), pk=pk)
         depot = report.depot
+        akte.log_deleted(request, depot.building, report)
         report.delete()
         depot.sync_from_reports()
         messages.success(request, 'Prüfbericht gelöscht.')
@@ -660,6 +727,30 @@ class KeyDepotBlankPdfView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def get(self, request, pk):
         depot = get_object_or_404(FireKeyDepot.objects.select_related('building'), pk=pk)
         return _render_fsd_report_pdf(request, depot, None)
+
+
+class BuildingObjectAktePdfView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Aktenauszug (Zeitleiste) eines Objekts als PDF."""
+    permission_required = 'objektverwaltung.view_buildingobject'
+
+    def get(self, request, pk):
+        from django.template.loader import render_to_string
+        from django.utils import timezone
+        from weasyprint import HTML
+
+        building = get_object_or_404(BuildingObject, pk=pk)
+        entries = akte.build_timeline(building)
+        html = render_to_string('objektverwaltung/akte_pdf.html', {
+            'building': building, 'entries': entries, 'now': timezone.localtime(),
+            'user': request.user,
+        }, request=request)
+        pdf = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf()
+        akte.log_akte(request, building, AuditAction.EXPORT,
+                      f'Aktenauszug als PDF erzeugt ({len(entries)} Einträge)')
+        safe_number = ''.join(ch for ch in building.object_number if ch.isalnum() or ch in '-_') or 'objekt'
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="Akte_{safe_number}_{timezone.localdate():%Y-%m-%d}.pdf"'
+        return response
 
 
 # ============================================================================
@@ -721,6 +812,14 @@ class BuildingObjectImportView(LoginRequiredMixin, PermissionRequiredMixin, View
             return redirect('objektverwaltung:import')
 
         result = resource.import_data(dataset, dry_run=False, raise_errors=False)
+        for row in result.rows:
+            if row.import_type not in ('new', 'update') or not row.object_id:
+                continue
+            building = BuildingObject.objects.filter(pk=row.object_id).first()
+            if building:
+                verb = 'angelegt' if row.import_type == 'new' else 'aktualisiert'
+                akte.log_akte(request, building, AuditAction.IMPORT,
+                              f'Objekt per CSV-Import {verb} ({import_file.name})')
         totals = result.totals
         messages.success(
             request,
