@@ -23,11 +23,13 @@ from .forms import (
     BuildingObjectForm, FloorForm, EscapeRouteForm, FireAlarmPanelForm,
     BuildingContactForm, BuildingPlanForm,
     FireSuppressionSystemForm, CompensationMeasureForm,
+    FireKeyDepotForm, FSDInspectionReportForm,
 )
 from .models import (
     BuildingObject, Floor, EscapeRoute, FireAlarmPanel,
     BuildingContact, BuildingPlan, UsageType,
     FireSuppressionSystem, CompensationMeasure,
+    FireKeyDepot, FSDInspectionReport,
 )
 from .resources import BuildingObjectResource
 
@@ -48,6 +50,9 @@ class ObjektDashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateV
             followers=self.request.user
         ).count()
         context['recent_objects'] = BuildingObject.objects.order_by('-updated_at')[:5]
+        due_depots = _due_key_depots()
+        context['due_depots'] = due_depots[:8]
+        context['due_depot_count'] = len(due_depots)
         return context
 
 
@@ -96,7 +101,7 @@ class BuildingObjectDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         return BuildingObject.objects.prefetch_related(
             'floors', 'escape_routes', 'fire_alarm_panels',
             'suppression_systems', 'compensation_measures',
-            'contacts', 'plans', 'followers',
+            'contacts', 'plans', 'followers', 'key_depots',
         )
 
     def get_context_data(self, **kwargs):
@@ -112,6 +117,7 @@ class BuildingObjectDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['compensation_form'] = CompensationMeasureForm(building=self.object)
         context['contact_form'] = BuildingContactForm()
         context['plan_form'] = BuildingPlanForm(building=self.object)
+        context['key_depot_form'] = FireKeyDepotForm()
         return context
 
 
@@ -266,6 +272,11 @@ class AddCompensationMeasureView(_AddChildMixin):
     pass_building_to_form = True
 
 
+class AddKeyDepotView(_AddChildMixin):
+    form_class = FireKeyDepotForm
+    success_message = 'Feuerwehrschlüsseldepot hinzugefügt.'
+
+
 class AddPlanView(_AddChildMixin):
     form_class = BuildingPlanForm
     success_message = 'Plan/Laufkarte hochgeladen.'
@@ -375,6 +386,13 @@ class EditCompensationMeasureView(_EditChildView):
     pass_building_to_form = True
 
 
+class EditKeyDepotView(_EditChildView):
+    model = FireKeyDepot
+    form_class = FireKeyDepotForm
+    title = 'Feuerwehrschlüsseldepot bearbeiten'
+    success_message = 'Feuerwehrschlüsseldepot aktualisiert.'
+
+
 class EditPlanView(_EditChildView):
     model = BuildingPlan
     form_class = BuildingPlanForm
@@ -430,9 +448,206 @@ class DeleteCompensationMeasureView(_DeleteChildView):
     deleted_message = 'Kompensationsmaßnahme gelöscht.'
 
 
+class DeleteKeyDepotView(_DeleteChildView):
+    model = FireKeyDepot
+    deleted_message = 'Feuerwehrschlüsseldepot gelöscht.'
+
+
 class DeletePlanView(_DeleteChildView):
     model = BuildingPlan
     deleted_message = 'Plan/Laufkarte gelöscht.'
+
+
+# ============================================================================
+# FEUERWEHRSCHLÜSSELDEPOTS (FSD) – Detail, Übersicht, Prüfberichte, PDF
+# ============================================================================
+
+def _due_key_depots():
+    """Aktive Depots, deren Prüfung überfällig oder in Kürze fällig ist (sortiert nach Termin)."""
+    from datetime import timedelta
+    from django.utils import timezone
+    limit = timezone.localdate() + timedelta(days=FireKeyDepot.DUE_SOON_DAYS)
+    return list(
+        FireKeyDepot.objects.filter(is_active=True, next_inspection__lte=limit)
+        .select_related('building').order_by('next_inspection', 'designation')
+    )
+
+
+class KeyDepotListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """Übersicht aller Feuerwehrschlüsseldepots mit Prüfstatus."""
+    model = FireKeyDepot
+    template_name = 'objektverwaltung/keydepot_list.html'
+    context_object_name = 'depots'
+    permission_required = 'objektverwaltung.view_buildingobject'
+
+    def get_queryset(self):
+        qs = FireKeyDepot.objects.select_related('building').order_by(
+            'next_inspection', 'building__name', 'designation'
+        )
+        status = self.request.GET.get('status', '')
+        from datetime import timedelta
+        from django.utils import timezone
+        today = timezone.localdate()
+        if status == 'overdue':
+            qs = qs.filter(is_active=True, next_inspection__lt=today)
+        elif status == 'due':
+            qs = qs.filter(is_active=True, next_inspection__lte=today + timedelta(days=FireKeyDepot.DUE_SOON_DAYS))
+        elif status == 'inactive':
+            qs = qs.filter(is_active=False)
+        else:
+            qs = qs.filter(is_active=True)
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            qs = qs.filter(
+                Q(designation__icontains=q) | Q(serial_number__icontains=q) |
+                Q(building__name__icontains=q) | Q(building__object_number__icontains=q)
+            )
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_module'] = 'objektverwaltung'
+        context['status'] = self.request.GET.get('status', '')
+        context['q'] = self.request.GET.get('q', '')
+        return context
+
+
+class KeyDepotDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = FireKeyDepot
+    template_name = 'objektverwaltung/keydepot_detail.html'
+    context_object_name = 'depot'
+    permission_required = 'objektverwaltung.view_buildingobject'
+
+    def get_queryset(self):
+        return FireKeyDepot.objects.select_related('building').prefetch_related(
+            'inspection_reports__created_by'
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_module'] = 'objektverwaltung'
+        context['building'] = self.object.building
+        context['can_edit'] = self.request.user.has_perm('objektverwaltung.change_buildingobject')
+        context['reports'] = self.object.inspection_reports.all()
+        return context
+
+
+class _FSDReportFormView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Gemeinsame Basis für Anlegen/Bearbeiten eines FSD-Prüfberichts."""
+    permission_required = 'objektverwaltung.change_buildingobject'
+    template_name = 'objektverwaltung/fsd_report_form.html'
+
+    def _render(self, request, depot, form, report=None):
+        return render(request, self.template_name, {
+            'current_module': 'objektverwaltung',
+            'depot': depot,
+            'building': depot.building,
+            'report': report,
+            'form': form,
+            'title': 'Prüfbericht bearbeiten' if report else 'Neuer Prüfbericht',
+        })
+
+
+class AddFSDReportView(_FSDReportFormView):
+    def _initial(self, request, depot):
+        from django.utils import timezone
+        user = request.user
+        fire_dept = (user.get_full_name() or user.get_username()) if user.is_authenticated else ''
+        return {
+            'inspection_date': timezone.localdate(),
+            'depot_contents': depot.contents,
+            'participant_fire_dept': fire_dept,
+        }
+
+    def get(self, request, pk):
+        depot = get_object_or_404(FireKeyDepot.objects.select_related('building'), pk=pk)
+        return self._render(request, depot, FSDInspectionReportForm(initial=self._initial(request, depot)))
+
+    def post(self, request, pk):
+        depot = get_object_or_404(FireKeyDepot.objects.select_related('building'), pk=pk)
+        form = FSDInspectionReportForm(data=request.POST)
+        if not form.is_valid():
+            return self._render(request, depot, form)
+        report = form.save(commit=False)
+        report.depot = depot
+        report.created_by = request.user
+        report.updated_by = request.user
+        report.save()
+        messages.success(request, 'Prüfbericht gespeichert. Nächste Prüfung: '
+                         + (depot.next_inspection.strftime('%d.%m.%Y') if depot.next_inspection else '–'))
+        return redirect(depot.get_absolute_url())
+
+
+class EditFSDReportView(_FSDReportFormView):
+    def get(self, request, pk):
+        report = get_object_or_404(FSDInspectionReport.objects.select_related('depot__building'), pk=pk)
+        return self._render(request, report.depot, FSDInspectionReportForm(instance=report), report)
+
+    def post(self, request, pk):
+        report = get_object_or_404(FSDInspectionReport.objects.select_related('depot__building'), pk=pk)
+        form = FSDInspectionReportForm(data=request.POST, instance=report)
+        if not form.is_valid():
+            return self._render(request, report.depot, form, report)
+        obj = form.save(commit=False)
+        obj.updated_by = request.user
+        obj.save()
+        messages.success(request, 'Prüfbericht aktualisiert.')
+        return redirect(report.depot.get_absolute_url())
+
+
+class DeleteFSDReportView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'objektverwaltung.change_buildingobject'
+
+    def post(self, request, pk):
+        report = get_object_or_404(FSDInspectionReport.objects.select_related('depot'), pk=pk)
+        depot = report.depot
+        report.delete()
+        depot.sync_from_reports()
+        messages.success(request, 'Prüfbericht gelöscht.')
+        return redirect(depot.get_absolute_url())
+
+
+def _render_fsd_report_pdf(request, depot, report=None):
+    """Prüfbericht als PDF (Layout nach der Vorlage „FSD-Überprüfungsbericht")."""
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+
+    context = {
+        'depot': depot,
+        'building': depot.building,
+        'report': report,
+        'contents_lines': (report.depot_contents if report else '').splitlines(),
+        'condition_lines': (report.condition_report if report else '').splitlines(),
+    }
+    html = render_to_string('objektverwaltung/fsd_report_pdf.html', context, request=request)
+    pdf = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf()
+
+    safe_number = ''.join(ch for ch in depot.building.object_number if ch.isalnum() or ch in '-_') or 'objekt'
+    if report:
+        filename = f'FSD-Pruefbericht_{safe_number}_{report.inspection_date:%Y-%m-%d}.pdf'
+    else:
+        filename = f'FSD-Pruefbericht_{safe_number}_leer.pdf'
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    return response
+
+
+class FSDReportPdfView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Ausgefüllter Prüfbericht als PDF."""
+    permission_required = 'objektverwaltung.view_buildingobject'
+
+    def get(self, request, pk):
+        report = get_object_or_404(FSDInspectionReport.objects.select_related('depot__building'), pk=pk)
+        return _render_fsd_report_pdf(request, report.depot, report)
+
+
+class KeyDepotBlankPdfView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Leerer Prüfbericht (Objektdaten vorausgefüllt) zum Ausfüllen vor Ort."""
+    permission_required = 'objektverwaltung.view_buildingobject'
+
+    def get(self, request, pk):
+        depot = get_object_or_404(FireKeyDepot.objects.select_related('building'), pk=pk)
+        return _render_fsd_report_pdf(request, depot, None)
 
 
 # ============================================================================

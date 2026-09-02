@@ -239,6 +239,167 @@ class FireSuppressionSystem(TimeStampedModel):
         return f"{self.get_system_type_display()}: {self.designation}"
 
 
+class FSDType(models.TextChoices):
+    """Typ eines Feuerwehrschlüsseldepots nach DIN 14675"""
+    FSD1 = 'fsd1', 'FSD 1'
+    FSD2 = 'fsd2', 'FSD 2'
+    FSD3 = 'fsd3', 'FSD 3'
+
+
+def add_months(date_value, months):
+    """Datum um n Monate verschieben (Monatsende wird abgeschnitten)."""
+    import calendar
+    month_index = date_value.month - 1 + months
+    year = date_value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(date_value.day, calendar.monthrange(year, month)[1])
+    return date_value.replace(year=year, month=month, day=day)
+
+
+class FireKeyDepot(TimeStampedModel):
+    """Feuerwehrschlüsseldepot (FSD) eines Objekts mit Prüfintervall"""
+    DUE_SOON_DAYS = 30
+
+    building = models.ForeignKey(
+        BuildingObject, on_delete=models.CASCADE,
+        related_name='key_depots', verbose_name="Objekt"
+    )
+    depot_type = models.CharField(
+        max_length=10, choices=FSDType.choices,
+        default=FSDType.FSD3, verbose_name="Typ"
+    )
+    designation = models.CharField(
+        max_length=200, verbose_name="Bezeichnung",
+        help_text="z.B. 'FSD Haupteingang'"
+    )
+    location_description = models.CharField(
+        max_length=255, blank=True, verbose_name="Standort",
+        help_text="Wo befindet sich das Depot? (z.B. 'Rechts neben Haupteingang')"
+    )
+    manufacturer = models.CharField(max_length=120, blank=True, verbose_name="Hersteller")
+    serial_number = models.CharField(max_length=100, blank=True, verbose_name="Serien-/Depot-Nr.")
+    installed_at = models.DateField(null=True, blank=True, verbose_name="Einbaudatum")
+    inspection_interval_months = models.PositiveSmallIntegerField(
+        default=12, verbose_name="Prüfintervall (Monate)"
+    )
+    last_inspection = models.DateField(null=True, blank=True, verbose_name="Letzte Prüfung")
+    next_inspection = models.DateField(
+        null=True, blank=True, verbose_name="Nächste Prüfung",
+        help_text="Wird aus letzter Prüfung (bzw. Einbaudatum) und Intervall berechnet"
+    )
+    contents = models.TextField(
+        blank=True, verbose_name="Depot-Inhalt",
+        help_text="Hinterlegte Schlüssel; wird als Vorbelegung in neue Prüfberichte übernommen"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Aktiv")
+    notes = models.TextField(blank=True, verbose_name="Hinweise")
+
+    class Meta:
+        verbose_name = "Feuerwehrschlüsseldepot"
+        verbose_name_plural = "Feuerwehrschlüsseldepots"
+        ordering = ['building', 'designation']
+
+    def __str__(self):
+        return f"{self.get_depot_type_display()}: {self.designation}"
+
+    def get_absolute_url(self):
+        return reverse('objektverwaltung:keydepot_detail', kwargs={'pk': self.pk})
+
+    def compute_next_inspection(self):
+        base = self.last_inspection or self.installed_at
+        if base is None or not self.inspection_interval_months:
+            return None
+        return add_months(base, self.inspection_interval_months)
+
+    def save(self, *args, **kwargs):
+        self.next_inspection = self.compute_next_inspection()
+        super().save(*args, **kwargs)
+
+    def sync_from_reports(self):
+        """Letzte Prüfung aus den Prüfberichten übernehmen und speichern."""
+        latest = self.inspection_reports.order_by('-inspection_date').first()
+        self.last_inspection = latest.inspection_date if latest else None
+        self.save(update_fields=['last_inspection', 'next_inspection', 'updated_at'])
+
+    @property
+    def days_until_inspection(self):
+        if not self.next_inspection:
+            return None
+        from django.utils import timezone
+        return (self.next_inspection - timezone.localdate()).days
+
+    @property
+    def inspection_status(self):
+        """'overdue' | 'due_soon' | 'ok' | 'unknown'"""
+        days = self.days_until_inspection
+        if days is None:
+            return 'unknown'
+        if days < 0:
+            return 'overdue'
+        if days <= self.DUE_SOON_DAYS:
+            return 'due_soon'
+        return 'ok'
+
+    @property
+    def inspection_status_display(self):
+        return {
+            'overdue': 'Prüfung überfällig',
+            'due_soon': 'Prüfung bald fällig',
+            'ok': 'Prüfung aktuell',
+            'unknown': 'Kein Prüftermin',
+        }[self.inspection_status]
+
+
+class FSDInspectionResult(models.TextChoices):
+    OK = 'ok', 'Ohne Mängel'
+    DEFECTS = 'defects', 'Mit Mängeln'
+
+
+class FSDInspectionReport(AuditedModel):
+    """Überprüfungsbericht zu einem Feuerwehrschlüsseldepot (Vorlage: FSD-Überprüfungsbericht)"""
+    depot = models.ForeignKey(
+        FireKeyDepot, on_delete=models.CASCADE,
+        related_name='inspection_reports', verbose_name="Schlüsseldepot"
+    )
+    inspection_date = models.DateField(verbose_name="Überprüfungsdatum")
+    participant_operator = models.CharField(
+        max_length=200, blank=True, verbose_name="Teilnehmer Betrieb"
+    )
+    participant_fire_dept = models.CharField(
+        max_length=200, blank=True, verbose_name="Teilnehmer Feuerwehr"
+    )
+    participant_other = models.CharField(
+        max_length=200, blank=True, verbose_name="Teilnehmer Sonstige"
+    )
+    depot_contents = models.TextField(blank=True, verbose_name="Depot-Inhalt")
+    condition_report = models.TextField(blank=True, verbose_name="Zustandsbericht")
+    result = models.CharField(
+        max_length=10, choices=FSDInspectionResult.choices,
+        default=FSDInspectionResult.OK, verbose_name="Ergebnis"
+    )
+    keys_match = models.BooleanField(
+        default=True, verbose_name="Schlüssel entsprechen der Schließanlage",
+        help_text="Bescheinigung: Die deponierten Schlüssel entsprechen der General- bzw. "
+                  "Torschließanlage und öffnen alle Toranlagen und Türen gewaltfrei."
+    )
+
+    class Meta:
+        verbose_name = "FSD-Prüfbericht"
+        verbose_name_plural = "FSD-Prüfberichte"
+        ordering = ['-inspection_date', '-created_at']
+
+    def __str__(self):
+        return f"Prüfbericht {self.inspection_date:%d.%m.%Y} – {self.depot}"
+
+    @property
+    def building(self):
+        return self.depot.building
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.depot.sync_from_reports()
+
+
 class CompensationStatus(models.TextChoices):
     """Status einer Kompensationsmaßnahme"""
     PLANNED = 'planned', 'Geplant'

@@ -112,3 +112,141 @@ class EditChildViewTests(TestCase):
             response = self.client.get(reverse(f'objektverwaltung:{name}', args=[obj.pk]))
             self.assertEqual(response.status_code, 200, name)
             self.assertContains(response, 'Speichern')
+
+
+class FireKeyDepotTests(TestCase):
+    """Feuerwehrschlüsseldepots: Intervalle, Prüfberichte, PDF."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw', first_name='Max', last_name='Prüfer')
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label='objektverwaltung',
+                                       codename__in=['view_buildingobject', 'change_buildingobject'])
+        )
+        self.client.force_login(self.user)
+        self.building = BuildingObject.objects.create(
+            object_number='OBJ-7', name='Rathaus', street='Schwartzstr.', house_number='72',
+            postal_code='46045', city='Oberhausen', created_by=self.user, updated_by=self.user,
+        )
+
+    def _depot(self, **kwargs):
+        from .models import FireKeyDepot
+        defaults = dict(building=self.building, depot_type='fsd3', designation='FSD Haupteingang',
+                        inspection_interval_months=12, contents='1x Generalhauptschlüssel')
+        defaults.update(kwargs)
+        return FireKeyDepot.objects.create(**defaults)
+
+    def test_add_months_and_next_inspection(self):
+        from datetime import date
+        from .models import add_months
+        self.assertEqual(add_months(date(2026, 1, 31), 1), date(2026, 2, 28))
+        self.assertEqual(add_months(date(2026, 11, 15), 3), date(2027, 2, 15))
+        depot = self._depot(last_inspection=date(2026, 3, 10))
+        self.assertEqual(depot.next_inspection, date(2027, 3, 10))
+        depot = self._depot(designation='FSD 2', installed_at=date(2026, 1, 1), inspection_interval_months=6)
+        self.assertEqual(depot.next_inspection, date(2026, 7, 1))
+        depot = self._depot(designation='FSD 3')
+        self.assertIsNone(depot.next_inspection)
+        self.assertEqual(depot.inspection_status, 'unknown')
+
+    def test_inspection_status(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        today = timezone.localdate()
+        overdue = self._depot(last_inspection=today - timedelta(days=400))
+        soon = self._depot(designation='b', last_inspection=today - timedelta(days=350))
+        ok = self._depot(designation='c', last_inspection=today - timedelta(days=10))
+        self.assertEqual(overdue.inspection_status, 'overdue')
+        self.assertEqual(soon.inspection_status, 'due_soon')
+        self.assertEqual(ok.inspection_status, 'ok')
+        response = self.client.get(reverse('objektverwaltung:keydepot_list') + '?status=due')
+        self.assertContains(response, 'FSD Haupteingang')
+        self.assertContains(response, '>b<', html=False)
+        self.assertNotContains(response, '>c<')
+        response = self.client.get(reverse('objektverwaltung:dashboard'))
+        self.assertContains(response, 'Fällige FSD-Prüfungen')
+
+    def test_add_depot_via_detail_and_report_updates_dates(self):
+        from datetime import date
+        from .models import FireKeyDepot, FSDInspectionReport
+        response = self.client.post(reverse('objektverwaltung:add_key_depot', args=[self.building.pk]), {
+            'depot_type': 'fsd1', 'designation': 'FSD Tor Nord', 'location_description': '', 'manufacturer': '',
+            'serial_number': '4711', 'installed_at': '', 'inspection_interval_months': 12,
+            'last_inspection': '', 'contents': '2x Torschlüssel', 'is_active': 'on', 'notes': '',
+        })
+        self.assertRedirects(response, self.building.get_absolute_url())
+        depot = FireKeyDepot.objects.get(serial_number='4711')
+        self.assertEqual(depot.building, self.building)
+
+        # Neuer Prüfbericht: Vorbelegung + Datumsfortschreibung
+        response = self.client.get(reverse('objektverwaltung:fsd_report_add', args=[depot.pk]))
+        self.assertContains(response, '2x Torschlüssel')
+        self.assertContains(response, 'Max Prüfer')
+        response = self.client.post(reverse('objektverwaltung:fsd_report_add', args=[depot.pk]), {
+            'inspection_date': '2026-08-15', 'participant_operator': 'Hr. Meier', 'participant_fire_dept': 'Max Prüfer',
+            'participant_other': '', 'depot_contents': '2x Torschlüssel\n1x GHS', 'condition_report': 'Alles in Ordnung',
+            'result': 'ok', 'keys_match': 'on',
+        })
+        self.assertRedirects(response, depot.get_absolute_url())
+        depot.refresh_from_db()
+        self.assertEqual(depot.last_inspection, date(2026, 8, 15))
+        self.assertEqual(depot.next_inspection, date(2027, 8, 15))
+        report = FSDInspectionReport.objects.get()
+        self.assertEqual(report.created_by, self.user)
+
+        # Löschen des Berichts setzt die Daten zurück
+        self.client.post(reverse('objektverwaltung:fsd_report_delete', args=[report.pk]))
+        depot.refresh_from_db()
+        self.assertIsNone(depot.last_inspection)
+        self.assertIsNone(depot.next_inspection)
+
+    def test_detail_pages_render(self):
+        from datetime import date
+        from .models import FSDInspectionReport
+        depot = self._depot(last_inspection=date(2026, 3, 10))
+        report = FSDInspectionReport.objects.create(
+            depot=depot, inspection_date=date(2026, 3, 10), result='defects',
+            condition_report='Schloss schwergängig', created_by=self.user, updated_by=self.user,
+        )
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Feuerwehrschlüsseldepots (1)')
+        response = self.client.get(depot.get_absolute_url())
+        self.assertContains(response, 'Mit Mängeln')
+        self.assertContains(response, reverse('objektverwaltung:fsd_report_pdf', args=[report.pk]))
+        response = self.client.get(reverse('objektverwaltung:fsd_report_edit', args=[report.pk]))
+        self.assertContains(response, 'Schloss schwergängig')
+        response = self.client.get(reverse('objektverwaltung:edit_key_depot', args=[depot.pk]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_pdf_generation(self):
+        import os
+        from datetime import date
+        from .models import FSDInspectionReport
+        depot = self._depot(last_inspection=date(2026, 3, 10), location_description='Rechts neben Haupteingang')
+        report = FSDInspectionReport.objects.create(
+            depot=depot, inspection_date=date(2026, 3, 10), participant_operator='Hr. Meier (Hausmeister)',
+            participant_fire_dept='Max Prüfer', depot_contents='1x Generalhauptschlüssel\n1x Torschlüssel Nord\n1x Schlüssel BMZ',
+            condition_report='Depot unbeschädigt, Schloss leichtgängig.\nSchlüssel vollständig.',
+            created_by=self.user, updated_by=self.user,
+        )
+        out_dir = os.environ.get('FSD_PDF_OUT')
+        response = self.client.get(reverse('objektverwaltung:fsd_report_pdf', args=[report.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('FSD-Pruefbericht_OBJ-7_2026-03-10.pdf', response['Content-Disposition'])
+        self.assertTrue(response.content.startswith(b'%PDF'))
+        if out_dir:
+            open(os.path.join(out_dir, 'bericht.pdf'), 'wb').write(response.content)
+        response = self.client.get(reverse('objektverwaltung:keydepot_blank_pdf', args=[depot.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('_leer.pdf', response['Content-Disposition'])
+        if out_dir:
+            open(os.path.join(out_dir, 'leer.pdf'), 'wb').write(response.content)
+
+    def test_view_only_user_cannot_add_report(self):
+        depot = self._depot()
+        self.user.user_permissions.clear()
+        self.user.user_permissions.add(Permission.objects.get(codename='view_buildingobject'))
+        self.assertEqual(self.client.get(depot.get_absolute_url()).status_code, 200)
+        self.assertEqual(self.client.get(reverse('objektverwaltung:fsd_report_add', args=[depot.pk])).status_code, 403)
+        self.assertEqual(self.client.get(reverse('objektverwaltung:keydepot_blank_pdf', args=[depot.pk])).status_code, 200)

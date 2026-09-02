@@ -8,6 +8,7 @@ from django import forms
 from .models import (
     BuildingObject, Floor, EscapeRoute, FireAlarmPanel,
     BuildingContact, BuildingPlan, FireSuppressionSystem, CompensationMeasure,
+    FireKeyDepot, FSDInspectionReport,
 )
 
 DATE = forms.DateInput(format='%Y-%m-%d', attrs={
@@ -171,3 +172,41 @@ class CompensationMeasureForm(forms.ModelForm):
         for f in ('escape_route', 'suppression_system'):
             self.fields[f].required = False
             self.fields[f].empty_label = '— keine —'
+
+
+class FireKeyDepotForm(forms.ModelForm):
+    class Meta:
+        model = FireKeyDepot
+        fields = ['depot_type', 'designation', 'location_description', 'manufacturer',
+                  'serial_number', 'installed_at', 'inspection_interval_months',
+                  'last_inspection', 'contents', 'is_active', 'notes']
+        widgets = {
+            'depot_type': forms.Select(attrs={'class': INPUT}),
+            'designation': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'z.B. FSD Haupteingang'}),
+            'location_description': forms.TextInput(attrs={'class': INPUT}),
+            'manufacturer': forms.TextInput(attrs={'class': INPUT}),
+            'serial_number': forms.TextInput(attrs={'class': INPUT}),
+            'installed_at': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT}),
+            'inspection_interval_months': forms.NumberInput(attrs={'class': INPUT, 'min': 1, 'max': 120}),
+            'last_inspection': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT}),
+            'contents': forms.Textarea(attrs={'class': INPUT, 'rows': 3, 'placeholder': 'z.B. 1x Generalhauptschlüssel, 1x Torschlüssel'}),
+            'is_active': forms.CheckboxInput(attrs={'class': CHECKBOX}),
+            'notes': forms.Textarea(attrs={'class': INPUT, 'rows': 2}),
+        }
+
+
+class FSDInspectionReportForm(forms.ModelForm):
+    class Meta:
+        model = FSDInspectionReport
+        fields = ['inspection_date', 'participant_operator', 'participant_fire_dept',
+                  'participant_other', 'depot_contents', 'condition_report', 'result', 'keys_match']
+        widgets = {
+            'inspection_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT}),
+            'participant_operator': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'Name(n) Betrieb / Objekt'}),
+            'participant_fire_dept': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'Name(n) Feuerwehr'}),
+            'participant_other': forms.TextInput(attrs={'class': INPUT}),
+            'depot_contents': forms.Textarea(attrs={'class': INPUT, 'rows': 5}),
+            'condition_report': forms.Textarea(attrs={'class': INPUT, 'rows': 5}),
+            'result': forms.Select(attrs={'class': INPUT}),
+            'keys_match': forms.CheckboxInput(attrs={'class': CHECKBOX}),
+        }

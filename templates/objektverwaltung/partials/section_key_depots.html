@@ -1,0 +1,68 @@
+<div class="bg-white rounded-lg shadow p-6" x-data="{ addOpen: false }">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-gray-900">Feuerwehrschlüsseldepots ({{ object.key_depots.count }})</h2>
+        {% if perms.objektverwaltung.change_buildingobject %}
+        <button @click="addOpen = !addOpen" class="text-sm text-primary-600 hover:text-primary-800 font-medium">
+            <span x-show="!addOpen">+ Schlüsseldepot</span>
+            <span x-show="addOpen" x-cloak>Abbrechen</span>
+        </button>
+        {% endif %}
+    </div>
+
+    {% if object.key_depots.all %}
+    <ul class="divide-y divide-gray-100">
+        {% for depot in object.key_depots.all %}
+        <li class="py-2 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+                <a href="{{ depot.get_absolute_url }}" class="text-sm font-medium text-primary-600 hover:text-primary-800">{{ depot.designation }}</a>
+                <span class="text-xs text-gray-500 ml-2">{{ depot.get_depot_type_display }}</span>
+                {% if not depot.is_active %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">inaktiv</span>
+                {% elif depot.inspection_status == 'overdue' %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-800">Prüfung überfällig</span>
+                {% elif depot.inspection_status == 'due_soon' %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800">Prüfung bald fällig</span>
+                {% endif %}
+                {% if depot.location_description %}<p class="text-xs text-gray-500">{{ depot.location_description }}</p>{% endif %}
+                <p class="text-xs text-gray-500">
+                    Intervall: {{ depot.inspection_interval_months }} Monate
+                    {% if depot.last_inspection %} · Letzte Prüfung: {{ depot.last_inspection|date:"d.m.Y" }}{% endif %}
+                    {% if depot.next_inspection %} · Nächste Prüfung: {{ depot.next_inspection|date:"d.m.Y" }}{% endif %}
+                </p>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <a href="{{ depot.get_absolute_url }}" class="text-xs text-gray-600 hover:text-gray-900">Prüfberichte ({{ depot.inspection_reports.count }})</a>
+                {% if perms.objektverwaltung.change_buildingobject %}
+                <a href="{% url 'objektverwaltung:edit_key_depot' depot.pk %}" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
+                <form method="post" action="{% url 'objektverwaltung:delete_key_depot' depot.pk %}"
+                      onsubmit="return confirm('Schlüsseldepot samt Prüfberichten löschen?');">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs text-red-600 hover:text-red-800">Löschen</button>
+                </form>
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-500">Noch kein Feuerwehrschlüsseldepot erfasst.</p>
+    {% endif %}
+
+    {% if perms.objektverwaltung.change_buildingobject %}
+    <form method="post" action="{% url 'objektverwaltung:add_key_depot' object.pk %}"
+          x-show="addOpen" x-cloak class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {% csrf_token %}
+        <div><label class="block text-xs text-gray-500 mb-1">Typ</label>{{ key_depot_form.depot_type }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Bezeichnung</label>{{ key_depot_form.designation }}</div>
+        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Standort</label>{{ key_depot_form.location_description }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Hersteller</label>{{ key_depot_form.manufacturer }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Serien-/Depot-Nr.</label>{{ key_depot_form.serial_number }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Einbaudatum</label>{{ key_depot_form.installed_at }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Prüfintervall (Monate)</label>{{ key_depot_form.inspection_interval_months }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Letzte Prüfung</label>{{ key_depot_form.last_inspection }}</div>
+        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Depot-Inhalt (hinterlegte Schlüssel)</label>{{ key_depot_form.contents }}</div>
+        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Hinweise</label>{{ key_depot_form.notes }}</div>
+        <label class="flex items-center gap-2 cursor-pointer md:col-span-2">{{ key_depot_form.is_active }}<span class="text-xs text-gray-700">Aktiv</span></label>
+        <div class="md:col-span-2 text-right">
+            <button type="submit" class="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-primary-700">Schlüsseldepot hinzufügen</button>
+        </div>
+    </form>
+    {% endif %}
+</div>

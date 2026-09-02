@@ -22,6 +22,8 @@ class Command(BaseCommand):
         'compensationmeasure',
         'buildingcontact',
         'buildingplan',
+        'firekeydepot',
+        'fsdinspectionreport',
     ]
 
     def handle(self, *args, **options):

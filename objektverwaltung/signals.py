@@ -16,6 +16,7 @@ from django.dispatch import receiver
 
 from .models import (
     BuildingObject, BuildingPlan, BuildingContact, CompensationMeasure,
+    FSDInspectionReport,
 )
 
 logger = logging.getLogger(__name__)
@@ -88,4 +89,17 @@ def object_saved(sender, instance, created, **kwargs):
         instance,
         title=f"Objektdaten geändert: {instance.name}",
         message="Die Stammdaten des Objekts wurden aktualisiert.",
+    )
+
+
+@receiver(post_save, sender=FSDInspectionReport)
+def fsd_report_saved(sender, instance, created, **kwargs):
+    if not created:
+        return
+    depot = instance.depot
+    notify_followers(
+        depot.building,
+        title=f"FSD-Prüfbericht: {depot.building.name}",
+        message=f'Prüfbericht vom {instance.inspection_date:%d.%m.%Y} für „{depot.designation}" '
+                f'erfasst ({instance.get_result_display()}).',
     )

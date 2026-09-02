@@ -107,3 +107,22 @@ class BuildingContactAdmin(admin.ModelAdmin):
     list_display = ('name', 'role', 'building', 'phone', 'is_primary')
     list_filter = ('is_primary',)
     search_fields = ('name', 'role', 'building__name')
+
+
+from .models import FireKeyDepot, FSDInspectionReport  # noqa: E402
+
+
+@admin.register(FireKeyDepot)
+class FireKeyDepotAdmin(admin.ModelAdmin):
+    list_display = ['designation', 'depot_type', 'building', 'inspection_interval_months',
+                    'last_inspection', 'next_inspection', 'is_active']
+    list_filter = ['depot_type', 'is_active']
+    search_fields = ['designation', 'serial_number', 'building__name', 'building__object_number']
+    readonly_fields = ['next_inspection']
+
+
+@admin.register(FSDInspectionReport)
+class FSDInspectionReportAdmin(admin.ModelAdmin):
+    list_display = ['depot', 'inspection_date', 'result', 'created_by']
+    list_filter = ['result']
+    date_hierarchy = 'inspection_date'

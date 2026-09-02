@@ -13,6 +13,7 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
+            <a href="{% url 'objektverwaltung:keydepot_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Schlüsseldepots</a>
             <a href="{% url 'objektverwaltung:list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Alle Objekte</a>
             {% if perms.objektverwaltung.add_buildingobject %}
             <a href="{% url 'objektverwaltung:create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">+ Neues Objekt</a>
@@ -20,7 +21,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div class="bg-white rounded-lg shadow p-6">
             <p class="text-sm text-gray-500">Aktive Objekte</p>
             <p class="text-3xl font-bold text-gray-900">{{ object_count }}</p>
@@ -29,7 +30,34 @@
             <p class="text-sm text-gray-500">Von mir abonniert</p>
             <p class="text-3xl font-bold text-gray-900">{{ followed_count }}</p>
         </div>
+        <a href="{% url 'objektverwaltung:keydepot_list' %}?status=due" class="bg-white rounded-lg shadow p-6 block hover:bg-gray-50">
+            <p class="text-sm text-gray-500">FSD-Prüfungen fällig</p>
+            <p class="text-3xl font-bold {% if due_depot_count %}text-red-600{% else %}text-gray-900{% endif %}">{{ due_depot_count }}</p>
+            <p class="text-xs text-gray-400 mt-1">überfällig oder in den nächsten 30 Tagen</p>
+        </a>
     </div>
+
+    {% if due_depots %}
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-8">
+        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="font-semibold text-gray-900">Fällige FSD-Prüfungen</h3>
+            <a href="{% url 'objektverwaltung:keydepot_list' %}" class="text-sm text-primary-600 hover:text-primary-800">Alle Schlüsseldepots</a>
+        </div>
+        <ul class="divide-y divide-gray-100">
+            {% for depot in due_depots %}
+            <li class="px-5 py-3 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <a href="{{ depot.get_absolute_url }}" class="text-sm font-medium text-gray-900 hover:text-primary-600">{{ depot.designation }}</a>
+                    <span class="text-xs text-gray-500 ml-2">{{ depot.get_depot_type_display }} · {{ depot.building.name }}</span>
+                </div>
+                <span class="text-xs whitespace-nowrap {% if depot.inspection_status == 'overdue' %}text-red-600 font-medium{% else %}text-yellow-700{% endif %}">
+                    {{ depot.next_inspection|date:"d.m.Y" }}
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
     {% if recent_objects %}
     <div class="bg-white rounded-lg shadow overflow-hidden">

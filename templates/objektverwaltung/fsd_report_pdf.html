@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>FSD-Überprüfungsbericht {{ building.object_number }}</title>
+    <style>
+        @page { size: A4; margin: 15mm 18mm 15mm 18mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 10pt; color: #000; line-height: 1.3; }
+        .head { margin-bottom: 4mm; }
+        .head .org { font-weight: bold; font-size: 10.5pt; }
+        .head .dept { font-size: 9.5pt; }
+        .head .title { font-weight: bold; font-size: 11pt; margin-top: 3mm; }
+        .head .subtitle { font-size: 10pt; }
+
+        table.sheet { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.sheet td { border: 1px solid #000; vertical-align: top; padding: 1.2mm 2mm; }
+        td.label { background: #d9d9d9; width: 40mm; font-size: 10pt; }
+        td.sublabel { background: #d9d9d9; width: 22mm; font-size: 8.5pt; padding-top: 1.5mm; }
+        td.value { font-size: 10pt; }
+        td.objnr { background: #d9d9d9; width: 30mm; font-size: 9.5pt; }
+        td.line { height: 7.5mm; }
+        td.value.line { font-family: 'DejaVu Sans', Arial, sans-serif; }
+        td.block { padding: 1.5mm 2mm; white-space: pre-wrap; }
+        td.block.contents { height: 45mm; }
+        td.block.condition { height: 52mm; }
+        td.block.ruled { background: repeating-linear-gradient(to bottom, transparent 0, transparent 7.2mm, #000 7.2mm, #000 7.45mm); }
+
+        .cert { border: 1px solid #000; border-top: none; padding: 2.5mm 3mm; font-size: 9.5pt; line-height: 1.35; }
+        .foot { margin-top: 9mm; width: 100%; }
+        .foot td { vertical-align: bottom; font-size: 9.5pt; padding: 0; }
+        .sig { border-bottom: 1px solid #000; height: 9mm; }
+        .sig-label { font-size: 8pt; text-align: center; padding-top: 1mm; }
+        .stamp { font-size: 7pt; text-align: center; line-height: 1.25; }
+        .stamp b { font-size: 8pt; }
+        .meta { font-size: 7pt; color: #666; margin-top: 4mm; }
+    </style>
+</head>
+<body>
+    <div class="head">
+        <div class="org">Berufsfeuerwehr Oberhausen</div>
+        <div class="dept">Fachbereich 6 - 1 - 60 (Vorbeugender Brandschutz)</div>
+        <div class="title">Feuerwehrschlüsseldepot (FSD)</div>
+        <div class="subtitle">Überprüfungsbericht{% if depot %} – {{ depot.get_depot_type_display }}{% if depot.designation %}, {{ depot.designation }}{% endif %}{% endif %}</div>
+    </div>
+
+    <table class="sheet">
+        <tr>
+            <td class="label line" rowspan="1">Firma / Objekt:</td>
+            <td class="value line" colspan="2">{{ building.name }}</td>
+        </tr>
+        <tr>
+            <td class="label line">Straße / Ort:</td>
+            <td class="value line">{{ building.full_address }}</td>
+            <td class="objnr">Objekt - Nr.:<br><span style="font-size:10pt">{{ building.object_number }}</span></td>
+        </tr>
+        <tr>
+            <td class="label line">Überprüfungsdatum:</td>
+            <td class="value line" colspan="2">{% if report %}{{ report.inspection_date|date:"d.m.Y" }}{% endif %}</td>
+        </tr>
+    </table>
+
+    <table class="sheet" style="border-top: none;">
+        <tr>
+            <td class="label" rowspan="3" style="border-top:none; vertical-align: middle;">Teilnehmer :</td>
+            <td class="sublabel line" style="border-top:none;">Betrieb:</td>
+            <td class="value line" style="border-top:none;">{% if report %}{{ report.participant_operator }}{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="sublabel line">Feuerwehr:</td>
+            <td class="value line">{% if report %}{{ report.participant_fire_dept }}{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="sublabel line">Sonstige:</td>
+            <td class="value line">{% if report %}{{ report.participant_other }}{% endif %}</td>
+        </tr>
+    </table>
+
+    <table class="sheet" style="border-top: none;">
+        <tr>
+            <td class="label" style="width: 62mm; border-top:none; vertical-align: middle;">Depot - Inhalt :</td>
+            <td class="block contents{% if not report %} ruled{% endif %}" style="border-top:none;">{% if report %}{{ report.depot_contents }}{% elif depot.contents %}{{ depot.contents }}{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label" style="width: 62mm; vertical-align: middle;">Zustandsbericht :</td>
+            <td class="block condition{% if not report %} ruled{% endif %}">{% if report %}{{ report.condition_report }}{% endif %}</td>
+        </tr>
+    </table>
+
+    <div class="cert">
+        {% if report and not report.keys_match %}<b>Hinweis: Die deponierten Schlüssel entsprechen laut Prüfung NICHT vollständig der Schließanlage.</b><br>{% endif %}
+        Hiermit bescheinige/n ich/wir gleichzeitig der Stadt Oberhausen (Berufsfeuerwehr), dass die im vg.
+        Feuerwehrschlüsseldepot - FSD - deponierten Schlüssel der Generalschließanlage bzw. der
+        Torschließanlage entsprechen.<br>
+        Mit den deponierten Schlüsseln sind alle Toranlagen sowie verschließbaren Türen der baulichen
+        Anlage(n) gewaltfrei zu öffnen.
+    </div>
+
+    <table class="foot">
+        <tr>
+            <td style="width: 24mm;">Oberhausen,</td>
+            <td style="width: 45mm;"><div class="sig">{% if report %}<span style="font-size:10pt; padding-left:2mm;">{{ report.inspection_date|date:"d.m.Y" }}</span>{% endif %}</div></td>
+            <td></td>
+            <td style="width: 55mm;" class="stamp">
+                <b>Stadt Oberhausen</b><br>Der Oberbürgermeister<br>Bereich Feuerwehr<br>Brücktorstr. 30<br>46047 Oberhausen
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-top: 5mm;">Unterschriften:</td>
+            <td style="padding-top: 5mm;"><div class="sig"></div><div class="sig-label">(Firma / Objekt)</div></td>
+            <td style="width: 12mm;"></td>
+            <td style="padding-top: 5mm;"><div class="sig"></div><div class="sig-label">(Feuerwehr)</div></td>
+        </tr>
+    </table>
+
+    <div class="meta">
+        {% if report %}Erfasst im FLVS am {{ report.created_at|date:"d.m.Y H:i" }}{% if report.created_by %} von {{ report.created_by.get_full_name|default:report.created_by.username }}{% endif %} · Ergebnis: {{ report.get_result_display }}{% if depot.next_inspection %} · Nächste Prüfung: {{ depot.next_inspection|date:"d.m.Y" }}{% endif %}
+        {% else %}Leerformular, erzeugt im FLVS · Prüfintervall: {{ depot.inspection_interval_months }} Monate{% if depot.last_inspection %} · Letzte Prüfung: {{ depot.last_inspection|date:"d.m.Y" }}{% endif %}{% endif %}
+    </div>
+</body>
+</html>
