@@ -1,7 +1,7 @@
 <!-- templates/includes/sidebar_nav.html -->
 
 <div class="space-y-1" x-data="{
-    expandedCategories: ['inventory'],  // Default expanded
+    expandedCategories: ['inventory'{% if current_module == 'tickets' or request.resolver_match.app_name == 'tickets' %}, 'leitstelle'{% endif %}],  // Default expanded
     currentModule: '{{ current_module|default:'' }}'
 }">
 
@@ -603,25 +603,71 @@
         </div>
     </div>
 
-    <!-- Leitstelle (eigenständiger Menüpunkt) -->
+    <!-- Leitstelle (aufklappbar: Ticketportal + Info-Monitor) -->
     {% if modules.tickets_enabled %}
     {% if perms.tickets.create_ticket or perms.tickets.process_ticket or perms.tickets.view_infomonitor or perms.tickets.edit_infomonitor or perms.tickets.edit_mappe %}
-    <a
-        href="{% if perms.tickets.create_ticket or perms.tickets.process_ticket %}{% url 'tickets:list' %}{% else %}{% url 'tickets:infomonitor_display' %}{% endif %}"
-        class="flex items-center py-2 mx-2 rounded-lg transition-colors mt-4
-               {% if current_module == 'tickets' %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
-        :class="$store.sidebar.expanded ? 'gap-3 px-3' : 'justify-center'"
+    <div class="mt-4">
+        <button
+            @click="expandedCategories.includes('leitstelle') ? expandedCategories = expandedCategories.filter(c => c !== 'leitstelle') : expandedCategories.push('leitstelle')"
+            class="w-full flex items-center gap-3 px-3 py-2 mx-2 text-left rounded-lg
+                   {% if current_module == 'tickets' or request.resolver_match.app_name == 'tickets' %}text-primary-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}"
+            x-show="$store.sidebar.expanded"
+        >
+            <span class="text-xl">🎫</span>
+            <span class="text-xs font-semibold uppercase tracking-wider flex-1">Leitstelle</span>
+            <svg
+                class="w-4 h-4 transition-transform"
+                :class="expandedCategories.includes('leitstelle') ? 'rotate-180' : ''"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Kategorie Icon als Button bei eingeklappter Sidebar -->
+    <button
+        x-show="!$store.sidebar.expanded"
+        @click="$store.sidebar.expanded = true; if (!expandedCategories.includes('leitstelle')) expandedCategories.push('leitstelle')"
+        class="flex items-center justify-center py-2 px-3 mx-2 rounded-lg transition-colors mt-4 hover:bg-gray-100 text-gray-700"
         x-tooltip="'Leitstelle'"
     >
-        <span class="text-xl flex-shrink-0">🎫</span>
-        <span
-            class="text-sm font-medium truncate transition-all duration-200"
-            x-show="$store.sidebar.expanded"
-            x-transition
+        <span class="text-xl">🎫</span>
+    </button>
+
+    <div>
+        <div
+            x-show="$store.sidebar.expanded && expandedCategories.includes('leitstelle')"
+            x-collapse
+            class="space-y-1 mt-1"
         >
-            Leitstelle
-        </span>
-    </a>
+            {% if perms.tickets.create_ticket or perms.tickets.process_ticket %}
+            <!-- Ticketportal -->
+            <a
+                href="{% url 'tickets:list' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if request.resolver_match.app_name == 'tickets' and '/infomonitor/' not in request.path %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Ticketportal'"
+            >
+                <span class="text-xl flex-shrink-0">🎟️</span>
+                <span class="text-sm truncate" x-show="$store.sidebar.expanded">Ticketportal</span>
+            </a>
+            {% endif %}
+
+            {% if perms.tickets.view_infomonitor or perms.tickets.edit_infomonitor or perms.tickets.edit_mappe %}
+            <!-- Info-Monitor -->
+            <a
+                href="{% url 'tickets:infomonitor_display' %}"
+                class="flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors
+                       {% if request.resolver_match.app_name == 'tickets' and '/infomonitor/' in request.path %}bg-primary-50 text-primary-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}"
+                x-tooltip="'Info-Monitor'"
+            >
+                <span class="text-xl flex-shrink-0">📺</span>
+                <span class="text-sm truncate" x-show="$store.sidebar.expanded">Info-Monitor</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
     {% endif %}
     {% endif %}
 

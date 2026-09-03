@@ -9,7 +9,7 @@
         <ol class="flex items-center space-x-2 text-sm">
             <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
             <li><span class="text-gray-400">/</span></li>
-            <li><a href="{% url 'tickets:list' %}" class="text-gray-500 hover:text-gray-700">Tickets</a></li>
+            <li><a href="{% url 'tickets:list' %}" class="text-gray-500 hover:text-gray-700">Ticketportal</a></li>
             <li><span class="text-gray-400">/</span></li>
             <li><span class="text-gray-900 font-medium">{{ ticket.ticket_number }}</span></li>
         </ol>
@@ -46,26 +46,6 @@
                     </span>
                     {% endif %}
                 </div>
-            </div>
-            <div class="flex items-center gap-3">
-                {% if has_both_roles %}
-                <!-- Rollen-Switch -->
-                <div class="flex items-center gap-2 bg-indigo-700/50 rounded-lg p-2">
-                    <span class="text-xs text-indigo-200">Rolle:</span>
-                    <form method="post" action="{% url 'tickets:switch_role' %}" class="flex items-center">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.path }}">
-                        <button type="submit" name="role" value="creator"
-                                class="px-2 py-1 rounded-l text-xs font-medium transition-colors {% if active_role == 'creator' %}bg-white text-indigo-700{% else %}bg-indigo-600 text-white hover:bg-indigo-500{% endif %}">
-                            Ersteller
-                        </button>
-                        <button type="submit" name="role" value="processor"
-                                class="px-2 py-1 rounded-r text-xs font-medium transition-colors {% if active_role == 'processor' %}bg-white text-indigo-700{% else %}bg-indigo-600 text-white hover:bg-indigo-500{% endif %}">
-                            Bearbeiter
-                        </button>
-                    </form>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -261,12 +241,6 @@
                     </span>
                 </div>
                 {% endif %}
-            </div>
-            {% elif has_both_roles and active_role == 'creator' %}
-            <div class="bg-yellow-50 rounded-lg shadow-sm border border-yellow-200 p-4">
-                <p class="text-sm text-yellow-800">
-                    <strong>Hinweis:</strong> Sie sind derzeit als Ersteller aktiv. Um den Status zu ändern oder das Ticket zuzuweisen, wechseln Sie zur Bearbeiter-Rolle.
-                </p>
             </div>
             {% endif %}
 
