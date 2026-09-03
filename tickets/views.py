@@ -14,8 +14,8 @@ from django.db.models import Q
 from .models import (Ticket, TicketComment, TicketImage, CommentImage, TicketStatus, TicketPriority,
                       TicketCategory, InfoMonitor, InfoMonitorVehicle, BereitschaftPerson,
                       MappeLink, MappeKontakt, MappeAnleitung,
-                      GrossveranstaltungDashboard, GrossveranstaltungAbschnitt)
-from .forms import (TicketCreateForm, TicketCommentForm, TicketCategoryForm, InfoMonitorForm,
+                      GrossveranstaltungDashboard, GrossveranstaltungAbschnitt, Grossereignis)
+from .forms import (TicketCreateForm, TicketCommentForm, TicketCategoryForm, InfoMonitorForm, GrossereignisForm,
                      InfoMonitorVehicleForm, BereitschaftPersonForm,
                      MappeLinkForm, MappeKontaktForm, MappeAnleitungForm,
                      GrossveranstaltungDashboardForm, GrossveranstaltungAbschnittFormSet)
@@ -112,16 +112,7 @@ class TicketListView(LoginRequiredMixin, TicketPermissionMixin, ListView):
         user = self.request.user
         context['is_processor'] = user.has_perm('tickets.process_ticket')
         context['is_creator'] = user.has_perm('tickets.create_ticket')
-        context['has_both_roles'] = context['is_processor'] and context['is_creator']
         context['status_choices'] = TicketStatus.choices
-
-        # Aktive Rolle aus Session (Standard: processor wenn beide Rollen)
-        if context['has_both_roles']:
-            context['active_role'] = self.request.session.get('ticket_role', 'processor')
-        elif context['is_processor']:
-            context['active_role'] = 'processor'
-        else:
-            context['active_role'] = 'creator'
 
         # Stats - gefiltert nach Sichtbarkeit
         base_qs = Ticket.objects.all()
@@ -159,19 +150,10 @@ class TicketDetailView(LoginRequiredMixin, TicketPermissionMixin, DetailView):
         user = self.request.user
         context['is_processor'] = user.has_perm('tickets.process_ticket')
         context['is_creator'] = user.has_perm('tickets.create_ticket')
-        context['has_both_roles'] = context['is_processor'] and context['is_creator']
         context['comment_form'] = TicketCommentForm()
 
-        # Aktive Rolle aus Session
-        if context['has_both_roles']:
-            context['active_role'] = self.request.session.get('ticket_role', 'processor')
-        elif context['is_processor']:
-            context['active_role'] = 'processor'
-        else:
-            context['active_role'] = 'creator'
-
-        # Prüfe ob Benutzer in aktiver Rolle Aktionen durchführen kann
-        context['can_process'] = context['active_role'] == 'processor' and context['is_processor']
+        # Bearbeiter-Recht entscheidet direkt über Aktionen (kein Rollen-Switch mehr)
+        context['can_process'] = context['is_processor']
         context['is_own_ticket'] = self.object.created_by == user
 
         # Get comments - filter internal if user is not in processor role
@@ -276,16 +258,8 @@ def add_comment(request, pk):
             comment.ticket = ticket
             comment.author = request.user
 
-            # Aktive Rolle prüfen für interne Kommentare
-            has_both = is_processor and is_creator
-            if has_both:
-                active_role = request.session.get('ticket_role', 'processor')
-                can_internal = active_role == 'processor'
-            else:
-                can_internal = is_processor
-
-            # Only processors in processor role can create internal comments
-            if not can_internal:
+            # Nur Bearbeiter dürfen interne Kommentare anlegen
+            if not is_processor:
                 comment.is_internal = False
 
             comment.save()
@@ -336,40 +310,9 @@ def send_comment_notification(ticket, comment, author):
         pass
 
 
-def switch_role(request):
-    """Rolle wechseln zwischen Ersteller und Bearbeiter"""
-    if request.method == 'POST':
-        new_role = request.POST.get('role')
-        if new_role in ['creator', 'processor']:
-            # Prüfe ob der Benutzer beide Rollen hat
-            has_processor = request.user.has_perm('tickets.process_ticket')
-            has_creator = request.user.has_perm('tickets.create_ticket')
-
-            if has_processor and has_creator:
-                request.session['ticket_role'] = new_role
-                role_name = 'Bearbeiter' if new_role == 'processor' else 'Ersteller'
-                messages.success(request, f'Rolle gewechselt zu: {role_name}')
-
-    # Zurück zur vorherigen Seite oder zur Ticket-Liste
-    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'tickets:list'
-    if next_url.startswith('/'):
-        return redirect(next_url)
-    return redirect('tickets:list')
-
-
 def update_ticket(request, pk):
     """Ticket-Eigenschaften aktualisieren (Status, Priorität, Zuweisung)"""
-    # Prüfe Berechtigung basierend auf aktiver Rolle
-    has_processor = request.user.has_perm('tickets.process_ticket')
-    has_both = has_processor and request.user.has_perm('tickets.create_ticket')
-
-    # Bei beiden Rollen: aktive Rolle aus Session prüfen
-    if has_both:
-        active_role = request.session.get('ticket_role', 'processor')
-        if active_role != 'processor':
-            messages.error(request, 'Bitte wechseln Sie zur Bearbeiter-Rolle um das Ticket zu bearbeiten.')
-            return redirect('tickets:detail', pk=pk)
-    elif not has_processor:
+    if not request.user.has_perm('tickets.process_ticket'):
         messages.error(request, 'Keine Berechtigung.')
         return redirect('tickets:list')
 
@@ -452,17 +395,7 @@ def update_ticket(request, pk):
 
 def close_ticket(request, pk):
     """Ticket abschließen mit optionalem Kommentar"""
-    # Prüfe Berechtigung basierend auf aktiver Rolle
-    has_processor = request.user.has_perm('tickets.process_ticket')
-    has_both = has_processor and request.user.has_perm('tickets.create_ticket')
-
-    # Bei beiden Rollen: aktive Rolle aus Session prüfen
-    if has_both:
-        active_role = request.session.get('ticket_role', 'processor')
-        if active_role != 'processor':
-            messages.error(request, 'Bitte wechseln Sie zur Bearbeiter-Rolle um das Ticket abzuschließen.')
-            return redirect('tickets:detail', pk=pk)
-    elif not has_processor:
+    if not request.user.has_perm('tickets.process_ticket'):
         messages.error(request, 'Keine Berechtigung.')
         return redirect('tickets:list')
 
@@ -604,6 +537,9 @@ class InfoMonitorDisplayView(LoginRequiredMixin, UserPassesTestMixin, DetailView
         context = super().get_context_data(**kwargs)
         context['can_edit'] = self.request.user.has_perm('tickets.edit_infomonitor')
         context['can_edit_mappe'] = _has_mappe_access(self.request.user)
+        context['grossereignisse'] = Grossereignis.objects.filter(ende__isnull=True).order_by('beginn')
+        context['grossereignisse_beendet'] = Grossereignis.objects.filter(ende__isnull=False)[:5]
+        context['grossereignis_form'] = GrossereignisForm(initial={'beginn': timezone.localtime().replace(second=0, microsecond=0)})
         context['monitor_vehicles'] = self.object.monitor_vehicles.order_by('position')
         context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
         # FF Züge
@@ -727,20 +663,32 @@ class InfoMonitorKioskView(DetailView):
         ).prefetch_related('abschnitte').order_by('-created_at')
         context['monitor_vehicles'] = self.object.monitor_vehicles.order_by('position')
         context['vehicle_count'] = context['monitor_vehicles'].count()
+        context['grossereignisse'] = Grossereignis.objects.filter(ende__isnull=True).order_by('beginn')
         context['monitor_sonstiges'] = self.object.monitor_sonstiges.order_by('position')
         m = self.object
-        context['bereitschaft_entries'] = [
-            {'label': label, 'value': getattr(m, f'bereitschaft_{key}'),
-             'note': getattr(m, f'bereitschaft_{key}_note'),
-             'changed_at': getattr(m, f'bereitschaft_{key}_changed_at')}
-            for key, label in [
-                ('a1_dienst', 'A1-Dienst'), ('a2_dienst', 'A2-Dienst'),
-                ('b_dienst', 'B-Dienst'), ('c_dienst', 'C-Dienst'),
-                ('lagedienst', 'Lagedienst'), ('lna', 'LNA'),
-                ('o_amt', 'Ordnungsamt'), ('g_amt', 'Gesundheitsamt'),
-                ('veterinaeramt', 'Veterinäramt'),
-            ]
-        ]
+        import json
+        import re as _re
+        entries = []
+        for key, label in [
+            ('a1_dienst', 'A1-Dienst'), ('a2_dienst', 'A2-Dienst'),
+            ('b_dienst', 'B-Dienst'), ('c_dienst', 'C-Dienst'),
+            ('lagedienst', 'Lagedienst'), ('lna', 'LNA'),
+            ('o_amt', 'Ordnungsamt'), ('g_amt', 'Gesundheitsamt'),
+            ('veterinaeramt', 'Veterinäramt'),
+        ]:
+            person = getattr(m, f'bereitschaft_{key}')
+            note = getattr(m, f'bereitschaft_{key}_note')
+            # Telefonfeld kann mehrere Nummern enthalten (getrennt durch , ; oder /)
+            phones = [t.strip() for t in _re.split(r'[,;/]', person.phone) if t.strip()] if person and person.phone else []
+            entries.append({
+                'label': label, 'value': person, 'note': note,
+                'changed_at': getattr(m, f'bereitschaft_{key}_changed_at'),
+                'phones': phones,
+                'contact_json': json.dumps({
+                    'label': label, 'name': person.name, 'note': note, 'phones': phones,
+                }, ensure_ascii=False) if phones else '',
+            })
+        context['bereitschaft_entries'] = entries
         # FF Züge für Kiosk-Ansicht
         from .models import FFZugStatus
         _ffv = list(self.object.ff_fahrzeuge.all())
@@ -754,6 +702,67 @@ class InfoMonitorKioskView(DetailView):
         ]
         context['FFZugStatus'] = FFZugStatus
         return context
+
+
+# =============================================================================
+# Großereignis (Info-Monitor)
+# =============================================================================
+
+def _grossereignis_form_errors(request, form):
+    for field, errors in form.errors.items():
+        label = form.fields[field].label if field in form.fields else field
+        for err in errors:
+            messages.error(request, f'{label}: {err}')
+
+
+def grossereignis_start(request):
+    """Großereignis starten (Info-Monitor-Seite)"""
+    if not request.user.has_perm('tickets.edit_infomonitor'):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:infomonitor_display')
+
+    if request.method == 'POST':
+        form = GrossereignisForm(request.POST)
+        if form.is_valid():
+            ereignis = form.save(commit=False)
+            ereignis.created_by = request.user
+            ereignis.save()
+            messages.success(request, f'Großereignis „{ereignis.titel}“ gestartet.')
+        else:
+            _grossereignis_form_errors(request, form)
+    return redirect('tickets:infomonitor_display')
+
+
+def grossereignis_update(request, pk):
+    """Großereignis korrigieren (Titel, Beginn, Hinweise)"""
+    if not request.user.has_perm('tickets.edit_infomonitor'):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:infomonitor_display')
+
+    ereignis = get_object_or_404(Grossereignis, pk=pk, ende__isnull=True)
+    if request.method == 'POST':
+        form = GrossereignisForm(request.POST, instance=ereignis)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Großereignis „{ereignis.titel}“ aktualisiert.')
+        else:
+            _grossereignis_form_errors(request, form)
+    return redirect('tickets:infomonitor_display')
+
+
+def grossereignis_end(request, pk):
+    """Großereignis beenden – bleibt als Historie erhalten"""
+    if not request.user.has_perm('tickets.edit_infomonitor'):
+        messages.error(request, 'Keine Berechtigung.')
+        return redirect('tickets:infomonitor_display')
+
+    ereignis = get_object_or_404(Grossereignis, pk=pk)
+    if request.method == 'POST' and ereignis.ende is None:
+        ereignis.ende = timezone.now()
+        ereignis.ended_by = request.user
+        ereignis.save(update_fields=['ende', 'ended_by'])
+        messages.success(request, f'Großereignis „{ereignis.titel}“ beendet (Laufzeit {ereignis.dauer_text}).')
+    return redirect('tickets:infomonitor_display')
 
 
 # =============================================================================

@@ -11,7 +11,6 @@ app_name = 'tickets'
 urlpatterns = [
     path('', views.TicketListView.as_view(), name='list'),
     path('create/', views.TicketCreateView.as_view(), name='create'),
-    path('switch-role/', views.switch_role, name='switch_role'),
     path('<int:pk>/', views.TicketDetailView.as_view(), name='detail'),
     path('<int:pk>/comment/', views.add_comment, name='add_comment'),
     path('<int:pk>/update/', views.update_ticket, name='update_ticket'),
@@ -21,6 +20,11 @@ urlpatterns = [
     path('infomonitor/', views.InfoMonitorDisplayView.as_view(), name='infomonitor_display'),
     path('infomonitor/edit/', views.InfoMonitorEditView.as_view(), name='infomonitor_edit'),
     path('infomonitor/kiosk/', views.InfoMonitorKioskView.as_view(), name='infomonitor_kiosk'),
+
+    # Großereignis (Info-Monitor)
+    path('infomonitor/grossereignis/start/', views.grossereignis_start, name='grossereignis_start'),
+    path('infomonitor/grossereignis/<int:pk>/update/', views.grossereignis_update, name='grossereignis_update'),
+    path('infomonitor/grossereignis/<int:pk>/end/', views.grossereignis_end, name='grossereignis_end'),
 
     # Kategorie-Verwaltung
     path('categories/', views.CategoryListView.as_view(), name='category_list'),

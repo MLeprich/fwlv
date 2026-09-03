@@ -219,7 +219,7 @@ class InfoMonitorForm(forms.ModelForm):
             elif isinstance(field, forms.CharField) and not isinstance(field.widget, forms.Textarea):
                 field.widget.attrs.setdefault('class', tw)
 
-        textarea_fields = ['geraete']
+        textarea_fields = ['geraete', 'bereitschaft_freitext']
         for name in textarea_fields:
             self.fields[name].widget = forms.Textarea(attrs={'class': tw, 'rows': 2})
 
@@ -229,6 +229,8 @@ class InfoMonitorForm(forms.ModelForm):
             self.fields[ff_field].widget = forms.RadioSelect(choices=FFZugStatus.choices)
 
         # Laufband
+        self.fields['bereitschaft_freitext'].widget.attrs.update({'rows': 3, 'placeholder': 'Freitext, z.B. Hinweise zur Bereitschaft...'})
+
         self.fields['laufband_text'].widget = forms.Textarea(attrs={'class': tw, 'rows': 2, 'placeholder': 'Text für das Laufband...'})
         self.fields['laufband_geschwindigkeit'].widget = forms.NumberInput(attrs={'class': tw, 'min': '5', 'max': '60'})
 
@@ -475,3 +477,21 @@ GrossveranstaltungAbschnittFormSet = inlineformset_factory(
     extra=1,
     can_delete=True,
 )
+
+
+class GrossereignisForm(forms.ModelForm):
+    """Großereignis starten oder korrigieren (Info-Monitor)"""
+
+    class Meta:
+        from .models import Grossereignis
+        model = Grossereignis
+        fields = ['titel', 'beschreibung', 'beginn']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        tw = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500'
+        self.fields['titel'].widget.attrs.update({'class': tw, 'placeholder': 'z.B. Großbrand Industriestraße', 'autofocus': True})
+        self.fields['beschreibung'].widget = forms.Textarea(attrs={'class': tw, 'rows': 2, 'placeholder': 'Optional: Einsatzabschnitte, Führung, Hinweise...'})
+        self.fields['beginn'].widget = forms.DateTimeInput(format='%Y-%m-%dT%H:%M', attrs={'class': tw, 'type': 'datetime-local'})
+        self.fields['beginn'].input_formats = ['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M', '%d.%m.%Y %H:%M']
+        self.fields['beginn'].help_text = 'Seit wann läuft das Ereignis? Vorbelegt mit jetzt.'

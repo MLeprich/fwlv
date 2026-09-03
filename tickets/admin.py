@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import InfoMonitor, InfoMonitorVehicle, MappeLink, MappeKontakt, MappeAnleitung
+from .models import InfoMonitor, InfoMonitorVehicle, MappeLink, MappeKontakt, MappeAnleitung, Grossereignis
 
 
 class InfoMonitorVehicleInline(admin.TabularInline):
@@ -42,3 +42,11 @@ class MappeAnleitungAdmin(admin.ModelAdmin):
     list_display = ['title', 'is_active', 'order']
     list_filter = ['is_active']
     list_editable = ['is_active', 'order']
+
+
+@admin.register(Grossereignis)
+class GrossereignisAdmin(admin.ModelAdmin):
+    list_display = ['titel', 'beginn', 'ende', 'created_by']
+    list_filter = ['ende']
+    search_fields = ['titel', 'beschreibung']
+    date_hierarchy = 'beginn'

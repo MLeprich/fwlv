@@ -609,6 +609,13 @@ class InfoMonitor(models.Model):
     bereitschaft_g_amt_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('Gesundheitsamt Notiz'))
     bereitschaft_veterinaeramt_note = models.CharField(max_length=200, blank=True, default='', verbose_name=_('Veterinäramt Notiz'))
 
+    # Freitext in der Bereitschafts-Kachel (Platz neben dem Veterinäramt)
+    bereitschaft_freitext = models.TextField(
+        blank=True, default='',
+        verbose_name=_('Freitext Bereitschaft'),
+        help_text=_('Wird in der Kachel „Bereitschaft“ neben dem Veterinäramt angezeigt')
+    )
+
     # =========================================================================
     # PERSONAL – FW1
     # =========================================================================
@@ -1081,3 +1088,59 @@ class GrossveranstaltungAbschnitt(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Grossereignis(models.Model):
+    """
+    Laufendes Großereignis für den Info-Monitor.
+
+    Wird auf der Info-Monitor-Seite gestartet und läuft, bis es beendet wird.
+    Anzeige und Kiosk zeigen Beginn und laufende Dauer, damit die zeitliche
+    Übersicht bei langen Lagen nicht verloren geht. Beendete Ereignisse bleiben
+    als Historie erhalten.
+    """
+    titel = models.CharField(max_length=200, verbose_name=_('Ereignis'))
+    beschreibung = models.TextField(blank=True, default='', verbose_name=_('Hinweise'))
+    beginn = models.DateTimeField(verbose_name=_('Beginn'))
+    ende = models.DateTimeField(null=True, blank=True, verbose_name=_('Ende'))
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Angelegt am'))
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+', verbose_name=_('Angelegt von')
+    )
+    ended_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+', verbose_name=_('Beendet von')
+    )
+
+    class Meta:
+        verbose_name = _('Großereignis')
+        verbose_name_plural = _('Großereignisse')
+        ordering = ['-beginn']
+
+    def __str__(self):
+        return self.titel
+
+    @property
+    def aktiv(self):
+        return self.ende is None
+
+    @property
+    def dauer(self):
+        from django.utils import timezone as _tz
+        return (self.ende or _tz.now()) - self.beginn
+
+    @property
+    def dauer_text(self):
+        """Laufzeit lesbar, z.B. „2 Std. 15 Min.“ – wird im Browser sekündlich fortgeschrieben."""
+        minutes = max(0, int(self.dauer.total_seconds() // 60))
+        days, rest = divmod(minutes, 60 * 24)
+        hours, mins = divmod(rest, 60)
+        parts = []
+        if days:
+            parts.append(f'{days} Tag' if days == 1 else f'{days} Tage')
+        if days or hours:
+            parts.append(f'{hours} Std.')
+        parts.append(f'{mins} Min.')
+        return ' '.join(parts)
