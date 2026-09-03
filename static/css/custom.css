@@ -164,9 +164,104 @@
     color: #6B7280;
 }
 
-/* Dark mode - Buttons */
-.dark button:not(.bg-primary-600):not(.bg-red-600):not(.bg-green-600) {
+/* Dark mode - Buttons
+   Weiße Buttons (.bg-white) werden hier bewusst ausgenommen: ihre Textfarbe
+   wird weiter unten je nach Kontext gesetzt. */
+.dark button:not(.bg-primary-600):not(.bg-red-600):not(.bg-green-600):not(.bg-white) {
     color: #F9FAFB;
+}
+
+/* Dark mode - Weiße Buttons mit farbiger Schrift
+   Problem: ".dark .bg-white" färbt den Hintergrund dunkel, die dunkle
+   Schriftfarbe (z.B. text-indigo-700) bleibt -> dunkel auf dunkel.
+   Außerhalb farbiger Header bekommt die Schrift deshalb eine helle Variante. */
+.dark .bg-white.text-indigo-600, .dark .bg-white.text-indigo-700, .dark .bg-white.text-indigo-800 {
+    color: #A5B4FC !important;
+}
+
+.dark .bg-white.text-blue-600, .dark .bg-white.text-blue-700, .dark .bg-white.text-blue-800 {
+    color: #93C5FD !important;
+}
+
+.dark .bg-white.text-red-600, .dark .bg-white.text-red-700, .dark .bg-white.text-red-800 {
+    color: #FCA5A5 !important;
+}
+
+.dark .bg-white.text-green-600, .dark .bg-white.text-green-700, .dark .bg-white.text-green-800 {
+    color: #86EFAC !important;
+}
+
+.dark .bg-white.text-purple-600, .dark .bg-white.text-purple-700, .dark .bg-white.text-purple-800 {
+    color: #D8B4FE !important;
+}
+
+.dark .bg-white.text-teal-600, .dark .bg-white.text-teal-700, .dark .bg-white.text-teal-800 {
+    color: #5EEAD4 !important;
+}
+
+.dark .bg-white.text-amber-600, .dark .bg-white.text-amber-700, .dark .bg-white.text-amber-800 {
+    color: #FCD34D !important;
+}
+
+.dark .bg-white.text-orange-600, .dark .bg-white.text-orange-700, .dark .bg-white.text-orange-800 {
+    color: #FDBA74 !important;
+}
+
+.dark .bg-white.text-yellow-600, .dark .bg-white.text-yellow-700, .dark .bg-white.text-yellow-800 {
+    color: #FDE047 !important;
+}
+
+/* Dark mode - Weiße Buttons auf farbigen Verlaufs-Headern
+   (z.B. Leitstelle, Info-Monitor, Digitale Mappe): Der Header bleibt auch im
+   Darkmode farbig, deshalb bleiben die Buttons darauf weiß mit dunkler Schrift. */
+.dark [class*="bg-gradient-to"] a.bg-white,
+.dark [class*="bg-gradient-to"] button.bg-white {
+    background-color: #FFFFFF !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white:hover,
+.dark [class*="bg-gradient-to"] button.bg-white:hover {
+    background-color: #F3F4F6 !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white.text-indigo-600, .dark [class*="bg-gradient-to"] button.bg-white.text-indigo-600, .dark [class*="bg-gradient-to"] a.bg-white.text-indigo-700, .dark [class*="bg-gradient-to"] button.bg-white.text-indigo-700, .dark [class*="bg-gradient-to"] a.bg-white.text-indigo-800, .dark [class*="bg-gradient-to"] button.bg-white.text-indigo-800 {
+    color: #4338CA !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white.text-blue-600, .dark [class*="bg-gradient-to"] button.bg-white.text-blue-600, .dark [class*="bg-gradient-to"] a.bg-white.text-blue-700, .dark [class*="bg-gradient-to"] button.bg-white.text-blue-700, .dark [class*="bg-gradient-to"] a.bg-white.text-blue-800, .dark [class*="bg-gradient-to"] button.bg-white.text-blue-800 {
+    color: #1D4ED8 !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white.text-red-600, .dark [class*="bg-gradient-to"] button.bg-white.text-red-600, .dark [class*="bg-gradient-to"] a.bg-white.text-red-700, .dark [class*="bg-gradient-to"] button.bg-white.text-red-700, .dark [class*="bg-gradient-to"] a.bg-white.text-red-800, .dark [class*="bg-gradient-to"] button.bg-white.text-red-800 {
+    color: #B91C1C !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white.text-green-600, .dark [class*="bg-gradient-to"] button.bg-white.text-green-600, .dark [class*="bg-gradient-to"] a.bg-white.text-green-700, .dark [class*="bg-gradient-to"] button.bg-white.text-green-700, .dark [class*="bg-gradient-to"] a.bg-white.text-green-800, .dark [class*="bg-gradient-to"] button.bg-white.text-green-800 {
+    color: #15803D !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white.text-purple-600, .dark [class*="bg-gradient-to"] button.bg-white.text-purple-600, .dark [class*="bg-gradient-to"] a.bg-white.text-purple-700, .dark [class*="bg-gradient-to"] button.bg-white.text-purple-700, .dark [class*="bg-gradient-to"] a.bg-white.text-purple-800, .dark [class*="bg-gradient-to"] button.bg-white.text-purple-800 {
+    color: #7E22CE !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white.text-teal-600, .dark [class*="bg-gradient-to"] button.bg-white.text-teal-600, .dark [class*="bg-gradient-to"] a.bg-white.text-teal-700, .dark [class*="bg-gradient-to"] button.bg-white.text-teal-700, .dark [class*="bg-gradient-to"] a.bg-white.text-teal-800, .dark [class*="bg-gradient-to"] button.bg-white.text-teal-800 {
+    color: #0F766E !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white.text-amber-600, .dark [class*="bg-gradient-to"] button.bg-white.text-amber-600, .dark [class*="bg-gradient-to"] a.bg-white.text-amber-700, .dark [class*="bg-gradient-to"] button.bg-white.text-amber-700, .dark [class*="bg-gradient-to"] a.bg-white.text-amber-800, .dark [class*="bg-gradient-to"] button.bg-white.text-amber-800 {
+    color: #B45309 !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white.text-orange-600, .dark [class*="bg-gradient-to"] button.bg-white.text-orange-600, .dark [class*="bg-gradient-to"] a.bg-white.text-orange-700, .dark [class*="bg-gradient-to"] button.bg-white.text-orange-700, .dark [class*="bg-gradient-to"] a.bg-white.text-orange-800, .dark [class*="bg-gradient-to"] button.bg-white.text-orange-800 {
+    color: #C2410C !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white.text-yellow-600, .dark [class*="bg-gradient-to"] button.bg-white.text-yellow-600, .dark [class*="bg-gradient-to"] a.bg-white.text-yellow-700, .dark [class*="bg-gradient-to"] button.bg-white.text-yellow-700, .dark [class*="bg-gradient-to"] a.bg-white.text-yellow-800, .dark [class*="bg-gradient-to"] button.bg-white.text-yellow-800 {
+    color: #A16207 !important;
+}
+
+.dark [class*="bg-gradient-to"] a.bg-white.text-gray-600, .dark [class*="bg-gradient-to"] button.bg-white.text-gray-600, .dark [class*="bg-gradient-to"] a.bg-white.text-gray-700, .dark [class*="bg-gradient-to"] button.bg-white.text-gray-700, .dark [class*="bg-gradient-to"] a.bg-white.text-gray-800, .dark [class*="bg-gradient-to"] button.bg-white.text-gray-800 {
+    color: #374151 !important;
 }
 
 /* Dark mode - Cards & Panels */
