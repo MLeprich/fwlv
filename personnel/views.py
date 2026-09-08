@@ -1359,6 +1359,7 @@ class QualificationCreateView(LoginRequiredMixin, PermissionRequiredMixin, NotOw
         )
 
         response = super().form_valid(form)
+        _notify_ff_verwalter(self.request, self.object.person, f'Qualifikation „{self.object.name}“ hinzugefügt')
 
         # Bei HTMX-Request: Redirect zur Detail-Seite
         if self.request.headers.get('HX-Request'):
@@ -1411,6 +1412,7 @@ class QualificationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, NotOw
         )
 
         response = super().form_valid(form)
+        _notify_ff_verwalter(self.request, self.object.person, f'Qualifikation „{self.object.name}“ geändert')
 
         # Bei HTMX-Request: Redirect zur Detail-Seite
         if self.request.headers.get('HX-Request'):
@@ -1453,6 +1455,7 @@ class QualificationDeleteView(LoginRequiredMixin, PermissionRequiredMixin, NotOw
             _('Qualifikation "{}" wurde erfolgreich gelöscht.').format(qualification.name)
         )
 
+        _notify_ff_verwalter(request, person, f'Qualifikation „{qualification.name}“ gelöscht')
         return super().delete(request, *args, **kwargs)
 
 
@@ -2794,6 +2797,7 @@ class DutyHoursEntryCreateView(LoginRequiredMixin, PermissionRequiredMixin, NotO
         )
 
         response = super().form_valid(form)
+        _notify_ff_verwalter(self.request, self.object.person, f'Pflichtstunden-Eintrag „{self.object.title}“ hinzugefügt')
 
         # Bei HTMX-Request: Redirect zur Detail-Seite
         if self.request.headers.get('HX-Request'):
@@ -2845,6 +2849,7 @@ class DutyHoursEntryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, NotO
         )
 
         response = super().form_valid(form)
+        _notify_ff_verwalter(self.request, self.object.person, f'Pflichtstunden-Eintrag „{self.object.title}“ geändert')
 
         # Bei HTMX-Request: Redirect zur Detail-Seite
         if self.request.headers.get('HX-Request'):
@@ -2886,6 +2891,7 @@ class DutyHoursEntryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, NotO
             _('Pflichtstunden-Eintrag "{}" wurde erfolgreich gelöscht.').format(entry.title)
         )
 
+        _notify_ff_verwalter(request, person, f'Pflichtstunden-Eintrag „{entry.title}“ gelöscht')
         return super().delete(request, *args, **kwargs)
 
 
@@ -3227,6 +3233,42 @@ def _is_ff_leader(user):
     return user.is_superuser or user.has_perm('personnel.manage_ff_person')
 
 
+def _notify_ff_verwalter(request, person, aenderung):
+    """
+    Benachrichtigt die FF Verwalter (In-App, Glocke), wenn ein FF-Einheitsführer
+    oder -Vertreter etwas an einer FF-Person geändert hat. Änderungen durch
+    Administratoren oder FF Verwalter selbst lösen keine Meldung aus.
+    """
+    actor = request.user
+    if _ff_has_all_units(actor) or not actor.has_perm('personnel.manage_ff_person'):
+        return
+    try:
+        from django.contrib.auth import get_user_model
+        from notifications.utils import create_notification
+        from notifications.models import NotificationCategory
+
+        unit = person.volunteer_unit
+        unit_name = f' ({unit.name})' if unit else ''
+        actor_name = actor.get_full_name() or actor.username
+        empfaenger = get_user_model().objects.filter(
+            groups__name=Roles.FF_VERWALTER, is_active=True
+        ).exclude(pk=actor.pk).distinct()
+        url = reverse('personnel:ff_person_edit', args=[person.pk])
+        for user in empfaenger:
+            create_notification(
+                recipient=user,
+                title=f'FF-Verwaltung: Änderung durch {actor_name}',
+                message=f'{actor_name} hat {person.get_full_name()}{unit_name} geändert: {aenderung}',
+                category=NotificationCategory.PERSONNEL,
+                obj=person,
+                action_url=url,
+                send_email=False,  # rein In-App, kein Mailausgang
+            )
+    except Exception:  # Benachrichtigung darf die Änderung nie blockieren
+        import logging
+        logging.getLogger(__name__).exception('FF-Verwalter-Benachrichtigung fehlgeschlagen')
+
+
 @login_required
 def ff_dashboard(request):
     """
@@ -3388,6 +3430,8 @@ def ff_person_edit(request, pk):
         form = FFPersonForm(request.POST, instance=person)
         if form.is_valid():
             form.save()
+            geaendert = ', '.join(str(form.fields[f].label or f) for f in form.changed_data) or 'Stammdaten'
+            _notify_ff_verwalter(request, person, f'Personendaten bearbeitet ({geaendert})')
             messages.success(request, f'Daten von {person.get_full_name()} wurden aktualisiert.')
             return redirect(f"{reverse('personnel:ff_dashboard')}?unit={person.volunteer_unit_id}")
     else:
@@ -3440,6 +3484,7 @@ def ff_person_create(request):
             person.created_by = request.user
             person.updated_by = request.user
             person.save()
+            _notify_ff_verwalter(request, person, 'neue Person angelegt')
             messages.success(request, f'{person.get_full_name()} wurde erfolgreich angelegt und {selected_unit.name} zugewiesen.')
             return redirect(f"{reverse('personnel:ff_dashboard')}?unit={selected_unit.pk}")
     else:

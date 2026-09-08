@@ -247,6 +247,89 @@
 .dark button.bg-cyan-50 [class*="text-cyan-"], .dark button.bg-cyan-100 [class*="text-cyan-"],
 .dark button.bg-cyan-50[class*="text-cyan-"], .dark button.bg-cyan-100[class*="text-cyan-"] { color: #67E8F9 !important; }
 
+/* Dark mode - Helle Verlaufs-Header (from-<farbe>-50/100 to-<farbe>-50/100/200)
+   z.B. Dashboard-Schnellzugriff: Der Verlauf blieb hell, die Schrift wurde per
+   .dark .text-gray-900 weiß -> weiß auf hell. Nur die hellen Tints werden
+   abgedunkelt; kräftige Header (from-red-600 usw.) bleiben unverändert. */
+.dark .from-gray-50 { --tw-gradient-from: #1F2937 !important; }
+.dark .from-gray-100 { --tw-gradient-from: #1F2937 !important; }
+.dark .via-gray-50 { --tw-gradient-via: #1F2937 !important; }
+.dark .to-gray-50 { --tw-gradient-to: #1F2937 !important; }
+.dark .to-gray-100 { --tw-gradient-to: #1F2937 !important; }
+.dark .to-gray-200 { --tw-gradient-to: #374151 !important; }
+.dark .from-blue-50 { --tw-gradient-from: #1E3A5F !important; }
+.dark .from-blue-100 { --tw-gradient-from: #1E3A8A !important; }
+.dark .via-blue-50 { --tw-gradient-via: #1E3A5F !important; }
+.dark .to-blue-50 { --tw-gradient-to: #1E3A5F !important; }
+.dark .to-blue-100 { --tw-gradient-to: #1E3A8A !important; }
+.dark .to-blue-200 { --tw-gradient-to: #1E40AF !important; }
+.dark .from-indigo-50 { --tw-gradient-from: #1E1B4B !important; }
+.dark .from-indigo-100 { --tw-gradient-from: #312E81 !important; }
+.dark .via-indigo-50 { --tw-gradient-via: #1E1B4B !important; }
+.dark .to-indigo-50 { --tw-gradient-to: #1E1B4B !important; }
+.dark .to-indigo-100 { --tw-gradient-to: #312E81 !important; }
+.dark .to-indigo-200 { --tw-gradient-to: #3730A3 !important; }
+.dark .from-purple-50 { --tw-gradient-from: #3B0764 !important; }
+.dark .from-purple-100 { --tw-gradient-from: #581C87 !important; }
+.dark .via-purple-50 { --tw-gradient-via: #3B0764 !important; }
+.dark .to-purple-50 { --tw-gradient-to: #3B0764 !important; }
+.dark .to-purple-100 { --tw-gradient-to: #581C87 !important; }
+.dark .to-purple-200 { --tw-gradient-to: #6B21A8 !important; }
+.dark .from-green-50 { --tw-gradient-from: #052E16 !important; }
+.dark .from-green-100 { --tw-gradient-from: #14532D !important; }
+.dark .via-green-50 { --tw-gradient-via: #052E16 !important; }
+.dark .to-green-50 { --tw-gradient-to: #052E16 !important; }
+.dark .to-green-100 { --tw-gradient-to: #14532D !important; }
+.dark .to-green-200 { --tw-gradient-to: #166534 !important; }
+.dark .from-emerald-50 { --tw-gradient-from: #022C22 !important; }
+.dark .from-emerald-100 { --tw-gradient-from: #064E3B !important; }
+.dark .via-emerald-50 { --tw-gradient-via: #022C22 !important; }
+.dark .to-emerald-50 { --tw-gradient-to: #022C22 !important; }
+.dark .to-emerald-100 { --tw-gradient-to: #064E3B !important; }
+.dark .to-emerald-200 { --tw-gradient-to: #065F46 !important; }
+.dark .from-teal-50 { --tw-gradient-from: #042F2E !important; }
+.dark .from-teal-100 { --tw-gradient-from: #134E4A !important; }
+.dark .via-teal-50 { --tw-gradient-via: #042F2E !important; }
+.dark .to-teal-50 { --tw-gradient-to: #042F2E !important; }
+.dark .to-teal-100 { --tw-gradient-to: #134E4A !important; }
+.dark .to-teal-200 { --tw-gradient-to: #115E59 !important; }
+.dark .from-cyan-50 { --tw-gradient-from: #083344 !important; }
+.dark .from-cyan-100 { --tw-gradient-from: #164E63 !important; }
+.dark .via-cyan-50 { --tw-gradient-via: #083344 !important; }
+.dark .to-cyan-50 { --tw-gradient-to: #083344 !important; }
+.dark .to-cyan-100 { --tw-gradient-to: #164E63 !important; }
+.dark .to-cyan-200 { --tw-gradient-to: #155E75 !important; }
+.dark .from-red-50 { --tw-gradient-from: #450A0A !important; }
+.dark .from-red-100 { --tw-gradient-from: #7F1D1D !important; }
+.dark .via-red-50 { --tw-gradient-via: #450A0A !important; }
+.dark .to-red-50 { --tw-gradient-to: #450A0A !important; }
+.dark .to-red-100 { --tw-gradient-to: #7F1D1D !important; }
+.dark .to-red-200 { --tw-gradient-to: #991B1B !important; }
+.dark .from-orange-50 { --tw-gradient-from: #431407 !important; }
+.dark .from-orange-100 { --tw-gradient-from: #7C2D12 !important; }
+.dark .via-orange-50 { --tw-gradient-via: #431407 !important; }
+.dark .to-orange-50 { --tw-gradient-to: #431407 !important; }
+.dark .to-orange-100 { --tw-gradient-to: #7C2D12 !important; }
+.dark .to-orange-200 { --tw-gradient-to: #9A3412 !important; }
+.dark .from-amber-50 { --tw-gradient-from: #451A03 !important; }
+.dark .from-amber-100 { --tw-gradient-from: #78350F !important; }
+.dark .via-amber-50 { --tw-gradient-via: #451A03 !important; }
+.dark .to-amber-50 { --tw-gradient-to: #451A03 !important; }
+.dark .to-amber-100 { --tw-gradient-to: #78350F !important; }
+.dark .to-amber-200 { --tw-gradient-to: #92400E !important; }
+.dark .from-yellow-50 { --tw-gradient-from: #422006 !important; }
+.dark .from-yellow-100 { --tw-gradient-from: #713F12 !important; }
+.dark .via-yellow-50 { --tw-gradient-via: #422006 !important; }
+.dark .to-yellow-50 { --tw-gradient-to: #422006 !important; }
+.dark .to-yellow-100 { --tw-gradient-to: #713F12 !important; }
+.dark .to-yellow-200 { --tw-gradient-to: #854D0E !important; }
+.dark .from-pink-50 { --tw-gradient-from: #500724 !important; }
+.dark .from-pink-100 { --tw-gradient-from: #831843 !important; }
+.dark .via-pink-50 { --tw-gradient-via: #500724 !important; }
+.dark .to-pink-50 { --tw-gradient-to: #500724 !important; }
+.dark .to-pink-100 { --tw-gradient-to: #831843 !important; }
+.dark .to-pink-200 { --tw-gradient-to: #9D174D !important; }
+
 /* Dark mode - Weiße Buttons auf farbigen Verlaufs-Headern
    (z.B. Leitstelle, Info-Monitor, Digitale Mappe): Der Header bleibt auch im
    Darkmode farbig, deshalb bleiben die Buttons darauf weiß mit dunkler Schrift. */

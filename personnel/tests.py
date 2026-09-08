@@ -87,3 +87,55 @@ class FFVerwaltungRollenTests(TestCase):
         for role in (Roles.FF_EINHEITSFUEHRER, Roles.FF_VERTRETER, Roles.FF_VERWALTER, Roles.ADMINISTRATOR):
             self.assertTrue(Group.objects.get(name=role).permissions.filter(codename='manage_ff_person').exists(), role)
         self.assertFalse(Group.objects.get(name=Roles.PERSONALVERWALTER).permissions.filter(codename='manage_ff_person').exists())
+
+
+class FFVerwalterBenachrichtigungTests(TestCase):
+    """FF Verwalter werden über Änderungen durch Einheitsführer/Vertreter informiert."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from notifications.models import Notification  # noqa: F401 (App-Check)
+        setup_verwaltungsrollen()
+        cls.unit = VolunteerUnit.objects.create(name='LZ Alpha', sort_order=1)
+        creator = User.objects.create_user(username='creator', password='pw')
+        audit = {'created_by': creator, 'updated_by': creator}
+        cls.person = Person.objects.create(first_name='Anna', last_name='Alpha', personnel_number='FF-A1',
+                                           is_volunteer_fire_brigade=True, volunteer_unit=cls.unit, **audit)
+        cls.fuehrer = User.objects.create_user(username='fuehrer', password='pw', first_name='Frida', last_name='Führer')
+        cls.fuehrer.groups.add(Group.objects.get(name=Roles.FF_EINHEITSFUEHRER))
+        leader_person = Person.objects.create(first_name='Frida', last_name='Führer', personnel_number='FF-L1',
+                                              user=cls.fuehrer, volunteer_unit=cls.unit, **audit)
+        cls.unit.leader = leader_person
+        cls.unit.save()
+        cls.verwalter = User.objects.create_user(username='ffverwalter', password='pw')
+        cls.verwalter.groups.add(Group.objects.get(name=Roles.FF_VERWALTER))
+        cls.verwalter2 = User.objects.create_user(username='ffverwalter2', password='pw')
+        cls.verwalter2.groups.add(Group.objects.get(name=Roles.FF_VERWALTER))
+
+    def test_einheitsfuehrer_aenderung_benachrichtigt_alle_ff_verwalter(self):
+        from notifications.models import Notification
+        self.client.force_login(self.fuehrer)
+        resp = self.client.post(reverse('personnel:ff_person_edit', args=[self.person.pk]),
+                                {'email': 'anna@example.de', 'phone': '0208-1'})
+        self.assertEqual(resp.status_code, 302)
+        for verwalter in (self.verwalter, self.verwalter2):
+            n = Notification.objects.get(recipient=verwalter)
+            self.assertIn('Frida Führer', n.title)
+            self.assertIn('Anna Alpha', n.message)
+            self.assertIn('LZ Alpha', n.message)
+            self.assertEqual(n.action_url, reverse('personnel:ff_person_edit', args=[self.person.pk]))
+        self.assertFalse(Notification.objects.filter(recipient=self.fuehrer).exists())
+
+    def test_neue_person_und_qualifikation_benachrichtigen(self):
+        from notifications.models import Notification
+        self.client.force_login(self.fuehrer)
+        self.client.post(reverse('personnel:ff_person_create') + f'?unit={self.unit.pk}',
+                         {'first_name': 'Neu', 'last_name': 'Mitglied', 'personnel_number': 'FF-N1', 'unit': self.unit.pk})
+        self.assertTrue(Person.objects.filter(personnel_number='FF-N1').exists())
+        self.assertEqual(Notification.objects.filter(recipient=self.verwalter, message__contains='neue Person angelegt').count(), 1)
+
+    def test_ff_verwalter_selbst_loest_keine_meldung_aus(self):
+        from notifications.models import Notification
+        self.client.force_login(self.verwalter)
+        self.client.post(reverse('personnel:ff_person_edit', args=[self.person.pk]), {'email': 'anna@example.de'})
+        self.assertEqual(Notification.objects.count(), 0)
