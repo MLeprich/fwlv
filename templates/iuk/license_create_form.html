@@ -49,19 +49,29 @@
 
     <!-- Nachweise -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 class="text-base font-semibold text-gray-900 mb-1">Nachweise</h2>
-        <p class="text-sm text-gray-500 mb-4">
-            Alle zutreffenden Nachweise ankreuzen &ndash; mindestens einer wird ben&ouml;tigt.
-        </p>
+        <div class="flex items-start justify-between gap-4 mb-4">
+            <div>
+                <h2 class="text-base font-semibold text-gray-900 mb-1">Nachweise</h2>
+                <p class="text-sm text-gray-500">
+                    Alle zutreffenden Nachweise ankreuzen &ndash; mindestens einer wird ben&ouml;tigt.
+                </p>
+            </div>
+            {% if can_manage_kinds %}
+            <a href="{% url 'iuk:license_kind_list' %}" class="shrink-0 text-sm font-medium text-blue-600 hover:text-blue-800">Nachweisarten verwalten</a>
+            {% endif %}
+        </div>
 
         <div class="space-y-4">
             {% for block in form.license_blocks %}
             <div x-data="{ open: {{ block.selected.value|yesno:'true,false' }} }"
+                 data-license-block data-validity-years="{{ block.validity_years|default:'' }}"
                  class="rounded-lg border {% if block.has_errors %}border-red-300{% else %}border-gray-200{% endif %}">
                 <label class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 rounded-lg">
                     {{ block.selected }}
                     <span class="text-sm font-semibold text-gray-900">{{ block.label }}</span>
+                    {% if block.validity_years %}<span class="text-xs text-gray-400">&middot; Regelg&uuml;ltigkeit {{ block.validity_years }} Jahr{{ block.validity_years|pluralize:"e" }}</span>{% endif %}
                 </label>
+                {% if block.description %}<p class="px-4 -mt-1 pb-2 text-xs text-gray-500">{{ block.description }}</p>{% endif %}
 
                 <div x-show="open" {% if not block.selected.value %}style="display:none"{% endif %}
                      class="border-t border-gray-200 p-4 bg-gray-50 rounded-lg">
@@ -79,6 +89,17 @@
                     </div>
                 </div>
             </div>
+            {% empty %}
+            <div class="rounded-lg border border-dashed border-gray-300 p-6 text-center">
+                <p class="text-sm font-semibold text-gray-700 mb-1">Keine aktive Nachweisart vorhanden</p>
+                <p class="text-sm text-gray-500">
+                    {% if can_manage_kinds %}
+                    Legen Sie zuerst unter <a href="{% url 'iuk:license_kind_list' %}" class="text-blue-600 hover:text-blue-800 font-medium">Nachweisarten</a> fest, welche F&uuml;hrerscheine erfasst werden sollen.
+                    {% else %}
+                    Bitte wenden Sie sich an den Modulverantwortlichen, damit Nachweisarten angelegt werden.
+                    {% endif %}
+                </p>
+            </div>
             {% endfor %}
         </div>
     </div>
@@ -88,4 +109,25 @@
         <a href="{% url 'iuk:license_list' %}" class="px-5 py-2 rounded-lg text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors">Abbrechen</a>
     </div>
 </form>
+
+<script>
+// Ablaufdatum aus Ausstellungsdatum + Regelgültigkeit der Nachweisart vorbelegen
+// (nur, solange der Benutzer noch kein Ablaufdatum eingetragen hat).
+document.querySelectorAll('[data-license-block]').forEach(function (block) {
+    var years = parseInt(block.dataset.validityYears, 10);
+    if (!years) { return; }
+    var issued = block.querySelector('input[name$="_issued"]');
+    var expiry = block.querySelector('input[name$="_expiry"]');
+    if (!issued || !expiry) { return; }
+    var autoFilled = false;
+    issued.addEventListener('change', function () {
+        if (!issued.value || (expiry.value && !autoFilled)) { return; }
+        var parts = issued.value.split('-');
+        var d = new Date(Date.UTC(parseInt(parts[0], 10) + years, parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
+        expiry.value = d.toISOString().slice(0, 10);
+        autoFilled = true;
+    });
+    expiry.addEventListener('input', function () { autoFilled = false; });
+});
+</script>
 {% endblock %}

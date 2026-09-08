@@ -20,10 +20,11 @@ from django.views.generic import (CreateView, DeleteView, DetailView, FormView,
 
 from .forms import (DroneAccessoryFormSet, DroneChecklistForm, DroneForm,
                     DroneLicenseCreateForm, DroneLicenseForm,
-                    FlightLogCommentForm, FlightLogForm, VoucherAssignForm,
-                    VoucherForm, VoucherImportForm, VoucherUseForm)
+                    DroneLicenseKindForm, FlightLogCommentForm, FlightLogForm,
+                    VoucherAssignForm, VoucherForm, VoucherImportForm,
+                    VoucherUseForm)
 from .models import (CRITICAL_DAYS, WARNING_DAYS, ChecklistKind, Drone,
-                     DroneChecklist, DroneLicense, DroneLicenseType,
+                     DroneChecklist, DroneLicense, DroneLicenseKind,
                      DroneStatus, FlightLog, FlightOperationType, LicenseState,
                      Voucher, VoucherEventType, VoucherStatus)
 from .services import import_vouchers, parse_voucher_csv
@@ -273,7 +274,7 @@ class DroneLicenseListView(_IukMixin, ListView):
             )
 
         license_type = self.request.GET.get('license_type')
-        if license_type in dict(DroneLicenseType.choices):
+        if license_type:
             queryset = queryset.filter(license_type=license_type)
 
         today = date.today()
@@ -299,12 +300,13 @@ class DroneLicenseListView(_IukMixin, ListView):
         context['search'] = self.request.GET.get('search', '')
         context['active_type'] = self.request.GET.get('license_type', '')
         context['active_state'] = self.request.GET.get('state', '')
-        context['type_choices'] = DroneLicenseType.choices
+        context['type_choices'] = DroneLicenseKind.choices(include=context['active_type'])
         context['state_choices'] = LicenseState.choices
         context['stats'] = _license_state_counts(DroneLicense.objects.all())
         context['can_add'] = self.request.user.has_perm('iuk.add_dronelicense')
         context['can_change'] = self.request.user.has_perm('iuk.change_dronelicense')
         context['can_delete'] = self.request.user.has_perm('iuk.delete_dronelicense')
+        context['can_manage_kinds'] = self.request.user.has_perm('iuk.view_dronelicensekind')
         return context
 
 
@@ -315,6 +317,11 @@ class DroneLicenseCreateView(_IukMixin, FormView):
     extra_context = {**MODULE_CONTEXT, 'iuk_tab': 'licenses'}
     permission_required = 'iuk.add_dronelicense'
     success_url = reverse_lazy('iuk:license_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_manage_kinds'] = self.request.user.has_perm('iuk.add_dronelicensekind')
+        return context
 
     def form_valid(self, form):
         created = form.save(self.request.user)
@@ -367,6 +374,100 @@ class DroneLicenseDeleteView(_IukMixin, DeleteView):
 
 
 # ============================================================================
+# NACHWEISARTEN (Drohnenführerschein-Arten, z.B. A1/A3, A2, STS, BOS, EGRED)
+# ============================================================================
+
+class DroneLicenseKindListView(_IukMixin, ListView):
+    model = DroneLicenseKind
+    template_name = 'iuk/license_kind_list.html'
+    extra_context = {**MODULE_CONTEXT, 'iuk_tab': 'licenses'}
+    context_object_name = 'kinds'
+    permission_required = 'iuk.view_dronelicensekind'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Verwendung je Art in einer Abfrage je Tabelle statt je Zeile.
+        license_counts = dict(
+            DroneLicense.objects.values_list('license_type')
+            .annotate(total=Count('id')).values_list('license_type', 'total')
+        )
+        voucher_counts = dict(
+            Voucher.objects.exclude(intended_use='').values_list('intended_use')
+            .annotate(total=Count('id')).values_list('intended_use', 'total')
+        )
+        for kind in context['kinds']:
+            kind.license_total = license_counts.get(kind.code, 0)
+            kind.voucher_total = voucher_counts.get(kind.code, 0)
+        context['can_add'] = self.request.user.has_perm('iuk.add_dronelicensekind')
+        context['can_change'] = self.request.user.has_perm('iuk.change_dronelicensekind')
+        context['can_delete'] = self.request.user.has_perm('iuk.delete_dronelicensekind')
+        return context
+
+
+class DroneLicenseKindCreateView(_IukMixin, CreateView):
+    model = DroneLicenseKind
+    form_class = DroneLicenseKindForm
+    template_name = 'iuk/license_kind_form.html'
+    extra_context = {**MODULE_CONTEXT, 'iuk_tab': 'licenses'}
+    permission_required = 'iuk.add_dronelicensekind'
+    success_url = reverse_lazy('iuk:license_kind_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Nachweisart „{form.instance.name}“ wurde angelegt.')
+        return super().form_valid(form)
+
+
+class DroneLicenseKindUpdateView(_IukMixin, UpdateView):
+    model = DroneLicenseKind
+    form_class = DroneLicenseKindForm
+    template_name = 'iuk/license_kind_form.html'
+    extra_context = {**MODULE_CONTEXT, 'iuk_tab': 'licenses'}
+    permission_required = 'iuk.change_dronelicensekind'
+    success_url = reverse_lazy('iuk:license_kind_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Nachweisart „{form.instance.name}“ wurde aktualisiert.')
+        return super().form_valid(form)
+
+
+class DroneLicenseKindDeleteView(_IukMixin, DeleteView):
+    """Löschen nur, solange kein Führerschein/Gutschein die Art verwendet."""
+    model = DroneLicenseKind
+    template_name = 'iuk/confirm_delete.html'
+    permission_required = 'iuk.delete_dronelicensekind'
+    success_url = reverse_lazy('iuk:license_kind_list')
+
+    def _in_use_response(self, kind):
+        messages.error(
+            self.request,
+            f'Nachweisart „{kind.name}“ wird noch von {kind.usage_count} Eintrag/Einträgen '
+            'verwendet und kann nicht gelöscht werden. Deaktivieren Sie die Art stattdessen.',
+        )
+        return redirect('iuk:license_kind_list')
+
+    def get(self, request, *args, **kwargs):
+        kind = self.get_object()
+        if kind.is_in_use:
+            return self._in_use_response(kind)
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        kind = self.get_object()
+        if kind.is_in_use:
+            return self._in_use_response(kind)
+        messages.success(request, f'Nachweisart „{kind.name}“ wurde gelöscht.')
+        return super().post(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['object_label'] = 'Nachweisart'
+        context['object_name'] = self.object.name
+        context['cancel_url'] = reverse('iuk:license_kind_list')
+        return context
+
+
+
+# ============================================================================
 # GUTSCHEINCODES
 # ============================================================================
 
@@ -414,7 +515,7 @@ class VoucherListView(_IukMixin, ListView):
                 | Q(assigned_to_name__icontains=search)
             )
         intended_use = self.request.GET.get('intended_use')
-        if intended_use in dict(DroneLicenseType.choices):
+        if intended_use:
             queryset = queryset.filter(intended_use=intended_use)
         status = self.request.GET.get('status')
         if status in dict(VoucherStatus.choices):
@@ -428,7 +529,7 @@ class VoucherListView(_IukMixin, ListView):
         context['active_status'] = self.request.GET.get('status', '')
         context['active_use'] = self.request.GET.get('intended_use', '')
         context['status_choices'] = VoucherStatus.choices
-        context['type_choices'] = DroneLicenseType.choices
+        context['type_choices'] = DroneLicenseKind.choices(include=context['active_use'])
         context['stats'] = {
             'total': base.count(),
             'offen': base.filter(status=VoucherStatus.OFFEN).count(),

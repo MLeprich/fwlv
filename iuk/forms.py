@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from personnel.models import Person
 
 from .models import (ChecklistKind, Drone, DroneAccessory, DroneChecklist,
-                     DroneLicense, DroneLicenseType, FlightLog,
+                     DroneLicense, DroneLicenseKind, FlightLog,
                      FlightLogComment, FlightOperationType, LbaReport, Voucher,
                      VoucherStatus, normalize_checklist_items)
 
@@ -47,6 +47,24 @@ class _StyledModelForm(forms.ModelForm):
 def _person_queryset():
     """Aktive Personen, alphabetisch – für die Auswahlfelder."""
     return Person.objects.all().order_by('last_name', 'first_name')
+
+
+def _apply_license_kind_choices(form, field_name, current=None):
+    """
+    Macht aus dem Kürzel-Textfeld ein Auswahlfeld mit den aktiven Nachweisarten.
+
+    ``current`` (das gespeicherte Kürzel) wird zusätzlich angeboten, auch wenn
+    die Art inzwischen inaktiv ist.
+    """
+    field = form.fields[field_name]
+    choices = [('', '---------')] + DroneLicenseKind.choices(include=current)
+    form.fields[field_name] = forms.ChoiceField(
+        choices=choices,
+        required=field.required,
+        label=field.label,
+        help_text='',
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
 
 
 class DroneForm(_StyledModelForm):
@@ -123,6 +141,48 @@ class DroneLicenseForm(_StyledModelForm):
         super().__init__(*args, **kwargs)
         self.fields['person'].queryset = _person_queryset()
         self.fields['person'].empty_label = '— keine Person aus der Personalverwaltung —'
+        _apply_license_kind_choices(
+            self, 'license_type', current=getattr(self.instance, 'license_type', None),
+        )
+
+
+class DroneLicenseKindForm(_StyledModelForm):
+    """Nachweisart anlegen/bearbeiten – das Kürzel ist nach dem Anlegen fest."""
+
+    class Meta:
+        model = DroneLicenseKind
+        fields = ['name', 'code', 'validity_years', 'sort_order', 'description', 'is_active']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['code'].required = False
+        if self.instance.pk:
+            self.fields['code'].disabled = True
+            self.fields['code'].help_text = 'Fest – Führerscheine und Gutscheine verweisen über das Kürzel auf diese Art'
+        else:
+            self.fields['code'].help_text = 'Leer lassen, dann wird es aus der Bezeichnung gebildet (z.B. "bos")'
+
+    def clean_code(self):
+        if self.instance.pk:
+            return self.instance.code
+        code = (self.cleaned_data.get('code') or '').strip().lower()
+        return DroneLicenseKind.build_code(code) if code else ''
+
+    def clean(self):
+        cleaned = super().clean()
+        if not self.instance.pk and not cleaned.get('code') and cleaned.get('name'):
+            code = DroneLicenseKind.build_code(cleaned['name'])
+            if not code:
+                self.add_error('code', 'Aus der Bezeichnung lässt sich kein Kürzel bilden – bitte eines angeben.')
+            elif DroneLicenseKind.objects.filter(code=code).exists():
+                self.add_error('code', f'Das Kürzel "{code}" ist bereits vergeben – bitte ein anderes angeben.')
+            else:
+                cleaned['code'] = code
+                self.instance.code = code
+        return cleaned
 
 
 class DroneLicenseCreateForm(forms.Form):
@@ -162,11 +222,13 @@ class DroneLicenseCreateForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields['person'].queryset = _person_queryset()
 
-        # Je Nachweisart ein eigener Block: auswählen + Details erfassen.
-        for key, label in DroneLicenseType.choices:
+        # Je aktiver Nachweisart ein eigener Block: auswählen + Details erfassen.
+        self.kinds = list(DroneLicenseKind.objects.filter(is_active=True))
+        for kind in self.kinds:
+            key = kind.code
             self.fields[f'{key}_selected'] = forms.BooleanField(
                 required=False,
-                label=str(label),
+                label=kind.name,
                 widget=forms.CheckboxInput(attrs={'x-model': 'open'}),
             )
             self.fields[f'{key}_number'] = forms.CharField(
@@ -197,10 +259,13 @@ class DroneLicenseCreateForm(forms.Form):
     @property
     def license_blocks(self):
         """Ein Block je Nachweisart – für die Darstellung im Template."""
-        for key, label in DroneLicenseType.choices:
+        for kind in self.kinds:
+            key = kind.code
             yield {
                 'key': key,
-                'label': str(label),
+                'label': kind.name,
+                'description': kind.description,
+                'validity_years': kind.validity_years,
                 'selected': self[f'{key}_selected'],
                 'fields': [
                     self[f'{key}_number'],
@@ -221,7 +286,8 @@ class DroneLicenseCreateForm(forms.Form):
             self.add_error('person', 'Bitte eine Person auswählen oder einen Namen eintragen.')
 
         selected_count = 0
-        for key, _label in DroneLicenseType.choices:
+        for kind in self.kinds:
+            key = kind.code
             if not cleaned.get(f'{key}_selected'):
                 continue
             selected_count += 1
@@ -245,7 +311,8 @@ class DroneLicenseCreateForm(forms.Form):
         """Erzeugt je ausgewählter Nachweisart einen Datensatz."""
         data = self.cleaned_data
         created = []
-        for key, _label in DroneLicenseType.choices:
+        for kind in self.kinds:
+            key = kind.code
             if not data.get(f'{key}_selected'):
                 continue
             license_obj = DroneLicense(
@@ -281,6 +348,11 @@ class _VoucherPersonFormMixin:
         self.fields[name].queryset = DroneLicense.objects.select_related('person')
         self.fields[name].empty_label = '— kein Nachweis verknüpft —'
 
+    def _setup_intended_use_field(self):
+        _apply_license_kind_choices(
+            self, 'intended_use', current=getattr(self.instance, 'intended_use', None),
+        )
+
 
 class VoucherForm(_VoucherPersonFormMixin, _StyledModelForm):
     class Meta:
@@ -304,6 +376,7 @@ class VoucherForm(_VoucherPersonFormMixin, _StyledModelForm):
         self._setup_person_field('used_by')
         self._setup_license_field()
         self.fields['intended_use'].required = False
+        self._setup_intended_use_field()
 
 
 class VoucherAssignForm(_VoucherPersonFormMixin, _StyledModelForm):
@@ -322,6 +395,7 @@ class VoucherAssignForm(_VoucherPersonFormMixin, _StyledModelForm):
         self._setup_person_field('assigned_to')
         self.fields['assigned_at'].required = True
         self.fields['intended_use'].required = True
+        self._setup_intended_use_field()
 
     def clean(self):
         cleaned = super().clean()
@@ -348,6 +422,7 @@ class VoucherUseForm(_VoucherPersonFormMixin, _StyledModelForm):
         self._setup_license_field()
         self.fields['used_at'].required = True
         self.fields['intended_use'].required = True
+        self._setup_intended_use_field()
 
     def clean(self):
         cleaned = super().clean()

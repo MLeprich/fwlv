@@ -14,8 +14,9 @@
 {% block iuk_content %}
 <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 text-sm text-blue-900">
     W&auml;hlen Sie entweder eine Person aus der Personalverwaltung <em>oder</em> tragen Sie
-    bei externen Piloten den Namen als Freitext ein. EU-Kompetenznachweise sind in der Regel
-    f&uuml;nf Jahre g&uuml;ltig; vor Ablauf wird automatisch erinnert.
+    bei externen Piloten den Namen als Freitext ein. Vor Ablauf des Nachweises wird
+    automatisch erinnert. Welche Nachweisarten zur Auswahl stehen, legen Sie unter
+    <a href="{% url 'iuk:license_kind_list' %}" class="underline font-medium">Nachweisarten</a> fest.
 </div>
 
 <form method="post" enctype="multipart/form-data" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

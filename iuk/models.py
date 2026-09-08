@@ -3,16 +3,19 @@ IUK-Modelle (Informations- und Kommunikationstechnik)
 
 Verwaltung der Drohnenstaffel:
 * Drohnen inkl. Seriennummer und LBA-Registrierung
-* Drohnenführerscheine (EU-Kompetenznachweis) mit Ablaufüberwachung
+* Drohnenführerscheine und weitere Nachweise (Nachweisarten frei pflegbar)
+  mit Ablaufüberwachung
 * Gutscheincodes der Behörde, die beim LBA eingelöst werden
 """
 
 from datetime import date
 
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.db.models import Q
 from django.urls import reverse
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from core.models.base import AuditedModel
@@ -46,10 +49,172 @@ class DroneAccessoryCategory(models.TextChoices):
 
 
 class DroneLicenseType(models.TextChoices):
-    """Nachweisarten für Fernpiloten nach EU-Drohnenverordnung."""
+    """
+    Standard-Nachweisarten nach EU-Drohnenverordnung.
+
+    Die Nachweisarten werden seit Migration 0007 in der Tabelle
+    :class:`DroneLicenseKind` gepflegt und können im Modul selbst ergänzt
+    werden (z.B. BOS, EGRED). Diese Aufzählung bleibt als Startbestand für die
+    Migration und als Konstanten für den CSV-Import erhalten.
+    """
     A1_A3 = 'a1_a3', _('EU-Kompetenznachweis A1/A3')
     A2 = 'a2', _('EU-Fernpiloten-Zeugnis A2')
     STS = 'sts', _('Standardszenarien STS-01/STS-02')
+
+
+#: Cache-Schlüssel für die Zuordnung Kürzel → Bezeichnung der Nachweisarten.
+LICENSE_KIND_LABELS_CACHE_KEY = 'iuk:license_kind_labels'
+
+#: Maximale Länge des technischen Kürzels einer Nachweisart.
+LICENSE_KIND_CODE_MAX_LENGTH = 40
+
+
+class DroneLicenseKind(models.Model):
+    """
+    Art eines Nachweises/Führerscheins (z.B. A1/A3, A2, STS, BOS, EGRED).
+
+    Wird im Modul selbst gepflegt. Die Einträge in Führerscheinen, Gutscheinen
+    und Gutschein-Vorgängen verweisen über das Kürzel (``code``) auf die Art –
+    das Kürzel ist deshalb nach dem Anlegen nicht mehr änderbar.
+    """
+
+    code = models.SlugField(
+        max_length=LICENSE_KIND_CODE_MAX_LENGTH,
+        unique=True,
+        verbose_name=_('Kürzel'),
+        help_text=_('Technischer Schlüssel, z.B. "bos" – wird aus der Bezeichnung '
+                    'gebildet und kann nachträglich nicht geändert werden'),
+    )
+    name = models.CharField(
+        max_length=150,
+        unique=True,
+        verbose_name=_('Bezeichnung'),
+        help_text=_('Wird in Listen und Auswahlfeldern angezeigt'),
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name=_('Beschreibung'),
+        help_text=_('Optionaler Hinweis, z.B. Rechtsgrundlage oder ausstellende Stelle'),
+    )
+    validity_years = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        verbose_name=_('Regelgültigkeit (Jahre)'),
+        help_text=_('Belegt beim Anlegen das Ablaufdatum vor; leer lassen, '
+                    'wenn die Gültigkeit unterschiedlich oder unbegrenzt ist'),
+    )
+    sort_order = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name=_('Reihenfolge'),
+        help_text=_('Kleinere Werte stehen weiter oben'),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Aktiv'),
+        help_text=_('Inaktive Arten stehen für neue Einträge nicht mehr zur Auswahl; '
+                    'bestehende Einträge bleiben erhalten'),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Erstellt am'))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Aktualisiert am'))
+
+    class Meta:
+        verbose_name = _('Nachweisart')
+        verbose_name_plural = _('Nachweisarten')
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse('iuk:license_kind_list')
+
+    # ------------------------------------------------------------ Speichern
+
+    @staticmethod
+    def build_code(name):
+        """'EU-Fernpiloten-Zeugnis A2' → 'eu-fernpiloten-zeugnis-a2'."""
+        return slugify(name)[:LICENSE_KIND_CODE_MAX_LENGTH].strip('-')
+
+    def clean(self):
+        super().clean()
+        if not self.code and self.name:
+            self.code = self.build_code(self.name)
+        if not self.code:
+            raise ValidationError({
+                'code': _('Aus der Bezeichnung lässt sich kein Kürzel bilden – '
+                          'bitte ein Kürzel angeben.'),
+            })
+        if self.pk:
+            stored = type(self).objects.filter(pk=self.pk).values_list('code', flat=True).first()
+            if stored is not None and stored != self.code:
+                raise ValidationError({
+                    'code': _('Das Kürzel kann nachträglich nicht geändert werden.'),
+                })
+
+    def save(self, *args, **kwargs):
+        if not self.code and self.name:
+            self.code = self.build_code(self.name)
+        super().save(*args, **kwargs)
+        cache.delete(LICENSE_KIND_LABELS_CACHE_KEY)
+
+    def delete(self, *args, **kwargs):
+        result = super().delete(*args, **kwargs)
+        cache.delete(LICENSE_KIND_LABELS_CACHE_KEY)
+        return result
+
+    # ------------------------------------------------------------ Verwendung
+
+    @property
+    def usage_count(self):
+        """Wie viele Führerscheine, Gutscheine und Vorgänge die Art verwenden."""
+        return (
+            DroneLicense.objects.filter(license_type=self.code).count()
+            + Voucher.objects.filter(intended_use=self.code).count()
+            + VoucherEvent.objects.filter(license_type=self.code).count()
+        )
+
+    @property
+    def license_count(self):
+        return DroneLicense.objects.filter(license_type=self.code).count()
+
+    @property
+    def is_in_use(self):
+        return self.usage_count > 0
+
+    # ------------------------------------------------------------ Auswahl
+
+    @classmethod
+    def label_map(cls):
+        """{Kürzel: Bezeichnung} aller Arten – gecacht, bis eine Art geändert wird."""
+        labels = cache.get(LICENSE_KIND_LABELS_CACHE_KEY)
+        if labels is None:
+            labels = dict(cls.objects.values_list('code', 'name'))
+            cache.set(LICENSE_KIND_LABELS_CACHE_KEY, labels, 3600)
+        return labels
+
+    @classmethod
+    def label_for(cls, code):
+        """Bezeichnung zum Kürzel; unbekannte Kürzel werden unverändert angezeigt."""
+        if not code:
+            return ''
+        return cls.label_map().get(code, code)
+
+    @classmethod
+    def choices(cls, include=None):
+        """
+        (Kürzel, Bezeichnung) der aktiven Arten für Auswahlfelder.
+
+        ``include`` nennt ein Kürzel, das zusätzlich angeboten wird, auch wenn
+        die Art inaktiv ist – damit ein bestehender Eintrag bearbeitet werden
+        kann, ohne die Art wechseln zu müssen.
+        """
+        query = Q(is_active=True)
+        if include:
+            query |= Q(code=include)
+        return list(cls.objects.filter(query).values_list('code', 'name'))
+
+    @classmethod
+    def known_codes(cls):
+        return set(cls.label_map())
 
 
 class FlightOperationType(models.TextChoices):
@@ -396,11 +561,10 @@ class DroneLicense(AuditedModel):
         help_text=_('Nur ausfüllen, wenn keine Person aus der Personalverwaltung gewählt wurde'),
     )
     license_type = models.CharField(
-        max_length=20,
-        choices=DroneLicenseType.choices,
-        default=DroneLicenseType.A1_A3,
+        max_length=LICENSE_KIND_CODE_MAX_LENGTH,
         db_index=True,
         verbose_name=_('Art des Nachweises'),
+        help_text=_('Kürzel einer Nachweisart (siehe Nachweisarten)'),
     )
     license_number = models.CharField(
         max_length=100,
@@ -418,7 +582,7 @@ class DroneLicense(AuditedModel):
     expiry_date = models.DateField(
         db_index=True,
         verbose_name=_('Gültig bis'),
-        help_text=_('EU-Kompetenznachweise sind in der Regel 5 Jahre gültig'),
+        help_text=_('Vor Ablauf wird automatisch erinnert'),
     )
     document = models.FileField(
         upload_to='iuk/drone_licenses/',
@@ -450,11 +614,23 @@ class DroneLicense(AuditedModel):
     def get_absolute_url(self):
         return reverse('iuk:license_list')
 
+    def get_license_type_display(self):
+        """Bezeichnung der Nachweisart (Ersatz für Djangos Choices-Anzeige)."""
+        return DroneLicenseKind.label_for(self.license_type)
+
+    @property
+    def license_kind(self):
+        return DroneLicenseKind.objects.filter(code=self.license_type).first()
+
     def clean(self):
         super().clean()
         if not self.person and not self.pilot_name.strip():
             raise ValidationError({
                 'person': _('Bitte eine Person auswählen oder einen Namen eintragen.'),
+            })
+        if self.license_type and not DroneLicenseKind.objects.filter(code=self.license_type).exists():
+            raise ValidationError({
+                'license_type': _('Unbekannte Nachweisart.'),
             })
         if self.issued_date and self.expiry_date and self.expiry_date < self.issued_date:
             raise ValidationError({
@@ -548,8 +724,7 @@ class Voucher(AuditedModel):
         help_text=_('Ablaufdatum des Gutscheins, falls vorhanden'),
     )
     intended_use = models.CharField(
-        max_length=20,
-        choices=DroneLicenseType.choices,
+        max_length=LICENSE_KIND_CODE_MAX_LENGTH,
         blank=True,
         verbose_name=_('Für welchen Nachweis'),
         help_text=_('Nachweis, für den der Gutschein eingesetzt werden soll'),
@@ -627,6 +802,8 @@ class Voucher(AuditedModel):
                 raise ValidationError({
                     'intended_use': _('Bitte angeben, für welchen Nachweis der Gutschein gilt.'),
                 })
+        if self.intended_use and not DroneLicenseKind.objects.filter(code=self.intended_use).exists():
+            raise ValidationError({'intended_use': _('Unbekannte Nachweisart.')})
         if self.status == VoucherStatus.VERGEBEN:
             if self.pk and self.used_at:
                 raise ValidationError({
@@ -673,6 +850,9 @@ class Voucher(AuditedModel):
         if self.used_by or self.used_by_name:
             return self.used_by_display
         return self.assigned_to_display
+
+    def get_intended_use_display(self):
+        return DroneLicenseKind.label_for(self.intended_use)
 
     @property
     def intended_use_display(self):
@@ -741,8 +921,7 @@ class VoucherEvent(models.Model):
         verbose_name=_('Person (extern)'),
     )
     license_type = models.CharField(
-        max_length=20,
-        choices=DroneLicenseType.choices,
+        max_length=LICENSE_KIND_CODE_MAX_LENGTH,
         blank=True,
         verbose_name=_('Für welchen Nachweis'),
     )
@@ -781,6 +960,9 @@ class VoucherEvent(models.Model):
         if self.person:
             return str(self.person)
         return self.person_name or '—'
+
+    def get_license_type_display(self):
+        return DroneLicenseKind.label_for(self.license_type)
 
     @property
     def license_type_display(self):

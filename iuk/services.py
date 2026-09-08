@@ -22,7 +22,8 @@ from notifications.models import NotificationCategory, NotificationType
 from notifications.utils import create_notification
 
 from .models import (CRITICAL_DAYS, WARNING_DAYS, DroneLicense,
-                     DroneLicenseType, Voucher, VoucherEventType)
+                     DroneLicenseKind, DroneLicenseType, Voucher,
+                     VoucherEventType)
 
 logger = logging.getLogger(__name__)
 
@@ -245,9 +246,10 @@ def _parse_license_type(value):
     key = raw.lower().replace(' ', '')
     if key in VOUCHER_CSV_LICENSE_TYPES:
         return VOUCHER_CSV_LICENSE_TYPES[key]
-    for choice_value, label in DroneLicenseType.choices:
-        if raw.lower() in (choice_value, str(label).lower()):
-            return choice_value
+    # Alle gepflegten Nachweisarten: Kürzel oder Bezeichnung (auch BOS, EGRED …)
+    for code, label in DroneLicenseKind.label_map().items():
+        if raw.lower() in (code.lower(), label.lower()) or key == code.lower().replace(' ', ''):
+            return code
     return None
 
 
@@ -342,7 +344,7 @@ def parse_voucher_csv(raw_bytes):
                 problems.append(f'Nachweisart "{raw_use}" unbekannt – bleibt leer')
             else:
                 entry['intended_use'] = parsed_use
-                entry['intended_use_label'] = str(DroneLicenseType(parsed_use).label)
+                entry['intended_use_label'] = DroneLicenseKind.label_for(parsed_use)
 
         code_key = entry['code'].lower()
         if code_key in existing_codes:

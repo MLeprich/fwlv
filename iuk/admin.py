@@ -1,9 +1,45 @@
 """Admin-Konfiguration für das IUK-Modul."""
 
+from django import forms
 from django.contrib import admin
 
 from .models import (Drone, DroneAccessory, DroneChecklist, DroneLicense,
-                     FlightLog, FlightLogComment, Voucher, VoucherEvent)
+                     DroneLicenseKind, FlightLog, FlightLogComment, Voucher,
+                     VoucherEvent)
+
+
+class _LicenseKindChoiceMixin:
+    """Zeigt Nachweisart-Kürzel als Auswahlliste der gepflegten Arten."""
+
+    license_kind_fields = ()
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name in self.license_kind_fields:
+            current = None
+            obj = getattr(request, '_iuk_admin_obj', None)
+            if obj is not None:
+                current = getattr(obj, db_field.name, None)
+            choices = [('', '---------')] + DroneLicenseKind.choices(include=current)
+            return forms.ChoiceField(
+                choices=choices, required=not db_field.blank,
+                label=db_field.verbose_name, help_text=db_field.help_text,
+            )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
+
+    def get_form(self, request, obj=None, **kwargs):
+        request._iuk_admin_obj = obj
+        return super().get_form(request, obj, **kwargs)
+
+
+@admin.register(DroneLicenseKind)
+class DroneLicenseKindAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'validity_years', 'sort_order', 'is_active')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'code', 'description')
+    ordering = ('sort_order', 'name')
+
+    def get_readonly_fields(self, request, obj=None):
+        return ('code',) if obj else ()
 
 
 class DroneAccessoryInline(admin.TabularInline):
@@ -23,7 +59,8 @@ class DroneAdmin(admin.ModelAdmin):
 
 
 @admin.register(DroneLicense)
-class DroneLicenseAdmin(admin.ModelAdmin):
+class DroneLicenseAdmin(_LicenseKindChoiceMixin, admin.ModelAdmin):
+    license_kind_fields = ('license_type',)
     list_display = ('pilot_display', 'license_type', 'license_number', 'issued_date', 'expiry_date')
     list_filter = ('license_type', 'expiry_date')
     search_fields = ('person__first_name', 'person__last_name', 'pilot_name', 'license_number')
@@ -36,7 +73,8 @@ class DroneLicenseAdmin(admin.ModelAdmin):
 
 
 @admin.register(Voucher)
-class VoucherAdmin(admin.ModelAdmin):
+class VoucherAdmin(_LicenseKindChoiceMixin, admin.ModelAdmin):
+    license_kind_fields = ('intended_use',)
     list_display = ('code', 'status', 'intended_use', 'person_display', 'assigned_at',
                     'valid_until', 'used_at')
     list_filter = ('status', 'intended_use')

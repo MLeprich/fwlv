@@ -401,6 +401,17 @@
     background-color: #1E3A5F !important;
 }
 
+/* Hinweisboxen: dunkelblauer Text auf dunkelblauem Grund wäre unlesbar */
+.dark .bg-blue-50.text-blue-900, .dark .bg-blue-50 .text-blue-900,
+.dark .bg-blue-50.text-blue-800, .dark .bg-blue-50 .text-blue-800,
+.dark .bg-blue-50.text-blue-700, .dark .bg-blue-50 .text-blue-700 {
+    color: #DBEAFE !important;
+}
+
+.dark .bg-blue-50.border-blue-200, .dark .bg-blue-50.border-blue-100 {
+    border-color: #3B82F6 !important;
+}
+
 .dark .border-blue-400 {
     border-color: #3B82F6 !important;
 }

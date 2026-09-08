@@ -1,0 +1,56 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}{% if object %}Nachweisart bearbeiten{% else %}Neue Nachweisart{% endif %}{% endblock %}
+{% block iuk_heading %}{% if object %}Nachweisart bearbeiten{% else %}Neue Nachweisart{% endif %}{% endblock %}
+{% block iuk_subtitle %}{% if object %}{{ object.name }}{% else %}z.B. BOS-Sprechfunk, EGRED, A2{% endif %}{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:license_list' %}" class="text-gray-500 hover:text-gray-700">Drohnenf&uuml;hrerscheine</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:license_kind_list' %}" class="text-gray-500 hover:text-gray-700">Nachweisarten</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neu{% endif %}</span></li>
+{% endblock %}
+
+{% block iuk_content %}
+<div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 text-sm text-blue-900">
+    Die <strong>Bezeichnung</strong> erscheint in Listen und Auswahlfeldern. Das <strong>K&uuml;rzel</strong>
+    ist der technische Schl&uuml;ssel, &uuml;ber den Nachweise und Gutscheine auf die Art verweisen
+    &ndash; es wird automatisch gebildet und ist nach dem Anlegen fest. Mit der
+    <strong>Regelg&uuml;ltigkeit</strong> wird beim Erfassen das Ablaufdatum vorbelegt.
+</div>
+
+<form method="post" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {% for field in form %}
+        <div class="{% if field.name == 'description' %}md:col-span-2{% endif %}">
+            {% if field.name == 'is_active' %}
+            <label class="flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors">
+                {{ field }}<span class="text-sm font-medium text-gray-700">{{ field.label }}</span>
+            </label>
+            {% else %}
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ field }}
+            {% endif %}
+            {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+            {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-6 flex items-center gap-3">
+        <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">Speichern</button>
+        <a href="{% url 'iuk:license_kind_list' %}" class="px-5 py-2 rounded-lg text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors">Abbrechen</a>
+    </div>
+</form>
+{% endblock %}

@@ -11,11 +11,31 @@ from django.urls import reverse
 
 from core.models import User
 from iuk.models import (CRITICAL_DAYS, WARNING_DAYS, Drone, DroneAccessory,
-                        DroneChecklist, DroneLicense, FlightLog, LicenseState,
-                        Voucher, VoucherEventType, VoucherStatus)
+                        DroneChecklist, DroneLicense, DroneLicenseKind,
+                        FlightLog, LicenseState, Voucher, VoucherEventType,
+                        VoucherStatus)
 from iuk.services import (MODULE_GROUP, ROW_DUPLICATE, ROW_NEW, import_vouchers,
                           parse_voucher_csv, send_license_reminders)
 from notifications.models import Notification
+
+
+@pytest.fixture(autouse=True)
+def license_kinds(db):
+    """
+    Standard-Nachweisarten wie in Migration 0007.
+
+    Die Tests laufen ohne Migrationen (--no-migrations), deshalb wird der
+    Startbestand hier angelegt.
+    """
+    kinds = [
+        DroneLicenseKind.objects.create(code='a1_a3', name='EU-Kompetenznachweis A1/A3',
+                                        validity_years=5, sort_order=10),
+        DroneLicenseKind.objects.create(code='a2', name='EU-Fernpiloten-Zeugnis A2',
+                                        validity_years=5, sort_order=20),
+        DroneLicenseKind.objects.create(code='sts', name='Standardszenarien STS-01/STS-02',
+                                        validity_years=5, sort_order=30),
+    ]
+    return kinds
 
 
 @pytest.fixture
@@ -984,3 +1004,118 @@ def test_checklist_form_renders_drone_checkboxes(client, iuk_user, drone):
     assert drone.designation in html
     # Reihenfolge: Prüfpunkte vor der Drohnenauswahl
     assert html.index('id_items_text') < html.index('id_drones')
+
+
+# ---------------------------------------------------------- Nachweisarten
+
+@pytest.mark.django_db
+def test_license_type_display_uses_kind_name():
+    assert _license(license_type='a2').get_license_type_display() == 'EU-Fernpiloten-Zeugnis A2'
+    # Unbekannte Kürzel (z.B. gelöschte Art) werden nicht verschluckt.
+    assert _license(license_type='weg').get_license_type_display() == 'weg'
+
+
+@pytest.mark.django_db
+def test_license_rejects_unknown_kind():
+    license_obj = DroneLicense(
+        pilot_name='Testpilot', license_type='gibt_es_nicht',
+        issued_date=date.today(), expiry_date=date.today() + timedelta(days=10),
+    )
+    with pytest.raises(ValidationError) as excinfo:
+        license_obj.full_clean()
+    assert 'license_type' in excinfo.value.message_dict
+
+
+@pytest.mark.django_db
+def test_license_kind_create_view_builds_code(client, iuk_user):
+    client.force_login(iuk_user)
+    response = client.post(reverse('iuk:license_kind_create'), {
+        'name': 'BOS-Sprechfunk',
+        'code': '',
+        'validity_years': '',
+        'sort_order': '40',
+        'description': 'Sprechfunkberechtigung',
+        'is_active': 'on',
+    })
+    assert response.status_code == 302
+    kind = DroneLicenseKind.objects.get(name='BOS-Sprechfunk')
+    assert kind.code == 'bos-sprechfunk'
+    assert kind.is_active
+
+
+@pytest.mark.django_db
+def test_license_kind_code_is_immutable(client, iuk_user):
+    kind = DroneLicenseKind.objects.get(code='a2')
+    client.force_login(iuk_user)
+    response = client.post(reverse('iuk:license_kind_edit', args=[kind.pk]), {
+        'name': 'A2 (neu benannt)',
+        'code': 'anders',
+        'validity_years': '3',
+        'sort_order': '20',
+        'description': '',
+        'is_active': 'on',
+    })
+    assert response.status_code == 302
+    kind.refresh_from_db()
+    assert kind.code == 'a2'
+    assert kind.name == 'A2 (neu benannt)'
+    assert kind.validity_years == 3
+    # Anzeige folgt sofort dem neuen Namen (Cache wird invalidiert).
+    assert _license(license_type='a2').get_license_type_display() == 'A2 (neu benannt)'
+
+
+@pytest.mark.django_db
+def test_license_kind_delete_blocked_when_in_use(client, iuk_user):
+    _license(license_type='sts')
+    kind = DroneLicenseKind.objects.get(code='sts')
+    client.force_login(iuk_user)
+    response = client.post(reverse('iuk:license_kind_delete', args=[kind.pk]))
+    assert response.status_code == 302
+    assert DroneLicenseKind.objects.filter(code='sts').exists()
+
+    unused = DroneLicenseKind.objects.create(code='egred', name='EGRED')
+    response = client.post(reverse('iuk:license_kind_delete', args=[unused.pk]))
+    assert response.status_code == 302
+    assert not DroneLicenseKind.objects.filter(code='egred').exists()
+
+
+@pytest.mark.django_db
+def test_license_create_form_offers_active_kinds_only(client, iuk_user):
+    DroneLicenseKind.objects.create(code='egred', name='EGRED', sort_order=50)
+    DroneLicenseKind.objects.filter(code='sts').update(is_active=False)
+    client.force_login(iuk_user)
+    body = client.get(reverse('iuk:license_create')).content.decode()
+    assert 'name="egred_selected"' in body
+    assert 'name="sts_selected"' not in body
+
+    today = date.today()
+    response = client.post(reverse('iuk:license_create'), {
+        'person': '', 'pilot_name': 'Funker', 'issuing_authority': 'Landesschule',
+        'notes': '',
+        'egred_selected': 'on', 'egred_number': 'E-1',
+        'egred_issued': today.isoformat(),
+        'egred_expiry': (today + timedelta(days=700)).isoformat(),
+    })
+    assert response.status_code == 302
+    created = DroneLicense.objects.get(license_type='egred')
+    assert created.get_license_type_display() == 'EGRED'
+
+
+@pytest.mark.django_db
+def test_license_edit_form_keeps_inactive_kind_selectable(client, iuk_user):
+    license_obj = _license(license_type='sts')
+    DroneLicenseKind.objects.filter(code='sts').update(is_active=False)
+    client.force_login(iuk_user)
+    body = client.get(reverse('iuk:license_edit', args=[license_obj.pk])).content.decode()
+    assert 'value="sts"' in body
+
+
+@pytest.mark.django_db
+def test_voucher_csv_recognizes_custom_kind():
+    DroneLicenseKind.objects.create(code='bos', name='BOS-Sprechfunk')
+    result = parse_voucher_csv(
+        'Code;Für welchen Nachweis\nLBA-9;bos-sprechfunk\nLBA-10;BOS\n'.encode('utf-8')
+    )
+    assert result['rows'][0]['intended_use'] == 'bos'
+    assert result['rows'][1]['intended_use'] == 'bos'
+    assert result['rows'][1]['intended_use_label'] == 'BOS-Sprechfunk'

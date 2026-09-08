@@ -18,6 +18,10 @@ urlpatterns = [
     # Drohnenführerscheine
     path('fuehrerscheine/', views.DroneLicenseListView.as_view(), name='license_list'),
     path('fuehrerscheine/neu/', views.DroneLicenseCreateView.as_view(), name='license_create'),
+    path('fuehrerscheine/arten/', views.DroneLicenseKindListView.as_view(), name='license_kind_list'),
+    path('fuehrerscheine/arten/neu/', views.DroneLicenseKindCreateView.as_view(), name='license_kind_create'),
+    path('fuehrerscheine/arten/<int:pk>/bearbeiten/', views.DroneLicenseKindUpdateView.as_view(), name='license_kind_edit'),
+    path('fuehrerscheine/arten/<int:pk>/loeschen/', views.DroneLicenseKindDeleteView.as_view(), name='license_kind_delete'),
     path('fuehrerscheine/<int:pk>/bearbeiten/', views.DroneLicenseUpdateView.as_view(), name='license_edit'),
     path('fuehrerscheine/<int:pk>/loeschen/', views.DroneLicenseDeleteView.as_view(), name='license_delete'),
 
