@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import InfoMonitor, InfoMonitorVehicle, MappeLink, MappeKontakt, MappeAnleitung, Grossereignis
+from .models import (InfoMonitor, InfoMonitorVehicle, MappeLink, MappeKontakt, MappeAnleitung, Grossereignis,
+                     FFStammfahrzeug)
 
 
 class InfoMonitorVehicleInline(admin.TabularInline):
@@ -50,3 +51,12 @@ class GrossereignisAdmin(admin.ModelAdmin):
     list_filter = ['ende']
     search_fields = ['titel', 'beschreibung']
     date_hierarchy = 'beginn'
+
+
+@admin.register(FFStammfahrzeug)
+class FFStammfahrzeugAdmin(admin.ModelAdmin):
+    list_display = ['name', 'zug', 'position']
+    list_filter = ['zug']
+    list_editable = ['position']
+    search_fields = ['name']
+    ordering = ['zug', 'position', 'name']

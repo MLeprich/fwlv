@@ -10,11 +10,13 @@ from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.db.models import Q
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed
 
 from .models import (Ticket, TicketComment, TicketImage, CommentImage, TicketStatus, TicketPriority,
                       TicketCategory, InfoMonitor, InfoMonitorVehicle, BereitschaftPerson,
                       MappeLink, MappeKontakt, MappeAnleitung,
-                      GrossveranstaltungDashboard, GrossveranstaltungAbschnitt, Grossereignis)
+                      GrossveranstaltungDashboard, GrossveranstaltungAbschnitt, Grossereignis,
+                      FFStammfahrzeug, InfoMonitorFFFahrzeug, FFZug)
 from .forms import (TicketCreateForm, TicketCommentForm, TicketCategoryForm, InfoMonitorForm, GrossereignisForm,
                      InfoMonitorVehicleForm, BereitschaftPersonForm,
                      MappeLinkForm, MappeKontaktForm, MappeAnleitungForm,
@@ -595,44 +597,56 @@ class InfoMonitorEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
             {'label': 'Laufband', 'field': form['show_laufband']},
             {'label': 'Sonstiges', 'field': form['show_sonstiges']},
         ]
-        # FF Z\u00fcge: Status-Radio + dynamisches Fahrzeug-Formset pro Zug
-        from .forms import InfoMonitorFFFahrzeugFormSet
-        ff_zuege = []
-        _zuege = [('sterkrade', 'FF Sterkrade'), ('mitte', 'FF Mitte'), ('sued', 'FF S\u00fcd'), ('koe', 'FF K\u00d6')]
-        for key, label in _zuege:
-            prefix = f'ff_{key}'
-            qs = self.object.ff_fahrzeuge.filter(zug=key)
-            if self.request.POST:
-                fs = InfoMonitorFFFahrzeugFormSet(self.request.POST, instance=self.object, prefix=prefix, queryset=qs)
-            else:
-                fs = InfoMonitorFFFahrzeugFormSet(instance=self.object, prefix=prefix, queryset=qs)
-            ff_zuege.append({'key': key, 'label': label, 'status_field': form[f'ff_{key}_status'], 'formset': fs})
-        context['ff_zuege'] = ff_zuege
+        # FF Züge: Status-Radio + Stammfahrzeuge mit Checkbox (aktiv am Dienstabend) und Stärke
+        context['ff_zuege'] = [
+            {'key': key, 'label': label, 'status_field': form[f'ff_{key}_status'],
+             'fahrzeuge': self._ff_fahrzeuge_rows(key)}
+            for key, label in FFZug.choices
+        ]
         return context
+
+    def _ff_fahrzeuge_rows(self, zug):
+        """Stammfahrzeuge eines Zugs mit aktuellem Auswahlstand (Checkbox + Stärke).
+        Bei einem POST wird der eingegebene Stand gezeigt, sonst der gespeicherte."""
+        aktiv = {e.stammfahrzeug_id: e.staerke for e in self.object.ff_fahrzeuge.filter(zug=zug)}
+        rows = []
+        for stamm in FFStammfahrzeug.objects.filter(zug=zug):
+            if self.request.POST:
+                checked = str(stamm.pk) in self.request.POST.getlist(f'ff_{zug}_aktiv')
+                staerke = self.request.POST.get(f'ff_{zug}_staerke_{stamm.pk}', '')
+            else:
+                checked = stamm.pk in aktiv
+                staerke = aktiv.get(stamm.pk, '')
+            rows.append({'stamm': stamm, 'checked': checked, 'staerke': staerke})
+        return rows
+
+    def _save_ff_fahrzeuge(self):
+        """Aktive FF-Fahrzeuge je Zug aus den Checkboxen neu aufbauen."""
+        for zug, _label in FFZug.choices:
+            gewaehlt = set(self.request.POST.getlist(f'ff_{zug}_aktiv'))
+            self.object.ff_fahrzeuge.filter(zug=zug).delete()
+            for pos, stamm in enumerate(FFStammfahrzeug.objects.filter(zug=zug)):
+                if str(stamm.pk) not in gewaehlt:
+                    continue
+                InfoMonitorFFFahrzeug.objects.create(
+                    monitor=self.object, zug=zug, stammfahrzeug=stamm,
+                    fahrzeug=stamm.name, position=pos,
+                    staerke=self.request.POST.get(f'ff_{zug}_staerke_{stamm.pk}', '').strip()[:50],
+                )
 
     def form_valid(self, form):
         context = self.get_context_data()
         vehicle_formset = context['vehicle_formset']
         sonstiges_formset = context['sonstiges_formset']
-        ff_zuege = context['ff_zuege']
-        ff_valid = all(z['formset'].is_valid() for z in ff_zuege)
 
-        if vehicle_formset.is_valid() and sonstiges_formset.is_valid() and ff_valid:
+        if vehicle_formset.is_valid() and sonstiges_formset.is_valid():
             form.instance.updated_by = self.request.user
             self.object = form.save()
             vehicle_formset.instance = self.object
             vehicle_formset.save()
             sonstiges_formset.instance = self.object
             sonstiges_formset.save()
-            for z in ff_zuege:
-                fs = z['formset']
-                fs.instance = self.object
-                for obj in fs.save(commit=False):
-                    obj.monitor = self.object
-                    obj.zug = z['key']
-                    obj.save()
-                for obj in fs.deleted_objects:
-                    obj.delete()
+            self._save_ff_fahrzeuge()
             from django.core.cache import cache
             cache.delete('infomonitor')
             messages.success(self.request, 'Info-Monitor wurde aktualisiert.')
@@ -731,6 +745,53 @@ def grossereignis_start(request):
         else:
             _grossereignis_form_errors(request, form)
     return redirect('tickets:infomonitor_display')
+
+
+def _ff_stammfahrzeug_row(request, stamm, status=200):
+    """Eine Zeile der Fahrzeugliste im Bearbeiten-Formular rendern (HTMX)."""
+    from django.template.loader import render_to_string
+    html = render_to_string('tickets/includes/ff_stammfahrzeug_row.html', {
+        'zug': stamm.zug,
+        'row': {'stamm': stamm, 'checked': True, 'staerke': ''},
+    }, request=request)
+    return HttpResponse(html, status=status)
+
+
+def ff_stammfahrzeug_create(request):
+    """FF-Stammfahrzeug direkt aus dem Info-Monitor-Formular anlegen (HTMX)."""
+    if not request.user.has_perm('tickets.edit_infomonitor'):
+        return HttpResponseForbidden('Keine Berechtigung.')
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    zug = request.POST.get('zug', '')
+    name = ' '.join(request.POST.get('name', '').split())[:100]
+    if zug not in FFZug.values:
+        return HttpResponse('Unbekannter Zug.', status=400)
+    if not name:
+        return HttpResponse('Bitte eine Fahrzeugbezeichnung eingeben.', status=400)
+    if FFStammfahrzeug.objects.filter(zug=zug, name__iexact=name).exists():
+        return HttpResponse(f'„{name}“ ist für diesen Zug bereits angelegt.', status=409)
+
+    letzte = FFStammfahrzeug.objects.filter(zug=zug).order_by('-position').first()
+    stamm = FFStammfahrzeug.objects.create(
+        zug=zug, name=name, position=(letzte.position + 1) if letzte else 0,
+    )
+    return _ff_stammfahrzeug_row(request, stamm, status=201)
+
+
+def ff_stammfahrzeug_delete(request, pk):
+    """FF-Stammfahrzeug aus der Stammliste entfernen (HTMX)."""
+    if not request.user.has_perm('tickets.edit_infomonitor'):
+        return HttpResponseForbidden('Keine Berechtigung.')
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    stamm = get_object_or_404(FFStammfahrzeug, pk=pk)
+    stamm.delete()  # aktive Monitor-Einträge hängen per CASCADE daran
+    from django.core.cache import cache
+    cache.delete('infomonitor')
+    return HttpResponse('')
 
 
 def grossereignis_update(request, pk):

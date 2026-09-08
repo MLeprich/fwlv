@@ -1,0 +1,18 @@
+{# Eine Zeile der FF-Fahrzeugliste im Info-Monitor-Formular: Checkbox (aktiv am Dienstabend), Name, Stärke, Entfernen aus Stammliste #}
+<div class="ff-row flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 py-1.5" id="ff-stamm-{{ row.stamm.pk }}">
+    <label class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+        <input type="checkbox" name="ff_{{ zug }}_aktiv" value="{{ row.stamm.pk }}"{% if row.checked %} checked{% endif %}
+               class="h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 flex-shrink-0">
+        <span class="text-sm font-medium text-gray-800 truncate" title="{{ row.stamm.name }}">{{ row.stamm.name }}</span>
+    </label>
+    <input type="text" name="ff_{{ zug }}_staerke_{{ row.stamm.pk }}" value="{{ row.staerke }}" maxlength="50" placeholder="Stärke"
+           class="w-24 flex-shrink-0 px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+    <button type="button"
+            hx-post="{% url 'tickets:ff_stammfahrzeug_delete' row.stamm.pk %}"
+            hx-target="#ff-stamm-{{ row.stamm.pk }}" hx-swap="outerHTML"
+            hx-confirm="„{{ row.stamm.name }}“ dauerhaft aus der Fahrzeugliste von {{ row.stamm.get_zug_display }} entfernen?"
+            class="px-2 py-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+            title="Aus Stammliste entfernen">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+    </button>
+</div>

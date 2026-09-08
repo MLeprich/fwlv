@@ -211,6 +211,42 @@
     color: #FDE047 !important;
 }
 
+/* Dark mode - Buttons mit hellem Farbton-Hintergrund (bg-<farbe>-50/100)
+   Problem: Die generische Button-Regel oben macht die Schrift fast weiß,
+   für orange/amber/indigo/purple/pink/cyan gibt es aber keine dunkle
+   Hintergrund-Variante -> helle Schrift auf hellem Button. Deshalb bekommen
+   diese Buttons einen dunklen Hintergrund und (auch für Überschriften darin)
+   eine helle Farbvariante. Badges/Karten mit denselben Klassen bleiben unberührt. */
+.dark button.bg-orange-50, .dark button.bg-orange-100 { background-color: #431407 !important; }
+.dark button.bg-orange-50:hover, .dark button.bg-orange-100:hover { background-color: #7C2D12 !important; }
+.dark button.bg-orange-50 [class*="text-orange-"], .dark button.bg-orange-100 [class*="text-orange-"],
+.dark button.bg-orange-50[class*="text-orange-"], .dark button.bg-orange-100[class*="text-orange-"] { color: #FDBA74 !important; }
+
+.dark button.bg-amber-50, .dark button.bg-amber-100 { background-color: #451A03 !important; }
+.dark button.bg-amber-50:hover, .dark button.bg-amber-100:hover { background-color: #78350F !important; }
+.dark button.bg-amber-50 [class*="text-amber-"], .dark button.bg-amber-100 [class*="text-amber-"],
+.dark button.bg-amber-50[class*="text-amber-"], .dark button.bg-amber-100[class*="text-amber-"] { color: #FCD34D !important; }
+
+.dark button.bg-indigo-50, .dark button.bg-indigo-100 { background-color: #1E1B4B !important; }
+.dark button.bg-indigo-50:hover, .dark button.bg-indigo-100:hover { background-color: #312E81 !important; }
+.dark button.bg-indigo-50 [class*="text-indigo-"], .dark button.bg-indigo-100 [class*="text-indigo-"],
+.dark button.bg-indigo-50[class*="text-indigo-"], .dark button.bg-indigo-100[class*="text-indigo-"] { color: #A5B4FC !important; }
+
+.dark button.bg-purple-50, .dark button.bg-purple-100 { background-color: #3B0764 !important; }
+.dark button.bg-purple-50:hover, .dark button.bg-purple-100:hover { background-color: #581C87 !important; }
+.dark button.bg-purple-50 [class*="text-purple-"], .dark button.bg-purple-100 [class*="text-purple-"],
+.dark button.bg-purple-50[class*="text-purple-"], .dark button.bg-purple-100[class*="text-purple-"] { color: #D8B4FE !important; }
+
+.dark button.bg-pink-50, .dark button.bg-pink-100 { background-color: #500724 !important; }
+.dark button.bg-pink-50:hover, .dark button.bg-pink-100:hover { background-color: #831843 !important; }
+.dark button.bg-pink-50 [class*="text-pink-"], .dark button.bg-pink-100 [class*="text-pink-"],
+.dark button.bg-pink-50[class*="text-pink-"], .dark button.bg-pink-100[class*="text-pink-"] { color: #F9A8D4 !important; }
+
+.dark button.bg-cyan-50, .dark button.bg-cyan-100 { background-color: #083344 !important; }
+.dark button.bg-cyan-50:hover, .dark button.bg-cyan-100:hover { background-color: #164E63 !important; }
+.dark button.bg-cyan-50 [class*="text-cyan-"], .dark button.bg-cyan-100 [class*="text-cyan-"],
+.dark button.bg-cyan-50[class*="text-cyan-"], .dark button.bg-cyan-100[class*="text-cyan-"] { color: #67E8F9 !important; }
+
 /* Dark mode - Weiße Buttons auf farbigen Verlaufs-Headern
    (z.B. Leitstelle, Info-Monitor, Digitale Mappe): Der Header bleibt auch im
    Darkmode farbig, deshalb bleiben die Buttons darauf weiß mit dunkler Schrift. */

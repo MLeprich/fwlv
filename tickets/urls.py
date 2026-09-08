@@ -33,6 +33,10 @@ urlpatterns = [
     path('categories/<int:pk>/delete/', views.category_delete, name='category_delete'),
 
     # Bereitschaftspersonen-Verwaltung
+    # FF-Stammfahrzeuge (direkt aus dem Bearbeiten-Formular, HTMX)
+    path('infomonitor/ff-fahrzeuge/create/', views.ff_stammfahrzeug_create, name='ff_stammfahrzeug_create'),
+    path('infomonitor/ff-fahrzeuge/<int:pk>/delete/', views.ff_stammfahrzeug_delete, name='ff_stammfahrzeug_delete'),
+
     path('infomonitor/bereitschaft/', views.BereitschaftPersonListView.as_view(), name='bereitschaft_person_list'),
     path('infomonitor/bereitschaft/create/', views.BereitschaftPersonCreateView.as_view(), name='bereitschaft_person_create'),
     path('infomonitor/bereitschaft/import/', views.bereitschaft_person_import, name='bereitschaft_person_import'),

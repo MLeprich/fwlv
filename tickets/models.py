@@ -868,6 +868,35 @@ class FFZug(models.TextChoices):
     KOE = 'koe', _('FF KÖ')
 
 
+class FFStammfahrzeug(models.Model):
+    """
+    Stammfahrzeug eines FF-Zugs. Wird einmal angelegt und kann dann im
+    Info-Monitor pro Dienstabend per Checkbox als aktiv ausgewählt werden.
+    """
+    zug = models.CharField(
+        max_length=20,
+        choices=FFZug.choices,
+        verbose_name=_('Zug')
+    )
+    name = models.CharField(
+        max_length=100,
+        verbose_name=_('Fahrzeug')
+    )
+    position = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Reihenfolge')
+    )
+
+    class Meta:
+        verbose_name = _('FF-Stammfahrzeug')
+        verbose_name_plural = _('FF-Stammfahrzeuge')
+        ordering = ['zug', 'position', 'name']
+        unique_together = [('zug', 'name')]
+
+    def __str__(self):
+        return f'{self.get_zug_display()}: {self.name}'
+
+
 class InfoMonitorFFFahrzeug(models.Model):
     """
     Einzelnes Fahrzeug eines FF-Zugs im Info-Monitor, mit Freitext-Stärke.
@@ -883,6 +912,14 @@ class InfoMonitorFFFahrzeug(models.Model):
         max_length=20,
         choices=FFZug.choices,
         verbose_name=_('Zug')
+    )
+    stammfahrzeug = models.ForeignKey(
+        FFStammfahrzeug,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='monitor_eintraege',
+        verbose_name=_('Stammfahrzeug')
     )
     fahrzeug = models.CharField(
         max_length=100,

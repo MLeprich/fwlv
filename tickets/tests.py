@@ -197,3 +197,91 @@ class BereitschaftFreitextTests(TestCase):
         self.assertContains(resp, '0208-123')
         self.assertContains(resp, '0170-456')
         self.assertEqual(resp.context['bereitschaft_entries'][0]['phones'], ['0208-123', '0170-456'])
+
+
+class FFStammfahrzeugTests(TestCase):
+    """FF-Stammfahrzeuge anlegen und im Info-Monitor per Checkbox aktiv schalten."""
+
+    def setUp(self):
+        from .models import FFStammfahrzeug
+        self.user = User.objects.create_user(username='monitor', password='pw')
+        self.user.user_permissions.add(Permission.objects.get(codename='edit_infomonitor'))
+        self.client.force_login(self.user)
+        self.monitor = InfoMonitor.load()
+        self.hlf = FFStammfahrzeug.objects.create(zug='mitte', name='5HLF20-1', position=0)
+        self.lf = FFStammfahrzeug.objects.create(zug='mitte', name='5LF10-1', position=1)
+
+    def _post_form(self, **extra):
+        data = {
+            'vehicles-TOTAL_FORMS': '0', 'vehicles-INITIAL_FORMS': '0',
+            'sonstiges-TOTAL_FORMS': '0', 'sonstiges-INITIAL_FORMS': '0',
+            'ff_sterkrade_status': 'einsatzbereit', 'ff_mitte_status': 'einsatzbereit',
+            'ff_sued_status': 'einsatzbereit', 'ff_koe_status': 'einsatzbereit',
+            'laufband_geschwindigkeit': '20', 'show_ff_zuege': 'on',
+        }
+        data.update(extra)
+        return self.client.post(reverse('tickets:infomonitor_edit'), data)
+
+    def test_edit_page_lists_stammfahrzeuge_as_checkboxes(self):
+        resp = self.client.get(reverse('tickets:infomonitor_edit'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'name="ff_mitte_aktiv"')
+        self.assertContains(resp, '5HLF20-1')
+        self.assertContains(resp, f'ff_mitte_staerke_{self.hlf.pk}')
+
+    def test_checked_vehicles_are_shown_on_monitor(self):
+        resp = self._post_form(**{
+            'ff_mitte_aktiv': [str(self.hlf.pk)],
+            f'ff_mitte_staerke_{self.hlf.pk}': '1/8',
+            f'ff_mitte_staerke_{self.lf.pk}': '1/5',
+        })
+        self.assertEqual(resp.status_code, 302)
+        aktiv = list(self.monitor.ff_fahrzeuge.filter(zug='mitte'))
+        self.assertEqual([(a.fahrzeug, a.staerke, a.stammfahrzeug_id) for a in aktiv],
+                         [('5HLF20-1', '1/8', self.hlf.pk)])
+        for name in ('tickets:infomonitor_display', 'tickets:infomonitor_kiosk'):
+            page = self.client.get(reverse(name))
+            self.assertContains(page, '5HLF20-1')
+            self.assertContains(page, '1/8')
+            self.assertNotContains(page, '5LF10-1')
+
+    def test_unchecking_removes_vehicle(self):
+        self._post_form(ff_mitte_aktiv=[str(self.hlf.pk), str(self.lf.pk)])
+        self.assertEqual(self.monitor.ff_fahrzeuge.count(), 2)
+        self._post_form(ff_mitte_aktiv=[str(self.lf.pk)])
+        self.assertEqual([a.fahrzeug for a in self.monitor.ff_fahrzeuge.all()], ['5LF10-1'])
+        self._post_form()
+        self.assertEqual(self.monitor.ff_fahrzeuge.count(), 0)
+
+    def test_create_stammfahrzeug_returns_row(self):
+        from .models import FFStammfahrzeug
+        resp = self.client.post(reverse('tickets:ff_stammfahrzeug_create'), {'zug': 'sued', 'name': '  4HLF20-1 '})
+        self.assertEqual(resp.status_code, 201)
+        stamm = FFStammfahrzeug.objects.get(zug='sued')
+        self.assertEqual(stamm.name, '4HLF20-1')
+        self.assertContains(resp, f'name="ff_sued_aktiv" value="{stamm.pk}" checked', status_code=201)
+
+    def test_create_rejects_duplicates_and_invalid(self):
+        from .models import FFStammfahrzeug
+        self.assertEqual(self.client.post(reverse('tickets:ff_stammfahrzeug_create'),
+                                          {'zug': 'mitte', 'name': '5hlf20-1'}).status_code, 409)
+        self.assertEqual(self.client.post(reverse('tickets:ff_stammfahrzeug_create'),
+                                          {'zug': 'mitte', 'name': '   '}).status_code, 400)
+        self.assertEqual(self.client.post(reverse('tickets:ff_stammfahrzeug_create'),
+                                          {'zug': 'nord', 'name': 'X'}).status_code, 400)
+        self.assertEqual(FFStammfahrzeug.objects.count(), 2)
+
+    def test_delete_stammfahrzeug_removes_active_entry(self):
+        from .models import FFStammfahrzeug
+        self._post_form(ff_mitte_aktiv=[str(self.hlf.pk)])
+        resp = self.client.post(reverse('tickets:ff_stammfahrzeug_delete', args=[self.hlf.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(FFStammfahrzeug.objects.filter(pk=self.hlf.pk).exists())
+        self.assertEqual(self.monitor.ff_fahrzeuge.count(), 0)
+
+    def test_requires_edit_permission(self):
+        other = User.objects.create_user(username='leser', password='pw')
+        self.client.force_login(other)
+        self.assertEqual(self.client.post(reverse('tickets:ff_stammfahrzeug_create'),
+                                          {'zug': 'mitte', 'name': 'Neu'}).status_code, 403)
+        self.assertEqual(self.client.post(reverse('tickets:ff_stammfahrzeug_delete', args=[self.hlf.pk])).status_code, 403)
