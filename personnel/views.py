@@ -3190,12 +3190,21 @@ class PhonebookView(LoginRequiredMixin, ListView):
 # FF-VERWALTUNG (Dienstgrade, Jubilaeen, Befoerderungen)
 # ============================================================================
 
+def _ff_has_all_units(user):
+    """Darf der Benutzer alle FF-Einheiten verwalten? (Admin oder FF Verwalter)"""
+    return (
+        user.is_superuser
+        or user.has_role(Roles.ADMINISTRATOR)
+        or user.has_role(Roles.FF_VERWALTER)
+    )
+
+
 def _get_ff_accessible_units(user):
     """
     Gibt die FF-Einheiten zurück, auf die der Benutzer Zugriff hat.
-    Admins: alle Einheiten. FF-Einheitsführer/Vertreter: nur ihre Einheit(en).
+    Admins und FF Verwalter: alle Einheiten. FF-Einheitsführer/Vertreter: nur ihre Einheit(en).
     """
-    if user.is_superuser or user.has_role(Roles.ADMINISTRATOR):
+    if _ff_has_all_units(user):
         return VolunteerUnit.objects.filter(is_active=True).order_by('sort_order', 'name')
 
     if not hasattr(user, 'person') or not user.person:
@@ -3209,13 +3218,13 @@ def _get_ff_accessible_units(user):
 
 
 def _is_ff_leader(user):
-    """Prüft ob der Benutzer FF-Einheitsführer oder Vertreter ist"""
-    return (
-        user.is_superuser or
-        user.has_role(Roles.ADMINISTRATOR) or
-        user.has_role(Roles.FF_EINHEITSFUEHRER) or
-        user.has_role(Roles.FF_VERTRETER)
-    )
+    """
+    Prüft ob der Benutzer die FF-Verwaltung nutzen darf.
+    Läuft über das Recht personnel.manage_ff_person (FF Einheitsführer,
+    FF Vertreter, FF Verwalter, Administrator); der Einheiten-Umfang kommt
+    aus _get_ff_accessible_units().
+    """
+    return user.is_superuser or user.has_perm('personnel.manage_ff_person')
 
 
 @login_required
@@ -3243,8 +3252,8 @@ def ff_dashboard(request):
     if selected_unit_pk:
         try:
             selected_unit = VolunteerUnit.objects.get(pk=selected_unit_pk, is_active=True)
-            # Zugriffsprüfung: Admin darf alle, FF-Leader nur ihre
-            if not (request.user.is_superuser or request.user.has_role(Roles.ADMINISTRATOR)):
+            # Zugriffsprüfung: Admin/FF Verwalter dürfen alle, FF-Leader nur ihre
+            if not _ff_has_all_units(request.user):
                 if selected_unit not in accessible_units:
                     selected_unit = accessible_units.first()
         except VolunteerUnit.DoesNotExist:
@@ -3350,7 +3359,7 @@ def ff_dashboard(request):
         'all_units': all_units,
         'selected_unit': selected_unit,
         'unit_personnel': unit_personnel,
-        'is_admin': request.user.is_superuser or request.user.has_role(Roles.ADMINISTRATOR),
+        'is_admin': _ff_has_all_units(request.user),
     }
 
     return render(request, 'personnel/ff_dashboard.html', context)
@@ -3371,7 +3380,7 @@ def ff_person_edit(request, pk):
     # Zugriffsprüfung: Person muss in einer zugänglichen Einheit sein
     accessible_units = _get_ff_accessible_units(request.user)
     if person.volunteer_unit and person.volunteer_unit not in accessible_units:
-        if not (request.user.is_superuser or request.user.has_role(Roles.ADMINISTRATOR)):
+        if not _ff_has_all_units(request.user):
             messages.error(request, 'Sie haben keinen Zugriff auf diese Person.')
             return redirect('personnel:ff_dashboard')
 

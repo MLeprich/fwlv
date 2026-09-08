@@ -74,8 +74,13 @@ class Roles:
     STANDARD_USER = 'Standard-Nutzer'
 
     # FF-Rollen (Freiwillige Feuerwehr)
-    FF_EINHEITSFUEHRER = 'FF Einheitsführer'
-    FF_VERTRETER = 'FF Vertreter'
+    FF_EINHEITSFUEHRER = 'FF Einheitsführer'   # nur eigene Einheit(en)
+    FF_VERTRETER = 'FF Vertreter'              # nur eigene Einheit(en)
+    FF_VERWALTER = 'FF Verwalter'              # alle FF-Einheiten
+
+    # Verwaltungsrollen (getrennt nach Bereich)
+    PERSONALVERWALTER = 'Personalverwalter'    # Personalakten (personnel), keine Benutzer
+    BENUTZERVERWALTER = 'Benutzerverwalter'    # Benutzerkonten & Rollen, keine Personalakten
 
     @classmethod
     def get_all_roles(cls):
@@ -131,6 +136,9 @@ class Roles:
             cls.STANDARD_USER,
             cls.FF_EINHEITSFUEHRER,
             cls.FF_VERTRETER,
+            cls.FF_VERWALTER,
+            cls.PERSONALVERWALTER,
+            cls.BENUTZERVERWALTER,
         ]
 
     @classmethod
@@ -325,6 +333,9 @@ class CustomPermissions:
     ASSIGN_ROLES = 'core.assign_roles'
     VIEW_AUDIT_LOG = 'core.view_audit_log'
     SYSTEM_CONFIGURATION = 'core.system_configuration'
+
+    # Personal / FF
+    MANAGE_FF_PERSON = 'personnel.manage_ff_person'
 
     # BTM (Betäubungsmittel)
     VIEW_BTM_MEDICATION = 'medical.view_btm_medication'

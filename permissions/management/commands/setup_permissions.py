@@ -60,6 +60,7 @@ class Command(BaseCommand):
                 self._setup_approval_groups()
                 self._setup_lst_infomonitor()
                 self._setup_ff_roles()
+                self._setup_verwaltungsrollen()
                 self._setup_survey_participation()
                 self._cleanup_legacy_groups()
 
@@ -603,10 +604,12 @@ class Command(BaseCommand):
             perms_added = 0
 
             # Nur Qualifikationen, Pflichtstunden und Ränge - KEIN view_person/change_person
-            # (Zugriff auf Personen wird in den FF-Views per Rollen-Check gesteuert)
+            # (Zugriff auf FF-Personen läuft über personnel.manage_ff_person,
+            # der Einheiten-Umfang wird in den FF-Views bestimmt)
             personnel_perms = Permission.objects.filter(
                 content_type__app_label=Modules.PERSONNEL,
                 codename__in=[
+                    'manage_ff_person',
                     'view_qualification', 'add_qualification', 'change_qualification',
                     'view_dutyhoursentry', 'add_dutyhoursentry', 'change_dutyhoursentry',
                     'view_rank', 'view_personrank',
@@ -622,6 +625,12 @@ class Command(BaseCommand):
                     f'  ✓ {role_name}: {status} ({perms_added} Permissions)'
                 )
             )
+
+    def _setup_verwaltungsrollen(self):
+        """Personalverwalter, FF Verwalter, Benutzerverwalter (getrennte Bereiche)"""
+        from permissions.management.commands.setup_verwaltungsrollen import setup_verwaltungsrollen
+        self.stdout.write('\n12. Verwaltungsrollen (Personal / FF / Benutzer)...')
+        setup_verwaltungsrollen(out=lambda msg: self.stdout.write(self.style.SUCCESS(msg)))
 
     def _cleanup_legacy_groups(self):
         """Entfernt veraltete Gruppen die nicht mehr verwendet werden"""

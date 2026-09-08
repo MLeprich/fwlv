@@ -144,6 +144,22 @@ class RoleRequiredMixin(LoginRequiredMixin):
         return any(user.has_role(role) for role in self.required_roles)
 
 
+class PermissionRedirectMixin(LoginRequiredMixin):
+    """
+    Erfordert ein Django-Recht (z.B. 'core.manage_users'); ohne Recht gibt es
+    eine Meldung und einen Redirect zum Dashboard statt eines 403.
+    """
+    required_permission = None
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        if self.required_permission and not request.user.has_perm(self.required_permission):
+            messages.error(request, 'Sie haben nicht die erforderliche Berechtigung für diese Aktion.')
+            return redirect('core:dashboard')
+        return super().dispatch(request, *args, **kwargs)
+
+
 class TimeBasedAccessMixin(LoginRequiredMixin):
     """
     Mixin für zeitbasierte Zugriffskontrolle

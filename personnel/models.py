@@ -310,6 +310,9 @@ class Person(AuditedModel):
         verbose_name = _('Person')
         verbose_name_plural = _('Personal')
         ordering = ['last_name', 'first_name']
+        permissions = [
+            ('manage_ff_person', 'Kann FF-Personal verwalten (FF-Verwaltung)'),
+        ]
         indexes = [
             models.Index(fields=['personnel_number']),
             models.Index(fields=['last_name', 'first_name']),

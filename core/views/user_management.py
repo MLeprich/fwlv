@@ -1,6 +1,9 @@
 """
-User Management Views für Administratoren
-Benutzerverwaltung, Rollen-Zuweisung, Permission-Management
+User Management Views (Benutzerverwaltung)
+Zugriff über das Recht core.manage_users (Rollen Administrator und
+Benutzerverwalter); Rollenzuweisung über core.assign_roles.
+Administrator-Konten und Superuser dürfen nur von Administratoren
+verändert werden.
 """
 
 import csv
@@ -25,10 +28,64 @@ from django.core.exceptions import ValidationError
 
 from core.models import User
 from locations.models import Location
-from permissions.mixins import RoleRequiredMixin
+from permissions.mixins import PermissionRedirectMixin
 from permissions.constants import Roles
 from permissions.utils import PermissionHelper
 from permissions.backends import get_active_delegations
+
+
+# =============================================================================
+# Zugriffshelfer
+# =============================================================================
+
+def _is_admin(user):
+    """Administrator oder Superuser (darf alles in der Benutzerverwaltung)."""
+    return user.is_authenticated and (user.is_superuser or user.has_role(Roles.ADMINISTRATOR))
+
+
+def _can_manage_users(user):
+    """Zugang zur Benutzerverwaltung: Administrator oder Benutzerverwalter."""
+    return user.is_authenticated and user.has_perm('core.manage_users')
+
+
+def _is_protected_account(user_obj):
+    """Superuser und Administratoren dürfen nur von Administratoren verändert werden."""
+    return user_obj.is_superuser or user_obj.has_role(Roles.ADMINISTRATOR)
+
+
+def _can_manage_target(actor, user_obj):
+    return _is_admin(actor) or not _is_protected_account(user_obj)
+
+
+def _assignable_roles(actor):
+    """Rollen, die der Handelnde vergeben darf (Administrator nur durch Administratoren)."""
+    qs = Group.objects.all().order_by('name')
+    if not _is_admin(actor):
+        qs = qs.exclude(name=Roles.ADMINISTRATOR)
+    return qs
+
+
+class UserManagementMixin(PermissionRedirectMixin):
+    """
+    Basis für alle Views der Benutzerverwaltung: Recht core.manage_users
+    (überschreibbar) und Schutz von Administrator-/Superuser-Konten vor
+    Änderungen durch Benutzerverwalter.
+    """
+    required_permission = 'core.manage_users'
+    protect_target = True  # Ziel-Benutzer (pk) gegen Nicht-Admins schützen
+
+    def dispatch(self, request, *args, **kwargs):
+        if (self.protect_target and 'pk' in kwargs and request.user.is_authenticated
+                and request.user.has_perm(self.required_permission or 'core.manage_users')):
+            target = get_object_or_404(User, pk=kwargs['pk'])
+            if not _can_manage_target(request.user, target):
+                messages.error(
+                    request,
+                    f'{target.get_full_name() or target.username} ist ein Administrator-Konto '
+                    f'und kann nur von Administratoren bearbeitet werden.'
+                )
+                return redirect('core:user_detail', pk=target.pk)
+        return super().dispatch(request, *args, **kwargs)
 
 
 class AdminSetPasswordForm(forms.Form):
@@ -79,11 +136,11 @@ class AdminSetPasswordForm(forms.Form):
         return password
 
 
-class UserListView(RoleRequiredMixin, ListView):
-    """Liste aller User für Admin"""
+class UserListView(UserManagementMixin, ListView):
+    """Liste aller User (Administrator / Benutzerverwalter)"""
+    protect_target = False
     model = User
     template_name = 'core/user_management/user_list.html'
-    required_roles = [Roles.ADMINISTRATOR]
     context_object_name = 'users'
     paginate_by = 50
 
@@ -131,11 +188,11 @@ class UserListView(RoleRequiredMixin, ListView):
         return context
 
 
-class UserDetailView(RoleRequiredMixin, DetailView):
+class UserDetailView(UserManagementMixin, DetailView):
     """User-Details mit Rollen und Permissions"""
+    protect_target = False  # Ansehen ist erlaubt, Änderungen werden in den Aktions-Views geschützt
     model = User
     template_name = 'core/user_management/user_detail.html'
-    required_roles = [Roles.ADMINISTRATOR]
     context_object_name = 'user_obj'  # Nicht 'user' wegen request.user
 
     def get_context_data(self, **kwargs):
@@ -146,9 +203,11 @@ class UserDetailView(RoleRequiredMixin, DetailView):
         # Permission-Summary holen
         context['permission_summary'] = PermissionHelper.get_user_permission_summary(user_obj)
 
-        # Alle verfügbaren Rollen
-        from django.contrib.auth.models import Group
-        context['available_roles'] = Group.objects.all().order_by('name')
+        # Verfügbare Rollen (Administrator nur für Administratoren vergebbar)
+        context['available_roles'] = _assignable_roles(self.request.user)
+        context['can_manage_admins'] = _is_admin(self.request.user)
+        context['can_modify_target'] = _can_manage_target(self.request.user, user_obj)
+        context['can_assign_roles'] = self.request.user.has_perm('core.assign_roles')
 
         # Aktive Delegationen
         context['active_delegations'] = get_active_delegations(user_obj)
@@ -207,10 +266,10 @@ class UserDetailView(RoleRequiredMixin, DetailView):
         return context
 
 
-class UserRoleAssignView(RoleRequiredMixin, DetailView):
+class UserRoleAssignView(UserManagementMixin, DetailView):
     """HTMX Endpoint für Rollen-Zuweisung"""
     model = User
-    required_roles = [Roles.ADMINISTRATOR]
+    required_permission = 'core.assign_roles'
 
     def post(self, request, *args, **kwargs):
         user_obj = self.get_object()
@@ -220,6 +279,11 @@ class UserRoleAssignView(RoleRequiredMixin, DetailView):
         # Verhindere, dass User sich selbst Admin-Rolle entfernt
         if action == 'remove' and role_name == Roles.ADMINISTRATOR and user_obj == request.user:
             messages.error(request, 'Sie können sich selbst die Administrator-Rolle nicht entziehen!')
+            return redirect('core:user_detail', pk=user_obj.pk)
+
+        # Administrator-Rolle darf nur ein Administrator vergeben oder entziehen
+        if role_name == Roles.ADMINISTRATOR and not _is_admin(request.user):
+            messages.error(request, 'Die Administrator-Rolle kann nur von Administratoren vergeben oder entzogen werden.')
             return redirect('core:user_detail', pk=user_obj.pk)
 
         if action == 'add':
@@ -240,10 +304,9 @@ class UserRoleAssignView(RoleRequiredMixin, DetailView):
         return redirect('core:user_detail', pk=user_obj.pk)
 
 
-class UserTicketPermissionsView(RoleRequiredMixin, DetailView):
+class UserTicketPermissionsView(UserManagementMixin, DetailView):
     """Ticket-Berechtigungen verwalten"""
     model = User
-    required_roles = [Roles.ADMINISTRATOR]
 
     def post(self, request, *args, **kwargs):
         from django.contrib.auth.models import Permission
@@ -274,11 +337,10 @@ class UserTicketPermissionsView(RoleRequiredMixin, DetailView):
         return redirect('core:user_detail', pk=user_obj.pk)
 
 
-class UserCreateView(RoleRequiredMixin, CreateView):
+class UserCreateView(UserManagementMixin, CreateView):
     """Neuen User anlegen"""
     model = User
     template_name = 'core/user_management/user_form.html'
-    required_roles = [Roles.ADMINISTRATOR]
     fields = [
         'username',
         'email',
@@ -324,11 +386,10 @@ class UserCreateView(RoleRequiredMixin, CreateView):
         return reverse_lazy('core:user_detail', kwargs={'pk': self.object.pk})
 
 
-class UserUpdateView(RoleRequiredMixin, UpdateView):
+class UserUpdateView(UserManagementMixin, UpdateView):
     """User bearbeiten"""
     model = User
     template_name = 'core/user_management/user_form.html'
-    required_roles = [Roles.ADMINISTRATOR]
     fields = [
         'email',
         'first_name',
@@ -358,9 +419,8 @@ class UserUpdateView(RoleRequiredMixin, UpdateView):
         return reverse_lazy('core:user_detail', kwargs={'pk': self.object.pk})
 
 
-class UserSetPasswordView(RoleRequiredMixin, View):
+class UserSetPasswordView(UserManagementMixin, View):
     """Passwort für einen Benutzer setzen (nur für Admins)"""
-    required_roles = [Roles.ADMINISTRATOR]
 
     def get(self, request, pk):
         user_obj = get_object_or_404(User, pk=pk)
@@ -396,9 +456,8 @@ class UserSetPasswordView(RoleRequiredMixin, View):
         })
 
 
-class UserStaffPositionView(RoleRequiredMixin, View):
+class UserStaffPositionView(UserManagementMixin, View):
     """Dienststellung für einen Benutzer verwalten"""
-    required_roles = [Roles.ADMINISTRATOR]
 
     def post(self, request, pk):
         user_obj = get_object_or_404(User, pk=pk)
@@ -417,9 +476,8 @@ class UserStaffPositionView(RoleRequiredMixin, View):
         return redirect('core:user_detail', pk=user_obj.pk)
 
 
-class UserCreatePersonView(RoleRequiredMixin, View):
+class UserCreatePersonView(UserManagementMixin, View):
     """Automatisch Personendatensatz aus Benutzerdaten erstellen"""
-    required_roles = [Roles.ADMINISTRATOR]
 
     def post(self, request, pk):
         from personnel.models import Person
@@ -467,9 +525,8 @@ class UserCreatePersonView(RoleRequiredMixin, View):
         return redirect('core:user_detail', pk=user_obj.pk)
 
 
-class UserFFSettingsView(RoleRequiredMixin, View):
+class UserFFSettingsView(UserManagementMixin, View):
     """FF-Einheitsführer/Vertreter Einstellungen für einen Benutzer verwalten"""
-    required_roles = [Roles.ADMINISTRATOR]
 
     def post(self, request, pk):
         from organization.models import VolunteerUnit
@@ -533,9 +590,8 @@ class UserFFSettingsView(RoleRequiredMixin, View):
         return redirect('core:user_detail', pk=user_obj.pk)
 
 
-class UserWBFSettingsView(RoleRequiredMixin, View):
+class UserWBFSettingsView(UserManagementMixin, View):
     """WBF-Einstellungen für einen Benutzer verwalten"""
-    required_roles = [Roles.ADMINISTRATOR]
 
     def post(self, request, pk):
         user_obj = get_object_or_404(User, pk=pk)
@@ -569,11 +625,6 @@ class UserWBFSettingsView(RoleRequiredMixin, View):
 # =============================================================================
 # CSV-Benutzer-Import
 # =============================================================================
-
-def _import_user_is_admin(user):
-    """Nur Administratoren/Superuser dürfen importieren."""
-    return user.is_authenticated and (user.is_superuser or user.has_role(Roles.ADMINISTRATOR))
-
 
 def _generate_import_password(length=12):
     """Zufallspasswort für importierte Benutzer (ohne verwechselbare Zeichen)."""
@@ -645,7 +696,7 @@ def _map_user_columns(header):
 
 def user_import_page(request):
     """Startseite des Benutzer-Imports (Upload-Formular)."""
-    if not _import_user_is_admin(request.user):
+    if not _can_manage_users(request.user):
         messages.error(request, 'Keine Berechtigung.')
         return redirect('core:dashboard')
     # Passwörter eines früheren Imports nicht länger als nötig in der Session halten
@@ -655,14 +706,14 @@ def user_import_page(request):
 
     context = {
         'current_module': 'administration',
-        'available_roles': sorted(Group.objects.values_list('name', flat=True)),
+        'available_roles': sorted(_assignable_roles(request.user).values_list('name', flat=True)),
     }
     return render(request, 'core/user_management/user_import.html', context)
 
 
 def user_import_template(request):
     """CSV-Vorlage zum Download."""
-    if not _import_user_is_admin(request.user):
+    if not _can_manage_users(request.user):
         return redirect('core:dashboard')
     roles = sorted(Group.objects.values_list('name', flat=True))
     lines = [
@@ -683,7 +734,7 @@ def user_import_template(request):
 
 def user_import_validate(request):
     """CSV parsen, validieren, Vorschau anzeigen (gültige Zeilen in Session)."""
-    if not _import_user_is_admin(request.user):
+    if not _can_manage_users(request.user):
         messages.error(request, 'Keine Berechtigung.')
         return redirect('core:dashboard')
     if request.method != 'POST':
@@ -712,7 +763,7 @@ def user_import_validate(request):
 
     header = rows[0]
     col = _map_user_columns(header)
-    valid_groups = set(Group.objects.values_list('name', flat=True))
+    valid_groups = set(_assignable_roles(request.user).values_list('name', flat=True))
 
     preview = []
     taken = set()
@@ -741,7 +792,11 @@ def user_import_validate(request):
         role_names = [r.strip() for r in roles_raw.split(',') if r.strip()] if roles_raw else []
         unknown = [r for r in role_names if r not in valid_groups]
         if unknown:
-            row_errors.append('Unbekannte Rolle(n): ' + ', '.join(unknown))
+            if Roles.ADMINISTRATOR in unknown:
+                row_errors.append('Die Administrator-Rolle kann nur von Administratoren vergeben werden')
+                unknown = [r for r in unknown if r != Roles.ADMINISTRATOR]
+            if unknown:
+                row_errors.append('Unbekannte Rolle(n): ' + ', '.join(unknown))
 
         if pn:
             if pn in existing_pn or User.objects.filter(personnel_number=pn).exists():
@@ -787,7 +842,7 @@ def user_import_validate(request):
 
 def user_import_execute(request):
     """Angelegte, validierte Zeilen als Benutzer anlegen."""
-    if not _import_user_is_admin(request.user):
+    if not _can_manage_users(request.user):
         messages.error(request, 'Keine Berechtigung.')
         return redirect('core:dashboard')
     if request.method != 'POST':
@@ -871,7 +926,7 @@ def user_import_execute(request):
 
 def user_import_passwords(request):
     """Die generierten Zugangsdaten des letzten Imports als CSV herunterladen."""
-    if not _import_user_is_admin(request.user):
+    if not _can_manage_users(request.user):
         messages.error(request, 'Keine Berechtigung.')
         return redirect('core:dashboard')
 

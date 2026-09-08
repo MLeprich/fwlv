@@ -278,9 +278,9 @@
                             <a href="{% url 'core:settings' %}" class="block px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
                                 ⚙️ Einstellungen
                             </a>
-                            {% if request.user|has_role:'Administrator' %}
+                            {% if perms.core.manage_users %}
                             <a href="{% url 'core:user_list' %}" class="block px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
-                                🔐 Administration
+                                🔐 Benutzerverwaltung
                             </a>
                             {% endif %}
                             <hr class="my-2">

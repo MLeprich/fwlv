@@ -149,6 +149,7 @@
                         {% for group in user_obj.groups.all %}
                             <div class="inline-flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
                                 <span class="text-sm font-medium text-red-800">{{ group.name }}</span>
+                                {% if can_manage_admins or can_assign_roles and can_modify_target and group.name != 'Administrator' %}
                                 <form method="post" action="{% url 'core:assign_roles' user_obj.pk %}" class="inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="remove">
@@ -161,6 +162,7 @@
                                         </svg>
                                     </button>
                                 </form>
+                                {% endif %}
                             </div>
                         {% empty %}
                             <p class="text-sm text-gray-500">Keine Rollen zugewiesen</p>
@@ -168,6 +170,9 @@
                     </div>
 
                     <!-- Rolle hinzufügen -->
+                    {% if not can_modify_target %}
+                    <p class="text-sm text-gray-500 italic">Administrator-Konten können nur von Administratoren geändert werden.</p>
+                    {% elif can_assign_roles %}
                     <form method="post" action="{% url 'core:assign_roles' user_obj.pk %}" class="flex gap-2">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="add">
@@ -190,6 +195,7 @@
                             Hinzufügen
                         </button>
                     </form>
+                    {% endif %}
                 </div>
             </div>
 

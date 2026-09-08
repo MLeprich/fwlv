@@ -58,9 +58,27 @@ Für jedes Lager-Modul gibt es eine spezielle Rolle mit vollem CRUD-Zugriff:
 | **Sachbearbeiter** | View-Rechte für alle Module | 191 |
 | **Lagerverwalter** | View + Add für alle Lager-Module | 186 |
 | **Wachleiter** | Fahrzeugübernahme + View auf wichtige Module | 86 |
-| **Personalverwalter** | Vollzugriff auf Personalverwaltung | 67 |
+| **Personalverwalter** | Vollzugriff auf Personalakten (`personnel.*`), keine Benutzer-/Systemrechte | 67 |
 | **Dokumentenverwalter** | Dokumentenverwaltung | 20 |
 | **Standard-Nutzer** | Basis-Zugriff (eigenes Profil, Fahrzeuge) | 16 |
+
+### Verwaltungsrollen (getrennte Bereiche)
+
+Seit 2026-09-08 sind Personal, FF-Personal und Benutzerverwaltung getrennte Bereiche
+mit jeweils eigener Rolle. Einrichtung: `python manage.py setup_verwaltungsrollen`
+(idempotent, fasst keine anderen Gruppen an; wird auch von `setup_permissions` aufgerufen).
+
+| Bereich | URL | Rolle | Zugriff über |
+|---------|-----|-------|--------------|
+| Personal | `/personnel/persons/` | **Personalverwalter** | Modellrechte `personnel.view/add/change/delete_person` usw. |
+| FF-Personal | `/personnel/ff/` | **FF Verwalter** (alle Einheiten), **FF Einheitsführer** / **FF Vertreter** (nur eigene Einheit) | Recht `personnel.manage_ff_person`; Einheiten-Umfang per Rolle |
+| Benutzer | `/verwaltung/users/` | **Benutzerverwalter** | Rechte `core.manage_users` (Zugang) und `core.assign_roles` (Rollen) |
+
+Schutzregeln in der Benutzerverwaltung:
+
+- Die Rolle **Administrator** kann nur von Administratoren vergeben oder entzogen werden (auch im CSV-Import).
+- Administrator-Konten und Superuser können nur von Administratoren bearbeitet werden (Stammdaten, Passwort, Rollen, Einstellungen).
+- Administrator behält in allen drei Bereichen Vollzugriff.
 
 ## Berechtigungs-Matrix
 
