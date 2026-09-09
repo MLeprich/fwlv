@@ -29,9 +29,8 @@ urlpatterns = [
     # Barcode/QR-Code Scanner
     path('scan/', views.barcode_scan_view, name='barcode_scan'),
 
-    # Notifications
-    path('notifications/', views.notifications_list_view, name='notifications_list'),
-    path('notifications/dropdown/', views.notifications_dropdown_view, name='notifications_dropdown'),
+    # Hinweis: /notifications/ wird von der notifications-App bedient
+    # (flvs_project/urls.py). Platzhalter-Routen hier würden sie verdecken.
 
     # Alerts & Warnings
     path('alerts/', views.alerts_view, name='alerts'),

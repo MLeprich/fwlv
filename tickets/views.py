@@ -174,6 +174,12 @@ class TicketDetailView(LoginRequiredMixin, TicketPermissionMixin, DetailView):
                 Q(is_superuser=True)
             ).distinct().order_by('first_name', 'last_name')
 
+            # Kategorien für nachträgliche Änderung (inaktive nur, wenn aktuell gesetzt)
+            categories = TicketCategory.objects.filter(is_active=True)
+            if self.object.category_id and not self.object.category.is_active:
+                categories = categories | TicketCategory.objects.filter(pk=self.object.category_id)
+            context['categories'] = categories.order_by('order', 'name')
+
         return context
 
 
@@ -338,6 +344,18 @@ def update_ticket(request, pk):
         if new_priority and new_priority in dict(TicketPriority.choices) and new_priority != ticket.priority:
             ticket.priority = new_priority
             changes.append(f'Priorität: {ticket.get_priority_display()}')
+
+        # Kategorie ändern (nur wenn das Feld im Formular mitgeschickt wurde)
+        if 'category' in request.POST:
+            category_id = request.POST.get('category')
+            if category_id:
+                new_category = TicketCategory.objects.filter(pk=category_id).first()
+                if new_category and new_category != ticket.category:
+                    ticket.category = new_category
+                    changes.append(f'Kategorie: {new_category.name}')
+            elif ticket.category is not None:
+                ticket.category = None
+                changes.append('Kategorie entfernt')
 
         # Zuweisung ändern
         from django.contrib.auth import get_user_model

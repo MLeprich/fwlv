@@ -4,7 +4,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import MappeKontakt, Grossereignis, InfoMonitor, BereitschaftPerson
+from .models import (MappeKontakt, Grossereignis, InfoMonitor, BereitschaftPerson,
+                     Ticket, TicketCategory)
 
 User = get_user_model()
 
@@ -285,3 +286,89 @@ class FFStammfahrzeugTests(TestCase):
         self.assertEqual(self.client.post(reverse('tickets:ff_stammfahrzeug_create'),
                                           {'zug': 'mitte', 'name': 'Neu'}).status_code, 403)
         self.assertEqual(self.client.post(reverse('tickets:ff_stammfahrzeug_delete', args=[self.hlf.pk])).status_code, 403)
+
+
+class TicketNotificationTests(TestCase):
+    """Neues Ticket -> Bearbeiter sieht Benachrichtigung mit Text in der Glocke."""
+
+    def setUp(self):
+        self.processor = User.objects.create_user(username='bearbeiter', password='pw',
+                                                  first_name='Bea', last_name='Bearbeiter')
+        self.processor.user_permissions.add(Permission.objects.get(codename='process_ticket'))
+        self.creator = User.objects.create_user(username='ersteller', password='pw',
+                                                first_name='Erik', last_name='Ersteller')
+        self.creator.user_permissions.add(Permission.objects.get(codename='create_ticket'))
+
+    def test_new_ticket_notification_visible_in_dropdown(self):
+        from notifications.models import Notification
+
+        self.client.force_login(self.creator)
+        response = self.client.post(reverse('tickets:create'), {
+            'title': 'Drucker druckt nicht',
+            'priority': 'normal',
+            'description': 'Papierstau',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        notification = Notification.objects.get(recipient=self.processor)
+        self.assertIn('Neues Ticket', notification.title)
+        self.assertIn('Drucker druckt nicht', notification.message)
+
+        # Die Glocke lädt /notifications/dropdown/ – darf nicht von einer
+        # Platzhalter-Route in core verdeckt werden (lieferte immer "leer").
+        self.client.force_login(self.processor)
+        count = self.client.get(reverse('notifications:unread_count')).json()['count']
+        self.assertEqual(count, 1)
+        dropdown = self.client.get(reverse('notifications:dropdown'))
+        self.assertContains(dropdown, 'Neues Ticket')
+        self.assertContains(dropdown, 'Drucker druckt nicht')
+        self.assertNotContains(dropdown, 'Keine neuen Benachrichtigungen')
+
+        listing = self.client.get(reverse('notifications:list'))
+        self.assertContains(listing, 'Drucker druckt nicht')
+
+
+class TicketCategoryChangeTests(TestCase):
+    """Bearbeiter kann die Kategorie eines Tickets nachträglich ändern."""
+
+    def setUp(self):
+        self.processor = User.objects.create_user(username='bearbeiter', password='pw')
+        self.processor.user_permissions.add(Permission.objects.get(codename='process_ticket'))
+        self.creator = User.objects.create_user(username='ersteller', password='pw')
+        self.cat_it = TicketCategory.objects.create(name='IT & Technik', order=1)
+        self.cat_daten = TicketCategory.objects.create(name='IT Datenversorgung', order=2)
+        self.ticket = Ticket.objects.create(title='Test', description='x', created_by=self.creator,
+                                            category=self.cat_it)
+        self.client.force_login(self.processor)
+
+    def test_detail_offers_category_select(self):
+        response = self.client.get(reverse('tickets:detail', args=[self.ticket.pk]))
+        self.assertContains(response, 'name="category"')
+        self.assertContains(response, 'IT Datenversorgung')
+
+    def test_update_changes_category(self):
+        response = self.client.post(reverse('tickets:update_ticket', args=[self.ticket.pk]), {
+            'status': self.ticket.status,
+            'priority': self.ticket.priority,
+            'category': self.cat_daten.pk,
+            'assigned_to': '',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.category, self.cat_daten)
+
+    def test_update_without_category_field_keeps_category(self):
+        self.client.post(reverse('tickets:update_ticket', args=[self.ticket.pk]), {
+            'status': 'in_progress', 'priority': self.ticket.priority, 'assigned_to': '',
+        })
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.category, self.cat_it)
+        self.assertEqual(self.ticket.status, 'in_progress')
+
+    def test_creator_cannot_change_category(self):
+        self.client.force_login(self.creator)
+        self.client.post(reverse('tickets:update_ticket', args=[self.ticket.pk]), {
+            'category': self.cat_daten.pk,
+        })
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.category, self.cat_it)

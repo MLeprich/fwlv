@@ -1541,33 +1541,6 @@ def barcode_scan_view(request):
 
 
 @login_required
-def notifications_dropdown_view(request):
-    """
-    Benachrichtigungen-Dropdown (HTMX)
-    """
-    # TODO: Später mit echten Benachrichtigungen aus notifications app
-    notifications = []
-
-    return render(request, 'core/partials/notifications_dropdown.html', {
-        'notifications': notifications
-    })
-
-
-@login_required
-def notifications_list_view(request):
-    """
-    Vollständige Benachrichtigungsliste
-    """
-    # TODO: Später mit echten Benachrichtigungen aus notifications app
-    notifications = []
-
-    return render(request, 'core/notifications_list.html', {
-        'notifications': notifications,
-        'current_module': 'notifications'
-    })
-
-
-@login_required
 def alerts_view(request):
     """
     Kritische Alerts/Warnungen
