@@ -551,7 +551,11 @@ def _defect_list(request, inspection):
 
 
 class DefectAddView(_BVSMixin, View):
-    """Mangel anlegen – leer oder mit dem Text eines Mustersatzes."""
+    """
+    Mangel anlegen – leer oder mit dem Text eines Mustersatzes. Kommt aus dem
+    Lückentext-Dialog der bereits ausgefüllte Text mit (``text``), wird dieser
+    statt des Mustersatz-Textes übernommen.
+    """
     permission_required = PERM_EDIT
 
     def post(self, request, pk):
@@ -562,10 +566,12 @@ class DefectAddView(_BVSMixin, View):
         phrase_id = request.POST.get('phrase', '')
         if phrase_id.isdigit():
             phrase = BVSPhrase.objects.filter(pk=int(phrase_id)).first()
+        filled = request.POST.get('text')
+        text = filled if filled is not None else (phrase.text if phrase else '')
         position = (inspection.defects.aggregate(m=Max('position'))['m'] or 0) + 1
         defect = FireSafetyDefect.objects.create(
             inspection=inspection, position=position, number=_next_defect_number(inspection),
-            text=phrase.text if phrase else '', phrase=phrase,
+            text=text, phrase=phrase,
         )
         if _is_htmx(request):
             return _defect_card(request, defect, is_new=True)
@@ -700,6 +706,10 @@ class BVSCompleteView(_BVSMixin, View):
                       f'Brandverhütungsschau vom {inspection.inspection_date:%d.%m.%Y} abgeschlossen ({summary})',
                       obj=inspection)
         messages.success(request, 'Brandverhütungsschau abgeschlossen. Die Niederschrift steht als PDF bereit.')
+        gaps = [d.number or '?' for d in inspection.defects.all() if d.has_gap]
+        if gaps:
+            messages.warning(request, f'Achtung: Punkt {", ".join(gaps)} enthält noch eine offene Lücke „…“. '
+                                      'Zum Nachtragen die Niederschrift wieder öffnen.')
         return redirect(inspection.get_absolute_url())
 
 

@@ -637,3 +637,37 @@ class SidebarNavigationTests(BVSTestBase):
         for link in sidebar_links:
             self.assertIn(f'href="{link}"', html)
         self.assertIn("'objektverwaltung']", html)  # Kategorie auf Seiten des Moduls aufgeklappt
+
+
+class GapTests(BVSTestBase):
+    """Platzhalter „…“ der Mustersätze: ausgefüllter Text, Markierung, Hinweis beim Abschluss."""
+
+    def test_has_gap(self):
+        self.assertTrue(FireSafetyDefect(text='Bauvorhaben „…“').has_gap)
+        self.assertTrue(FireSafetyDefect(text='vom ... und').has_gap)
+        self.assertFalse(FireSafetyDefect(text='Tür freihalten.').has_gap)
+
+    def test_add_with_filled_text_from_dialog(self):
+        inspection = self.start()
+        response = self.client.post(reverse('objektverwaltung:bvs_defect_add', args=[inspection.pk]),
+                                    {'phrase': self.phrase.pk, 'text': 'Die Tür zum Keller ist freizuhalten.'},
+                                    HTTP_HX_REQUEST='true')
+        defect = inspection.defects.get()
+        self.assertEqual(defect.text, 'Die Tür zum Keller ist freizuhalten.')
+        self.assertEqual(defect.phrase, self.phrase)
+        self.assertContains(response, 'border-primary-600')
+        self.assertContains(response, 'class="gap-hint', html=False)
+        self.assertIn('hidden', response.content.decode().split('class="gap-hint')[1].split('>')[0])
+
+    def test_open_gap_is_marked_and_reported_on_completion(self):
+        inspection = self.start()
+        response = self.client.post(reverse('objektverwaltung:bvs_defect_add', args=[inspection.pk]),
+                                    {'phrase': self.phrase.pk}, HTTP_HX_REQUEST='true')
+        self.assertContains(response, 'border-yellow-400')
+        self.assertNotIn('hidden', response.content.decode().split('class="gap-hint')[1].split('>')[0])
+
+        response = self.client.post(reverse('objektverwaltung:bvs_complete', args=[inspection.pk]), follow=True)
+        inspection.refresh_from_db()
+        self.assertEqual(inspection.status, BVSStatus.COMPLETED)  # Abschluss bleibt möglich
+        self.assertContains(response, 'Punkt 1.1 enthält noch eine offene Lücke')
+        self.assertContains(response, 'Enthält eine offene Lücke')

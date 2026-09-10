@@ -1102,3 +1102,10 @@ class FireSafetyDefect(TimeStampedModel):
 
     def __str__(self):
         return f"Punkt {self.number}" if self.number else f"Mangel {self.pk}"
+
+    #: Platzhalter der Mustersätze, die vor Ort ausgefüllt werden
+    GAP_MARKERS = ('…', '...')
+
+    @property
+    def has_gap(self):
+        return any(marker in self.text for marker in self.GAP_MARKERS)

@@ -236,6 +236,36 @@
             </div>
         </div>
     </template>
+
+    <!-- Lückentext-Dialog: Platzhalter „…“ des Mustersatzes vor dem Einfügen ausfüllen -->
+    <template x-teleport="body">
+        <div x-show="gap" x-cloak class="fixed inset-0 bg-black/50 flex justify-center items-start overflow-y-auto" style="z-index: 60"
+             @keydown.escape.window="gap = null">
+            <div id="gap-dialog" class="bg-white w-full max-w-3xl shadow-lg rounded-lg mt-8 mx-4" x-show="gap">
+                <template x-if="gap">
+                    <div>
+                        <div class="p-5 border-b border-gray-200">
+                            <p class="text-xs text-gray-500">Mustersatz <span x-text="gap.phrase.code"></span></p>
+                            <h2 class="text-lg font-semibold text-gray-900" x-text="gap.phrase.title"></h2>
+                            <p class="text-sm text-gray-600 mt-1">Lücken ausfüllen – <span x-text="gapFilled"></span> von <span x-text="gapTotal"></span> ausgefüllt. „Weiter“ auf der Tastatur springt zur nächsten Lücke.</p>
+                        </div>
+                        <div class="p-5 text-base text-gray-800 whitespace-pre-line" style="line-height: 2.6"><template x-for="(part, i) in gap.parts" :key="i"><span><template x-if="i % 2 === 0"><span x-text="part"></span></template><template x-if="i % 2 === 1"><input type="text" x-model="gap.values[i]" :data-gap="i" placeholder="…"
+                                   :enterkeyhint="i + 2 < gap.parts.length ? 'next' : 'done'"
+                                   @keydown.enter.prevent="nextGapInput(i)"
+                                   class="inline-block mx-1 px-2 py-1 text-base border border-yellow-400 bg-yellow-50 rounded focus:ring-2 focus:ring-primary-500"
+                                   :style="'max-width: 100%; width: ' + Math.max(8, (gap.values[i] || '').length + 2) + 'ch'"></template></span></template></div>
+                        <div class="p-4 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
+                            <button type="button" @click="gap = null" class="px-4 py-3 rounded-lg text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200">Abbrechen</button>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" @click="applyGaps(false)" class="px-4 py-3 rounded-lg text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200">Ohne Ausfüllen übernehmen</button>
+                                <button type="button" @click="applyGaps(true)" class="px-5 py-3 rounded-lg text-base font-semibold bg-primary-600 text-white hover:bg-primary-700">Übernehmen</button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
 </div>
 
 {{ phrase_groups|json_script:"bvs-phrases" }}
@@ -275,9 +305,27 @@ window.bvs = (function () {
         window.dispatchEvent(new CustomEvent('bvs-defects', { detail: n }));
     }
 
+    // Offene Lücken „…“ der Mustersätze: Karte gelb markieren, Hinweis zeigen
+    const GAP_RE = /…|\.\.\./;
+    function markGaps(card) {
+        const textarea = card.querySelector('textarea');
+        const hasGap = !!textarea && GAP_RE.test(textarea.value);
+        card.classList.toggle('border-yellow-400', hasGap);
+        card.classList.toggle('border-primary-600', !hasGap);
+        const hint = card.querySelector('.gap-hint');
+        if (hint) hint.hidden = !hasGap;
+    }
+    function gapPoints() {
+        return [...document.querySelectorAll('#defect-list .defect-card')]
+            .filter(card => GAP_RE.test(card.querySelector('textarea').value))
+            .map(card => (card.querySelector('input[name$="-number"]') || {}).value || '?');
+    }
+
     ['input', 'change'].forEach(type => document.addEventListener(type, e => {
         const form = autosaveForm(e.target);
         if (form) { dirty.add(form); status('<span class="text-gray-500">Ungespeicherte Änderungen …</span>'); }
+        const card = e.target.closest && e.target.closest('.defect-card');
+        if (card && e.target.tagName === 'TEXTAREA') markGaps(card);
     }));
     document.body.addEventListener('htmx:beforeRequest', e => {
         inflight++;
@@ -340,8 +388,12 @@ window.bvs = (function () {
 
     return {
         flush,
-        addDefect(phraseId) {
-            return htmx.ajax('POST', urls.add, { target: '#defect-list', swap: 'beforeend', values: { phrase: phraseId } });
+        GAP_RE,
+        gapPoints,
+        addDefect(phraseId, text) {
+            const values = { phrase: phraseId };
+            if (text !== undefined) values.text = text;  // aus dem Lückentext-Dialog
+            return htmx.ajax('POST', urls.add, { target: '#defect-list', swap: 'beforeend', values });
         },
         async move(url) {
             await flush();
@@ -376,10 +428,14 @@ window.bvs = (function () {
 
 function bvsPage() {
     const groups = JSON.parse(document.getElementById('bvs-phrases').textContent);
+    const phraseById = {};
+    groups.forEach(g => g.phrases.forEach(p => { phraseById[p.id] = p; }));
     return {
         picker: false,
         q: '',
         chapter: '',
+        // Lückentext-Dialog: parts wechseln sich ab – Text (gerade Indizes) und Lücke (ungerade)
+        gap: null,
         defectCount: document.querySelectorAll('#defect-list .defect-card').length,
         chapters: [...new Set(groups.map(g => g.chapter))],
         init() {
@@ -401,7 +457,34 @@ function bvsPage() {
         },
         pick(id) {
             this.picker = false;
-            bvs.addDefect(id);
+            const phrase = phraseById[id];
+            if (!phrase || !bvs.GAP_RE.test(phrase.text)) {
+                bvs.addDefect(id);
+                return;
+            }
+            const parts = phrase.text.split(/(…|\.\.\.)/);
+            this.gap = { phrase, parts, values: parts.map(() => '') };
+            this.$nextTick(() => this.focusGapInput(1));
+        },
+        get gapTotal() {
+            return this.gap ? (this.gap.parts.length - 1) / 2 : 0;
+        },
+        get gapFilled() {
+            return this.gap ? this.gap.values.filter((v, i) => i % 2 === 1 && v.trim()).length : 0;
+        },
+        focusGapInput(index) {
+            const input = document.querySelector('#gap-dialog [data-gap="' + index + '"]');
+            if (input) { input.focus(); return true; }
+            return false;
+        },
+        nextGapInput(index) {
+            if (!this.focusGapInput(index + 2)) this.applyGaps(true);
+        },
+        applyGaps(fill) {
+            const { phrase, parts, values } = this.gap;
+            const text = parts.map((part, i) => (i % 2 === 1 && fill && values[i].trim()) ? values[i].trim() : part).join('');
+            this.gap = null;
+            bvs.addDefect(phrase.id, text);
         },
         async complete(form) {
             const saved = await bvs.flush();
@@ -413,6 +496,8 @@ function bvsPage() {
             let msg = 'Brandverhütungsschau abschließen?\n\n'
                 + (this.defectCount ? this.defectCount + ' Mängel erfasst.' : 'Keine Mängel erfasst.');
             if (this.defectCount && deadline && !deadline.value) msg += '\nHinweis: Es ist keine Frist zur Mängelbeseitigung eingetragen.';
+            const gaps = bvs.gapPoints();
+            if (gaps.length) msg += '\nAchtung: Punkt ' + gaps.join(', ') + ' enthält noch eine offene Lücke „…“ – sie steht so in der Niederschrift.';
             msg += '\n\nDanach ist die Niederschrift schreibgeschützt (sie kann wieder geöffnet werden).';
             if (confirm(msg)) form.submit();
         },

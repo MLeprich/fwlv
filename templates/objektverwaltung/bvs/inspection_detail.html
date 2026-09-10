@@ -102,6 +102,7 @@
                 <div class="flex-1 min-w-0">
                     {% if defect.location %}<p class="text-sm font-medium text-gray-900">{{ defect.location }}</p>{% endif %}
                     <p class="text-sm text-gray-700 whitespace-pre-line">{{ defect.text }}</p>
+                    {% if defect.has_gap %}<p class="mt-1 inline-block text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">Enthält eine offene Lücke „…“</p>{% endif %}
                     {% if defect.phrase %}<p class="text-xs text-gray-400 mt-1">Mustersatz {{ defect.phrase.code }}</p>{% endif %}
                 </div>
                 {% if inspection.is_completed %}
