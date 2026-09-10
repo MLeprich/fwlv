@@ -38,10 +38,12 @@
 
     <div class="bg-white rounded-lg shadow mb-6 p-4">
         <form method="get" class="flex flex-wrap gap-4 items-end">
+            {% if current_sort != 'name' %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
+            {% if current_dir != 'asc' %}<input type="hidden" name="dir" value="{{ current_dir }}">{% endif %}
             <div class="flex-1 min-w-[200px]">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Suche</label>
                 <input type="text" name="q" value="{{ current_search }}"
-                       placeholder="Name, Nummer, Ort, Ansprechpartner, FSD, BMZ..."
+                       placeholder="Name, Nummer, Straße, PLZ, Ort, Ansprechpartner, FSD, BMZ..."
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
             </div>
             <div class="w-56">
@@ -64,7 +66,7 @@
             </div>
             <div>
                 <button type="submit" class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">Filtern</button>
-                {% if current_search or current_usage_type or current_filter %}
+                {% if current_search or current_usage_type or current_filter or current_sort != 'name' or current_dir != 'asc' %}
                 <a href="{% url 'objektverwaltung:list' %}" class="ml-2 text-sm text-gray-500 hover:text-gray-700">Zurücksetzen</a>
                 {% endif %}
             </div>
@@ -77,25 +79,27 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Objektnummer</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nutzungsart</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ort</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Technik</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                        {% include 'objektverwaltung/partials/sort_th.html' with key='number' label='Objektnummer' %}
+                        {% include 'objektverwaltung/partials/sort_th.html' with key='name' label='Name' %}
+                        {% include 'objektverwaltung/partials/sort_th.html' with key='usage' label='Nutzungsart' %}
+                        {% include 'objektverwaltung/partials/sort_th.html' with key='street' label='Straße' %}
+                        {% include 'objektverwaltung/partials/sort_th.html' with key='city' label='Ort' %}
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Technik</th>
+                        {% include 'objektverwaltung/partials/sort_th.html' with key='status' label='Status' %}
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for obj in objects %}
                     <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ obj.object_number }}</td>
-                        <td class="px-6 py-4">
+                        <td class="px-4 py-4 text-sm font-medium text-gray-900">{{ obj.object_number }}</td>
+                        <td class="px-4 py-4">
                             <a href="{{ obj.get_absolute_url }}" class="text-sm font-medium text-gray-900 hover:text-primary-600">{{ obj.name }}</a>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ obj.get_usage_type_display }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ obj.city }}</td>
-                        <td class="px-6 py-4">
+                        <td class="px-4 py-4 text-sm text-gray-500">{{ obj.get_usage_type_display }}</td>
+                        <td class="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">{{ obj.street }} {{ obj.house_number }}</td>
+                        <td class="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">{{ obj.postal_code }} {{ obj.city }}</td>
+                        <td class="px-4 py-4">
                             <div class="flex flex-wrap gap-1">
                                 {% if obj.bmz_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs {% if obj.bmz_due_count %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}" title="Brandmeldezentralen{% if obj.bmz_due_count %}, Prüfung fällig{% endif %}">BMZ {{ obj.bmz_count }}</span>{% endif %}
                                 {% if obj.fsd_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs {% if obj.fsd_due_count %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}" title="Schlüsseldepots{% if obj.fsd_due_count %}, Prüfung fällig{% endif %}">FSD {{ obj.fsd_count }}</span>{% endif %}
@@ -103,13 +107,13 @@
                                 {% if obj.komp_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800" title="Aktive Kompensationsmaßnahmen">Komp. {{ obj.komp_count }}</span>{% endif %}
                             </div>
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-4 py-4">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                 {% if obj.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
                                 {% if obj.is_active %}Aktiv{% else %}Inaktiv{% endif %}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-right text-sm font-medium">
+                        <td class="px-4 py-4 text-right text-sm font-medium whitespace-nowrap">
                             <a href="{{ obj.get_absolute_url }}" class="text-primary-600 hover:text-primary-900 mr-3">Ansehen</a>
                             {% if perms.objektverwaltung.change_buildingobject %}
                             <a href="{% url 'objektverwaltung:update' obj.pk %}" class="text-primary-600 hover:text-primary-900">Bearbeiten</a>

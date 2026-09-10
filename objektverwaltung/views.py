@@ -77,6 +77,33 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
         ('inaktiv', 'nur inaktive Objekte'),
     )
 
+    # Spaltensortierung: GET-Parameter sort=<key>&dir=asc|desc
+    SORT_FIELDS = {
+        'number': ('object_number',),
+        'name': ('name',),
+        'usage': ('usage_type', 'name'),
+        'street': ('street', 'house_number', 'city'),
+        'city': ('city', 'postal_code', 'street', 'house_number'),
+        'status': ('-is_active', 'name'),
+    }
+    DEFAULT_SORT = 'name'
+
+    def get_sort(self):
+        sort = self.request.GET.get('sort', '')
+        if sort not in self.SORT_FIELDS:
+            sort = self.DEFAULT_SORT
+        direction = 'desc' if self.request.GET.get('dir') == 'desc' else 'asc'
+        return sort, direction
+
+    def get_ordering(self):
+        sort, direction = self.get_sort()
+        fields = list(self.SORT_FIELDS[sort])
+        if direction == 'desc':
+            fields = [f[1:] if f.startswith('-') else f'-{f}' for f in fields]
+        if 'pk' not in fields:
+            fields.append('pk')
+        return fields
+
     def get_queryset(self):
         from datetime import timedelta
         from django.db.models import Count
@@ -129,7 +156,7 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
             sys_count=Count('suppression_systems', distinct=True),
             sys_due_count=Count('suppression_systems', filter=Q(suppression_systems__next_inspection__lte=limit), distinct=True),
             komp_count=Count('compensation_measures', filter=Q(compensation_measures__status='active'), distinct=True),
-        ).order_by('name')
+        ).order_by(*self.get_ordering())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -142,6 +169,12 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
         context['filter_choices'] = self.FILTERS
         context['usage_type_choices'] = UsageType.choices
         context['query_string'] = params.urlencode()
+        sort, direction = self.get_sort()
+        context['current_sort'] = sort
+        context['current_dir'] = direction
+        params.pop('sort', None)
+        params.pop('dir', None)
+        context['sort_query_string'] = params.urlencode()
         return context
 
 

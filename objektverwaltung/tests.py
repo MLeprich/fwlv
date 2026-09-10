@@ -421,6 +421,36 @@ class SearchTests(TestCase):
         response = self.client.get(url, {'q': 'hermosin'})
         self.assertEqual(response.content.decode().count('>Rathaus<'), 1)
 
+    def test_list_sorting_and_address_columns(self):
+        url = reverse('objektverwaltung:list')
+        self.a.street, self.a.house_number, self.a.postal_code, self.a.city = 'Zeppelinstraße', '3', '46049', 'Oberhausen'
+        self.a.save()
+        self.b.street, self.b.house_number, self.b.postal_code, self.b.city = 'Am Bahnhof', '1', '45127', 'Essen'
+        self.b.save()
+        # Standard: nach Name aufsteigend -> Bahnhof vor Rathaus; Adresse wird angezeigt
+        html = self.client.get(url).content.decode()
+        self.assertLess(html.index('>Bahnhof<'), html.index('>Rathaus<'))
+        self.assertIn('Zeppelinstraße 3', html)
+        self.assertIn('46049 Oberhausen', html)
+        # absteigend nach Name
+        html = self.client.get(url, {'sort': 'name', 'dir': 'desc'}).content.decode()
+        self.assertLess(html.index('>Rathaus<'), html.index('>Bahnhof<'))
+        # nach Ort aufsteigend: Essen (Bahnhof) vor Oberhausen (Rathaus)
+        html = self.client.get(url, {'sort': 'city'}).content.decode()
+        self.assertLess(html.index('>Bahnhof<'), html.index('>Rathaus<'))
+        # nach Straße absteigend: Zeppelinstraße (Rathaus) vor Am Bahnhof
+        html = self.client.get(url, {'sort': 'street', 'dir': 'desc'}).content.decode()
+        self.assertLess(html.index('>Rathaus<'), html.index('>Bahnhof<'))
+        # unbekannter Sortierschlüssel fällt auf Name zurück, kein Fehler
+        response = self.client.get(url, {'sort': 'evil', 'dir': 'x'})
+        self.assertEqual(response.status_code, 200)
+        # Sortierung bleibt in Filter-Links erhalten, Suche findet Adresse
+        html = self.client.get(url, {'sort': 'city', 'dir': 'desc', 'q': '45127'}).content.decode()
+        self.assertIn('>Bahnhof<', html)
+        self.assertNotIn('>Rathaus<', html)
+        self.assertIn('name="sort" value="city"', html)
+        self.assertIn('name="dir" value="desc"', html)
+
 
 
 class GenericInspectionTests(TestCase):
