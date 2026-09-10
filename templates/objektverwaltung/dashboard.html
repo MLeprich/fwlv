@@ -4,7 +4,8 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto py-6">
-    <div class="flex items-center justify-between gap-3 mb-6">
+    {# Bereiche (Objekte, Prüfungen, Brandverhütungsschau, PSV-Fristen) stehen in der Seitenleiste #}
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div class="flex items-center gap-3">
             <span class="text-4xl">🏢</span>
             <div>
@@ -16,12 +17,6 @@
             {% if perms.objektverwaltung.change_buildingobject %}
             <a href="{% url 'objektverwaltung:inspection_new' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">+ Neue Prüfung</a>
             {% endif %}
-            <a href="{% url 'objektverwaltung:inspection_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Prüfungen</a>
-            {% if perms.objektverwaltung.bvs_view %}
-            <a href="{% url 'objektverwaltung:bvs_overview' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Brandverhütungsschau</a>
-            {% endif %}
-            <a href="{% url 'objektverwaltung:list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Alle Objekte</a>
-            <a href="{% url 'objektverwaltung:usage_category_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Nutzungsarten</a>
             {% if perms.objektverwaltung.add_buildingobject %}
             <a href="{% url 'objektverwaltung:create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">+ Neues Objekt</a>
             {% endif %}

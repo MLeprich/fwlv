@@ -589,3 +589,51 @@ class BVSUserManagementTests(TestCase):
     def test_invalid_level_is_rejected(self):
         self.client.post(self.url, {'bvs_level': 'alles'})
         self.assertFalse(self.fresh_target().groups.exists())
+
+
+class SidebarNavigationTests(BVSTestBase):
+    """Eigene Kategorie „Objektverwaltung“ in der Seitenleiste mit Unterpunkten je Recht."""
+
+    def setUp(self):
+        super().setUp()
+        from core.models.system_settings import SystemSettings
+        settings_obj = SystemSettings.objects.first() or SystemSettings.objects.create()
+        settings_obj.objektverwaltung_enabled = True
+        settings_obj.save()
+
+    def test_section_for_paths(self):
+        from types import SimpleNamespace
+        from .templatetags.objektverwaltung_nav import objektverwaltung_section as section
+        cases = {
+            '/objektverwaltung/': 'dashboard',
+            '/objektverwaltung/objekte/5/': 'objects',
+            '/objektverwaltung/nutzungsarten/': 'objects',
+            '/objektverwaltung/pruefungen/': 'inspections',
+            '/objektverwaltung/anlage/fsd/3/': 'inspections',
+            '/objektverwaltung/fsd/3/': 'inspections',
+            '/objektverwaltung/bvs/': 'bvs',
+            '/objektverwaltung/bvs/12/': 'bvs',
+            '/objektverwaltung/bvs/mustersaetze/': 'bvs',
+            '/objektverwaltung/bvs/fristen/': 'psv',
+            '/objektverwaltung/psv/4/': 'psv',
+            '/objektverwaltung/psv-pruefung/4/bearbeiten/': 'psv',
+            '/medical/': '',
+        }
+        for path, expected in cases.items():
+            self.assertEqual(section(SimpleNamespace(path=path)), expected, path)
+
+    def test_bvs_items_only_with_bvs_permission(self):
+        sidebar_links = [reverse('objektverwaltung:list'), reverse('objektverwaltung:inspection_list'),
+                         reverse('objektverwaltung:bvs_overview'), reverse('objektverwaltung:psv_overview')]
+        self.client.force_login(make_user('nur_objekte'))
+        html = self.client.get(reverse('objektverwaltung:list')).content.decode()
+        self.assertIn(f'href="{sidebar_links[0]}"', html)
+        self.assertIn(f'href="{sidebar_links[1]}"', html)
+        self.assertNotIn(f'href="{sidebar_links[2]}"', html)
+        self.assertNotIn(f'href="{sidebar_links[3]}"', html)
+
+        self.client.force_login(self.user)  # BVS durchführen
+        html = self.client.get(reverse('objektverwaltung:psv_overview')).content.decode()
+        for link in sidebar_links:
+            self.assertIn(f'href="{link}"', html)
+        self.assertIn("'objektverwaltung']", html)  # Kategorie auf Seiten des Moduls aufgeklappt
