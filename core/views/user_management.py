@@ -228,6 +228,18 @@ class UserDetailView(UserManagementMixin, DetailView):
         context['has_edit_infomonitor'] = user_obj.has_perm('tickets.edit_infomonitor')
         context['has_edit_mappe'] = user_obj.has_perm('tickets.edit_mappe')
 
+        # Brandverhütungsschau: Zugriffsstufe über die BVS-Gruppen
+        from objektverwaltung import bvs_roles
+        context['bvs_levels'] = bvs_roles.BVS_LEVELS
+        context['bvs_level'] = bvs_roles.group_level(user_obj)
+        order = [key for key, *_rest in bvs_roles.BVS_LEVELS]
+        effective = bvs_roles.effective_level(user_obj)
+        # Mehr Rechte als die gewählte Stufe, z.B. über Administrator oder Superuser
+        context['bvs_effective_label'] = (
+            dict((key, label) for key, label, *_rest in bvs_roles.BVS_LEVELS)[effective]
+            if order.index(effective) > order.index(context['bvs_level']) else ''
+        )
+
         # Feuerwachen für WBF-Dropdown (Typ 'site' = Standort/Wache)
         context['wbf_locations'] = Location.objects.filter(
             location_type='site'
@@ -334,6 +346,28 @@ class UserTicketPermissionsView(UserManagementMixin, DetailView):
                 user_obj.user_permissions.remove(perm)
 
         messages.success(request, f'Leitstelle-Berechtigungen für {user_obj.get_full_name()} wurden aktualisiert.')
+        return redirect('core:user_detail', pk=user_obj.pk)
+
+
+class UserBVSPermissionsView(UserManagementMixin, DetailView):
+    """Zugriffsstufe Brandverhütungsschau setzen (ordnet genau eine BVS-Gruppe zu)."""
+    model = User
+    required_permission = 'core.assign_roles'
+
+    def post(self, request, *args, **kwargs):
+        from objektverwaltung import bvs_roles
+
+        user_obj = self.get_object()
+        level = request.POST.get('bvs_level', '')
+        labels = {key: label for key, label, _group, _desc in bvs_roles.BVS_LEVELS}
+        if level not in labels:
+            messages.error(request, 'Bitte eine Zugriffsstufe auswählen.')
+            return redirect('core:user_detail', pk=user_obj.pk)
+        bvs_roles.set_level(user_obj, level, assigned_by=request.user)
+        messages.success(
+            request,
+            f'Brandverhütungsschau für {user_obj.get_full_name() or user_obj.username}: „{labels[level]}“.'
+        )
         return redirect('core:user_detail', pk=user_obj.pk)
 
 

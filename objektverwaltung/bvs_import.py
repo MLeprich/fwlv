@@ -25,6 +25,7 @@ _RE_CHAPTER = re.compile(r'^(\d{1,2})\.\s{2,}(\S.*)$')
 _RE_SECTION = re.compile(r'^(\d{1,2}\.\d{1,2})\s{2,}(\S.*)$')
 _RE_PHRASE = re.compile(r'^(\d{4,5})(?:\s{2,}(\S.*))?$')
 _RE_SPACES = re.compile(r'\s{2,}')
+_SENTENCE_END = ('.', '!', '?', ':')
 
 #: Ab dieser Einrückung gilt eine Zeile als Aufzählungspunkt (Randkommentare
 #: stehen deutlich weiter rechts und werden vorher entfernt).
@@ -149,16 +150,18 @@ def parse_text(text):
     phrase = None
     paragraph = []
     paragraph_is_item = False
+    pending_break = False  # Leerzeile mitten im Satz – Entscheidung an der nächsten Zeile
     comments = _CommentTracker()
 
     def flush_paragraph():
-        nonlocal paragraph, paragraph_is_item
+        nonlocal paragraph, paragraph_is_item, pending_break
         if phrase is not None and paragraph:
             joined = _join_lines(paragraph)
             if joined:
                 phrase.paragraphs.append(f'– {joined}' if paragraph_is_item else joined)
         paragraph = []
         paragraph_is_item = False
+        pending_break = False
 
     for page in text.split('\f'):
         for raw in _strip_page(page):
@@ -169,10 +172,14 @@ def parse_text(text):
             indent = len(line) - len(line.lstrip())
 
             if not stripped:
-                # Eine reine Kommentarzeile kann eine Leerzeile verdecken – mitten
-                # im Satz trennt sie aber keinen Absatz.
-                if not comment_only or (paragraph and paragraph[-1].rstrip().endswith(('.', '!', '?', ':'))):
+                # Neben Kommentarkästen setzt pdftotext Leerzeilen auch mitten in
+                # einen Satz. Nach einem Satzende trennt eine (ggf. von einem
+                # Kommentar verdeckte) Leerzeile immer; sonst entscheidet die
+                # nächste Zeile (kleingeschrieben und nicht eingerückt = Fortsetzung).
+                if not paragraph or paragraph[-1].rstrip().endswith(_SENTENCE_END):
                     flush_paragraph()
+                elif not comment_only:
+                    pending_break = True
                 if comment is not None and phrase is not None:
                     phrase.notes.append(comment)
                 continue
@@ -217,6 +224,9 @@ def parse_text(text):
                 phrase.notes.append(comment)
             if indent >= MARGIN_COLUMN:
                 continue  # Rest der Randspalte ohne erkannten Kommentar
+            if pending_break and (indent >= LIST_INDENT or not stripped[0].islower()):
+                flush_paragraph()
+            pending_break = False
             if indent >= LIST_INDENT and not paragraph:
                 paragraph_is_item = True
             paragraph.append(line)
@@ -232,3 +242,92 @@ def parse_pdf(path):
 def note_text(notes):
     """Kommentarlisten → lesbarer Prüfhinweis."""
     return '\n'.join('Randkommentar: ' + ' '.join(part for part in note if part) for note in notes)
+
+
+EMPTY_NOTE = 'Text fehlt in der Vorlage.'
+
+
+@dataclass
+class ImportStats:
+    categories_new: int = 0
+    categories_updated: int = 0
+    new: int = 0
+    updated: int = 0
+    kept: int = 0
+    skipped: list = field(default_factory=list)      # leere Nummern ohne Titel und Text
+    category_notes: list = field(default_factory=list)  # Randkommentare an Kapiteln/Abschnitten
+    dry_run: bool = False
+
+    @property
+    def summary(self):
+        text = (f'Kapitel/Abschnitte: {self.categories_new} neu, {self.categories_updated} aktualisiert · '
+                f'Mustersätze: {self.new} neu, {self.updated} aktualisiert, {self.kept} unverändert gelassen')
+        if self.skipped:
+            text += f' · leere Nummern übersprungen: {", ".join(self.skipped)}'
+        return text
+
+
+def import_phrases(parsed, update=False, dry_run=False):
+    """
+    Geparste Vorlage in die Datenbank übernehmen (Management-Command und Upload).
+
+    Ohne ``update`` werden nur fehlende Kapitel und Mustersätze angelegt; im System
+    überarbeitete Texte bleiben unverändert. Nummern ohne Titel und Text werden
+    übersprungen, Mustersätze ohne Text inaktiv angelegt. ``dry_run`` rollt am Ende
+    zurück und liefert nur die Zahlen.
+    """
+    from django.db import transaction
+    from .models import BVSPhrase, BVSPhraseCategory
+
+    stats = ImportStats(dry_run=dry_run)
+    with transaction.atomic():
+        categories = {}
+        for cat in parsed.categories:
+            values = {
+                'title': cat.title,
+                'parent': categories.get(cat.parent),
+                'sort_order': BVSPhraseCategory.sort_key_for(cat.number),
+            }
+            obj = BVSPhraseCategory.objects.filter(number=cat.number).first()
+            if obj is None:
+                obj = BVSPhraseCategory.objects.create(number=cat.number, **values)
+                stats.categories_new += 1
+            elif update:
+                for key, value in values.items():
+                    setattr(obj, key, value)
+                obj.save()
+                stats.categories_updated += 1
+            categories[cat.number] = obj
+            if cat.notes:
+                stats.category_notes.append(f'{cat.number} {cat.title}: {note_text(cat.notes)}')
+
+        for phrase in parsed.phrases:
+            if not phrase.title and not phrase.text:
+                stats.skipped.append(phrase.code)
+                continue
+            notes = [note_text(phrase.notes)] if phrase.notes else []
+            if not phrase.text:
+                notes.append(EMPTY_NOTE)
+            values = {
+                'category': categories[phrase.category],
+                'title': phrase.title or f'Mustersatz {phrase.code}',
+                'text': phrase.text,
+                'review_note': '\n'.join(notes),
+                'is_active': bool(phrase.text),
+                'sort_order': int(phrase.code),
+            }
+            obj = BVSPhrase.objects.filter(code=phrase.code).first()
+            if obj is None:
+                BVSPhrase.objects.create(code=phrase.code, **values)
+                stats.new += 1
+            elif update:
+                for key, value in values.items():
+                    setattr(obj, key, value)
+                obj.save()
+                stats.updated += 1
+            else:
+                stats.kept += 1
+
+        if dry_run:
+            transaction.set_rollback(True)
+    return stats

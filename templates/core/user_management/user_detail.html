@@ -353,6 +353,44 @@
                 </form>
             </div>
 
+            {% if modules.objektverwaltung_enabled %}
+            <!-- Brandverhütungsschau Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-1">Brandverhütungsschau</h2>
+                <p class="text-xs text-gray-500 mb-4">Objektverwaltung – Niederschriften, PSV-Fristen und Mustersätze. Setzt die Rolle „BVS Leser“, „BVS Sachbearbeiter“ bzw. „BVS Verantwortlicher“ inkl. Leserechten auf die Objekte.</p>
+                <form method="post" action="{% url 'core:user_bvs_permissions' user_obj.pk %}">
+                    {% csrf_token %}
+                    <div class="space-y-2">
+                        {% for key, label, group, description in bvs_levels %}
+                        <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 {% if can_assign_roles %}cursor-pointer{% endif %}">
+                            <input type="radio" name="bvs_level" value="{{ key }}" {% if bvs_level == key %}checked{% endif %}
+                                   {% if not can_assign_roles %}disabled{% endif %}
+                                   class="border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">{{ label }}</span>
+                                <p class="text-xs text-gray-500">{{ description }}</p>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% if bvs_effective_label %}
+                    <p class="mt-3 text-xs text-yellow-800 bg-yellow-50 rounded-lg px-3 py-2">
+                        Über andere Rollen (z.B. Administrator) hat dieser Benutzer bereits „{{ bvs_effective_label }}“.
+                    </p>
+                    {% endif %}
+                    {% if can_assign_roles %}
+                    <div class="mt-4">
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+                            Zugriff speichern
+                        </button>
+                    </div>
+                    {% else %}
+                    <p class="mt-3 text-xs text-gray-500">Zum Ändern ist das Recht „Rollen zuweisen“ nötig.</p>
+                    {% endif %}
+                </form>
+            </div>
+            {% endif %}
+
             <!-- Dienststellung & Freigabe Card -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Dienststellung & Freigabe</h2>

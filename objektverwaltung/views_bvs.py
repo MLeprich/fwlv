@@ -887,6 +887,78 @@ class PhraseDeleteView(_BVSMixin, View):
         return redirect(reverse('objektverwaltung:bvs_phrase_list') + f'#k{obj.category_id}')
 
 
+class PhraseImportView(_BVSMixin, View):
+    """
+    Mustersätze aus der PDF-Vorlage importieren – dasselbe wie der Befehl
+    ``import_bvs_mustersaetze``, aber ohne Dateizugriff auf den Server (Stadt-VM).
+    """
+    permission_required = PERM_MANAGE
+    template_name = 'objektverwaltung/bvs/phrase_import.html'
+    MAX_SIZE = 20 * 1024 * 1024
+
+    def _render(self, request, **extra):
+        return render(request, self.template_name, _ctx(
+            request, phrase_total=BVSPhrase.objects.count(), **extra))
+
+    def get(self, request):
+        return self._render(request)
+
+    def post(self, request):
+        import tempfile
+
+        from .bvs_import import import_phrases, parse_pdf
+
+        upload = request.FILES.get('pdf')
+        update = request.POST.get('update') == 'on'
+        dry_run = request.POST.get('dry_run') == 'on'
+        error = ''
+        if upload is None:
+            error = 'Bitte eine PDF-Datei auswählen.'
+        elif not upload.name.lower().endswith('.pdf'):
+            error = 'Nur PDF-Dateien (.pdf) sind erlaubt.'
+        elif upload.size > self.MAX_SIZE:
+            error = 'Die Datei ist größer als 20 MB.'
+        elif upload.read(5) != b'%PDF-':
+            error = 'Die Datei ist keine gültige PDF.'
+        if error:
+            return self._render(request, error=error, update=update, dry_run=dry_run)
+
+        upload.seek(0)
+        with tempfile.NamedTemporaryFile(suffix='.pdf') as tmp:
+            for chunk in upload.chunks():
+                tmp.write(chunk)
+            tmp.flush()
+            try:
+                parsed = parse_pdf(tmp.name)
+            except (OSError, RuntimeError) as exc:
+                return self._render(request, error=f'Die PDF konnte nicht gelesen werden: {exc}',
+                                    update=update, dry_run=dry_run)
+        if not parsed.phrases:
+            return self._render(request, error='In der PDF wurden keine nummerierten Mustersätze gefunden. '
+                                               'Ist es die Vorlage „Mustersätze für Stellungnahmen“?',
+                                update=update, dry_run=dry_run)
+
+        stats = import_phrases(parsed, update=update, dry_run=dry_run)
+        if dry_run:
+            return self._render(request, stats=stats, update=update, dry_run=True, filename=upload.name)
+
+        try:
+            from audit.models import AuditLog
+            from audit.utils import get_client_ip, get_user_agent
+            AuditLog.log_action(
+                user=request.user, action=AuditAction.IMPORT,
+                description=f'Mustersätze der Brandverhütungsschau importiert ({upload.name}): {stats.summary}',
+                ip_address=get_client_ip(request), user_agent=get_user_agent(request),
+                request_path=request.path, http_method=request.method,
+                extra_data={'update': update},
+            )
+        except Exception:  # pragma: no cover – Protokoll darf den Import nicht verhindern
+            pass
+        messages.success(request, f'Import abgeschlossen – {stats.summary}.')
+        return redirect(reverse('objektverwaltung:bvs_phrase_list')
+                        + ('?show=review' if BVSPhrase.objects.exclude(review_note='').exists() else ''))
+
+
 class PhraseCategoryFormView(_BVSMixin, _BVSFormPage, View):
     permission_required = PERM_MANAGE
 

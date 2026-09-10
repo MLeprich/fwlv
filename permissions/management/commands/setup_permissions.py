@@ -598,8 +598,8 @@ class Command(BaseCommand):
             )
 
     def _setup_bvs_roles(self):
-        """BVS Sachbearbeiter und BVS Verantwortlicher (Brandverhütungsschau)"""
-        from objektverwaltung.management.commands.setup_bvs_permissions import setup_bvs_roles
+        """BVS Leser, BVS Sachbearbeiter und BVS Verantwortlicher (Brandverhütungsschau)"""
+        from objektverwaltung.bvs_roles import setup_bvs_roles
         self.stdout.write('\n10b. Brandverhütungsschau...')
         setup_bvs_roles(out=lambda msg: self.stdout.write(self.style.SUCCESS(msg)), replace=True)
 

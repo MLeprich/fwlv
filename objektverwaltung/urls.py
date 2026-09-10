@@ -104,6 +104,7 @@ urlpatterns = [
     path('bvs/pruefarten/<int:pk>/loeschen/', views_bvs.PSVTypeDeleteView.as_view(), name='psv_type_delete'),
     path('bvs/mustersaetze/', views_bvs.PhraseListView.as_view(), name='bvs_phrase_list'),
     path('bvs/mustersaetze/neu/', views_bvs.PhraseFormView.as_view(), name='bvs_phrase_create'),
+    path('bvs/mustersaetze/import/', views_bvs.PhraseImportView.as_view(), name='bvs_phrase_import'),
     path('bvs/mustersaetze/<int:pk>/bearbeiten/', views_bvs.PhraseFormView.as_view(), name='bvs_phrase_edit'),
     path('bvs/mustersaetze/<int:pk>/loeschen/', views_bvs.PhraseDeleteView.as_view(), name='bvs_phrase_delete'),
     path('bvs/mustersaetze/kapitel/neu/', views_bvs.PhraseCategoryFormView.as_view(), name='bvs_category_create'),

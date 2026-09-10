@@ -126,6 +126,15 @@ class ParserTests(TestCase):
         self.assertNotIn('Stand:', second.text)
         self.assertEqual(codes['9103'].text, '')
 
+    def test_blank_line_inside_sentence_is_no_paragraph_break(self):
+        text = SAMPLE.replace(
+            'Die Aufstellfläche ist so zu befestigen, dass der Ist-\nZustand erhalten bleibt.',
+            'Die Belehrung des Personals ist\n\nschriftlich zu dokumentieren.')
+        second = [p for p in parse_text(text).phrases if p.code == '9102'][0]
+        self.assertTrue(second.paragraphs[0].startswith('Die Belehrung des Personals ist schriftlich zu dokumentieren.'))
+        # eingerückte Aufzählung nach Leerzeile bleibt ein eigener Punkt
+        self.assertIn('– der erste Punkt einer Liste und', second.paragraphs)
+
     def test_import_command_creates_and_keeps_existing(self):
         parsed = ParseResult(
             categories=[ParsedCategory('97', 'Kapitel'), ParsedCategory('97.1', 'Abschnitt', parent='97')],
@@ -457,3 +466,126 @@ class InspectionWorkflowTests(BVSTestBase):
         self.start()
         self.assertTrue(any(e['kind'] == 'bvs' for e in akte.build_timeline(self.building)))
         self.assertFalse(any(e['kind'] == 'bvs' for e in akte.build_timeline(self.building, include_bvs=False)))
+
+
+class PhraseImportViewTests(BVSTestBase):
+    PARSED = ParseResult(
+        categories=[ParsedCategory('96', 'Kapitel Upload'), ParsedCategory('96.1', 'Abschnitt', parent='96')],
+        phrases=[ParsedPhrase('96101', 'Aus der PDF', '96.1', ['Text aus der PDF.'])],
+    )
+    TARGET = 'objektverwaltung.bvs_import.parse_pdf'
+
+    def setUp(self):
+        super().setUp()
+        self.manager = make_user('chef', BVS_MANAGE)
+        self.client.force_login(self.manager)
+        self.url = reverse('objektverwaltung:bvs_phrase_import')
+
+    def pdf(self, content=b'%PDF-1.4 test', name='Mustersaetze.pdf'):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        return SimpleUploadedFile(name, content, content_type='application/pdf')
+
+    def test_requires_manage_permission(self):
+        self.client.force_login(self.user)  # nur bvs_view/bvs_edit
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+        self.client.force_login(self.manager)
+        self.assertContains(self.client.get(reverse('objektverwaltung:bvs_phrase_list')), self.url)
+
+    def test_rejects_non_pdf(self):
+        response = self.client.post(self.url, {'pdf': self.pdf(name='liste.docx')})
+        self.assertContains(response, 'Nur PDF-Dateien')
+        response = self.client.post(self.url, {'pdf': self.pdf(content=b'kein pdf')})
+        self.assertContains(response, 'keine gültige PDF')
+        self.assertFalse(BVSPhrase.objects.filter(code='96101').exists())
+
+    def test_dry_run_saves_nothing(self):
+        with mock.patch(self.TARGET, return_value=self.PARSED):
+            response = self.client.post(self.url, {'pdf': self.pdf(), 'dry_run': 'on'})
+        self.assertContains(response, 'Probelauf')
+        self.assertContains(response, 'Mustersätze: 1 neu')
+        self.assertFalse(BVSPhrase.objects.filter(code='96101').exists())
+
+    def test_import_and_update(self):
+        with mock.patch(self.TARGET, return_value=self.PARSED):
+            response = self.client.post(self.url, {'pdf': self.pdf()})
+        self.assertEqual(response.status_code, 302)
+        phrase = BVSPhrase.objects.get(code='96101')
+        self.assertEqual(phrase.category.number, '96.1')
+
+        phrase.text = 'Überarbeitet'
+        phrase.save()
+        with mock.patch(self.TARGET, return_value=self.PARSED):
+            self.client.post(self.url, {'pdf': self.pdf()})
+        phrase.refresh_from_db()
+        self.assertEqual(phrase.text, 'Überarbeitet')
+        with mock.patch(self.TARGET, return_value=self.PARSED):
+            self.client.post(self.url, {'pdf': self.pdf(), 'update': 'on'})
+        phrase.refresh_from_db()
+        self.assertEqual(phrase.text, 'Text aus der PDF.')
+
+    def test_unreadable_pdf_shows_error(self):
+        with mock.patch(self.TARGET, side_effect=RuntimeError('pdftotext (poppler-utils) ist nicht installiert.')):
+            response = self.client.post(self.url, {'pdf': self.pdf()})
+        self.assertContains(response, 'poppler-utils')
+
+
+class BVSUserManagementTests(TestCase):
+    """Zugriffsstufe über die Benutzerverwaltung (Karte „Brandverhütungsschau“)."""
+
+    def setUp(self):
+        from core.models.system_settings import SystemSettings
+        settings_obj = SystemSettings.objects.first() or SystemSettings.objects.create()
+        settings_obj.objektverwaltung_enabled = True
+        settings_obj.save()
+        self.admin = User.objects.create_user(username='verwalter', password='pw')
+        self.admin.user_permissions.add(*Permission.objects.filter(
+            content_type__app_label='core', codename__in=['manage_users', 'assign_roles']))
+        self.target = User.objects.create_user(username='ziel', password='pw', first_name='Max', last_name='Ziel')
+        self.url = reverse('core:user_bvs_permissions', args=[self.target.pk])
+        self.client.force_login(self.admin)
+
+    def fresh_target(self):
+        return User.objects.get(pk=self.target.pk)  # Rechte-Cache verwerfen
+
+    def test_card_shows_current_level(self):
+        response = self.client.get(reverse('core:user_detail', args=[self.target.pk]))
+        self.assertContains(response, 'Brandverhütungsschau')
+        self.assertContains(response, 'name="bvs_level" value="none" checked')
+
+    def test_levels_assign_exactly_one_group_and_object_read_access(self):
+        self.client.post(self.url, {'bvs_level': 'edit'})
+        target = self.fresh_target()
+        self.assertEqual(list(target.groups.values_list('name', flat=True)), ['BVS Sachbearbeiter'])
+        self.assertTrue(target.has_perm('objektverwaltung.bvs_edit'))
+        self.assertTrue(target.has_perm('objektverwaltung.view_buildingobject'))
+        self.assertFalse(target.has_perm('objektverwaltung.bvs_manage'))
+
+        self.client.post(self.url, {'bvs_level': 'manage'})
+        target = self.fresh_target()
+        self.assertEqual(list(target.groups.values_list('name', flat=True)), ['BVS Verantwortlicher'])
+        self.assertTrue(target.has_perm('objektverwaltung.bvs_manage'))
+
+        response = self.client.get(reverse('core:user_detail', args=[self.target.pk]))
+        self.assertContains(response, 'name="bvs_level" value="manage" checked')
+
+        target.user_permissions.add(Permission.objects.get(codename='bvs_view'))
+        self.client.post(self.url, {'bvs_level': 'none'})
+        target = self.fresh_target()
+        self.assertFalse(target.groups.exists())
+        self.assertFalse(target.has_perm('objektverwaltung.bvs_view'))  # auch Einzelrecht entfernt
+
+    def test_other_groups_stay_untouched(self):
+        other = Group.objects.create(name='Sachbearbeiter Objektverwaltung')
+        self.target.groups.add(other)
+        self.client.post(self.url, {'bvs_level': 'view'})
+        names = set(self.fresh_target().groups.values_list('name', flat=True))
+        self.assertEqual(names, {'Sachbearbeiter Objektverwaltung', 'BVS Leser'})
+
+    def test_requires_assign_roles(self):
+        self.admin.user_permissions.remove(Permission.objects.get(content_type__app_label='core', codename='assign_roles'))
+        self.client.post(self.url, {'bvs_level': 'manage'})
+        self.assertFalse(self.fresh_target().groups.exists())
+
+    def test_invalid_level_is_rejected(self):
+        self.client.post(self.url, {'bvs_level': 'alles'})
+        self.assertFalse(self.fresh_target().groups.exists())

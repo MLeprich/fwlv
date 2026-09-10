@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Mustersätze importieren - Brandverhütungsschau - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'objektverwaltung:bvs_overview' %}" class="text-gray-500 hover:text-gray-700">Brandverhütungsschau</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'objektverwaltung:bvs_phrase_list' %}" class="text-gray-500 hover:text-gray-700">Mustersätze</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">PDF importieren</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900">Mustersätze aus PDF importieren</h1>
+        <p class="text-sm text-gray-500 mt-1">Vorlage „Mustersätze für Stellungnahmen“ (Word-Export als PDF). Derzeit im System: {{ phrase_total }} Mustersätze.</p>
+
+        {% if error %}
+        <div class="mt-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg text-sm text-red-700">{{ error }}</div>
+        {% endif %}
+
+        {% if stats %}
+        <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900 space-y-2">
+            <p class="font-semibold">Probelauf für „{{ filename }}“ – es wurde nichts gespeichert.</p>
+            <ul class="list-disc pl-5 space-y-1">
+                <li>Kapitel/Abschnitte: {{ stats.categories_new }} neu{% if update %}, {{ stats.categories_updated }} würden aktualisiert{% endif %}</li>
+                <li>Mustersätze: {{ stats.new }} neu{% if update %}, {{ stats.updated }} würden überschrieben{% else %}, {{ stats.kept }} bereits vorhanden (bleiben unverändert){% endif %}</li>
+                {% if stats.skipped %}<li>Leere Nummern ohne Titel und Text (werden übersprungen): {{ stats.skipped|join:", " }}</li>{% endif %}
+                {% for note in stats.category_notes %}<li>Hinweis zu {{ note }}</li>{% endfor %}
+            </ul>
+            <p>Wenn das passt: Datei erneut auswählen und ohne „Probelauf“ importieren.</p>
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" class="space-y-5 mt-6"
+              x-data="{ update: {{ update|yesno:'true,false' }}, dry: {{ dry_run|yesno:'true,false' }} }"
+              @submit="if (update && !dry && !confirm('Vorhandene Mustersätze werden mit dem Stand der PDF überschrieben – auch Texte, die im System überarbeitet wurden. Fortfahren?')) $event.preventDefault()">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">PDF-Datei *</label>
+                <input type="file" name="pdf" accept=".pdf,application/pdf" required
+                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100">
+            </div>
+
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" name="dry_run" x-model="dry" class="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                <span class="text-sm text-gray-700"><strong>Probelauf</strong> – nur anzeigen, was importiert würde, nichts speichern</span>
+            </label>
+
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" name="update" x-model="update" class="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                <span class="text-sm text-gray-700"><strong>Vorhandene Mustersätze überschreiben</strong><br>
+                    <span class="text-gray-500">Ohne Haken werden nur neue Nummern ergänzt – im System überarbeitete Texte bleiben erhalten.
+                    Mit Haken gilt für alle Nummern der Stand der PDF.</span></span>
+            </label>
+
+            <div class="bg-gray-50 rounded-lg p-4 text-xs text-gray-600 space-y-1">
+                <p>Erkannt werden Kapitel („2. Flächen für die Feuerwehr“), Abschnitte („2.1 Zugänge“) und nummerierte Mustersätze („2101 Titel“ mit Text).</p>
+                <p>Randkommentare aus der Überarbeitung („Kommentiert [HD5]: …“) werden aus dem Text entfernt und als <strong>Prüfhinweis</strong> am Mustersatz gespeichert.</p>
+                <p>Nummern ohne Text werden als inaktive Mustersätze angelegt, leere Nummern ohne Titel übersprungen.</p>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <a href="{% url 'objektverwaltung:bvs_phrase_list' %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Abbrechen</a>
+                <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
+                        x-text="dry ? 'Probelauf starten' : 'Importieren'">Importieren</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

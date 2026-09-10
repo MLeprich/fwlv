@@ -25,6 +25,7 @@
         </div>
         {% if can_bvs_manage %}
         <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'objektverwaltung:bvs_phrase_import' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">PDF importieren</a>
             <a href="{% url 'objektverwaltung:bvs_category_create' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">+ Kapitel / Abschnitt</a>
             <a href="{% url 'objektverwaltung:bvs_phrase_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700">+ Neuer Mustersatz</a>
         </div>
@@ -103,6 +104,9 @@
     <div class="bg-white rounded-lg shadow p-12 text-center">
         <span class="text-5xl">📝</span>
         <p class="mt-3 text-sm text-gray-600">{% if q or show %}Keine Treffer.{% else %}Noch keine Mustersätze vorhanden.{% endif %}</p>
+        {% if can_bvs_manage and not q and not show %}
+        <a href="{% url 'objektverwaltung:bvs_phrase_import' %}" class="inline-block mt-4 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700">Mustersätze aus PDF importieren</a>
+        {% endif %}
     </div>
     {% endfor %}
 </div>

@@ -67,6 +67,7 @@ class Roles:
     LST_MAPPE = 'LST Mappe'
 
     # Brandverhütungsschau (Objektverwaltung, eigene Rechte bvs_*)
+    BVS_LESER = 'BVS Leser'                        # nur ansehen
     BVS_SACHBEARBEITER = 'BVS Sachbearbeiter'      # durchführen, PSV-Fristen pflegen
     BVS_VERANTWORTLICHER = 'BVS Verantwortlicher'  # zusätzlich Mustersätze/Prüfarten
 
@@ -130,6 +131,7 @@ class Roles:
             cls.SACHBEARBEITER_IUK,
             cls.LST_INFOMONITOR,
             cls.LST_MAPPE,
+            cls.BVS_LESER,
             cls.BVS_SACHBEARBEITER,
             cls.BVS_VERANTWORTLICHER,
             cls.FREIGABE_STUFE_1,

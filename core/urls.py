@@ -99,6 +99,7 @@ urlpatterns = [
     path('verwaltung/users/<int:pk>/set-password/', user_management.UserSetPasswordView.as_view(), name='user_set_password'),
     path('verwaltung/users/<int:pk>/roles/', user_management.UserRoleAssignView.as_view(), name='assign_roles'),
     path('verwaltung/users/<int:pk>/ticket-permissions/', user_management.UserTicketPermissionsView.as_view(), name='user_ticket_permissions'),
+    path('verwaltung/users/<int:pk>/bvs-permissions/', user_management.UserBVSPermissionsView.as_view(), name='user_bvs_permissions'),
     path('verwaltung/users/<int:pk>/wbf-settings/', user_management.UserWBFSettingsView.as_view(), name='user_wbf_settings'),
     path('verwaltung/users/<int:pk>/ff-settings/', user_management.UserFFSettingsView.as_view(), name='user_ff_settings'),
     path('verwaltung/users/<int:pk>/create-person/', user_management.UserCreatePersonView.as_view(), name='user_create_person'),
