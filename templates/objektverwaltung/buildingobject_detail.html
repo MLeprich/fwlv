@@ -47,7 +47,7 @@
 
     {% with floors_n=object.floors.count routes_n=object.escape_routes.count bmz_n=object.fire_alarm_panels.count sys_n=object.suppression_systems.count fsd_n=object.key_depots.count comp_n=object.compensation_measures.count plans_n=object.plans.count %}
     <div x-data="{
-            tabs: ['uebersicht', 'gebaeude', 'technik', 'kompensation', 'plaene', 'akte'],
+            tabs: ['uebersicht', 'gebaeude', 'technik', 'kompensation', 'plaene', {% if can_bvs %}'bvs', {% endif %}'akte'],
             akteKind: 'alle',
             tab: 'uebersicht',
             init() {
@@ -89,6 +89,16 @@
                     Pläne &amp; Laufkarten
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ plans_n }}</span>
                 </button>
+                {% if can_bvs %}
+                <button type="button" @click="tab = 'bvs'"
+                        :class="tab === 'bvs' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-2">
+                    Brandverhütungsschau
+                    {% if psv_counts.action %}
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs {% if psv_counts.expired or psv_counts.missing %}bg-red-100 text-red-800{% else %}bg-yellow-100 text-yellow-800{% endif %}" title="PSV-Fristen mit Handlungsbedarf">{{ psv_counts.action }}</span>
+                    {% endif %}
+                </button>
+                {% endif %}
                 <button type="button" @click="tab = 'akte'"
                         :class="tab === 'akte' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                         class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-2">
@@ -211,6 +221,13 @@
         <div x-show="tab === 'plaene'" x-cloak>
             {% include 'objektverwaltung/partials/section_plans.html' %}
         </div>
+
+        <!-- Brandverhütungsschau: PSV-Fristen und Niederschriften -->
+        {% if can_bvs %}
+        <div x-show="tab === 'bvs'" x-cloak class="space-y-6">
+            {% include 'objektverwaltung/partials/section_bvs.html' %}
+        </div>
+        {% endif %}
 
         <!-- Akte: chronologische Historie -->
         <div x-show="tab === 'akte'" x-cloak class="bg-white rounded-lg shadow">

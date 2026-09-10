@@ -1,0 +1,40 @@
+{# Reiter „Brandverhütungsschau“ der Objekt-Detailseite #}
+<div class="bg-white rounded-lg shadow">
+    <div class="px-5 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900">Brandverhütungsschauen</h2>
+            {% if bvs_next %}<p class="text-xs text-gray-500">Nächste Brandverhütungsschau voraussichtlich {{ bvs_next|date:"F Y" }}</p>{% endif %}
+        </div>
+        {% if can_bvs_edit %}
+        <form method="post" action="{% url 'objektverwaltung:bvs_start_for_building' object.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="px-5 py-2.5 rounded-lg text-sm font-semibold bg-primary-600 text-white hover:bg-primary-700">Brandverhütungsschau starten</button>
+        </form>
+        {% endif %}
+    </div>
+    {% if bvs_inspections %}
+    <ul class="divide-y divide-gray-100">
+        {% for i in bvs_inspections %}
+        <li class="px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="min-w-0">
+                <a href="{{ i.get_absolute_url }}" class="text-sm font-medium text-gray-900 hover:text-primary-600">Brandverhütungsschau vom {{ i.inspection_date|date:"d.m.Y" }}</a>
+                <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs {{ i.status_badge_class }}">{{ i.get_status_display }}</span>
+                {% if i.follow_up_status == 'overdue' %}<span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-800">Nachschau fällig</span>
+                {% elif i.follow_up_status == 'open' %}<span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800">Nachschau ab {{ i.defect_deadline|date:"d.m.Y" }}</span>{% endif %}
+                <p class="text-xs text-gray-500">{% with n=i.defects.all|length %}{% if n %}{{ n }} Mängel{% else %}keine Mängel{% endif %}{% endwith %}{% if i.created_by %} · {{ i.created_by.get_full_name|default:i.created_by.username }}{% endif %}</p>
+            </div>
+            <div class="flex items-center gap-3 text-sm whitespace-nowrap">
+                {% if i.is_completed %}
+                <a href="{% url 'objektverwaltung:bvs_pdf' i.pk 'niederschrift' %}" target="_blank" class="text-primary-600 hover:text-primary-800">Niederschrift (PDF)</a>
+                {% endif %}
+                <a href="{{ i.get_absolute_url }}" class="text-gray-600 hover:text-gray-900">{% if not i.is_completed and can_bvs_edit %}Fortsetzen{% else %}Öffnen{% endif %}</a>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-gray-500">Für dieses Objekt wurde noch keine Brandverhütungsschau erfasst.</p>
+    {% endif %}
+</div>
+
+{% include 'objektverwaltung/bvs/partials/psv_panel.html' %}

@@ -1,0 +1,19 @@
+{# Datum/Objekt/Teilnehmer-Tabelle der Niederschrift (beide Briefvarianten) #}
+<table class="facts">
+    <tr>
+        <td><span class="k">Datum:</span>{{ inspection.inspection_date|date:"d.m.Y" }}</td>
+        <td><span class="k">Teilnehmer:</span></td>
+    </tr>
+    <tr>
+        <td><span class="k">Objekt:</span>{{ building.name }}</td>
+        <td><span class="k">Betrieb:</span>{{ inspection.participant_operator }}</td>
+    </tr>
+    <tr>
+        <td><span class="k">Straße:</span>{{ building.street }} {{ building.house_number }}</td>
+        <td><span class="k">Feuerwehr:</span>{{ inspection.participant_fire_dept }}</td>
+    </tr>
+    <tr>
+        <td><span class="k">Ort:</span>{{ city }}</td>
+        <td><span class="k">Sonstige:</span>{{ inspection.participant_other }}</td>
+    </tr>
+</table>

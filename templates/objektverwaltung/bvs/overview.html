@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Brandverhütungsschau - Objektverwaltung - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'core:dashboard' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'objektverwaltung:dashboard' %}" class="text-gray-500 hover:text-gray-700">Objektverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Brandverhütungsschau</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <span class="text-4xl">📋</span>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Brandverhütungsschau</h1>
+                <p class="text-sm text-gray-600">Niederschriften nach § 26 BHKG und Fristen der Prüfsachverständigen</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'objektverwaltung:psv_overview' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">PSV-Fristen</a>
+            <a href="{% url 'objektverwaltung:bvs_phrase_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Mustersätze</a>
+            <a href="{% url 'objektverwaltung:psv_type_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">PSV-Prüfarten</a>
+        </div>
+    </div>
+
+    <!-- Ampel PSV-Fristen -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href="{% url 'objektverwaltung:psv_overview' %}?status=expired" class="bg-white rounded-lg shadow p-5 border-l-4 border-red-500 hover:bg-gray-50">
+            <p class="text-sm text-gray-500">PSV-Frist abgelaufen / kein Nachweis</p>
+            <p class="text-3xl font-bold {% if counts.expired or counts.missing %}text-red-600{% else %}text-gray-900{% endif %}">{{ counts.expired|add:counts.missing }}</p>
+        </a>
+        <a href="{% url 'objektverwaltung:psv_overview' %}?status=expiring" class="bg-white rounded-lg shadow p-5 border-l-4 border-yellow-400 hover:bg-gray-50">
+            <p class="text-sm text-gray-500">Läuft bald ab</p>
+            <p class="text-3xl font-bold {% if counts.expiring %}text-yellow-700{% else %}text-gray-900{% endif %}">{{ counts.expiring }}</p>
+        </a>
+        <a href="{% url 'objektverwaltung:psv_overview' %}?status=valid" class="bg-white rounded-lg shadow p-5 border-l-4 border-green-500 hover:bg-gray-50">
+            <p class="text-sm text-gray-500">Gültig</p>
+            <p class="text-3xl font-bold text-gray-900">{{ counts.valid }}</p>
+        </a>
+    </div>
+
+    {% if can_bvs_edit %}
+    <form method="post" action="{% url 'objektverwaltung:bvs_start' %}" class="bg-white rounded-lg shadow p-5 flex flex-wrap items-end gap-3">
+        {% csrf_token %}
+        <div class="flex-1 min-w-0" style="min-width: 16rem">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Neue Brandverhütungsschau für</label>
+            <select name="building" required class="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+                <option value="">– Objekt wählen –</option>
+                {% for b in buildings %}<option value="{{ b.pk }}">{{ b.name }} ({{ b.object_number }}){% if b.street %} – {{ b.street }} {{ b.house_number }}{% endif %}</option>{% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="px-6 py-3 rounded-lg text-base font-semibold bg-primary-600 text-white hover:bg-primary-700">Starten</button>
+    </form>
+    {% endif %}
+
+    {% if drafts %}
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200"><h2 class="font-semibold text-gray-900">In Bearbeitung</h2></div>
+        <ul class="divide-y divide-gray-100">
+            {% for i in drafts %}
+            <li class="px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <a href="{{ i.get_absolute_url }}" class="text-sm font-medium text-gray-900 hover:text-primary-600">{{ i.building.name }}</a>
+                    <span class="text-xs text-gray-500 ml-2">{{ i.inspection_date|date:"d.m.Y" }} · {{ i.defect_total }} Mängel · {{ i.created_by.get_full_name|default:i.created_by.username }}</span>
+                </div>
+                <a href="{{ i.get_absolute_url }}" class="text-sm text-primary-600 hover:text-primary-800">Fortsetzen</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if follow_ups %}
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200"><h2 class="font-semibold text-gray-900">Nachschau</h2>
+            <p class="text-xs text-gray-500">Abgeschlossene Brandverhütungsschauen mit offenen Mängeln</p></div>
+        <ul class="divide-y divide-gray-100">
+            {% for i in follow_ups %}
+            <li class="px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <a href="{{ i.get_absolute_url }}" class="text-sm font-medium text-gray-900 hover:text-primary-600">{{ i.building.name }}</a>
+                    <span class="text-xs text-gray-500 ml-2">BVS {{ i.inspection_date|date:"d.m.Y" }} · {{ i.open_total }} von {{ i.defect_total }} Mängeln offen</span>
+                </div>
+                <span class="text-xs whitespace-nowrap {% if i.defect_deadline < today %}text-red-600 font-medium{% else %}text-gray-600{% endif %}">Frist {{ i.defect_deadline|date:"d.m.Y" }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
+            <h2 class="font-semibold text-gray-900">Abgeschlossen</h2>
+            <form method="get" class="flex items-center gap-2">
+                <input type="search" name="q" value="{{ q }}" placeholder="Objekt oder Berichtnummer"
+                       class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+                <button type="submit" class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-200">Suchen</button>
+            </form>
+        </div>
+        {% if completed %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Objekt</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mängel</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nächste BVS</th>
+                        <th class="px-5 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for i in completed %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-5 py-3 text-sm text-gray-900 whitespace-nowrap">{{ i.inspection_date|date:"d.m.Y" }}</td>
+                        <td class="px-5 py-3 text-sm"><a href="{{ i.get_absolute_url }}" class="font-medium text-gray-900 hover:text-primary-600">{{ i.building.name }}</a>
+                            <span class="block text-xs text-gray-500">{{ i.building.object_number }}{% if i.report_number %} · Bericht {{ i.report_number }}{% endif %}</span></td>
+                        <td class="px-5 py-3 text-sm text-gray-700">{% if i.defect_total %}{{ i.defect_total }}{% if i.open_total %} <span class="text-xs text-yellow-700">({{ i.open_total }} offen)</span>{% endif %}{% else %}keine{% endif %}</td>
+                        <td class="px-5 py-3 text-sm text-gray-700 whitespace-nowrap">{{ i.next_inspection|date:"m/Y"|default:"—" }}</td>
+                        <td class="px-5 py-3 text-right text-sm whitespace-nowrap">
+                            <a href="{% url 'objektverwaltung:bvs_pdf' i.pk 'niederschrift' %}" target="_blank" class="text-primary-600 hover:text-primary-800">PDF</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="p-8 text-sm text-gray-500 text-center">{% if q %}Keine Treffer.{% else %}Noch keine abgeschlossene Brandverhütungsschau.{% endif %}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

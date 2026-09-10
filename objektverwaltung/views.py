@@ -55,6 +55,9 @@ class ObjektDashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateV
         due_assets = _due_assets()
         context['due_assets'] = due_assets[:8]
         context['due_asset_count'] = len(due_assets)
+        if self.request.user.has_perm('objektverwaltung.bvs_view'):
+            from .views_bvs import psv_counts
+            context['psv_counts'] = psv_counts()
         return context
 
 
@@ -219,9 +222,19 @@ class BuildingObjectDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['contact_form'] = BuildingContactForm()
         context['plan_form'] = BuildingPlanForm(building=self.object)
         context['key_depot_form'] = FireKeyDepotForm()
-        context['akte_entries'] = akte.build_timeline(self.object)
+        can_bvs = self.request.user.has_perm('objektverwaltung.bvs_view')
+        context['akte_entries'] = akte.build_timeline(self.object, include_bvs=can_bvs)
         context['due_assets'] = _building_due_assets(self.object)
-        context['akte_kinds'] = akte.KIND_LABELS
+        context['akte_kinds'] = {k: v for k, v in akte.KIND_LABELS.items() if can_bvs or k != 'bvs'}
+        context['can_bvs'] = can_bvs
+        if can_bvs:
+            from .views_bvs import psv_panel_context
+            context.update(psv_panel_context(self.object, self.request))
+            inspections = list(self.object.fire_safety_inspections.select_related(
+                'created_by').prefetch_related('defects'))
+            context['bvs_inspections'] = inspections
+            context['bvs_next'] = next((i.next_inspection for i in inspections
+                                        if i.is_completed and i.next_inspection), None)
         return context
 
 
@@ -318,7 +331,7 @@ class ToggleFollowView(LoginRequiredMixin, View):
 # UNTEROBJEKTE: Hinzufügen (POST) + Löschen
 # ============================================================================
 
-_DETAIL_TABS = ('uebersicht', 'gebaeude', 'technik', 'kompensation', 'plaene')
+_DETAIL_TABS = ('uebersicht', 'gebaeude', 'technik', 'kompensation', 'plaene', 'bvs')
 
 
 def _redirect_to_building(request, building):
@@ -894,7 +907,7 @@ class BuildingObjectAktePdfView(LoginRequiredMixin, PermissionRequiredMixin, Vie
         from weasyprint import HTML
 
         building = get_object_or_404(BuildingObject, pk=pk)
-        entries = akte.build_timeline(building)
+        entries = akte.build_timeline(building, include_bvs=request.user.has_perm('objektverwaltung.bvs_view'))
         html = render_to_string('objektverwaltung/akte_pdf.html', {
             'building': building, 'entries': entries, 'now': timezone.localtime(),
             'user': request.user,

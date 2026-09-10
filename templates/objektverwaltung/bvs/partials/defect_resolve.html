@@ -1,0 +1,16 @@
+{# Nachschau: „Behoben am“ eines Mangels (Leseansicht der Niederschrift) #}
+<div id="resolve-{{ defect.pk }}" class="flex items-center gap-2 whitespace-nowrap">
+    {% if can_bvs_edit %}
+    <form hx-post="{% url 'objektverwaltung:bvs_defect_resolve' defect.pk %}" hx-trigger="change"
+          hx-target="#resolve-{{ defect.pk }}" hx-swap="outerHTML" class="flex items-center gap-2">
+        {% csrf_token %}
+        <input type="date" name="resolved_on" value="{{ defect.resolved_on|date:'Y-m-d' }}"
+               class="px-2 py-1.5 border border-gray-300 rounded-lg text-sm" aria-label="Behoben am">
+    </form>
+    {% elif defect.resolved_on %}
+    <span class="text-sm text-gray-700">{{ defect.resolved_on|date:"d.m.Y" }}</span>
+    {% endif %}
+    {% if defect.resolved_on %}<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800">behoben</span>
+    {% else %}<span class="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">offen</span>{% endif %}
+    {% if saved %}<span class="text-xs text-green-700">✓</span>{% endif %}
+</div>

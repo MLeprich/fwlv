@@ -66,6 +66,10 @@ class Roles:
     LST_INFOMONITOR = 'LST Infomonitor'
     LST_MAPPE = 'LST Mappe'
 
+    # Brandverhütungsschau (Objektverwaltung, eigene Rechte bvs_*)
+    BVS_SACHBEARBEITER = 'BVS Sachbearbeiter'      # durchführen, PSV-Fristen pflegen
+    BVS_VERANTWORTLICHER = 'BVS Verantwortlicher'  # zusätzlich Mustersätze/Prüfarten
+
     # Operative Rollen
     BEREICHSLEITUNG = 'Bereichsleitung'
     LAGERVERWALTER = 'Lagerverwalter'
@@ -126,6 +130,8 @@ class Roles:
             cls.SACHBEARBEITER_IUK,
             cls.LST_INFOMONITOR,
             cls.LST_MAPPE,
+            cls.BVS_SACHBEARBEITER,
+            cls.BVS_VERANTWORTLICHER,
             cls.FREIGABE_STUFE_1,
             cls.FREIGABE_STUFE_2,
             cls.FREIGABE_STUFE_3,

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, views_bvs
 
 app_name = 'objektverwaltung'
 
@@ -68,6 +68,47 @@ urlpatterns = [
     path('pruefung/<int:pk>/bearbeiten/', views.EditReportView.as_view(), name='report_edit'),
     path('pruefung/<int:pk>/loeschen/', views.DeleteReportView.as_view(), name='report_delete'),
     path('pruefung/<int:pk>/pdf/', views.ReportPdfView.as_view(), name='report_pdf'),
+
+    # Brandverhütungsschau: Übersicht, Vor-Ort-Schablone, Mängel, PDF
+    path('bvs/', views_bvs.BVSOverviewView.as_view(), name='bvs_overview'),
+    path('bvs/neu/', views_bvs.BVSStartView.as_view(), name='bvs_start'),
+    path('objekte/<int:pk>/bvs/neu/', views_bvs.BVSStartView.as_view(), name='bvs_start_for_building'),
+    path('bvs/<int:pk>/', views_bvs.BVSDetailView.as_view(), name='bvs_detail'),
+    path('bvs/<int:pk>/speichern/', views_bvs.BVSSaveView.as_view(), name='bvs_save'),
+    path('bvs/<int:pk>/abschliessen/', views_bvs.BVSCompleteView.as_view(), name='bvs_complete'),
+    path('bvs/<int:pk>/wieder-oeffnen/', views_bvs.BVSReopenView.as_view(), name='bvs_reopen'),
+    path('bvs/<int:pk>/loeschen/', views_bvs.BVSDeleteView.as_view(), name='bvs_delete'),
+    path('bvs/<int:pk>/<str:part>.pdf', views_bvs.BVSPdfView.as_view(), name='bvs_pdf'),
+    path('bvs/<int:pk>/mangel/neu/', views_bvs.DefectAddView.as_view(), name='bvs_defect_add'),
+    path('bvs/<int:pk>/maengel/neu-nummerieren/', views_bvs.DefectRenumberView.as_view(), name='bvs_defect_renumber'),
+    path('bvs/mangel/<int:pk>/', views_bvs.DefectSaveView.as_view(), name='bvs_defect_save'),
+    path('bvs/mangel/<int:pk>/loeschen/', views_bvs.DefectDeleteView.as_view(), name='bvs_defect_delete'),
+    path('bvs/mangel/<int:pk>/hoch/', views_bvs.DefectMoveView.as_view(), {'direction': 'hoch'}, name='bvs_defect_up'),
+    path('bvs/mangel/<int:pk>/runter/', views_bvs.DefectMoveView.as_view(), {'direction': 'runter'}, name='bvs_defect_down'),
+    path('bvs/mangel/<int:pk>/behoben/', views_bvs.DefectResolveView.as_view(), name='bvs_defect_resolve'),
+
+    # Brandverhütungsschau: PSV-Fristen
+    path('bvs/fristen/', views_bvs.PSVOverviewView.as_view(), name='psv_overview'),
+    path('objekte/<int:pk>/psv/neu/', views_bvs.PSVRequirementAddView.as_view(), name='psv_add'),
+    path('psv/<int:pk>/', views_bvs.PSVRequirementDetailView.as_view(), name='psv_detail'),
+    path('psv/<int:pk>/bearbeiten/', views_bvs.PSVRequirementEditView.as_view(), name='psv_edit'),
+    path('psv/<int:pk>/loeschen/', views_bvs.PSVRequirementDeleteView.as_view(), name='psv_delete'),
+    path('psv/<int:pk>/pruefung/neu/', views_bvs.PSVCertificateAddView.as_view(), name='psv_certificate_add'),
+    path('psv-pruefung/<int:pk>/bearbeiten/', views_bvs.PSVCertificateEditView.as_view(), name='psv_certificate_edit'),
+    path('psv-pruefung/<int:pk>/loeschen/', views_bvs.PSVCertificateDeleteView.as_view(), name='psv_certificate_delete'),
+
+    # Brandverhütungsschau: Pflege von Prüfarten und Mustersätzen
+    path('bvs/pruefarten/', views_bvs.PSVTypeListView.as_view(), name='psv_type_list'),
+    path('bvs/pruefarten/neu/', views_bvs.PSVTypeFormView.as_view(), name='psv_type_create'),
+    path('bvs/pruefarten/<int:pk>/bearbeiten/', views_bvs.PSVTypeFormView.as_view(), name='psv_type_edit'),
+    path('bvs/pruefarten/<int:pk>/loeschen/', views_bvs.PSVTypeDeleteView.as_view(), name='psv_type_delete'),
+    path('bvs/mustersaetze/', views_bvs.PhraseListView.as_view(), name='bvs_phrase_list'),
+    path('bvs/mustersaetze/neu/', views_bvs.PhraseFormView.as_view(), name='bvs_phrase_create'),
+    path('bvs/mustersaetze/<int:pk>/bearbeiten/', views_bvs.PhraseFormView.as_view(), name='bvs_phrase_edit'),
+    path('bvs/mustersaetze/<int:pk>/loeschen/', views_bvs.PhraseDeleteView.as_view(), name='bvs_phrase_delete'),
+    path('bvs/mustersaetze/kapitel/neu/', views_bvs.PhraseCategoryFormView.as_view(), name='bvs_category_create'),
+    path('bvs/mustersaetze/kapitel/<int:pk>/bearbeiten/', views_bvs.PhraseCategoryFormView.as_view(), name='bvs_category_edit'),
+    path('bvs/mustersaetze/kapitel/<int:pk>/loeschen/', views_bvs.PhraseCategoryDeleteView.as_view(), name='bvs_category_delete'),
 
     # Bisherige FSD-Adressen bleiben gültig
     path('fsd/', views.InspectionOverviewView.as_view(), {'type': 'fsd'}, name='keydepot_list'),

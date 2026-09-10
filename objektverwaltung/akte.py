@@ -35,6 +35,7 @@ KIND_LABELS = {
     'pruefung': 'Prüfungen',
     'kompensation': 'Kompensation',
     'dokument': 'Pläne & Dokumente',
+    'bvs': 'Brandverhütungsschau',
     'export': 'Export / Import',
 }
 
@@ -50,6 +51,9 @@ _KIND_BY_MODEL = {
     'escaperoute': 'unterobjekt',
     'firealarmpanel': 'unterobjekt',
     'firesuppressionsystem': 'unterobjekt',
+    'firesafetyinspection': 'bvs',
+    'psvrequirement': 'bvs',
+    'psvcertificate': 'bvs',
 }
 
 
@@ -175,8 +179,11 @@ def audit_logs_for(building):
     )
 
 
-def build_timeline(building):
-    """Alle Akteneinträge eines Objekts, neueste zuerst."""
+def build_timeline(building, include_bvs=True):
+    """
+    Alle Akteneinträge eines Objekts, neueste zuerst. Einträge der
+    Brandverhütungsschau nur mit ``include_bvs`` (eigenes Recht bvs_view).
+    """
     entries = []
     has_create_log = False
 
@@ -187,6 +194,8 @@ def build_timeline(building):
             has_create_log = True
         kind = 'export' if log.action in (AuditAction.EXPORT, AuditAction.IMPORT) \
             else _KIND_BY_MODEL.get(log.model_name, 'unterobjekt')
+        if kind == 'bvs' and not include_bvs:
+            continue
         entries.append(_entry(
             log.timestamp, kind, log.description, user=log.user,
             action=log.action, changes=log.changes or {},

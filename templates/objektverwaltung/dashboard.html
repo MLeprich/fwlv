@@ -17,6 +17,9 @@
             <a href="{% url 'objektverwaltung:inspection_new' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">+ Neue Prüfung</a>
             {% endif %}
             <a href="{% url 'objektverwaltung:inspection_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Prüfungen</a>
+            {% if perms.objektverwaltung.bvs_view %}
+            <a href="{% url 'objektverwaltung:bvs_overview' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Brandverhütungsschau</a>
+            {% endif %}
             <a href="{% url 'objektverwaltung:list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Alle Objekte</a>
             <a href="{% url 'objektverwaltung:usage_category_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Nutzungsarten</a>
             {% if perms.objektverwaltung.add_buildingobject %}
@@ -40,6 +43,20 @@
             <p class="text-xs text-gray-400 mt-1">überfällig oder in den nächsten 30 Tagen</p>
         </a>
     </div>
+
+    {% if psv_counts %}
+    <a href="{% url 'objektverwaltung:psv_overview' %}" class="bg-white rounded-lg shadow p-5 mb-8 flex flex-wrap items-center justify-between gap-4 hover:bg-gray-50">
+        <div>
+            <p class="font-semibold text-gray-900">Fristen der Prüfsachverständigen</p>
+            <p class="text-xs text-gray-500">Gültigkeit der PSV-Prüfbescheinigungen aller Objekte</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-800"><span class="w-2 h-2 rounded-full bg-red-500"></span>{{ psv_counts.expired|add:psv_counts.missing }} abgelaufen / fehlend</span>
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-100 text-yellow-800"><span class="w-2 h-2 rounded-full bg-yellow-400"></span>{{ psv_counts.expiring }} läuft bald ab</span>
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-800"><span class="w-2 h-2 rounded-full bg-green-500"></span>{{ psv_counts.valid }} gültig</span>
+        </div>
+    </a>
+    {% endif %}
 
     {% if due_assets %}
     <div class="bg-white rounded-lg shadow overflow-hidden mb-8">

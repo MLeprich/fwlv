@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+
+{% block title %}Brandverhütungsschau – {{ building.name }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex flex-wrap items-center space-x-2 text-sm">
+            <li><a href="{% url 'objektverwaltung:dashboard' %}" class="text-gray-500 hover:text-gray-700">Objektverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'objektverwaltung:bvs_overview' %}" class="text-gray-500 hover:text-gray-700">Brandverhütungsschau</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ building.name|truncatechars:40 }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    #defect-list:has(.defect-card) + .empty-hint { display: none; }
+    .bvs-section-title { font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 0.75rem; }
+    .dark .bvs-section-title { color: #F9FAFB; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto" x-data="bvsPage()" style="padding-bottom: 6rem">
+
+    <!-- Kopfzeile mit Speicherstatus -->
+    <div class="sticky top-16 z-30 bg-white rounded-lg shadow px-4 py-3 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+            <p class="text-xs text-gray-500">Brandverhütungsschau · {{ inspection.get_status_display }}</p>
+            <h1 class="text-lg font-bold text-gray-900 truncate">{{ building.name }}</h1>
+            <p class="text-xs text-gray-500 truncate">{{ building.object_number }}{% if building.full_address %} · {{ building.full_address }}{% endif %}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <span id="save-status" class="text-sm text-gray-500" aria-live="polite">Änderungen werden automatisch gespeichert</span>
+            <a href="{% url 'objektverwaltung:bvs_pdf' inspection.pk 'niederschrift' %}" target="_blank"
+               @click.prevent="bvs.flush().then(() => window.open($el.href, '_blank'))"
+               class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">PDF-Vorschau</a>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <!-- Allgemeine Angaben -->
+        <form class="bvs-autosave bg-white rounded-lg shadow p-5"
+              hx-post="{% url 'objektverwaltung:bvs_save' inspection.pk %}"
+              hx-trigger="input delay:1000ms, change" hx-target="#save-status" hx-swap="innerHTML" hx-sync="this:queue last">
+            {% csrf_token %}
+            <input type="hidden" name="_fields" value="inspection_date,report_number,object_key,cost_bearer">
+            <h2 class="bvs-section-title">Allgemeine Angaben</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="block text-sm text-gray-600 mb-1">{{ form.inspection_date.label }} *</label>{{ form.inspection_date }}</div>
+                <div><label class="block text-sm text-gray-600 mb-1">{{ form.report_number.label }}</label>{{ form.report_number }}</div>
+                <div><label class="block text-sm text-gray-600 mb-1">{{ form.object_key.label }}</label>{{ form.object_key }}</div>
+                <div><label class="block text-sm text-gray-600 mb-1">{{ form.cost_bearer.label }}</label>{{ form.cost_bearer }}</div>
+            </div>
+        </form>
+
+        <!-- Teilnehmer -->
+        <form class="bvs-autosave bg-white rounded-lg shadow p-5"
+              hx-post="{% url 'objektverwaltung:bvs_save' inspection.pk %}"
+              hx-trigger="input delay:1000ms, change" hx-target="#save-status" hx-swap="innerHTML" hx-sync="this:queue last">
+            {% csrf_token %}
+            <input type="hidden" name="_fields" value="participant_operator,participant_fire_dept,participant_other">
+            <h2 class="bvs-section-title">Teilnehmer</h2>
+            <div class="grid grid-cols-1 gap-4">
+                <div><label class="block text-sm text-gray-600 mb-1">Betrieb</label>{{ form.participant_operator }}</div>
+                <div><label class="block text-sm text-gray-600 mb-1">Feuerwehr</label>{{ form.participant_fire_dept }}</div>
+                <div><label class="block text-sm text-gray-600 mb-1">Sonstige</label>{{ form.participant_other }}</div>
+            </div>
+        </form>
+
+        <!-- Zeitaufwand -->
+        <form class="bvs-autosave bg-white rounded-lg shadow p-5"
+              hx-post="{% url 'objektverwaltung:bvs_save' inspection.pk %}"
+              hx-trigger="input delay:1000ms, change" hx-target="#save-status" hx-swap="innerHTML" hx-sync="this:queue last">
+            {% csrf_token %}
+            <input type="hidden" name="_fields" value="departure_station,arrival_object,departure_object,arrival_station,prep_minutes">
+            <h2 class="bvs-section-title">Zeitaufwand</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for field in time_fields %}
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">{{ field.label }}</label>
+                    <div class="flex gap-2">
+                        {{ field }}
+                        <button type="button" @click="bvs.setNow($el.previousElementSibling)"
+                                class="px-4 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">Jetzt</button>
+                    </div>
+                </div>
+                {% endfor %}
+                <div><label class="block text-sm text-gray-600 mb-1">{{ form.prep_minutes.label }}</label>{{ form.prep_minutes }}</div>
+            </div>
+        </form>
+
+        <!-- Mängel -->
+        <section class="bg-gray-50 rounded-lg shadow p-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="bvs-section-title" style="margin-bottom: 0">Mängel und notwendige Maßnahmen</h2>
+                    <p class="text-sm text-gray-500"><span x-text="defectCount"></span> erfasst · Lücken „…“ vor Ort ergänzen</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" @click="openPicker()"
+                            class="px-5 py-3 rounded-lg text-base font-semibold bg-primary-600 text-white hover:bg-primary-700">+ Mustersatz</button>
+                    <button type="button" @click="bvs.addDefect('')"
+                            class="px-5 py-3 rounded-lg text-base font-medium bg-white text-gray-800 border border-gray-300 hover:bg-gray-100">+ Freitext</button>
+                    <button type="button" x-show="defectCount > 1" @click="bvs.renumber()"
+                            class="px-4 py-3 rounded-lg text-sm bg-white text-gray-600 border border-gray-300 hover:bg-gray-100">Neu nummerieren</button>
+                </div>
+            </div>
+            {% include 'objektverwaltung/bvs/partials/defect_list.html' %}
+            <p class="empty-hint text-sm text-gray-500 bg-white rounded-lg p-6 text-center">
+                Noch keine Mängel erfasst. Ohne Mängel lautet die Niederschrift „keine sichtbaren Mängel festgestellt“.
+            </p>
+        </section>
+
+        <!-- Prüfsachverständige -->
+        {% include 'objektverwaltung/bvs/partials/psv_panel.html' %}
+
+        <!-- Ergebnis -->
+        <form class="bvs-autosave bg-white rounded-lg shadow p-5"
+              hx-post="{% url 'objektverwaltung:bvs_save' inspection.pk %}"
+              hx-trigger="input delay:1000ms, change" hx-target="#save-status" hx-swap="innerHTML" hx-sync="this:queue last">
+            {% csrf_token %}
+            <input type="hidden" name="_fields" value="defect_deadline,next_inspection,is_fee_required">
+            <h2 class="bvs-section-title">Ergebnis</h2>
+            <p class="mb-4 px-4 py-3 rounded-lg text-base"
+               :class="defectCount ? 'bg-yellow-50 text-yellow-800' : 'bg-green-50 text-green-800'"
+               x-text="defectCount ? 'Mängel gemäß beigefügter Liste festgestellt (' + defectCount + ').' : 'Keine sichtbaren Mängel festgestellt.'"></p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">{{ form.defect_deadline.label }}</label>
+                    {{ form.defect_deadline }}
+                    <p class="mt-1 text-xs text-gray-500">{{ form.defect_deadline.help_text }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">{{ form.next_inspection.label }}</label>
+                    {{ form.next_inspection }}
+                </div>
+                <label class="md:col-span-2 flex items-center gap-3 cursor-pointer py-2">
+                    {{ form.is_fee_required }}
+                    <span class="text-base text-gray-800">{{ form.is_fee_required.label }}</span>
+                    <span class="text-xs text-gray-500">{{ form.is_fee_required.help_text }}</span>
+                </label>
+            </div>
+        </form>
+
+        <!-- Briefkopf -->
+        <form class="bvs-autosave bg-white rounded-lg shadow p-5" x-data="{ open: false }"
+              hx-post="{% url 'objektverwaltung:bvs_save' inspection.pk %}"
+              hx-trigger="input delay:1000ms, change" hx-target="#save-status" hx-swap="innerHTML" hx-sync="this:queue last">
+            {% csrf_token %}
+            <input type="hidden" name="_fields" value="recipient_address,clerk_name,clerk_phone,clerk_room,clerk_email,our_reference,notes">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between text-left">
+                <span class="bvs-section-title" style="margin-bottom: 0">Anschrift, Briefkopf &amp; Notizen</span>
+                <span class="text-sm text-primary-600" x-text="open ? 'Einklappen' : 'Anzeigen'"></span>
+            </button>
+            <p class="text-xs text-gray-500" x-show="!open">Wird aus der letzten Brandverhütungsschau übernommen – nur bei Bedarf ändern.</p>
+            <div x-show="open" x-cloak class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div class="md:col-span-2"><label class="block text-sm text-gray-600 mb-1">{{ form.recipient_address.label }}</label>{{ form.recipient_address }}</div>
+                <div><label class="block text-sm text-gray-600 mb-1">{{ form.clerk_name.label }}</label>{{ form.clerk_name }}</div>
+                <div><label class="block text-sm text-gray-600 mb-1">{{ form.our_reference.label }}</label>{{ form.our_reference }}</div>
+                <div><label class="block text-sm text-gray-600 mb-1">{{ form.clerk_phone.label }}</label>{{ form.clerk_phone }}</div>
+                <div><label class="block text-sm text-gray-600 mb-1">{{ form.clerk_room.label }}</label>{{ form.clerk_room }}</div>
+                <div class="md:col-span-2"><label class="block text-sm text-gray-600 mb-1">{{ form.clerk_email.label }}</label>{{ form.clerk_email }}</div>
+                <div class="md:col-span-2"><label class="block text-sm text-gray-600 mb-1">{{ form.notes.label }}</label>{{ form.notes }}
+                    <p class="mt-1 text-xs text-gray-500">{{ form.notes.help_text }}</p></div>
+            </div>
+        </form>
+
+        <!-- Abschließen -->
+        <div class="bg-white rounded-lg shadow p-5 flex flex-wrap items-center justify-between gap-3">
+            <form method="post" action="{% url 'objektverwaltung:bvs_delete' inspection.pk %}"
+                  onsubmit="return confirm('Diesen Entwurf mit allen Mängeln löschen?');">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ building.get_absolute_url }}#bvs">
+                <button type="submit" class="px-4 py-3 rounded-lg text-sm text-red-700 bg-red-50 hover:bg-red-100">Entwurf löschen</button>
+            </form>
+            <form method="post" action="{% url 'objektverwaltung:bvs_complete' inspection.pk %}" @submit.prevent="complete($el)">
+                {% csrf_token %}
+                <button type="submit" class="px-8 py-4 rounded-lg text-lg font-semibold bg-green-600 text-white hover:bg-green-700">
+                    Brandverhütungsschau abschließen
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Auswahl der Mustersätze -->
+    <template x-teleport="body">
+        <div x-show="picker" x-cloak class="fixed inset-0 bg-black/50 flex justify-center" style="z-index: 60"
+             @keydown.escape.window="picker = false">
+            <div class="bg-white w-full max-w-4xl flex flex-col shadow-lg" style="height: 100%">
+                <div class="p-4 border-b border-gray-200 flex items-center gap-3">
+                    <input type="search" x-model="q" x-ref="search" placeholder="Suchen: Nummer, Titel oder Text …"
+                           class="flex-1 min-w-0 px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+                    <button type="button" @click="picker = false"
+                            class="px-4 py-3 rounded-lg text-base font-medium bg-gray-100 text-gray-800 hover:bg-gray-200">Schließen</button>
+                </div>
+                <div class="px-4 py-3 border-b border-gray-200 flex gap-2 overflow-x-auto">
+                    <button type="button" @click="chapter = ''"
+                            :class="chapter === '' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'"
+                            class="px-3 py-2 rounded-full text-sm whitespace-nowrap">Alle</button>
+                    <template x-for="c in chapters" :key="c">
+                        <button type="button" @click="chapter = c"
+                                :class="chapter === c ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'"
+                                class="px-3 py-2 rounded-full text-sm whitespace-nowrap" x-text="c"></button>
+                    </template>
+                </div>
+                <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
+                    <template x-for="g in results" :key="g.number">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-500" x-text="g.number + ' ' + g.title"></h3>
+                            <div class="mt-2 space-y-2">
+                                <template x-for="p in g.phrases" :key="p.id">
+                                    <div class="border border-gray-200 rounded-lg flex items-stretch" x-data="{ full: false }">
+                                        <button type="button" @click="pick(p.id)" class="flex-1 min-w-0 text-left p-3 hover:bg-gray-100 rounded-l-lg">
+                                            <span class="font-mono text-xs text-gray-500" x-text="p.code"></span>
+                                            <span class="font-medium text-gray-900" x-text="p.title"></span>
+                                            <p class="text-sm text-gray-600 mt-1 whitespace-pre-line" :class="full ? '' : 'line-clamp-2'" x-text="p.text"></p>
+                                        </button>
+                                        <button type="button" @click="full = !full" class="px-3 text-sm text-gray-500 border-l border-gray-200 hover:bg-gray-50 rounded-r-lg"
+                                                :title="full ? 'Weniger anzeigen' : 'Ganzen Text anzeigen'" x-text="full ? '▴' : '▾'"></button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <p x-show="!results.length" class="text-center text-gray-500 py-12">Keine passenden Mustersätze.</p>
+                </div>
+                <div class="p-3 border-t border-gray-200 flex items-center justify-between gap-3">
+                    <span class="text-xs text-gray-500">Antippen übernimmt den Text als neuen Mangel.</span>
+                    <button type="button" @click="pick('')" class="px-4 py-3 rounded-lg text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200">Stattdessen Freitext</button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+{{ phrase_groups|json_script:"bvs-phrases" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/*
+ * Vor-Ort-Schablone: Jeder Abschnitt und jeder Mangel ist ein eigenes Formular
+ * (class="bvs-autosave"), das htmx bei Änderungen speichert. `bvs` merkt sich
+ * ungespeicherte Formulare, damit vor Verschieben, Löschen, PDF und Abschluss
+ * alles gesichert ist, und wiederholt fehlgeschlagene Speicherungen.
+ */
+window.bvs = (function () {
+    const dirty = new Set();
+    let inflight = 0;
+    const urls = {
+        add: "{% url 'objektverwaltung:bvs_defect_add' inspection.pk %}",
+        renumber: "{% url 'objektverwaltung:bvs_defect_renumber' inspection.pk %}",
+    };
+
+    function status(html) {
+        const el = document.getElementById('save-status');
+        if (el) el.innerHTML = html;
+    }
+    function showError(text) {
+        const span = document.createElement('span');
+        span.className = 'text-red-700 font-medium';
+        span.textContent = '⚠ ' + text;
+        status(span.outerHTML);
+    }
+    function autosaveForm(el) {
+        return el && el.closest ? el.closest('form.bvs-autosave') : null;
+    }
+    function countDefects() {
+        const n = document.querySelectorAll('#defect-list .defect-card').length;
+        window.dispatchEvent(new CustomEvent('bvs-defects', { detail: n }));
+    }
+
+    ['input', 'change'].forEach(type => document.addEventListener(type, e => {
+        const form = autosaveForm(e.target);
+        if (form) { dirty.add(form); status('<span class="text-gray-500">Ungespeicherte Änderungen …</span>'); }
+    }));
+    document.body.addEventListener('htmx:beforeRequest', e => {
+        inflight++;
+        const form = autosaveForm(e.detail.elt);
+        if (form && e.detail.elt === form) dirty.delete(form);
+    });
+    document.body.addEventListener('htmx:sendAbort', e => { e.detail.xhr._bvsAborted = true; });
+    document.body.addEventListener('htmx:afterRequest', e => {
+        inflight = Math.max(0, inflight - 1);
+        const form = autosaveForm(e.detail.elt);
+        const xhr = e.detail.xhr;
+        if (form && e.detail.elt === form && !e.detail.successful) {
+            // Abgebrochene Requests wurden durch einen neueren ersetzt – kein Fehler.
+            setTimeout(() => { if (!xhr._bvsAborted) dirty.add(form); }, 0);
+        }
+    });
+    document.body.addEventListener('htmx:responseError', e => {
+        const code = e.detail.xhr.status;
+        showError(code === 401 ? 'Sitzung abgelaufen – bitte in einem neuen Tab anmelden, danach hier weiterarbeiten.'
+            : code === 403 ? 'Keine Berechtigung zum Speichern.'
+            : code === 409 ? 'Die Niederschrift ist bereits abgeschlossen.'
+            : 'Speichern fehlgeschlagen (Fehler ' + code + '). Wird erneut versucht.');
+    });
+    document.body.addEventListener('htmx:sendError', () =>
+        showError('Keine Verbindung – wird automatisch erneut gespeichert.'));
+    document.body.addEventListener('bvsError', e => showError(e.detail.value));
+    document.body.addEventListener('htmx:afterSettle', countDefects);
+    document.addEventListener('DOMContentLoaded', countDefects);
+
+    // Fehlgeschlagenes erneut versuchen (Funkloch im Gebäude)
+    window.addEventListener('online', () => flush());
+    setInterval(() => { if (dirty.size && !inflight && navigator.onLine) flush(); }, 15000);
+    window.addEventListener('beforeunload', e => {
+        if (dirty.size || inflight) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    async function flush() {
+        for (const form of [...dirty]) {
+            if (!document.body.contains(form)) { dirty.delete(form); continue; }
+            try {
+                await htmx.ajax('POST', form.getAttribute('hx-post'), { source: form, target: '#save-status', swap: 'innerHTML' });
+            } catch (err) { dirty.add(form); }
+        }
+        await new Promise(resolve => {
+            const check = () => (inflight <= 0 ? resolve() : setTimeout(check, 100));
+            check();
+        });
+        return dirty.size === 0;
+    }
+
+    function selectGap(textarea, from) {
+        const text = textarea.value;
+        const candidates = ['…', '...'].map(m => [text.indexOf(m, from), m]).filter(([i]) => i >= 0);
+        if (!candidates.length) return false;
+        const [index, marker] = candidates.sort((a, b) => a[0] - b[0])[0];
+        textarea.focus();
+        textarea.setSelectionRange(index, index + marker.length);
+        return true;
+    }
+
+    return {
+        flush,
+        addDefect(phraseId) {
+            return htmx.ajax('POST', urls.add, { target: '#defect-list', swap: 'beforeend', values: { phrase: phraseId } });
+        },
+        async move(url) {
+            await flush();
+            await htmx.ajax('POST', url, { target: '#defect-list', swap: 'outerHTML' });
+        },
+        async remove(url, selector) {
+            if (!confirm('Diesen Mangel löschen?')) return;
+            await flush();
+            await htmx.ajax('POST', url, { target: selector, swap: 'outerHTML' });
+            countDefects();
+        },
+        async renumber() {
+            if (!confirm('Alle Punkte fortlaufend neu nummerieren?')) return;
+            await flush();
+            await htmx.ajax('POST', urls.renumber, { target: '#defect-list', swap: 'outerHTML' });
+        },
+        setNow(input) {
+            const d = new Date();
+            input.value = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+        focusNew(card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const textarea = card.querySelector('textarea');
+            if (textarea && !selectGap(textarea, 0)) textarea.focus();
+        },
+        nextGap(textarea) {
+            if (!selectGap(textarea, textarea.selectionEnd || 0)) selectGap(textarea, 0);
+        },
+    };
+})();
+
+function bvsPage() {
+    const groups = JSON.parse(document.getElementById('bvs-phrases').textContent);
+    return {
+        picker: false,
+        q: '',
+        chapter: '',
+        defectCount: document.querySelectorAll('#defect-list .defect-card').length,
+        chapters: [...new Set(groups.map(g => g.chapter))],
+        init() {
+            window.addEventListener('bvs-defects', e => { this.defectCount = e.detail; });
+        },
+        get results() {
+            const terms = this.q.toLowerCase().split(/\s+/).filter(Boolean);
+            return groups
+                .filter(g => !this.chapter || g.chapter === this.chapter)
+                .map(g => ({ ...g, phrases: g.phrases.filter(p => {
+                    const hay = (p.code + ' ' + p.title + ' ' + p.text).toLowerCase();
+                    return terms.every(t => hay.includes(t));
+                }) }))
+                .filter(g => g.phrases.length);
+        },
+        openPicker() {
+            this.picker = true;
+            this.$nextTick(() => this.$refs.search && this.$refs.search.focus());
+        },
+        pick(id) {
+            this.picker = false;
+            bvs.addDefect(id);
+        },
+        async complete(form) {
+            const saved = await bvs.flush();
+            if (!saved) {
+                alert('Es konnten nicht alle Änderungen gespeichert werden. Bitte die Verbindung prüfen und erneut versuchen.');
+                return;
+            }
+            const deadline = document.querySelector('[name=defect_deadline]');
+            let msg = 'Brandverhütungsschau abschließen?\n\n'
+                + (this.defectCount ? this.defectCount + ' Mängel erfasst.' : 'Keine Mängel erfasst.');
+            if (this.defectCount && deadline && !deadline.value) msg += '\nHinweis: Es ist keine Frist zur Mängelbeseitigung eingetragen.';
+            msg += '\n\nDanach ist die Niederschrift schreibgeschützt (sie kann wieder geöffnet werden).';
+            if (confirm(msg)) form.submit();
+        },
+    };
+}
+</script>
+{% endblock %}

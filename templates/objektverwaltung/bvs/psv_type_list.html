@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}PSV-Prüfarten - Brandverhütungsschau - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'objektverwaltung:dashboard' %}" class="text-gray-500 hover:text-gray-700">Objektverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'objektverwaltung:bvs_overview' %}" class="text-gray-500 hover:text-gray-700">Brandverhütungsschau</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">PSV-Prüfarten</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">PSV-Prüfarten</h1>
+            <p class="text-sm text-gray-600">Welche Prüfungen durch Prüfsachverständige einem Objekt zugeordnet werden können</p>
+        </div>
+        {% if can_bvs_manage %}
+        <a href="{% url 'objektverwaltung:psv_type_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-700">+ Neue Prüfart</a>
+        {% endif %}
+    </div>
+
+    <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 text-sm text-blue-900">
+        Das <strong>Prüfintervall</strong> schlägt beim Eintragen einer Prüfung das Datum „gültig bis“ vor.
+        Die <strong>Vorwarnzeit</strong> legt fest, ab wann eine Frist gelb („läuft bald ab“) angezeigt wird.
+        Verwendete Prüfarten lassen sich nicht löschen, aber deaktivieren.
+    </div>
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bezeichnung</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Intervall</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vorwarnzeit</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Verwendet</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for t in types %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-5 py-3 text-sm font-medium text-gray-900">{{ t.name }}{% if not t.is_active %} <span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">inaktiv</span>{% endif %}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ t.interval_months }} Monate</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ t.warning_days }} Tage</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{% if t.usage %}<a href="{% url 'objektverwaltung:psv_overview' %}?status=all&type={{ t.pk }}" class="hover:text-primary-600">{{ t.usage }}×</a>{% else %}—{% endif %}</td>
+                    <td class="px-5 py-3 text-right text-sm whitespace-nowrap">
+                        {% if can_bvs_manage %}
+                        <a href="{% url 'objektverwaltung:psv_type_edit' t.pk %}" class="text-primary-600 hover:text-primary-900">Bearbeiten</a>
+                        {% if not t.usage %}
+                        <form method="post" action="{% url 'objektverwaltung:psv_type_delete' t.pk %}" class="inline" onsubmit="return confirm('Prüfart löschen?');">
+                            {% csrf_token %}<button type="submit" class="ml-3 text-red-600 hover:text-red-800">Löschen</button>
+                        </form>
+                        {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="px-5 py-8 text-center text-sm text-gray-500">Noch keine Prüfarten angelegt.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

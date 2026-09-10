@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Brandverhütungsschau {{ inspection.inspection_date|date:"d.m.Y" }} – {{ building.name }} - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex flex-wrap items-center space-x-2 text-sm">
+            <li><a href="{% url 'objektverwaltung:dashboard' %}" class="text-gray-500 hover:text-gray-700">Objektverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'objektverwaltung:bvs_overview' %}" class="text-gray-500 hover:text-gray-700">Brandverhütungsschau</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{{ building.get_absolute_url }}#bvs" class="text-gray-500 hover:text-gray-700">{{ building.name|truncatechars:40 }}</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">{{ inspection.inspection_date|date:"d.m.Y" }}</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+            <p class="text-sm text-gray-500">Brandverhütungsschau vom {{ inspection.inspection_date|date:"d.m.Y" }}</p>
+            <h1 class="text-2xl font-bold text-gray-900">{{ building.name }}</h1>
+            <div class="flex flex-wrap items-center gap-3 mt-2">
+                <span class="text-sm text-gray-500">{{ building.object_number }}{% if building.full_address %} · {{ building.full_address }}{% endif %}</span>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ inspection.status_badge_class }}">{{ inspection.get_status_display }}</span>
+                {% if inspection.follow_up_status == 'overdue' %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Nachschau fällig</span>
+                {% elif inspection.follow_up_status == 'open' %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Nachschau ab {{ inspection.defect_deadline|date:"d.m.Y" }}</span>{% endif %}
+            </div>
+            {% if inspection.completed_at %}
+            <p class="text-xs text-gray-500 mt-1">Abgeschlossen am {{ inspection.completed_at|date:"d.m.Y H:i" }}{% if inspection.completed_by %} von {{ inspection.completed_by.get_full_name|default:inspection.completed_by.username }}{% endif %}</p>
+            {% endif %}
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'objektverwaltung:bvs_pdf' inspection.pk 'niederschrift' %}" target="_blank"
+               class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">Niederschrift (PDF)</a>
+            <a href="{% url 'objektverwaltung:bvs_pdf' inspection.pk 'erfassungsblatt' %}" target="_blank"
+               class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Erfassungsblatt (PDF)</a>
+            {% if can_bvs_edit and inspection.is_completed %}
+            <form method="post" action="{% url 'objektverwaltung:bvs_reopen' inspection.pk %}"
+                  onsubmit="return confirm('Die Niederschrift wieder zur Bearbeitung öffnen?');">
+                {% csrf_token %}
+                <button type="submit" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Wieder öffnen</button>
+            </form>
+            {% endif %}
+            {% if can_bvs_manage or can_bvs_edit and not inspection.is_completed %}
+            <form method="post" action="{% url 'objektverwaltung:bvs_delete' inspection.pk %}"
+                  onsubmit="return confirm('Diese Brandverhütungsschau endgültig löschen?');">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ building.get_absolute_url }}#bvs">
+                <button type="submit" class="bg-red-50 text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-100">Löschen</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow p-6 lg:col-span-2">
+            <h2 class="text-lg font-semibold text-gray-900 mb-3">Ergebnis</h2>
+            <p class="px-4 py-3 rounded-lg text-sm {% if defects %}bg-yellow-50 text-yellow-800{% else %}bg-green-50 text-green-800{% endif %}">
+                {% if defects %}Mängel gemäß beigefügter Liste festgestellt ({{ defects|length }}).{% else %}Keine sichtbaren Mängel festgestellt.{% endif %}
+            </p>
+            <dl class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                <div><dt class="text-gray-500 inline">Frist Mängelbeseitigung:</dt> <dd class="inline text-gray-900">{{ inspection.defect_deadline|date:"d.m.Y"|default:"—" }}</dd></div>
+                <div><dt class="text-gray-500 inline">Nächste BVS:</dt> <dd class="inline text-gray-900">{{ inspection.next_inspection|date:"F Y"|default:"—" }}</dd></div>
+                <div><dt class="text-gray-500 inline">Gebührenpflichtig:</dt> <dd class="inline text-gray-900">{{ inspection.is_fee_required|yesno:"Ja,Nein" }}</dd></div>
+                <div><dt class="text-gray-500 inline">Berichtnummer:</dt> <dd class="inline text-gray-900">{{ inspection.report_number|default:"—" }}</dd></div>
+                <div><dt class="text-gray-500 inline">Objekt-Kennziffer:</dt> <dd class="inline text-gray-900">{{ inspection.object_key|default:"—" }}</dd></div>
+                <div><dt class="text-gray-500 inline">Kostenträger:</dt> <dd class="inline text-gray-900">{{ inspection.cost_bearer|default:"—" }}</dd></div>
+            </dl>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-3">Teilnehmer &amp; Zeitaufwand</h2>
+            <dl class="space-y-1 text-sm">
+                <div><dt class="text-gray-500 inline">Betrieb:</dt> <dd class="inline text-gray-900">{{ inspection.participant_operator|default:"—" }}</dd></div>
+                <div><dt class="text-gray-500 inline">Feuerwehr:</dt> <dd class="inline text-gray-900">{{ inspection.participant_fire_dept|default:"—" }}</dd></div>
+                <div><dt class="text-gray-500 inline">Sonstige:</dt> <dd class="inline text-gray-900">{{ inspection.participant_other|default:"—" }}</dd></div>
+            </dl>
+            <dl class="mt-3 pt-3 border-t border-gray-100 grid gap-x-4 text-sm" style="grid-template-columns: auto 1fr; row-gap: 0.25rem">
+                <dt class="text-gray-500">Abfahrt Wache</dt><dd class="text-gray-900">{{ inspection.departure_station|time:"H:i"|default:"—" }}</dd>
+                <dt class="text-gray-500">Ankunft Objekt</dt><dd class="text-gray-900">{{ inspection.arrival_object|time:"H:i"|default:"—" }}</dd>
+                <dt class="text-gray-500">Abfahrt Objekt</dt><dd class="text-gray-900">{{ inspection.departure_object|time:"H:i"|default:"—" }}</dd>
+                <dt class="text-gray-500">Ankunft Wache</dt><dd class="text-gray-900">{{ inspection.arrival_station|time:"H:i"|default:"—" }}</dd>
+                <dt class="text-gray-500">Vor-/Nachbereitung</dt><dd class="text-gray-900">{% if inspection.prep_minutes is not None %}{{ inspection.prep_minutes }} Min.{% else %}—{% endif %}</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Mängelliste</h2>
+            {% if defects and inspection.is_completed %}<p class="text-xs text-gray-500">Bei der Nachschau das Datum der Beseitigung eintragen.</p>{% endif %}
+        </div>
+        {% if defects %}
+        <ul class="divide-y divide-gray-100">
+            {% for defect in defects %}
+            <li class="px-6 py-4 flex flex-wrap gap-4">
+                <div class="w-16 flex-shrink-0 text-sm font-semibold text-gray-900">{{ defect.number|default:"—" }}</div>
+                <div class="flex-1 min-w-0">
+                    {% if defect.location %}<p class="text-sm font-medium text-gray-900">{{ defect.location }}</p>{% endif %}
+                    <p class="text-sm text-gray-700 whitespace-pre-line">{{ defect.text }}</p>
+                    {% if defect.phrase %}<p class="text-xs text-gray-400 mt-1">Mustersatz {{ defect.phrase.code }}</p>{% endif %}
+                </div>
+                {% if inspection.is_completed %}
+                <div class="flex-shrink-0">{% include 'objektverwaltung/bvs/partials/defect_resolve.html' %}</div>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="px-6 py-6 text-sm text-gray-500">Keine Mängel.</p>
+        {% endif %}
+    </div>
+
+    {% include 'objektverwaltung/bvs/partials/psv_panel.html' %}
+
+    {% if inspection.notes %}
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Interne Notizen</h2>
+        <p class="text-sm text-gray-700 whitespace-pre-line">{{ inspection.notes }}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

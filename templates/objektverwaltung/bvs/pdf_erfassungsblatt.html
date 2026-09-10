@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Erfassungsblatt Brandverhütungsschau {{ building.object_number }}</title>
+    <style>
+        @page { size: A4; margin: 20mm 20mm 20mm 24mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, 'Liberation Sans', 'DejaVu Sans', sans-serif; font-size: 10.5pt; color: #000; line-height: 1.35; }
+        .top { display: flex; justify-content: space-between; margin-bottom: 9mm; }
+        .top .dept span { text-decoration: underline; }
+        h1 { text-align: center; font-size: 11pt; font-weight: bold; margin-bottom: 6mm; }
+        table.facts { border-collapse: collapse; margin-bottom: 8mm; }
+        table.facts td { padding: 0.8mm 0; vertical-align: top; }
+        table.facts td.k { text-align: right; padding-right: 5mm; width: 78mm; }
+        .frame { border: 0.8pt solid #000; padding: 2.5mm 3mm; margin-bottom: 4mm; }
+        .frame .h { font-weight: bold; text-decoration: underline; }
+        .cols { display: flex; gap: 4mm; }
+        .cols > div { flex: 1; }
+        .row { margin-top: 1.8mm; }
+        table.times { width: 100%; border-collapse: collapse; }
+        table.times td { padding: 1.2mm 0; }
+        .v { display: inline-block; min-width: 14mm; text-align: center; }
+        .checks { margin-top: 4mm; }
+        .check { display: flex; margin-bottom: 4mm; }
+        .box { flex: 0 0 auto; width: 4mm; height: 4mm; border: 0.7pt solid #000; margin: 0.3mm 5mm 0 1mm; text-align: center; font-size: 8.5pt; line-height: 3.8mm; font-weight: bold; }
+        .check .txt { flex: 1; text-align: justify; }
+        .blank { display: inline-block; min-width: 18mm; border-bottom: 0.4pt solid #000; text-align: center; }
+        .sigs { display: flex; justify-content: space-between; margin-top: 22mm; }
+        .sig { width: 62mm; text-align: center; font-size: 9.5pt; }
+        .sig .line { border-top: 0.6pt solid #000; padding-top: 1mm; }
+        .meta { margin-top: 10mm; font-size: 7pt; color: #666; }
+    </style>
+</head>
+<body>
+{% with defect_total=defects|length %}
+    <div class="top">
+        <div class="dept">Fachbereich 6-1-60<br><span>Vorbeugende Gefahrenabwehr</span></div>
+        <div>Oberhausen, {{ letter_date|date:"d.m.Y" }}</div>
+    </div>
+
+    <h1>Erfassungsblatt für den Fachbereich 6-1-10 / Gebührenabrechnung</h1>
+
+    <table class="facts">
+        <tr><td class="k">Niederschrift über die Brandverhütungsschau vom:</td><td>{{ inspection.inspection_date|date:"d.m.Y" }}</td></tr>
+        <tr><td class="k">Objekt:</td><td>{{ building.name }}</td></tr>
+        <tr><td class="k">Straße, Hausnummer:</td><td>{{ building.street }} {{ building.house_number }}</td></tr>
+        <tr><td class="k">PLZ, Ort:</td><td>{{ building.postal_code }} {{ building.city|default:"Oberhausen" }}</td></tr>
+        <tr><td class="k">Objekt-Kennziffer laut Satzung:</td><td>{{ inspection.object_key }}</td></tr>
+        <tr><td class="k">Berichtnummer:</td><td>{{ inspection.report_number }}</td></tr>
+    </table>
+
+    <div class="frame cols">
+        <div>
+            <div class="h">Kostenträger</div>
+            <div class="row">Firma: {{ inspection.cost_bearer }}</div>
+        </div>
+        <div>
+            <div class="h">Teilnehmer</div>
+            <div class="row">Betrieb: {{ inspection.participant_operator }}</div>
+            <div class="row">Feuerwehr: {{ inspection.participant_fire_dept }}</div>
+            <div class="row">Sonstige: {{ inspection.participant_other }}</div>
+        </div>
+    </div>
+
+    <div class="frame">
+        <div class="h">Zeitaufwand für die Brandverhütungsschau</div>
+        <table class="times">
+            <tr>
+                <td style="width: 38mm">Abfahrt Feuerwache</td><td style="width: 30mm"><span class="v">{{ inspection.departure_station|time:"H:i" }}</span> Uhr</td>
+                <td style="width: 38mm">Ankunft Objekt</td><td><span class="v">{{ inspection.arrival_object|time:"H:i" }}</span> Uhr</td>
+            </tr>
+            <tr>
+                <td>Abfahrt Objekt</td><td><span class="v">{{ inspection.departure_object|time:"H:i" }}</span> Uhr</td>
+                <td>Ankunft Feuerwache</td><td><span class="v">{{ inspection.arrival_station|time:"H:i" }}</span> Uhr</td>
+            </tr>
+            <tr>
+                <td>Vor- und Nachbearbeitung</td><td colspan="3"><span class="v">{% if inspection.prep_minutes is not None %}{{ inspection.prep_minutes }}{% endif %}</span> Minuten</td>
+            </tr>
+        </table>
+    </div>
+
+    <p style="margin-top: 4mm">Während der Brandverhütungsschau wurden</p>
+    <div class="checks">
+        <div class="check"><div class="box">{% if not defect_total %}X{% endif %}</div><div class="txt">keine Mängel festgestellt.</div></div>
+        <div class="check"><div class="box">{% if defect_total %}X{% endif %}</div><div class="txt">Mängel gemäß Liste festgestellt.</div></div>
+        <div class="check"><div class="box">{% if defect_total and inspection.defect_deadline %}X{% endif %}</div><div class="txt">Zur Beseitigung der aufgeführten Mängel wird Ihnen eine Frist bis <span class="blank">{% if defect_total %}{{ inspection.defect_deadline|date:"d.m.Y" }}{% endif %}</span> eingeräumt. Danach erfolgt eine Nachschau.</div></div>
+        <div class="check"><div class="box">{% if inspection.next_inspection %}X{% endif %}</div><div class="txt">Die nächste Brandverhütungsschau wird in Ihrem Betrieb im <span class="blank">{{ inspection.next_inspection|date:"F Y" }}</span> durchgeführt.</div></div>
+    </div>
+
+    <div class="sigs">
+        <div class="sig"><div style="height: 6mm">{{ inspection.clerk_name }}</div><div class="line">(Sachbearbeiter Fb. 6-1-60)</div></div>
+        <div class="sig"><div style="height: 6mm"></div><div class="line">(Eingang Fb. 6-1-10 )</div></div>
+    </div>
+
+    <div class="meta">Erzeugt im FLVS · Brandverhütungsschau {{ inspection.get_status_display|lower }}{% if inspection.completed_at %} am {{ inspection.completed_at|date:"d.m.Y H:i" }}{% endif %}</div>
+{% endwith %}
+</body>
+</html>

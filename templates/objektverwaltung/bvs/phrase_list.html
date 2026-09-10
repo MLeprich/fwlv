@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Mustersätze - Brandverhütungsschau - FLVS{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li><a href="{% url 'objektverwaltung:dashboard' %}" class="text-gray-500 hover:text-gray-700">Objektverwaltung</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><a href="{% url 'objektverwaltung:bvs_overview' %}" class="text-gray-500 hover:text-gray-700">Brandverhütungsschau</a></li>
+            <li><span class="text-gray-400">/</span></li>
+            <li><span class="text-gray-900 font-medium">Mustersätze</span></li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Mustersätze</h1>
+            <p class="text-sm text-gray-600">{{ total }} Textbausteine für die Mängelliste der Brandverhütungsschau</p>
+        </div>
+        {% if can_bvs_manage %}
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'objektverwaltung:bvs_category_create' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">+ Kapitel / Abschnitt</a>
+            <a href="{% url 'objektverwaltung:bvs_phrase_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700">+ Neuer Mustersatz</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <form method="get" class="bg-white rounded-lg shadow p-4 flex flex-wrap items-center gap-2">
+        <input type="search" name="q" value="{{ q }}" placeholder="Nummer, Titel oder Text"
+               class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm" style="min-width: 14rem">
+        <select name="show" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">Alle</option>
+            <option value="review" {% if show == 'review' %}selected{% endif %}>Mit Prüfhinweis ({{ review_total }})</option>
+            <option value="inactive" {% if show == 'inactive' %}selected{% endif %}>Inaktiv ({{ inactive_total }})</option>
+        </select>
+        <button type="submit" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Filtern</button>
+        {% if q or show %}<a href="{% url 'objektverwaltung:bvs_phrase_list' %}" class="text-sm text-gray-500 hover:text-gray-700">zurücksetzen</a>{% endif %}
+    </form>
+
+    {% if review_total and can_bvs_manage and show != 'review' %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-sm text-yellow-900">
+        {{ review_total }} Mustersätze haben einen <strong>Prüfhinweis</strong> – meist Randkommentare aus der Überarbeitung der Vorlage
+        (z.B. „Nicht 82 sondern 84“) oder fehlender Text. Bitte durchsehen, den Text ggf. korrigieren und den Hinweis danach leeren.
+        <a href="?show=review" class="font-medium underline">Jetzt anzeigen</a>
+    </div>
+    {% endif %}
+
+    {% for group in groups %}
+    <div id="k{{ group.category.pk }}" class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between gap-3 {% if not group.category.parent %}bg-gray-50{% endif %}">
+            <h2 class="{% if group.category.parent %}text-sm font-semibold text-gray-700{% else %}font-semibold text-gray-900{% endif %}">
+                {{ group.category.number }} {{ group.category.title }}
+            </h2>
+            {% if can_bvs_manage %}
+            <div class="flex items-center gap-3 text-xs whitespace-nowrap">
+                <a href="{% url 'objektverwaltung:bvs_phrase_create' %}?kapitel={{ group.category.pk }}" class="text-primary-600 hover:text-primary-800">+ Mustersatz</a>
+                <a href="{% url 'objektverwaltung:bvs_category_edit' group.category.pk %}" class="text-gray-600 hover:text-gray-900">Bearbeiten</a>
+                {% if not group.phrases and not group.has_children %}
+                <form method="post" action="{% url 'objektverwaltung:bvs_category_delete' group.category.pk %}" class="inline" onsubmit="return confirm('Kapitel/Abschnitt löschen?');">
+                    {% csrf_token %}<button type="submit" class="text-red-600 hover:text-red-800">Löschen</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% if group.phrases %}
+        <ul class="divide-y divide-gray-100">
+            {% for p in group.phrases %}
+            <li class="px-5 py-3" x-data="{ open: false }">
+                <div class="flex items-start justify-between gap-3">
+                    <button type="button" @click="open = !open" class="text-left min-w-0">
+                        <span class="font-mono text-xs text-gray-500">{{ p.code }}</span>
+                        <span class="text-sm font-medium {% if p.is_active %}text-gray-900{% else %}text-gray-400{% endif %}">{{ p.title }}</span>
+                        {% if not p.is_active %}<span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">inaktiv</span>{% endif %}
+                        {% if p.review_note %}<span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">Prüfhinweis</span>{% endif %}
+                        {% if p.usage %}<span class="ml-2 text-xs text-gray-400">{{ p.usage }}× verwendet</span>{% endif %}
+                        <p class="text-sm text-gray-600 mt-1 whitespace-pre-line" :class="open ? '' : 'line-clamp-2'">{{ p.text|default:"(kein Text)" }}</p>
+                    </button>
+                    {% if can_bvs_manage %}
+                    <div class="flex items-center gap-3 text-xs whitespace-nowrap flex-shrink-0">
+                        <a href="{% url 'objektverwaltung:bvs_phrase_edit' p.pk %}" class="text-primary-600 hover:text-primary-800">Bearbeiten</a>
+                        <form method="post" action="{% url 'objektverwaltung:bvs_phrase_delete' p.pk %}" class="inline" onsubmit="return confirm('Mustersatz {{ p.code }} löschen?');">
+                            {% csrf_token %}<button type="submit" class="text-red-600 hover:text-red-800">Löschen</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if p.review_note %}<p x-show="open" x-cloak class="mt-2 text-xs text-yellow-800 bg-yellow-50 rounded px-3 py-2 whitespace-pre-line">{{ p.review_note }}</p>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% elif not group.has_children %}
+        <p class="px-5 py-3 text-xs text-gray-400">Keine Mustersätze.</p>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="bg-white rounded-lg shadow p-12 text-center">
+        <span class="text-5xl">📝</span>
+        <p class="mt-3 text-sm text-gray-600">{% if q or show %}Keine Treffer.{% else %}Noch keine Mustersätze vorhanden.{% endif %}</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

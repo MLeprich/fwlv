@@ -136,3 +136,75 @@ class InspectionReportAdmin(admin.ModelAdmin):
     list_filter = ['inspection_type', 'result']
     date_hierarchy = 'inspection_date'
     readonly_fields = ['building', 'inspection_type']
+
+
+# ---------------------------------------------------------------------------
+# Brandverhütungsschau (Pflege im Frontend; Admin nur für Superuser, da die
+# BVS-Modelle keine Standard-Modellrechte haben)
+# ---------------------------------------------------------------------------
+
+from .models import (  # noqa: E402
+    BVSPhrase, BVSPhraseCategory, FireSafetyDefect, FireSafetyInspection,
+    PSVCertificate, PSVInspectionType, PSVRequirement,
+)
+
+
+@admin.register(PSVInspectionType)
+class PSVInspectionTypeAdmin(admin.ModelAdmin):
+    list_display = ['name', 'interval_months', 'warning_days', 'sort_order', 'is_active']
+    list_filter = ['is_active']
+    search_fields = ['name']
+
+
+class PSVCertificateInline(admin.TabularInline):
+    model = PSVCertificate
+    extra = 0
+    fields = ['inspection_date', 'valid_until', 'expert_name', 'expert_company', 'result', 'document']
+
+
+@admin.register(PSVRequirement)
+class PSVRequirementAdmin(admin.ModelAdmin):
+    list_display = ['building', 'inspection_type', 'designation', 'last_inspection', 'valid_until', 'is_active']
+    list_filter = ['inspection_type', 'is_active']
+    search_fields = ['designation', 'building__name', 'building__object_number']
+    readonly_fields = ['last_inspection', 'valid_until']
+    inlines = [PSVCertificateInline]
+
+    def save_formset(self, request, form, formset, change):
+        for instance in formset.save(commit=False):
+            if not instance.pk:
+                instance.created_by = request.user
+            instance.updated_by = request.user
+            instance.save()
+        for obj in formset.deleted_objects:
+            obj.delete()
+        form.instance.sync_from_certificates()
+
+
+@admin.register(BVSPhraseCategory)
+class BVSPhraseCategoryAdmin(admin.ModelAdmin):
+    list_display = ['number', 'title', 'parent', 'sort_order']
+    search_fields = ['number', 'title']
+
+
+@admin.register(BVSPhrase)
+class BVSPhraseAdmin(admin.ModelAdmin):
+    list_display = ['code', 'title', 'category', 'is_active']
+    list_filter = ['is_active', 'category']
+    search_fields = ['code', 'title', 'text']
+
+
+class FireSafetyDefectInline(admin.TabularInline):
+    model = FireSafetyDefect
+    extra = 0
+    fields = ['position', 'number', 'location', 'text', 'resolved_on']
+
+
+@admin.register(FireSafetyInspection)
+class FireSafetyInspectionAdmin(AuditSaveMixin, admin.ModelAdmin):
+    list_display = ['building', 'inspection_date', 'status', 'report_number', 'created_by']
+    list_filter = ['status', 'is_fee_required']
+    search_fields = ['building__name', 'building__object_number', 'report_number']
+    date_hierarchy = 'inspection_date'
+    readonly_fields = ['completed_at', 'completed_by']
+    inlines = [FireSafetyDefectInline]

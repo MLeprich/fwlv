@@ -59,6 +59,7 @@ class Command(BaseCommand):
                 self._setup_standard_user()
                 self._setup_approval_groups()
                 self._setup_lst_infomonitor()
+                self._setup_bvs_roles()
                 self._setup_ff_roles()
                 self._setup_verwaltungsrollen()
                 self._setup_survey_participation()
@@ -219,6 +220,9 @@ class Command(BaseCommand):
             # Medical: BTM-Permissions ausschließen (nur BTM-Beauftragter)
             if module_name == Modules.MEDICAL:
                 module_perms = module_perms.exclude(codename__icontains='btm')
+            # Objektverwaltung: Brandverhütungsschau hat eigene Rollen (BVS Sachbearbeiter/Verantwortlicher)
+            if module_name == Modules.OBJEKTVERWALTUNG:
+                module_perms = module_perms.exclude(codename__startswith='bvs_')
             for perm in module_perms:
                 group.permissions.add(perm)
                 perms_added += 1
@@ -592,6 +596,12 @@ class Command(BaseCommand):
                     f'  ✓ {group_name}: {status} ({perms_added} Permissions)'
                 )
             )
+
+    def _setup_bvs_roles(self):
+        """BVS Sachbearbeiter und BVS Verantwortlicher (Brandverhütungsschau)"""
+        from objektverwaltung.management.commands.setup_bvs_permissions import setup_bvs_roles
+        self.stdout.write('\n10b. Brandverhütungsschau...')
+        setup_bvs_roles(out=lambda msg: self.stdout.write(self.style.SUCCESS(msg)), replace=True)
 
     def _setup_ff_roles(self):
         """FF Einheitsführer und FF Vertreter Gruppen"""

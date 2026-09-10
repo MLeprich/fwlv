@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Niederschrift Brandverhütungsschau {{ building.object_number }}</title>
+    <style>
+        @page { size: A4; margin: 18mm 18mm 20mm 24mm;
+                @bottom-right { content: "Seite " counter(page) " von " counter(pages); font-family: Arial, 'Liberation Sans', sans-serif; font-size: 7.5pt; color: #555; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, 'Liberation Sans', 'DejaVu Sans', sans-serif; font-size: 10.5pt; color: #000; line-height: 1.35; }
+        .letter { position: relative; }
+        .main { width: 124mm; }
+        .sender { font-size: 7pt; border-bottom: 0.4pt solid #000; display: inline-block; padding-bottom: 0.5mm; margin-top: 17mm; }
+        .address { height: 36mm; padding-top: 3mm; white-space: pre-line; font-size: 10.5pt; }
+        .sidebar { position: absolute; top: 17mm; right: -4mm; width: 38mm; font-size: 7.5pt; line-height: 1.25; }
+        .sidebar .blk { margin-bottom: 2.6mm; }
+        .sidebar .lbl { color: #333; }
+        .sidebar .val { font-size: 8.5pt; }
+        h1 { font-size: 11pt; font-weight: bold; margin: 5mm 0 4mm; }
+        p { margin-bottom: 3mm; text-align: justify; }
+        table.facts { width: 100%; border-collapse: collapse; margin: 3mm 0 6mm; table-layout: fixed; }
+        table.facts td { border: 0.6pt solid #000; padding: 1.4mm 2mm; vertical-align: top; font-size: 10pt; }
+        table.facts .k { display: inline-block; width: 19mm; }
+        .checks { margin: 2mm 0 5mm; }
+        .check { display: flex; margin-bottom: 3.2mm; }
+        .box { flex: 0 0 auto; width: 3.6mm; height: 3.6mm; border: 0.7pt solid #000; margin: 0.4mm 3.5mm 0 1mm; text-align: center; font-size: 8pt; line-height: 3.4mm; font-weight: bold; }
+        .check .txt { flex: 1; text-align: justify; }
+        .blank { display: inline-block; min-width: 18mm; border-bottom: 0.4pt solid #000; text-align: center; }
+        .sign { margin-top: 3mm; page-break-inside: avoid; }
+        .sign .name { margin-top: 10mm; }
+
+        .list-page { page-break-before: always; }
+        .list-head { text-align: center; margin-bottom: 7mm; }
+        .list-head .t { font-weight: bold; text-decoration: underline; font-size: 11pt; }
+        .list-head .d { font-weight: bold; margin-top: 3mm; }
+        .list-head .o { font-weight: bold; margin-top: 3mm; }
+        table.defects { width: 100%; border-collapse: collapse; }
+        table.defects thead td { border: 0.6pt solid #000; font-weight: bold; padding: 1.2mm 2mm; }
+        table.defects tbody td { padding: 2.2mm 2mm; vertical-align: top; }
+        table.defects tbody tr { page-break-inside: avoid; }
+        td.num { width: 16mm; }
+        .loc { font-weight: bold; }
+        .dtext { white-space: pre-line; text-align: justify; }
+    </style>
+</head>
+<body>
+{% with city=building.city|default:"Oberhausen" defect_total=defects|length %}
+
+{% if inspection.is_fee_required %}
+{# ---------- Niederschrift an den Betreiber (gebührenpflichtig) ---------- #}
+<div class="letter">
+    <div class="sidebar">
+        <div class="blk val">Feuerwehr<br>Fachbereich 6-1-60<br>Vorbeugende<br>Gefahrenabwehr</div>
+        <div class="blk"><div class="lbl">Datum</div><div class="val">{{ letter_date|date:"d.m.Y" }}</div></div>
+        <div class="blk"><div class="lbl">Ihr Zeichen</div><div class="val">&nbsp;</div></div>
+        <div class="blk"><div class="lbl">Ihre Nachricht vom</div><div class="val">&nbsp;</div></div>
+        <div class="blk"><div class="lbl">Mein Zeichen</div><div class="val">{% if inspection.our_reference %}{{ inspection.our_reference }}{% else %}&nbsp;{% endif %}</div></div>
+        <div class="blk"><div class="lbl">Zentrale</div><div class="val">0208-8585-1</div></div>
+        <div class="blk"><div class="lbl">Durchwahl</div><div class="val">{% if inspection.clerk_phone %}{% if inspection.clerk_phone|slice:":1" == "0" or inspection.clerk_phone|slice:":1" == "+" %}{{ inspection.clerk_phone }}{% else %}0208-8585-{{ inspection.clerk_phone }}{% endif %}{% else %}0208-8585-{% endif %}</div></div>
+        <div class="blk"><div class="lbl">Telefax</div><div class="val">0208-8585-243</div></div>
+        <div class="blk"><div class="lbl">E-Mail-Adresse:</div><div class="val">{{ inspection.clerk_email|default:"@oberhausen.de" }}</div></div>
+        <div class="blk"><div class="lbl">Verwaltungsgebäude</div><div class="val">Dorstener Str. 119<br>46145 Oberhausen</div></div>
+        <div class="blk"><div class="lbl">Bearbeiter</div><div class="val">{% if inspection.clerk_name %}{{ inspection.clerk_name }}{% else %}&nbsp;{% endif %}</div></div>
+        <div class="blk"><div class="lbl">Zimmer Nr.</div><div class="val">{% if inspection.clerk_room %}{{ inspection.clerk_room }}{% else %}&nbsp;{% endif %}</div></div>
+    </div>
+
+    <div class="main">
+        <div class="sender">Stadt Oberhausen · Der Oberbürgermeister · Feuerwehr · Dorstener Str. 119 · 46145 Oberhausen</div>
+        <div class="address">{{ inspection.recipient_address }}</div>
+
+        <h1>Niederschrift über die Brandverhütungsschau</h1>
+        <p>Sehr geehrte Damen und Herren,</p>
+        <p>gemäß §26 BHKG - Gesetz über den Brandschutz, die Hilfeleistung und den Katastrophenschutz vom
+            17.12.2015 - GV NRW S. 886 - wurde eine Brandverhütungsschau durchgeführt.</p>
+
+        {% include 'objektverwaltung/bvs/pdf_facts.html' %}
+
+        <p style="margin-bottom: 2mm">Während der Brandverhütungsschau wurden</p>
+        <div class="checks">
+            <div class="check"><div class="box">{% if not defect_total %}X{% endif %}</div><div class="txt">keine sichtbaren Mängel festgestellt.</div></div>
+            <div class="check"><div class="box">{% if defect_total %}X{% endif %}</div><div class="txt">Mängel gemäß beigefügter Liste festgestellt.</div></div>
+            <div class="check"><div class="box">{% if defect_total and inspection.defect_deadline %}X{% endif %}</div><div class="txt">Zur Beseitigung der aufgeführten Mängel wird Ihnen eine Frist bis <span class="blank">{% if defect_total %}{{ inspection.defect_deadline|date:"d.m.Y" }}{% endif %}</span> eingeräumt. Danach erfolgt eine Nachschau.</div></div>
+            <div class="check"><div class="box">{% if inspection.next_inspection %}X{% endif %}</div><div class="txt">Die nächste Brandverhütungsschau wird in Ihrem Betrieb voraussichtlich im <span class="blank">{{ inspection.next_inspection|date:"F Y" }}</span> durchgeführt.</div></div>
+        </div>
+
+        <p>Die Durchführung der Brandverhütungsschau ist laut Gebührensatzung der Stadt Oberhausen kostenpflichtig.
+            Ein Gebührenbescheid geht Ihnen in den nächsten Tagen zu.</p>
+
+        <div class="sign">
+            <p style="margin-bottom: 0">Mit freundlichen Grüßen<br>Im Auftrag</p>
+            <p class="name">{{ inspection.clerk_name }}</p>
+        </div>
+    </div>
+</div>
+
+{% else %}
+{# ---------- Niederschrift ohne Gebührenhinweis ---------- #}
+<div class="letter">
+    <div class="main" style="width: 100%">
+        <h1 style="margin-top: 0">Niederschrift über die Brandverhütungsschau</h1>
+        <p>Sehr geehrte Damen und Herren,</p>
+        <p>gemäß §26 BHKG - Gesetz über den Brandschutz, die Hilfeleistung und den Katastrophenschutz vom
+            17.12.2015 - GV NRW S. 886 – wurde eine Brandverhütungsschau durchgeführt.</p>
+
+        {% include 'objektverwaltung/bvs/pdf_facts.html' %}
+
+        <p style="margin-bottom: 2mm">Bei der Brandverhütungsschau wurden</p>
+        <div class="checks">
+            <div class="check"><div class="box">{% if not defect_total %}X{% endif %}</div><div class="txt">keine sichtbaren Mängel festgestellt.</div></div>
+            <div class="check"><div class="box">{% if defect_total %}X{% endif %}</div><div class="txt">Mängel gemäß beigefügter Liste festgestellt.</div></div>
+            <div class="check"><div class="box">{% if defect_total and inspection.defect_deadline %}X{% endif %}</div><div class="txt">Zur Beseitigung der aufgeführten Mängel wird eine Frist bis <span class="blank">{% if defect_total %}{{ inspection.defect_deadline|date:"d.m.Y" }}{% endif %}</span> eingeräumt. Danach erfolgt eine Nachschau.</div></div>
+            <div class="check"><div class="box">{% if inspection.next_inspection %}X{% endif %}</div><div class="txt">Die nächste Brandverhütungsschau wird voraussichtlich im <span class="blank">{{ inspection.next_inspection|date:"F Y" }}</span> durchgeführt.</div></div>
+        </div>
+
+        <div class="sign">
+            <p style="margin-bottom: 0">Mit freundlichen Grüßen<br>Im Auftrag</p>
+            <p class="name">{{ inspection.clerk_name }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if defects %}
+{# ---------- Mängelliste ---------- #}
+<div class="list-page">
+    <div class="list-head">
+        <div class="t">Niederschrift über die Brandverhütungsschau</div>
+        <div class="d">am {{ inspection.inspection_date|date:"d.m.Y" }}</div>
+        <div class="o">{{ building.name }}, {{ building.street }} {{ building.house_number }}, {{ city }}</div>
+    </div>
+    <table class="defects">
+        <thead><tr><td class="num">Punkt</td><td>Art der Mängel und notwendige Maßnahmen</td></tr></thead>
+        <tbody>
+            {% for d in defects %}
+            <tr>
+                <td class="num">{{ d.number }}</td>
+                <td>{% if d.location %}<div class="loc">{{ d.location }}</div>{% endif %}<div class="dtext">{{ d.text }}</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endwith %}
+</body>
+</html>
