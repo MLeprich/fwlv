@@ -9,7 +9,7 @@ Abo-/Folgen-Funktion.
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
@@ -23,11 +23,11 @@ from .forms import (
     BuildingObjectForm, FloorForm, EscapeRouteForm, FireAlarmPanelForm,
     BuildingContactForm, BuildingPlanForm,
     FireSuppressionSystemForm, CompensationMeasureForm,
-    FireKeyDepotForm, InspectionReportForm,
+    FireKeyDepotForm, InspectionReportForm, UsageCategoryForm,
 )
 from .models import (
     BuildingObject, Floor, EscapeRoute, FireAlarmPanel,
-    BuildingContact, BuildingPlan, UsageType,
+    BuildingContact, BuildingPlan, UsageCategory, ObjectStatus,
     FireSuppressionSystem, CompensationMeasure,
     FireKeyDepot, InspectionReport, InspectionType,
 )
@@ -47,7 +47,7 @@ class ObjektDashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateV
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'objektverwaltung'
-        context['object_count'] = BuildingObject.objects.filter(is_active=True).count()
+        context['object_count'] = BuildingObject.objects.filter(status=ObjectStatus.ACTIVE).count()
         context['followed_count'] = BuildingObject.objects.filter(
             followers=self.request.user
         ).count()
@@ -74,17 +74,19 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
         ('fsd', 'mit Schlüsseldepot'),
         ('due', 'Prüfung fällig / überfällig (FSD, BMZ, Löschanlage)'),
         ('komp', 'aktive Kompensationsmaßnahme'),
+        ('planung', 'nur Objekte in Planung'),
         ('inaktiv', 'nur inaktive Objekte'),
+        ('loeschen', 'nur zum Löschen vorgemerkte Objekte'),
     )
 
     # Spaltensortierung: GET-Parameter sort=<key>&dir=asc|desc
     SORT_FIELDS = {
         'number': ('object_number',),
         'name': ('name',),
-        'usage': ('usage_type', 'name'),
+        'usage': ('usage_type__sort_order', 'usage_type__name', 'name'),
         'street': ('street', 'house_number', 'city'),
         'city': ('city', 'postal_code', 'street', 'house_number'),
-        'status': ('-is_active', 'name'),
+        'status': ('status_order', 'name'),
     }
     DEFAULT_SORT = 'name'
 
@@ -124,9 +126,9 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
                 Q(key_depots__serial_number__icontains=search) |
                 Q(fire_alarm_panels__designation__icontains=search)
             )
-        usage_type = self.request.GET.get('usage_type')
-        if usage_type and usage_type in dict(UsageType.choices):
-            qs = qs.filter(usage_type=usage_type)
+        usage_type = self.request.GET.get('usage_type', '')
+        if usage_type.isdigit():
+            qs = qs.filter(usage_type_id=int(usage_type))
 
         f = self.request.GET.get('filter', '')
         today = timezone.localdate()
@@ -143,11 +145,20 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
             )
         elif f == 'komp':
             qs = qs.filter(compensation_measures__status='active')
+        elif f == 'planung':
+            qs = qs.filter(status=ObjectStatus.PLANNED)
         elif f == 'inaktiv':
-            qs = qs.filter(is_active=False)
+            qs = qs.filter(status=ObjectStatus.INACTIVE)
+        elif f == 'loeschen':
+            qs = qs.filter(status=ObjectStatus.FOR_DELETION)
 
         limit = today + timedelta(days=FireKeyDepot.DUE_SOON_DAYS)
-        return qs.distinct().annotate(
+        status_order = Case(
+            *[When(status=code, then=Value(i)) for i, code in enumerate(ObjectStatus.values)],
+            default=Value(len(ObjectStatus.values)), output_field=IntegerField(),
+        )
+        return qs.select_related('usage_type').distinct().annotate(
+            status_order=status_order,
             bmz_count=Count('fire_alarm_panels', distinct=True),
             bmz_due_count=Count('fire_alarm_panels', filter=Q(fire_alarm_panels__next_inspection__lte=limit), distinct=True),
             fsd_count=Count('key_depots', filter=Q(key_depots__is_active=True), distinct=True),
@@ -167,7 +178,10 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
         context['current_usage_type'] = self.request.GET.get('usage_type', '')
         context['current_filter'] = self.request.GET.get('filter', '')
         context['filter_choices'] = self.FILTERS
-        context['usage_type_choices'] = UsageType.choices
+        context['usage_type_choices'] = [
+            (str(c.pk), c.name) for c in UsageCategory.objects.filter(
+                Q(is_active=True) | Q(buildings__isnull=False)).distinct()
+        ]
         context['query_string'] = params.urlencode()
         sort, direction = self.get_sort()
         context['current_sort'] = sort
@@ -691,7 +705,7 @@ class NewInspectionView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVie
             assets = [a for a in getattr(building, ASSET_RELATED[type_key]).all() if a.inspection_active]
         context.update({
             'current_module': 'objektverwaltung',
-            'buildings': BuildingObject.objects.filter(is_active=True).order_by('name'),
+            'buildings': BuildingObject.objects.filter(status=ObjectStatus.ACTIVE).order_by('name'),
             'building': building,
             'type_key': type_key if type_key in ASSET_MODELS else '',
             'type_choices': InspectionType.choices,
@@ -976,20 +990,101 @@ class BuildingObjectImportTemplateView(LoginRequiredMixin, PermissionRequiredMix
     def get(self, request):
         import csv
         from io import StringIO
-        from .models import UsageType
+        from .models import ObjectStatus
         out = StringIO()
         w = csv.writer(out, delimiter=',')
         w.writerow([
             'objektnummer', 'bezeichnung', 'nutzungsart', 'strasse', 'hausnummer',
             'plz', 'ort', 'obergeschosse', 'untergeschosse', 'brandmeldeanlage',
-            'breitengrad', 'laengengrad', 'aktiv', 'hinweise',
+            'breitengrad', 'laengengrad', 'status', 'hinweise',
         ])
         w.writerow(['OBJ-001', 'Grundschule Musterstadt', 'Schule', 'Hauptstr.', '1',
-                    '12345', 'Musterstadt', '3', '1', 'True', '', '', 'True', ''])
+                    '12345', 'Musterstadt', '3', '1', 'True', '', '', 'Aktiv', ''])
         w.writerow([])
         w.writerow(['Mögliche Nutzungsarten:'])
-        for _code, label in UsageType.choices:
+        for label in UsageCategory.objects.filter(is_active=True).values_list('name', flat=True):
+            w.writerow([label])
+        w.writerow([])
+        w.writerow(['Mögliche Status:'])
+        for _code, label in ObjectStatus.choices:
             w.writerow([label])
         response = HttpResponse('﻿' + out.getvalue(), content_type='text/csv; charset=utf-8')
         response['Content-Disposition'] = 'attachment; filename="objekte_import_vorlage.csv"'
         return response
+
+
+# ============================================================================
+# NUTZUNGSARTEN (frei pflegbare Kategorien der Objekte)
+# ============================================================================
+
+class UsageCategoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = UsageCategory
+    template_name = 'objektverwaltung/usagecategory_list.html'
+    context_object_name = 'categories'
+    permission_required = 'objektverwaltung.view_buildingobject'
+
+    def get_queryset(self):
+        from django.db.models import Count
+        return UsageCategory.objects.annotate(building_total=Count('buildings'))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_module'] = 'objektverwaltung'
+        context['can_manage'] = self.request.user.has_perm('objektverwaltung.change_buildingobject')
+        return context
+
+
+class UsageCategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = UsageCategory
+    form_class = UsageCategoryForm
+    template_name = 'objektverwaltung/usagecategory_form.html'
+    permission_required = 'objektverwaltung.change_buildingobject'
+    success_url = reverse_lazy('objektverwaltung:usage_category_list')
+    extra_context = {'current_module': 'objektverwaltung'}
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Nutzungsart „{form.instance.name}“ wurde angelegt.')
+        return super().form_valid(form)
+
+
+class UsageCategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = UsageCategory
+    form_class = UsageCategoryForm
+    template_name = 'objektverwaltung/usagecategory_form.html'
+    permission_required = 'objektverwaltung.change_buildingobject'
+    success_url = reverse_lazy('objektverwaltung:usage_category_list')
+    extra_context = {'current_module': 'objektverwaltung'}
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Nutzungsart „{form.instance.name}“ wurde aktualisiert.')
+        return super().form_valid(form)
+
+
+class UsageCategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    """Löschen nur, solange kein Objekt die Nutzungsart verwendet."""
+    model = UsageCategory
+    template_name = 'objektverwaltung/usagecategory_confirm_delete.html'
+    permission_required = 'objektverwaltung.change_buildingobject'
+    success_url = reverse_lazy('objektverwaltung:usage_category_list')
+    extra_context = {'current_module': 'objektverwaltung'}
+
+    def _in_use_response(self, category):
+        messages.error(
+            self.request,
+            f'Nutzungsart „{category.name}“ wird noch von {category.usage_count} Objekt(en) '
+            'verwendet und kann nicht gelöscht werden. Deaktivieren Sie sie stattdessen.',
+        )
+        return redirect('objektverwaltung:usage_category_list')
+
+    def get(self, request, *args, **kwargs):
+        category = self.get_object()
+        if category.is_in_use:
+            return self._in_use_response(category)
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        category = self.get_object()
+        if category.is_in_use:
+            return self._in_use_response(category)
+        messages.success(request, f'Nutzungsart „{category.name}“ wurde gelöscht.')
+        return super().post(request, *args, **kwargs)

@@ -20,6 +20,12 @@ urlpatterns = [
     path('objekte/<int:pk>/loeschen/', views.BuildingObjectDeleteView.as_view(), name='delete'),
     path('objekte/<int:pk>/akte.pdf', views.BuildingObjectAktePdfView.as_view(), name='akte_pdf'),
 
+    # Nutzungsarten verwalten
+    path('nutzungsarten/', views.UsageCategoryListView.as_view(), name='usage_category_list'),
+    path('nutzungsarten/neu/', views.UsageCategoryCreateView.as_view(), name='usage_category_create'),
+    path('nutzungsarten/<int:pk>/bearbeiten/', views.UsageCategoryUpdateView.as_view(), name='usage_category_edit'),
+    path('nutzungsarten/<int:pk>/loeschen/', views.UsageCategoryDeleteView.as_view(), name='usage_category_delete'),
+
     # Abo / Folgen
     path('objekte/<int:pk>/folgen/', views.ToggleFollowView.as_view(), name='toggle_follow'),
 

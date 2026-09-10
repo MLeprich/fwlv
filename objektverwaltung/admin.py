@@ -3,7 +3,16 @@ from django.contrib import admin
 from .models import (
     BuildingObject, Floor, EscapeRoute, FireAlarmPanel,
     BuildingContact, BuildingPlan, FireSuppressionSystem, CompensationMeasure,
+    UsageCategory,
 )
+
+
+@admin.register(UsageCategory)
+class UsageCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'sort_order', 'is_active')
+    list_filter = ('is_active',)
+    search_fields = ('name',)
+    ordering = ('sort_order', 'name')
 
 
 class AuditSaveMixin:
@@ -69,8 +78,8 @@ class BuildingPlanInline(AuditSaveMixin, admin.TabularInline):
 @admin.register(BuildingObject)
 class BuildingObjectAdmin(AuditSaveMixin, admin.ModelAdmin):
     view_on_site = False  # Detail-Frontend folgt in Phase 2
-    list_display = ('object_number', 'name', 'usage_type', 'city', 'is_active')
-    list_filter = ('usage_type', 'is_active', 'has_fire_alarm_system')
+    list_display = ('object_number', 'name', 'usage_type', 'city', 'status')
+    list_filter = ('usage_type', 'status', 'has_fire_alarm_system')
     search_fields = ('object_number', 'name', 'street', 'city')
     filter_horizontal = ('followers',)
     inlines = [
@@ -80,7 +89,7 @@ class BuildingObjectAdmin(AuditSaveMixin, admin.ModelAdmin):
     ]
     fieldsets = (
         ('Identifikation', {
-            'fields': ('object_number', 'name', 'usage_type', 'is_active')
+            'fields': ('object_number', 'name', 'usage_type', 'status')
         }),
         ('Adresse', {
             'fields': ('street', 'house_number', 'postal_code', 'city',

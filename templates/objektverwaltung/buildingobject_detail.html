@@ -27,9 +27,8 @@
                 <span class="text-sm text-gray-400">|</span>
                 <span class="text-sm text-gray-500">{{ object.get_usage_type_display }}</span>
                 <span class="text-sm text-gray-400">|</span>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                    {% if object.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                    {% if object.is_active %}Aktiv{% else %}Inaktiv{% endif %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ object.status_badge_class }}">
+                    {{ object.get_status_display }}
                 </span>
             </div>
         </div>

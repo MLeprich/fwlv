@@ -18,6 +18,7 @@
             {% endif %}
             <a href="{% url 'objektverwaltung:inspection_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Prüfungen</a>
             <a href="{% url 'objektverwaltung:list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Alle Objekte</a>
+            <a href="{% url 'objektverwaltung:usage_category_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Nutzungsarten</a>
             {% if perms.objektverwaltung.add_buildingobject %}
             <a href="{% url 'objektverwaltung:create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">+ Neues Objekt</a>
             {% endif %}

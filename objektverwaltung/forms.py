@@ -8,7 +8,7 @@ from django import forms
 from .models import (
     BuildingObject, Floor, EscapeRoute, FireAlarmPanel,
     BuildingContact, BuildingPlan, FireSuppressionSystem, CompensationMeasure,
-    FireKeyDepot, InspectionReport, InspectionType,
+    FireKeyDepot, InspectionReport, InspectionType, UsageCategory,
 )
 
 DATE = forms.DateInput(format='%Y-%m-%d', attrs={
@@ -27,7 +27,7 @@ class BuildingObjectForm(forms.ModelForm):
     class Meta:
         model = BuildingObject
         fields = [
-            'object_number', 'name', 'usage_type', 'is_active',
+            'object_number', 'name', 'usage_type', 'status',
             'street', 'house_number', 'postal_code', 'city',
             'latitude', 'longitude',
             'floor_count', 'basement_count', 'has_fire_alarm_system',
@@ -37,7 +37,7 @@ class BuildingObjectForm(forms.ModelForm):
             'object_number': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'z.B. OBJ-001'}),
             'name': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'z.B. Grundschule Musterstadt'}),
             'usage_type': forms.Select(attrs={'class': INPUT}),
-            'is_active': forms.CheckboxInput(attrs={'class': CHECKBOX}),
+            'status': forms.Select(attrs={'class': INPUT}),
             'street': forms.TextInput(attrs={'class': INPUT}),
             'house_number': forms.TextInput(attrs={'class': INPUT}),
             'postal_code': forms.TextInput(attrs={'class': INPUT}),
@@ -49,6 +49,35 @@ class BuildingObjectForm(forms.ModelForm):
             'has_fire_alarm_system': forms.CheckboxInput(attrs={'class': CHECKBOX}),
             'notes': forms.Textarea(attrs={'class': INPUT, 'rows': 4}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Nur aktive Nutzungsarten anbieten; die aktuell gesetzte bleibt wählbar
+        qs = UsageCategory.objects.filter(is_active=True)
+        if self.instance.pk and self.instance.usage_type_id:
+            qs = qs | UsageCategory.objects.filter(pk=self.instance.usage_type_id)
+        self.fields['usage_type'].queryset = qs.distinct()
+        self.fields['usage_type'].empty_label = '– keine –'
+
+
+class UsageCategoryForm(forms.ModelForm):
+    """Nutzungsart anlegen/bearbeiten (Verwaltung unter „Nutzungsarten“)."""
+
+    class Meta:
+        model = UsageCategory
+        fields = ['name', 'sort_order', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'z.B. Hochhaus'}),
+            'sort_order': forms.NumberInput(attrs={'class': INPUT, 'min': '0'}),
+            'is_active': forms.CheckboxInput(attrs={'class': CHECKBOX}),
+        }
+
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        clash = UsageCategory.objects.filter(name__iexact=name).exclude(pk=self.instance.pk)
+        if clash.exists():
+            raise forms.ValidationError(f'Die Nutzungsart „{name}“ existiert bereits.')
+        return name
 
 
 class FloorForm(forms.ModelForm):

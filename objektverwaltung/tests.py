@@ -4,7 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import BuildingContact, BuildingObject, BuildingPlan, Floor
+from .models import BuildingContact, BuildingObject, BuildingPlan, Floor, UsageCategory
 
 User = get_user_model()
 
@@ -331,9 +331,9 @@ class AkteTests(TestCase):
     def test_building_update_logs_changes_and_unchanged_save_logs_nothing(self):
         from audit.models import AuditLog
         data = {
-            'object_number': 'OBJ-9', 'name': 'Schule', 'usage_type': 'other', 'street': '', 'house_number': '',
+            'object_number': 'OBJ-9', 'name': 'Schule', 'usage_type': '', 'street': '', 'house_number': '',
             'postal_code': '', 'city': 'Oberhausen', 'latitude': '', 'longitude': '', 'floor_count': '',
-            'basement_count': '', 'has_fire_alarm_system': '', 'notes': '', 'is_active': 'on',
+            'basement_count': '', 'has_fire_alarm_system': '', 'notes': '', 'status': 'active',
         }
         self.client.post(reverse('objektverwaltung:update', args=[self.building.pk]), data)
         self.assertEqual(AuditLog.objects.count(), 0)
@@ -562,3 +562,141 @@ class GenericInspectionTests(TestCase):
         response = self.client.get(reverse('objektverwaltung:inspection_new'), {'building': self.building.pk, 'type': 'loeschanlage'})
         self.assertContains(response, 'noch keine Anlage dieser Art')
         self.assertContains(response, self.building.get_absolute_url() + '#technik')
+
+
+class StatusAndUsageCategoryTests(TestCase):
+    """Objektstatus (Aktiv, In Planung, Inaktiv, Zum Löschen vorgemerkt) und pflegbare Nutzungsarten."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw')
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label='objektverwaltung',
+                                       codename__in=['view_buildingobject', 'change_buildingobject',
+                                                     'add_buildingobject'])
+        )
+        self.client.force_login(self.user)
+        # Tests laufen ohne Migrationen (--no-migrations), daher Standardwerte selbst anlegen
+        self.school = UsageCategory.objects.create(name='Schule', sort_order=10)
+        UsageCategory.objects.create(name='Krankenhaus / Pflege', sort_order=30)
+        UsageCategory.objects.create(name='Sonstiges', sort_order=80)
+        self.building = BuildingObject.objects.create(
+            object_number='OBJ-1', name='Rathaus', usage_type=self.school,
+            created_by=self.user, updated_by=self.user,
+        )
+
+    def _form_data(self, **overrides):
+        data = {
+            'object_number': 'OBJ-1', 'name': 'Rathaus', 'usage_type': str(self.school.pk),
+            'status': 'active', 'street': '', 'house_number': '', 'postal_code': '', 'city': '',
+            'latitude': '', 'longitude': '', 'floor_count': '', 'basement_count': '',
+            'has_fire_alarm_system': '', 'notes': '',
+        }
+        data.update(overrides)
+        return data
+
+    def test_status_choices_in_form_and_badges(self):
+        response = self.client.get(reverse('objektverwaltung:update', args=[self.building.pk]))
+        self.assertContains(response, 'In Planung')
+        self.assertContains(response, 'Zum Löschen vorgemerkt')
+        for status, label in [('planned', 'In Planung'), ('for_deletion', 'Zum Löschen vorgemerkt')]:
+            self.client.post(reverse('objektverwaltung:update', args=[self.building.pk]),
+                             self._form_data(status=status))
+            self.building.refresh_from_db()
+            self.assertEqual(self.building.status, status)
+            self.assertFalse(self.building.is_active)
+            self.assertContains(self.client.get(reverse('objektverwaltung:list')), label)
+            self.assertContains(self.client.get(self.building.get_absolute_url()), label)
+
+    def test_status_filters_and_dashboard_count(self):
+        planned = BuildingObject.objects.create(object_number='OBJ-2', name='Neubau', status='planned',
+                                                created_by=self.user, updated_by=self.user)
+        BuildingObject.objects.create(object_number='OBJ-3', name='Abriss', status='for_deletion',
+                                      created_by=self.user, updated_by=self.user)
+        url = reverse('objektverwaltung:list')
+        html = self.client.get(url, {'filter': 'planung'}).content.decode()
+        self.assertIn('>Neubau<', html)
+        self.assertNotIn('>Rathaus<', html)
+        html = self.client.get(url, {'filter': 'loeschen'}).content.decode()
+        self.assertIn('>Abriss<', html)
+        self.assertNotIn('>Neubau<', html)
+        # Statussortierung: Aktiv, In Planung, ..., Zum Löschen vorgemerkt
+        html = self.client.get(url, {'sort': 'status'}).content.decode()
+        self.assertLess(html.index('>Rathaus<'), html.index('>Neubau<'))
+        self.assertLess(html.index('>Neubau<'), html.index('>Abriss<'))
+        response = self.client.get(reverse('objektverwaltung:dashboard'))
+        self.assertEqual(response.context['object_count'], 1)
+        self.assertEqual(planned.get_status_display(), 'In Planung')
+
+    def test_usage_category_crud(self):
+        list_url = reverse('objektverwaltung:usage_category_list')
+        response = self.client.get(list_url)
+        self.assertContains(response, 'Schule')
+        self.assertContains(response, '1 Objekt')
+        # anlegen
+        response = self.client.post(reverse('objektverwaltung:usage_category_create'),
+                                    {'name': 'Hochhaus', 'sort_order': '5', 'is_active': 'on'})
+        self.assertRedirects(response, list_url)
+        new = UsageCategory.objects.get(name='Hochhaus')
+        # Duplikat (auch bei anderer Schreibweise) wird abgelehnt
+        response = self.client.post(reverse('objektverwaltung:usage_category_create'),
+                                    {'name': 'hochhaus', 'sort_order': '0', 'is_active': 'on'})
+        self.assertContains(response, 'existiert bereits')
+        # steht im Objektformular zur Verfügung
+        response = self.client.get(reverse('objektverwaltung:create'))
+        self.assertContains(response, '>Hochhaus</option>')
+        # deaktivieren -> nicht mehr im Formular für neue Objekte
+        self.client.post(reverse('objektverwaltung:usage_category_edit', args=[new.pk]),
+                         {'name': 'Hochhaus', 'sort_order': '5'})
+        new.refresh_from_db()
+        self.assertFalse(new.is_active)
+        self.assertNotContains(self.client.get(reverse('objektverwaltung:create')), '>Hochhaus</option>')
+        # löschen (unbenutzt) klappt
+        response = self.client.post(reverse('objektverwaltung:usage_category_delete', args=[new.pk]))
+        self.assertRedirects(response, list_url)
+        self.assertFalse(UsageCategory.objects.filter(pk=new.pk).exists())
+
+    def test_usage_category_in_use_cannot_be_deleted_but_stays_selectable(self):
+        response = self.client.post(reverse('objektverwaltung:usage_category_delete', args=[self.school.pk]),
+                                    follow=True)
+        self.assertContains(response, 'kann nicht gelöscht werden')
+        self.assertTrue(UsageCategory.objects.filter(pk=self.school.pk).exists())
+        # deaktivierte, aber verwendete Nutzungsart bleibt im Bearbeiten-Formular wählbar
+        self.school.is_active = False
+        self.school.save()
+        response = self.client.get(reverse('objektverwaltung:update', args=[self.building.pk]))
+        self.assertContains(response, 'Schule')
+        # Liste filtert nach Nutzungsart-ID
+        html = self.client.get(reverse('objektverwaltung:list'), {'usage_type': self.school.pk}).content.decode()
+        self.assertIn('>Rathaus<', html)
+
+    def test_usage_category_management_requires_change_permission(self):
+        reader = User.objects.create_user(username='leser', password='pw')
+        reader.user_permissions.add(Permission.objects.get(codename='view_buildingobject'))
+        self.client.force_login(reader)
+        response = self.client.get(reverse('objektverwaltung:usage_category_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Neue Nutzungsart')
+        self.assertEqual(self.client.get(reverse('objektverwaltung:usage_category_create')).status_code, 403)
+
+    def test_csv_import_and_export_use_category_names(self):
+        from io import BytesIO
+        export = self.client.get(reverse('objektverwaltung:export')).content.decode('utf-8-sig')
+        self.assertIn('Schule', export)
+        self.assertIn('Aktiv', export)
+        csv_text = (
+            'objektnummer,bezeichnung,nutzungsart,status\n'
+            'OBJ-7,Import-Halle,krankenhaus / pflege,In Planung\n'
+        )
+        upload = BytesIO(csv_text.encode('utf-8'))
+        upload.name = 'objekte.csv'
+        self.client.post(reverse('objektverwaltung:import'), {'import_file': upload})
+        imported = BuildingObject.objects.get(object_number='OBJ-7')
+        self.assertEqual(imported.usage_type.name, 'Krankenhaus / Pflege')
+        self.assertEqual(imported.status, 'planned')
+        # unbekannte Nutzungsart -> verständlicher Fehler, nichts importiert
+        upload = BytesIO(b'objektnummer,bezeichnung,nutzungsart\nOBJ-8,Halle,Raumstation\n')
+        upload.name = 'objekte.csv'
+        response = self.client.post(reverse('objektverwaltung:import'), {'import_file': upload}, follow=True)
+        self.assertContains(response, 'Raumstation')
+        self.assertContains(response, 'unbekannt')
+        self.assertFalse(BuildingObject.objects.filter(object_number='OBJ-8').exists())

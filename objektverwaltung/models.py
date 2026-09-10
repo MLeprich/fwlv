@@ -14,16 +14,69 @@ from django.urls import reverse
 from core.models.base import FullAuditModel, AuditedModel, TimeStampedModel
 
 
-class UsageType(models.TextChoices):
-    """Nutzungsart des Objekts"""
-    SCHOOL = 'school', 'Schule'
-    KINDERGARTEN = 'kindergarten', 'Kindergarten / Kita'
-    HOSPITAL = 'hospital', 'Krankenhaus / Pflege'
-    ASSEMBLY = 'assembly', 'Versammlungsstätte'
-    OFFICE = 'office', 'Verwaltung / Büro'
-    INDUSTRY = 'industry', 'Industrie / Gewerbe'
-    RESIDENTIAL = 'residential', 'Wohngebäude'
-    OTHER = 'other', 'Sonstiges'
+class ObjectStatus(models.TextChoices):
+    """Lebenszyklus-Status eines Objekts"""
+    ACTIVE = 'active', 'Aktiv'
+    PLANNED = 'planned', 'In Planung'
+    INACTIVE = 'inactive', 'Inaktiv'
+    FOR_DELETION = 'for_deletion', 'Zum Löschen vorgemerkt'
+
+    @property
+    def badge_class(self):
+        return {
+            'active': 'bg-green-100 text-green-800',
+            'planned': 'bg-blue-100 text-blue-800',
+            'inactive': 'bg-gray-100 text-gray-800',
+            'for_deletion': 'bg-red-100 text-red-800',
+        }[self.value]
+
+
+class UsageCategory(models.Model):
+    """
+    Nutzungsart eines Objekts (z.B. Schule, Krankenhaus, Versammlungsstätte).
+
+    Wird im Modul selbst unter „Nutzungsarten“ gepflegt. Nutzungsarten, die
+    von Objekten verwendet werden, lassen sich nicht löschen, aber deaktivieren.
+    """
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name="Bezeichnung",
+        help_text="Wird in Listen und Auswahlfeldern angezeigt"
+    )
+    sort_order = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name="Reihenfolge",
+        help_text="Kleinere Werte stehen weiter oben"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Aktiv",
+        help_text="Inaktive Nutzungsarten stehen für neue Objekte nicht mehr zur Auswahl; "
+                  "bestehende Objekte behalten sie"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am")
+
+    class Meta:
+        verbose_name = "Nutzungsart"
+        verbose_name_plural = "Nutzungsarten"
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse('objektverwaltung:usage_category_list')
+
+    @property
+    def usage_count(self):
+        return self.buildings.count()
+
+    @property
+    def is_in_use(self):
+        return self.buildings.exists()
 
 
 class BuildingObject(FullAuditModel):
@@ -44,10 +97,12 @@ class BuildingObject(FullAuditModel):
         verbose_name="Bezeichnung",
         help_text="Name des Objekts (z.B. 'Grundschule Musterstadt')"
     )
-    usage_type = models.CharField(
-        max_length=20,
-        choices=UsageType.choices,
-        default=UsageType.OTHER,
+    usage_type = models.ForeignKey(
+        UsageCategory,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='buildings',
         verbose_name="Nutzungsart"
     )
 
@@ -85,7 +140,12 @@ class BuildingObject(FullAuditModel):
 
     notes = models.TextField(blank=True, verbose_name="Allgemeine Hinweise")
 
-    is_active = models.BooleanField(default=True, verbose_name="Aktiv")
+    status = models.CharField(
+        max_length=20,
+        choices=ObjectStatus.choices,
+        default=ObjectStatus.ACTIVE,
+        verbose_name="Status"
+    )
 
     # Abonnement: Nutzer, die dieses Objekt "folgen" und bei Änderungen
     # benachrichtigt werden sollen.
@@ -115,6 +175,18 @@ class BuildingObject(FullAuditModel):
         if not user or not user.is_authenticated:
             return False
         return self.followers.filter(pk=user.pk).exists()
+
+    def get_usage_type_display(self):
+        """Wie bei einem Choice-Feld: Bezeichnung der Nutzungsart oder '–'."""
+        return self.usage_type.name if self.usage_type_id else '–'
+
+    @property
+    def is_active(self):
+        return self.status == ObjectStatus.ACTIVE
+
+    @property
+    def status_badge_class(self):
+        return ObjectStatus(self.status).badge_class
 
     @property
     def full_address(self):

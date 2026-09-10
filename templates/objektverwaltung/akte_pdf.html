@@ -34,7 +34,7 @@
         <tr><td class="k">Objektnummer</td><td>{{ building.object_number }}</td></tr>
         <tr><td class="k">Nutzungsart</td><td>{{ building.get_usage_type_display }}</td></tr>
         <tr><td class="k">Anschrift</td><td>{{ building.full_address|default:"–" }}</td></tr>
-        <tr><td class="k">Status</td><td>{% if building.is_active %}Aktiv{% else %}Inaktiv{% endif %}</td></tr>
+        <tr><td class="k">Status</td><td>{{ building.get_status_display }}</td></tr>
         <tr><td class="k">Einträge</td><td>{{ entries|length }}</td></tr>
     </table>
 
