@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Unfallbericht {{ report.report_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 16mm 16mm 18mm 18mm;
+            @bottom-left { content: "{{ sys_settings.organization_name }} · Unfallbericht {{ report.report_number }}"; font-family: Arial, 'Liberation Sans', sans-serif; font-size: 7.5pt; color: #555; }
+            @bottom-right { content: "Seite " counter(page) " von " counter(pages); font-family: Arial, 'Liberation Sans', sans-serif; font-size: 7.5pt; color: #555; }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, 'Liberation Sans', 'DejaVu Sans', sans-serif; font-size: 9.5pt; color: #111; line-height: 1.35; }
+
+        /* Kopf */
+        .head { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1.2pt solid #1E3A8A; padding-bottom: 3mm; margin-bottom: 4mm; }
+        .head .org { font-size: 8pt; color: #333; line-height: 1.3; }
+        .head .org .name { font-size: 11pt; font-weight: bold; color: #1E3A8A; }
+        .head .logo { max-height: 18mm; max-width: 45mm; }
+        .head .title { text-align: right; }
+        .head .title h1 { font-size: 17pt; font-weight: bold; color: #1E3A8A; letter-spacing: 0.3pt; }
+        .head .title .sub { font-size: 8pt; color: #444; margin-top: 1mm; }
+        .head .title .nr { font-size: 10.5pt; font-weight: bold; margin-top: 1.5mm; }
+        .notice { font-size: 7.5pt; color: #444; border: 0.5pt solid #999; padding: 1.5mm 2.5mm; margin-bottom: 4mm; background: #F5F5F5; }
+
+        /* Abschnitte */
+        .sec { border: 0.6pt solid #000; margin-bottom: 3mm; page-break-inside: avoid; }
+        .sec .h { background: #1E3A8A; color: #fff; font-weight: bold; font-size: 9pt; padding: 1.3mm 2.5mm; }
+        .sec .b { padding: 2mm 2.5mm; }
+        .sec.a .h { background: #2563EB; }
+        .sec.b2 .h { background: #F59E0B; color: #111; }
+        .grid { display: flex; flex-wrap: wrap; }
+        .f { padding: 0.6mm 2mm 1.2mm 0; }
+        .f.w50 { width: 50%; } .f.w33 { width: 33.33%; } .f.w25 { width: 25%; } .f.w100 { width: 100%; }
+        .f .l { font-size: 7pt; color: #555; text-transform: uppercase; letter-spacing: 0.2pt; }
+        .f .v { font-size: 9.5pt; min-height: 4mm; }
+        .pre { white-space: pre-line; }
+        .box { display: inline-block; width: 3.4mm; height: 3.4mm; border: 0.6pt solid #000; text-align: center; font-size: 8pt; line-height: 3.2mm; font-weight: bold; vertical-align: middle; margin-right: 1.2mm; }
+        .yn { display: inline-block; margin-right: 6mm; }
+        .badge { display: inline-block; border: 0.6pt solid #000; padding: 0 1.5mm; font-size: 8pt; font-weight: bold; margin-left: 2mm; }
+
+        .cols { display: flex; gap: 3mm; }
+        .cols > .sec { flex: 1; margin-bottom: 3mm; }
+
+        table.circ { width: 100%; border-collapse: collapse; }
+        table.circ td, table.circ th { border-bottom: 0.3pt solid #BBB; padding: 0.8mm 1.5mm; font-size: 8.5pt; vertical-align: middle; }
+        table.circ th { font-size: 7.5pt; color: #333; text-align: left; border-bottom: 0.6pt solid #000; }
+        table.circ td.c { width: 10mm; text-align: center; }
+        table.circ td.n { width: 7mm; color: #666; text-align: right; padding-right: 2mm; }
+
+        .photos { display: flex; flex-wrap: wrap; gap: 3mm; }
+        .photos img { width: 55mm; height: 41mm; object-fit: cover; border: 0.4pt solid #999; }
+        .sign { display: flex; gap: 8mm; margin-top: 8mm; page-break-inside: avoid; }
+        .sign div { flex: 1; border-top: 0.6pt solid #000; padding-top: 1.5mm; font-size: 7.5pt; color: #444; }
+        .meta { font-size: 7.5pt; color: #555; margin-top: 4mm; }
+    </style>
+</head>
+<body>
+
+<div class="head">
+    <div style="display:flex; gap:4mm; align-items:flex-start;">
+        {% if logo_path %}<img class="logo" src="file://{{ logo_path }}" alt="">{% endif %}
+        <div class="org">
+            <div class="name">{{ sys_settings.organization_name }}</div>
+            <div>{{ sys_settings.site_title }}</div>
+            <div>Unfallbeauftragte/r</div>
+        </div>
+    </div>
+    <div class="title">
+        <h1>Unfallbericht</h1>
+        <div class="sub">{% if report.is_traffic_accident %}Verkehrsunfall mit Dienstfahrzeug · nach dem Muster des Europäischen Unfallberichts{% else %}Unfall / Verletzung im Dienst{% endif %}</div>
+        <div class="nr">{{ report.report_number }}</div>
+    </div>
+</div>
+
+<div class="notice">
+    Keine Schuldanerkenntnis, sondern eine Wiedergabe des Unfallhergangs zur schnelleren Schadenregulierung bzw. zur Meldung an den Unfallversicherungsträger.
+    Schwere: <strong>{{ report.get_severity_display }}</strong>
+    {% if report.is_public_submission %} · Eingereicht über die öffentliche Unfallmeldung{% endif %}
+</div>
+
+{# 1–2: Tag, Uhrzeit, Ort #}
+<div class="sec">
+    <div class="h">1. – 2. Tag, Uhrzeit und Ort des Unfalls</div>
+    <div class="b grid">
+        <div class="f w25"><div class="l">Tag des Unfalles</div><div class="v">{{ report.accident_date|date:"d.m.Y" }}</div></div>
+        <div class="f w25"><div class="l">Uhrzeit</div><div class="v">{% if report.accident_time %}{{ report.accident_time|time:"H:i" }} Uhr{% else %}–{% endif %}</div></div>
+        <div class="f w50"><div class="l">Ort (Gemeinde, Straße, Haus-Nr. bzw. Kilometerstein)</div><div class="v">{{ report.location }}</div></div>
+    </div>
+</div>
+
+{# Einsatzbezug #}
+<div class="sec">
+    <div class="h">Einsatzbezug</div>
+    <div class="b grid">
+        <div class="f w33"><div class="l">Tätigkeit zum Unfallzeitpunkt</div><div class="v">{{ report.get_activity_type_display }}</div></div>
+        <div class="f w33"><div class="l">Einsatznummer</div><div class="v">{{ report.incident_number|default:"–" }}</div></div>
+        <div class="f w33"><div class="l">Einsatzstichwort / Bezeichnung</div><div class="v">{{ report.activity_detail|default:"–" }}</div></div>
+        {% if report.is_traffic_accident %}
+        <div class="f w100" style="margin-top:1mm">
+            <span class="yn"><span class="box">{% if report.special_rights %}X{% endif %}</span>Einsatzfahrt mit Sonder-/Wegerechten (§ 35 / § 38 StVO)</span>
+            <span class="yn"><span class="box">{% if report.blue_light_siren %}X{% endif %}</span>Blaulicht und Einsatzhorn eingeschaltet</span>
+        </div>
+        {% endif %}
+        {% if report.vehicle %}<div class="f w100"><div class="l">Fahrzeug (Fuhrpark)</div><div class="v">{{ report.vehicle }}</div></div>{% endif %}
+    </div>
+</div>
+
+{# 3–5: Verletzte, Sachschäden, Zeugen #}
+<div class="sec">
+    <div class="h">3. – 5. Verletzte, andere Sachschäden, Zeugen</div>
+    <div class="b grid">
+        <div class="f w50">
+            <div class="l">3. Verletzte? (auch leicht)</div>
+            <div class="v"><span class="yn"><span class="box">{% if not report.injuries_occurred %}X{% endif %}</span>nein</span><span class="yn"><span class="box">{% if report.injuries_occurred %}X{% endif %}</span>ja</span></div>
+        </div>
+        <div class="f w50">
+            <div class="l">4. Andere Sachschäden als an den Fahrzeugen</div>
+            <div class="v"><span class="yn"><span class="box">{% if not report.other_property_damage %}X{% endif %}</span>nein</span><span class="yn"><span class="box">{% if report.other_property_damage %}X{% endif %}</span>ja</span>{% if report.other_property_damage_detail %} – {{ report.other_property_damage_detail }}{% endif %}</div>
+        </div>
+        <div class="f w100"><div class="l">5. Zeugen (Name, Anschrift, Telefon)</div><div class="v pre">{{ report.witnesses|default:"–" }}</div></div>
+        <div class="f w100"><div class="l">Polizeiliche Aufnahme</div><div class="v"><span class="yn"><span class="box">{% if not report.police_involved %}X{% endif %}</span>nein</span><span class="yn"><span class="box">{% if report.police_involved %}X{% endif %}</span>ja</span>{% if report.police_detail %} – {{ report.police_detail }}{% endif %}</div></div>
+    </div>
+</div>
+
+{% if report.is_traffic_accident %}
+{# Fahrzeug A / B #}
+<div class="cols">
+    <div class="sec a">
+        <div class="h">Fahrzeug A – Dienstfahrzeug</div>
+        <div class="b grid">
+            <div class="f w100"><div class="l">7. Fahrzeug (Funkrufname / Bezeichnung)</div><div class="v">{{ report.own_vehicle_display|default:"–" }}</div></div>
+            <div class="f w100"><div class="l">Amtl. Kennzeichen</div><div class="v">{{ report.own_vehicle_plate|default:"–" }}</div></div>
+            <div class="f w100"><div class="l">9. Fahrer/in</div><div class="v">{{ report.own_driver_name|default:"–" }}</div></div>
+            <div class="f w50"><div class="l">Führerschein-Nr.</div><div class="v">{{ report.own_driver_license_number|default:"–" }}</div></div>
+            <div class="f w50"><div class="l">Klasse</div><div class="v">{{ report.own_driver_license_class|default:"–" }}</div></div>
+            <div class="f w100"><div class="l">10. Punkt des ersten Anstoßes</div><div class="v">{{ report.get_own_impact_point_display|default:"–" }}</div></div>
+            <div class="f w100"><div class="l">11. Sichtbare Schäden</div><div class="v pre">{{ report.own_damage|default:"–" }}</div></div>
+        </div>
+    </div>
+    <div class="sec b2">
+        <div class="h">Fahrzeug B – Unfallgegner</div>
+        <div class="b grid">
+            {% if report.other_vehicle_involved %}
+            <div class="f w100"><div class="l">6. Halter / Versicherungsnehmer</div><div class="v">{{ report.other_holder_name|default:"–" }}</div></div>
+            <div class="f w100"><div class="l">Anschrift · Telefon</div><div class="v">{{ report.other_holder_address|default:"–" }}{% if report.other_holder_phone %} · {{ report.other_holder_phone }}{% endif %}</div></div>
+            <div class="f w50"><div class="l">7. Marke, Typ</div><div class="v">{{ report.other_vehicle_make|default:"–" }}</div></div>
+            <div class="f w50"><div class="l">Amtl. Kennzeichen</div><div class="v">{{ report.other_vehicle_plate|default:"–" }}</div></div>
+            <div class="f w50"><div class="l">8. Versicherer</div><div class="v">{{ report.other_insurer|default:"–" }}</div></div>
+            <div class="f w50"><div class="l">Vers.-Nr.</div><div class="v">{{ report.other_insurance_number|default:"–" }}</div></div>
+            <div class="f w50"><div class="l">9. Fahrer/in (falls abweichend)</div><div class="v">{{ report.other_driver_name|default:"–" }}</div></div>
+            <div class="f w50"><div class="l">Führerschein-Nr.</div><div class="v">{{ report.other_driver_license_number|default:"–" }}</div></div>
+            <div class="f w100"><div class="l">10. Punkt des ersten Anstoßes</div><div class="v">{{ report.get_other_impact_point_display|default:"–" }}</div></div>
+            <div class="f w100"><div class="l">11. Sichtbare Schäden</div><div class="v pre">{{ report.other_damage|default:"–" }}</div></div>
+            {% else %}
+            <div class="f w100"><div class="v">Kein weiteres Fahrzeug beteiligt.</div></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# 12. Umstände #}
+<div class="sec">
+    <div class="h">12. Umstände</div>
+    <div class="b">
+        <table class="circ">
+            <thead><tr><th style="text-align:center">A</th><th></th><th>Fahrzeug …</th><th style="text-align:center">B</th></tr></thead>
+            <tbody>
+            {% for n, label in circumstances %}
+            <tr>
+                <td class="c"><span class="box" style="margin:0">{% if n in own_circumstances %}X{% endif %}</span></td>
+                <td class="n">{{ n }}</td>
+                <td>{{ label }}</td>
+                <td class="c"><span class="box" style="margin:0">{% if n in other_circumstances %}X{% endif %}</span></td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td class="c" style="font-weight:bold">{{ own_circumstances|length }}</td>
+                <td class="n"></td>
+                <td style="font-weight:bold">Anzahl der angekreuzten Felder</td>
+                <td class="c" style="font-weight:bold">{{ other_circumstances|length }}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# Hergang #}
+<div class="sec">
+    <div class="h">{% if report.is_traffic_accident %}13. – 14. Unfallhergang und Bemerkungen{% else %}Unfallhergang und Ursache{% endif %}</div>
+    <div class="b grid">
+        <div class="f w100"><div class="l">Unfallhergang</div><div class="v pre">{{ report.description }}</div></div>
+        {% if report.cause %}<div class="f w100"><div class="l">Unfallursache</div><div class="v pre">{{ report.cause }}</div></div>{% endif %}
+        {% if report.notes %}<div class="f w100"><div class="l">Bemerkungen</div><div class="v pre">{{ report.notes }}</div></div>{% endif %}
+        {% if report.is_traffic_accident %}
+        <div class="f w100" style="margin-top:1mm"><span class="box">{% if report.paper_report_completed %}X{% endif %}</span>Europäischer Unfallbericht in Papierform mit dem Unfallgegner ausgefüllt</div>
+        {% endif %}
+    </div>
+</div>
+
+{# Verletzte Person #}
+{% if report.injuries_occurred %}
+<div class="sec">
+    <div class="h">Verletzte Person und Erstversorgung</div>
+    <div class="b grid">
+        <div class="f w50"><div class="l">Name</div><div class="v">{{ report.injured_display }}{% if report.injured_person %} (Personal-Nr. {{ report.injured_person.personnel_number }}){% endif %}</div></div>
+        <div class="f w25"><div class="l">Geburtsdatum</div><div class="v">{% if report.injured_birthdate %}{{ report.injured_birthdate|date:"d.m.Y" }}{% else %}–{% endif %}</div></div>
+        <div class="f w25"><div class="l">Funktion / Dienstgrad</div><div class="v">{{ report.injured_function|default:"–" }}</div></div>
+        <div class="f w50"><div class="l">Kontakt</div><div class="v">{{ report.injured_contact|default:"–" }}</div></div>
+        <div class="f w50"><div class="l">Art der Verletzung · Körperteile</div><div class="v">{{ report.injury_type|default:"–" }}{% if report.body_part %} · {{ report.body_part }}{% endif %}</div></div>
+        <div class="f w100" style="margin-top:1mm">
+            <span class="yn"><span class="box">{% if report.first_aid_given %}X{% endif %}</span>Erste Hilfe geleistet{% if report.first_aid_by %} ({{ report.first_aid_by }}){% endif %}</span>
+            <span class="yn"><span class="box">{% if report.doctor_visited %}X{% endif %}</span>Ärztliche Behandlung{% if report.doctor_hospital %} ({{ report.doctor_hospital }}){% endif %}</span>
+            <span class="yn"><span class="box">{% if report.incapacity_expected %}X{% endif %}</span>Arbeitsunfähigkeit zu erwarten</span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# Meldung #}
+<div class="sec">
+    <div class="h">Meldung</div>
+    <div class="b grid">
+        <div class="f w33"><div class="l">Gemeldet durch</div><div class="v">{{ report.reporter_display }}{% if report.reporter_contact %}<br><span style="font-size:8pt">{{ report.reporter_contact }}</span>{% endif %}</div></div>
+        <div class="f w33"><div class="l">Eingegangen am</div><div class="v">{{ report.created_at|date:"d.m.Y H:i" }} Uhr</div></div>
+        <div class="f w33"><div class="l">Gemeldet an · Meldedatum</div><div class="v">{{ report.reported_to|default:"–" }}{% if report.reported_date %} · {{ report.reported_date|date:"d.m.Y" }}{% endif %}</div></div>
+    </div>
+</div>
+
+{# Fotos #}
+{% if report.images.all %}
+<div class="sec">
+    <div class="h">Fotos / Skizze</div>
+    <div class="b photos">
+        {% for img in report.images.all %}
+        <img src="file://{{ img.image.path }}" alt="{{ img.caption }}">
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="sign">
+    {% if report.is_traffic_accident %}<div>Datum, Unterschrift Fahrer/in Dienstfahrzeug (A)</div>{% else %}<div>Datum, Unterschrift verletzte Person</div>{% endif %}
+    <div>Datum, Unterschrift Unfallbeauftragte/r</div>
+</div>
+
+<div class="meta">Erstellt am {{ generated_at|date:"d.m.Y H:i" }} Uhr durch {{ generated_by.get_full_name|default:generated_by.username }} · {{ sys_settings.site_title }}</div>
+
+</body>
+</html>

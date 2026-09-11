@@ -25,7 +25,7 @@
                 <span class="text-4xl">🚑</span>
                 <div>
                     <h1 class="text-2xl font-bold">Unfallberichte</h1>
-                    <p class="text-indigo-100">Unfälle & Verletzungen im Dienst</p>
+                    <p class="text-indigo-100">Verkehrsunfälle mit Dienstfahrzeugen sowie Unfälle & Verletzungen im Dienst</p>
                 </div>
             </div>
             {% if can_add %}
@@ -39,10 +39,14 @@
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <p class="text-sm text-gray-500">Gesamt</p>
             <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <p class="text-sm text-gray-500">Verkehrsunfälle</p>
+            <p class="text-2xl font-bold text-blue-600">{{ stats.verkehr }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <p class="text-sm text-gray-500">Schwer / tödlich</p>
@@ -56,9 +60,15 @@
 
     <!-- Filter -->
     <form method="get" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <input type="text" name="search" value="{{ search }}" placeholder="Nummer, Person, Ort, Hergang…"
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <input type="text" name="search" value="{{ search }}" placeholder="Nummer, Einsatz-Nr., Person, Kennzeichen, Ort…"
                    class="md:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <select name="report_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="">Alle Unfallarten</option>
+                {% for value, label in report_type_choices %}
+                <option value="{{ value }}" {% if active_report_type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
             <select name="severity" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 <option value="">Alle Schweregrade</option>
                 {% for value, label in severity_choices %}
@@ -86,7 +96,9 @@
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nr.</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Person</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Art</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Einsatz-Nr.</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Person / Fahrzeug</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ort</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tätigkeit</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schwere</th>
@@ -97,7 +109,9 @@
                     <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'accident_report:detail' report.pk %}'">
                         <td class="px-4 py-3 text-sm font-medium text-indigo-600">{{ report.report_number }}</td>
                         <td class="px-4 py-3 text-sm text-gray-700">{{ report.accident_date|date:"d.m.Y" }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-900">{{ report.injured_display }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700" title="{{ report.get_report_type_display }}">{% if report.is_traffic_accident %}🚒 Verkehr{% else %}🩹 Person{% endif %}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">{{ report.incident_number|default:"–" }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{% if report.is_traffic_accident %}{{ report.own_vehicle_display|default:"–" }}{% if report.injuries_occurred %}<span class="block text-xs text-gray-500">Verletzt: {{ report.injured_display }}</span>{% endif %}{% else %}{{ report.injured_display }}{% endif %}</td>
                         <td class="px-4 py-3 text-sm text-gray-700">{{ report.location|truncatechars:40 }}</td>
                         <td class="px-4 py-3 text-sm text-gray-700">{{ report.get_activity_type_display }}</td>
                         <td class="px-4 py-3">
@@ -106,7 +120,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="px-4 py-12 text-center text-gray-500">
+                        <td colspan="8" class="px-4 py-12 text-center text-gray-500">
                             <span class="text-4xl block mb-2">🚑</span>
                             Noch keine Unfallberichte erfasst.
                         </td>
@@ -121,12 +135,12 @@
     {% if is_paginated %}
     <div class="flex justify-center items-center gap-2 mt-6">
         {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if active_severity %}&severity={{ active_severity }}{% endif %}{% if active_activity %}&activity_type={{ active_activity }}{% endif %}"
+        <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if active_severity %}&severity={{ active_severity }}{% endif %}{% if active_activity %}&activity_type={{ active_activity }}{% endif %}{% if active_report_type %}&report_type={{ active_report_type }}{% endif %}"
            class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Zurück</a>
         {% endif %}
         <span class="text-sm text-gray-600">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</span>
         {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if active_severity %}&severity={{ active_severity }}{% endif %}{% if active_activity %}&activity_type={{ active_activity }}{% endif %}"
+        <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if active_severity %}&severity={{ active_severity }}{% endif %}{% if active_activity %}&activity_type={{ active_activity }}{% endif %}{% if active_report_type %}&report_type={{ active_report_type }}{% endif %}"
            class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Weiter</a>
         {% endif %}
     </div>

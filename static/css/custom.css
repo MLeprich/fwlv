@@ -456,6 +456,22 @@
     color: #BBF7D0 !important;
 }
 
+.dark .text-green-800, .dark .text-green-900 {
+    color: #86EFAC !important;
+}
+
+.dark .bg-emerald-50 {
+    background-color: #022C22 !important;
+}
+
+.dark .border-emerald-200 {
+    border-color: #059669 !important;
+}
+
+.dark .text-emerald-700, .dark .text-emerald-800, .dark .text-emerald-900 {
+    color: #6EE7B7 !important;
+}
+
 .dark .bg-yellow-50 {
     background-color: #451A03 !important;
 }

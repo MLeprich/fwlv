@@ -1,0 +1,7 @@
+{# Einzelnes Formularfeld: Label, Widget, Hilfetext, Fehler #}
+<div class="{{ extra_class|default:'' }}">
+    <label class="block text-sm font-medium text-gray-700 mb-1">{{ label|default:field.label }}{% if required %} <span class="text-red-500">*</span>{% endif %}</label>
+    {{ field }}
+    {% if help %}<p class="mt-1 text-xs text-gray-500">{{ help }}</p>{% endif %}
+    {% if field.errors %}<p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>{% endif %}
+</div>

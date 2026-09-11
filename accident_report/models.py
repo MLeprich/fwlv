@@ -58,6 +58,50 @@ class Severity(models.TextChoices):
     TOD = 'tod', _('Tödlicher Unfall')
 
 
+class ReportType(models.TextChoices):
+    """Art des Berichts – Verkehrsunfall (Europäischer Unfallbericht) oder Personenunfall."""
+    VERKEHRSUNFALL = 'verkehrsunfall', _('Verkehrsunfall mit Dienstfahrzeug')
+    PERSONENUNFALL = 'personenunfall', _('Unfall / Verletzung im Dienst (ohne Fahrzeugschaden)')
+
+
+class ImpactPoint(models.TextChoices):
+    """Punkt des ersten Anstoßes (Ziffer 10 des Europäischen Unfallberichts)."""
+    FRONT = 'front', _('Front')
+    FRONT_LEFT = 'front_left', _('Front links')
+    FRONT_RIGHT = 'front_right', _('Front rechts')
+    LEFT = 'left', _('Seite links')
+    RIGHT = 'right', _('Seite rechts')
+    REAR = 'rear', _('Heck')
+    REAR_LEFT = 'rear_left', _('Heck links')
+    REAR_RIGHT = 'rear_right', _('Heck rechts')
+    TOP = 'top', _('Dach / oben')
+    UNKNOWN = 'unknown', _('Unbekannt / mehrere')
+
+
+# Ziffer 12 des Europäischen Unfallberichts: die 17 Umstände (Nummer, Text).
+# Gespeichert werden je Fahrzeug die angekreuzten Nummern als Liste (JSON).
+CIRCUMSTANCES = [
+    (1, 'parkte (auf der Straße)'),
+    (2, 'fuhr aus der Parkstelle heraus'),
+    (3, 'fuhr in eine Parkstelle hinein'),
+    (4, 'fuhr aus einem Parkplatz, Grundstück oder Feld-/Privatweg heraus'),
+    (5, 'fuhr auf einen Parkplatz, bog in ein Grundstück oder Feld-/Privatweg ein'),
+    (6, 'bog in einen Kreisverkehr ein'),
+    (7, 'fuhr im Kreisverkehr'),
+    (8, 'fuhr heckseitig auf ein anderes Fahrzeug auf (gleiche Richtung, gleiche Spur)'),
+    (9, 'fuhr in gleicher Richtung, aber in einer anderen Spur'),
+    (10, 'wechselte die Spur'),
+    (11, 'überholte'),
+    (12, 'bog rechts ab'),
+    (13, 'bog links ab'),
+    (14, 'setzte zurück'),
+    (15, 'fuhr in die Gegenfahrbahn'),
+    (16, 'kam von rechts'),
+    (17, 'beachtete Vorfahrtszeichen nicht'),
+]
+CIRCUMSTANCE_LABELS = dict(CIRCUMSTANCES)
+
+
 class AccidentReport(AuditedModel):
     """
     Ein einzelner Unfallbericht.
@@ -99,6 +143,12 @@ class AccidentReport(AuditedModel):
         choices=Severity.choices,
         default=Severity.LEICHT,
         verbose_name=_('Schwere'),
+    )
+    report_type = models.CharField(
+        max_length=20,
+        choices=ReportType.choices,
+        default=ReportType.PERSONENUNFALL,
+        verbose_name=_('Art des Unfalls'),
     )
 
     # -- Melder (bei öffentlicher Meldung ohne Login) ----------------------
@@ -168,10 +218,23 @@ class AccidentReport(AuditedModel):
         default=ActivityType.EINSATZ,
         verbose_name=_('Tätigkeit zum Unfallzeitpunkt'),
     )
+    incident_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_('Einsatznummer'),
+    )
     activity_detail = models.CharField(
         max_length=250,
         blank=True,
-        verbose_name=_('Bezug (Einsatz-Nr. / Bezeichnung)'),
+        verbose_name=_('Einsatzstichwort / Bezeichnung'),
+    )
+    special_rights = models.BooleanField(
+        default=False,
+        verbose_name=_('Einsatzfahrt mit Sonder-/Wegerechten (§ 35 / § 38 StVO)'),
+    )
+    blue_light_siren = models.BooleanField(
+        default=False,
+        verbose_name=_('Blaulicht und Einsatzhorn eingeschaltet'),
     )
     vehicle = models.ForeignKey(
         'vehicles.Vehicle',
@@ -180,6 +243,137 @@ class AccidentReport(AuditedModel):
         blank=True,
         related_name='accident_reports',
         verbose_name=_('Beteiligtes Fahrzeug'),
+    )
+
+    # -- Fahrzeug A: Dienstfahrzeug (Ziffern 7, 9, 10, 11) ---------------------
+    own_vehicle_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Dienstfahrzeug (Funkrufname / Bezeichnung)'),
+    )
+    own_vehicle_plate = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_('Kennzeichen Dienstfahrzeug'),
+    )
+    own_driver_name = models.CharField(
+        max_length=150,
+        blank=True,
+        verbose_name=_('Fahrer/in Dienstfahrzeug'),
+    )
+    own_driver_license_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_('Führerschein-Nr.'),
+    )
+    own_driver_license_class = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_('Führerscheinklasse'),
+    )
+    own_impact_point = models.CharField(
+        max_length=20,
+        choices=ImpactPoint.choices,
+        blank=True,
+        verbose_name=_('Punkt des ersten Anstoßes (Dienstfahrzeug)'),
+    )
+    own_damage = models.TextField(
+        blank=True,
+        verbose_name=_('Sichtbare Schäden am Dienstfahrzeug'),
+    )
+    own_circumstances = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_('Umstände Dienstfahrzeug (Ziffer 12)'),
+    )
+
+    # -- Fahrzeug B: Unfallgegner (Ziffern 6, 7, 8, 9, 10, 11) ------------------
+    other_vehicle_involved = models.BooleanField(
+        default=False,
+        verbose_name=_('Weiteres Fahrzeug beteiligt'),
+    )
+    other_holder_name = models.CharField(
+        max_length=150,
+        blank=True,
+        verbose_name=_('Halter / Versicherungsnehmer'),
+    )
+    other_holder_address = models.CharField(
+        max_length=250,
+        blank=True,
+        verbose_name=_('Anschrift Halter'),
+    )
+    other_holder_phone = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_('Telefon Halter'),
+    )
+    other_vehicle_make = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Marke, Typ'),
+    )
+    other_vehicle_plate = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_('Kennzeichen Unfallgegner'),
+    )
+    other_insurer = models.CharField(
+        max_length=150,
+        blank=True,
+        verbose_name=_('Versicherer'),
+    )
+    other_insurance_number = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Versicherungsschein-Nr.'),
+    )
+    other_driver_name = models.CharField(
+        max_length=150,
+        blank=True,
+        verbose_name=_('Fahrer/in Unfallgegner (falls abweichend)'),
+    )
+    other_driver_license_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_('Führerschein-Nr. Unfallgegner'),
+    )
+    other_impact_point = models.CharField(
+        max_length=20,
+        choices=ImpactPoint.choices,
+        blank=True,
+        verbose_name=_('Punkt des ersten Anstoßes (Unfallgegner)'),
+    )
+    other_damage = models.TextField(
+        blank=True,
+        verbose_name=_('Sichtbare Schäden am Fahrzeug des Unfallgegners'),
+    )
+    other_circumstances = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_('Umstände Unfallgegner (Ziffer 12)'),
+    )
+
+    # -- Sachschäden, Polizei, Papierbericht (Ziffern 4, 15) --------------------
+    other_property_damage = models.BooleanField(
+        default=False,
+        verbose_name=_('Andere Sachschäden (außer an den Fahrzeugen)'),
+    )
+    other_property_damage_detail = models.TextField(
+        blank=True,
+        verbose_name=_('Beschreibung der Sachschäden'),
+    )
+    police_involved = models.BooleanField(
+        default=False,
+        verbose_name=_('Polizei hat den Unfall aufgenommen'),
+    )
+    police_detail = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_('Dienststelle / Tagebuch-Nr.'),
+    )
+    paper_report_completed = models.BooleanField(
+        default=False,
+        verbose_name=_('Europäischer Unfallbericht in Papierform ausgefüllt'),
     )
 
     # -- Hergang & Ursache --------------------------------------------------
@@ -192,6 +386,10 @@ class AccidentReport(AuditedModel):
     )
 
     # -- Verletzung ---------------------------------------------------------
+    injuries_occurred = models.BooleanField(
+        default=True,
+        verbose_name=_('Verletzte (auch leicht)'),
+    )
     injury_type = models.CharField(
         max_length=250,
         blank=True,
@@ -253,6 +451,8 @@ class AccidentReport(AuditedModel):
             models.Index(fields=['report_number']),
             models.Index(fields=['accident_date']),
             models.Index(fields=['severity']),
+            models.Index(fields=['report_type']),
+            models.Index(fields=['incident_number']),
         ]
 
     def __str__(self):
@@ -287,11 +487,48 @@ class AccidentReport(AuditedModel):
         return f'{prefix}{seq:05d}'
 
     @property
+    def is_traffic_accident(self):
+        return self.report_type == ReportType.VERKEHRSUNFALL
+
+    @staticmethod
+    def _circumstance_labels(numbers):
+        """Nummernliste (Ziffer 12) in lesbare Texte übersetzen."""
+        result = []
+        for n in numbers or []:
+            try:
+                n = int(n)
+            except (TypeError, ValueError):
+                continue
+            if n in CIRCUMSTANCE_LABELS:
+                result.append((n, CIRCUMSTANCE_LABELS[n]))
+        return result
+
+    @property
+    def own_circumstances_display(self):
+        return self._circumstance_labels(self.own_circumstances)
+
+    @property
+    def other_circumstances_display(self):
+        return self._circumstance_labels(self.other_circumstances)
+
+    @property
+    def own_vehicle_display(self):
+        """Dienstfahrzeug: verknüpftes Fahrzeug bevorzugt, sonst Freitext der Meldung."""
+        if self.vehicle_id:
+            return str(self.vehicle)
+        parts = [self.own_vehicle_name, self.own_vehicle_plate]
+        return ' · '.join(p for p in parts if p)
+
+    @property
     def injured_display(self):
         """Anzeigename der verletzten Person (Personalstamm oder Freitext)."""
         if self.injured_person:
-            return self.injured_person.full_name
-        return self.injured_name or _('Unbekannt')
+            return self.injured_person.get_full_name()
+        if self.injured_name:
+            return self.injured_name
+        if not self.injuries_occurred:
+            return _('Keine Verletzten')
+        return _('Unbekannt')
 
     @property
     def reporter_display(self):

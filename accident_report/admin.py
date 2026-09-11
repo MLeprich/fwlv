@@ -12,12 +12,15 @@ class AccidentReportImageInline(admin.TabularInline):
 
 @admin.register(AccidentReport)
 class AccidentReportAdmin(admin.ModelAdmin):
-    list_display = ['report_number', 'injured_display', 'severity',
-                    'accident_date', 'activity_type', 'location', 'created_by']
-    list_filter = ['severity', 'activity_type', 'accident_date',
-                   'first_aid_given', 'doctor_visited', 'incapacity_expected']
-    search_fields = ['report_number', 'injured_name', 'location',
-                     'description', 'injured_person__first_name', 'injured_person__last_name']
+    list_display = ['report_number', 'report_type', 'injured_display', 'severity',
+                    'accident_date', 'activity_type', 'incident_number', 'location', 'created_by']
+    list_filter = ['report_type', 'severity', 'activity_type', 'accident_date',
+                   'special_rights', 'police_involved', 'first_aid_given',
+                   'doctor_visited', 'incapacity_expected']
+    search_fields = ['report_number', 'incident_number', 'injured_name', 'location',
+                     'description', 'own_vehicle_name', 'own_vehicle_plate',
+                     'other_vehicle_plate', 'other_holder_name',
+                     'injured_person__first_name', 'injured_person__last_name']
     date_hierarchy = 'accident_date'
     autocomplete_fields = ['injured_person', 'vehicle']
     readonly_fields = ['report_number', 'created_by', 'updated_by', 'created_at', 'updated_at']

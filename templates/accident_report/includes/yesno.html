@@ -1,0 +1,15 @@
+{# Ja/Nein-Auswahl als zwei Schaltflächen; `model` = Alpine-Variable, an die das Radio gebunden ist #}
+<div class="{{ extra_class|default:'' }}">
+    <p class="text-sm font-medium text-gray-700 mb-2">{{ label|default:field.label }}</p>
+    <div class="flex gap-3">
+        {% for radio in field %}
+        <label class="flex-1 flex items-center justify-center gap-2 px-4 py-3 border rounded-lg cursor-pointer transition-colors"
+               {% if model %}:class="{{ model }} === '{{ radio.data.value }}' ? 'border-{{ accent|default:'emerald' }}-500 bg-{{ accent|default:'emerald' }}-50 text-{{ accent|default:'emerald' }}-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"{% else %}class="border-gray-300"{% endif %}>
+            {{ radio.tag }}
+            <span class="text-sm font-medium">{{ radio.choice_label }}</span>
+        </label>
+        {% endfor %}
+    </div>
+    {% if help %}<p class="mt-1 text-xs text-gray-500">{{ help }}</p>{% endif %}
+    {% if field.errors %}<p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>{% endif %}
+</div>

@@ -3,7 +3,15 @@
 {% block title %}Unfallbericht erfassen - FLVS{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto">
+{{ wizard_steps|json_script:"wizard-steps" }}
+<div class="max-w-3xl mx-auto"
+     x-data="accidentWizard"
+     data-type="{{ form.report_type.value|default:'verkehrsunfall' }}"
+     data-injuries="{{ form.injuries_occurred.value|stringformat:'s' }}"
+     data-other-vehicle="{{ form.other_vehicle_involved.value|stringformat:'s' }}"
+     data-property-damage="{{ form.other_property_damage.value|stringformat:'s' }}"
+     data-police="{{ form.police_involved.value|stringformat:'s' }}"
+     data-start="{{ error_step|default:'basis' }}">
 
     <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center gap-3 mb-6">
@@ -12,11 +20,38 @@
             </div>
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Unfallbericht erfassen</h1>
-                <p class="text-sm text-gray-500">Unfall / Verletzung im Dienst melden – ohne Anmeldung</p>
+                <p class="text-sm text-gray-500">Verkehrsunfall mit Dienstfahrzeug oder Verletzung im Dienst melden – ohne Anmeldung</p>
             </div>
         </div>
 
-        <form method="post" enctype="multipart/form-data" class="space-y-6">
+        <!-- Fortschritt -->
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-2 text-sm text-gray-600">
+                <span>Schritt <span x-text="index + 1"></span> von <span x-text="steps.length"></span>:
+                    <span class="font-medium text-gray-900" x-text="steps[index] ? steps[index].title : ''"></span></span>
+                <span x-text="progress + ' %'"></span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-emerald-600 h-2 rounded-full transition-all duration-300" :style="'width: ' + progress + '%'"></div>
+            </div>
+            <ol class="flex gap-1 mt-3 overflow-x-auto pb-1">
+                <template x-for="(s, i) in steps" :key="s.key">
+                    <li class="flex-1 min-w-[3.5rem]">
+                        <button type="button" @click="jump(s.key)"
+                                class="w-full flex flex-col items-center gap-1 text-xs rounded-lg py-1 px-1 transition-colors"
+                                :class="s.key === current ? 'text-emerald-700 font-semibold' : (visited.includes(s.key) ? 'text-gray-600 hover:bg-gray-50' : 'text-gray-400 cursor-default')">
+                            <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold border"
+                                  :class="s.has_errors ? 'bg-red-100 border-red-400 text-red-700' : (s.key === current ? 'bg-emerald-600 border-emerald-600 text-white' : (visited.includes(s.key) ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-gray-300'))"
+                                  x-text="s.has_errors ? '!' : i + 1"></span>
+                            <span class="hidden sm:block truncate w-full text-center" x-text="s.title"></span>
+                        </button>
+                    </li>
+                </template>
+            </ol>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" novalidate class="space-y-6"
+              @submit="onSubmit($event)" @keydown.enter="onEnter($event)">
             {% csrf_token %}
 
             {% if form.non_field_errors %}
@@ -24,147 +59,384 @@
                 <div class="text-sm text-red-700">{{ form.non_field_errors }}</div>
             </div>
             {% endif %}
+            {% if form.errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg text-sm text-red-700" x-show="index === firstErrorIndex">
+                Bitte prüfen Sie die rot markierten Angaben. Schritte mit Fehlern sind in der Übersicht mit „!“ gekennzeichnet.
+            </div>
+            {% endif %}
 
-            <!-- Ihre Daten (Melder) -->
-            <div class="border-b border-gray-200 pb-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Ihre Daten (Melder)</h2>
+            <!-- 1. Unfall: Art, Melder, Zeit, Ort -->
+            <section data-step="basis" x-show="current === 'basis'" class="space-y-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-1">Was ist passiert?</h2>
+                    <p class="text-xs text-gray-500 mb-3">Die Auswahl bestimmt, welche Schritte folgen.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {% for radio in form.report_type %}
+                        <label class="flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors"
+                               :class="type === '{{ radio.data.value }}' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-300 hover:bg-gray-50'">
+                            {{ radio.tag }}
+                            <span>
+                                <span class="block text-sm font-semibold text-gray-900">{% if radio.data.value == 'verkehrsunfall' %}🚒 Verkehrsunfall mit Dienstfahrzeug{% else %}🩹 Unfall / Verletzung im Dienst{% endif %}</span>
+                                <span class="block text-xs text-gray-500 mt-0.5">{% if radio.data.value == 'verkehrsunfall' %}Angelehnt an den Europäischen Unfallbericht: Fahrzeug A/B, Umstände, Schäden.{% else %}Verletzung ohne Fahrzeugschaden, z.B. bei Einsatz, Übung oder Dienstsport.{% endif %}</span>
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% if form.report_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.report_type.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div class="border-t border-gray-200 pt-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Ihre Daten (Melder)</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% include 'accident_report/includes/field.html' with field=form.reporter_first_name label='Vorname' required=True %}
+                        {% include 'accident_report/includes/field.html' with field=form.reporter_last_name label='Nachname' required=True %}
+                        {% include 'accident_report/includes/field.html' with field=form.reporter_contact label='Kontakt (für Rückfragen)' extra_class='md:col-span-2' %}
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 pt-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Tag, Uhrzeit und Ort des Unfalls</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% include 'accident_report/includes/field.html' with field=form.accident_date label='Unfalldatum' required=True %}
+                        {% include 'accident_report/includes/field.html' with field=form.accident_time label='Uhrzeit' %}
+                        {% include 'accident_report/includes/field.html' with field=form.location label='Unfallort' required=True extra_class='md:col-span-2' help='Gemeinde, Straße, Haus-Nr. bzw. Kilometerstein' %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Einsatz -->
+            <section data-step="einsatz" x-show="current === 'einsatz'" class="space-y-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-1">Einsatzbezug</h2>
+                    <p class="text-xs text-gray-500 mb-4">Wobei ist der Unfall passiert? Die Einsatznummer hilft der Nachbearbeitung.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% include 'accident_report/includes/field.html' with field=form.activity_type label='Tätigkeit zum Unfallzeitpunkt' extra_class='md:col-span-2' %}
+                        {% include 'accident_report/includes/field.html' with field=form.incident_number label='Einsatznummer' help='Falls bekannt, z.B. aus dem Alarmfax oder der Leitstelle.' %}
+                        {% include 'accident_report/includes/field.html' with field=form.activity_detail label='Einsatzstichwort / Bezeichnung' %}
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 pt-6" x-show="isTraffic">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-1">Einsatzfahrt</h2>
+                    <p class="text-xs text-gray-500 mb-4">Wichtig für die rechtliche Bewertung (§ 35 / § 38 StVO).</p>
+                    <div class="space-y-3">
+                        <label class="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                            {{ form.special_rights }}
+                            <span class="text-sm text-gray-800">
+                                <span class="font-medium">Einsatzfahrt mit Sonder-/Wegerechten</span>
+                                <span class="block text-xs text-gray-500">Fahrt zum oder im Einsatz unter Inanspruchnahme von Sonderrechten (§ 35 StVO) bzw. Wegerecht (§ 38 StVO).</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                            {{ form.blue_light_siren }}
+                            <span class="text-sm text-gray-800">
+                                <span class="font-medium">Blaulicht und Einsatzhorn waren eingeschaltet</span>
+                                <span class="block text-xs text-gray-500">Zum Unfallzeitpunkt waren blaues Blinklicht <em>und</em> Einsatzhorn in Betrieb.</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Fahrzeug A: Dienstfahrzeug -->
+            <section data-step="fahrzeug_a" x-show="current === 'fahrzeug_a'" class="space-y-6">
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded bg-blue-600 text-white text-sm font-bold">A</span>
+                    <h2 class="text-lg font-semibold text-gray-900">Dienstfahrzeug</h2>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Vorname *</label>
-                        {{ form.reporter_first_name }}
-                        {% if form.reporter_first_name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.reporter_first_name.errors.0 }}</p>{% endif %}
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nachname *</label>
-                        {{ form.reporter_last_name }}
-                        {% if form.reporter_last_name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.reporter_last_name.errors.0 }}</p>{% endif %}
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Kontakt (für Rückfragen)</label>
-                        {{ form.reporter_contact }}
+                    {% include 'accident_report/includes/field.html' with field=form.own_vehicle_name label='Fahrzeug (Funkrufname / Bezeichnung)' required=True %}
+                    {% include 'accident_report/includes/field.html' with field=form.own_vehicle_plate label='Amtl. Kennzeichen' %}
+                </div>
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3">Fahrer/in</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% include 'accident_report/includes/field.html' with field=form.own_driver_name label='Name, Vorname' required=True %}
+                        {% include 'accident_report/includes/field.html' with field=form.own_driver_license_number label='Führerschein-Nr.' %}
+                        {% include 'accident_report/includes/field.html' with field=form.own_driver_license_class label='Führerscheinklasse' %}
                     </div>
                 </div>
-            </div>
-
-            <!-- Verletzte Person -->
-            <div class="border-b border-gray-200 pb-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Verletzte / betroffene Person</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                        {{ form.injured_name }}
-                        {% if form.injured_name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.injured_name.errors.0 }}</p>{% endif %}
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Geburtsdatum</label>
-                        {{ form.injured_birthdate }}
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Funktion / Dienstgrad</label>
-                        {{ form.injured_function }}
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Kontakt</label>
-                        {{ form.injured_contact }}
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3">Anstoß und Schäden</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% include 'accident_report/includes/field.html' with field=form.own_impact_point label='Punkt des ersten Anstoßes' %}
+                        {% include 'accident_report/includes/field.html' with field=form.own_damage label='Sichtbare Schäden' extra_class='md:col-span-2' %}
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Unfalldaten -->
-            <div class="border-b border-gray-200 pb-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Unfalldaten</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Unfalldatum *</label>
-                        {{ form.accident_date }}
-                        {% if form.accident_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.accident_date.errors.0 }}</p>{% endif %}
+            <!-- 4. Fahrzeug B: Unfallgegner -->
+            <section data-step="fahrzeug_b" x-show="current === 'fahrzeug_b'" class="space-y-6">
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded bg-amber-400 text-gray-900 text-sm font-bold">B</span>
+                    <h2 class="text-lg font-semibold text-gray-900">Unfallgegner</h2>
+                </div>
+                {% include 'accident_report/includes/yesno.html' with field=form.other_vehicle_involved label='War ein weiteres Fahrzeug beteiligt?' model='otherVehicle' help='Bei „Nein“ (z.B. Alleinunfall, Anstoß an Gegenstand) entfällt dieser Abschnitt.' %}
+
+                <div x-show="otherVehicle === 'True'" class="space-y-6">
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-base font-semibold text-gray-900 mb-3">Fahrzeug</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% include 'accident_report/includes/field.html' with field=form.other_vehicle_plate label='Amtl. Kennzeichen' required=True %}
+                            {% include 'accident_report/includes/field.html' with field=form.other_vehicle_make label='Marke, Typ' %}
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Unfallzeit</label>
-                        {{ form.accident_time }}
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-base font-semibold text-gray-900 mb-1">Halter / Versicherungsnehmer</h3>
+                        <p class="text-xs text-gray-500 mb-3">Siehe Kfz-Schein bzw. Grüne Versicherungskarte.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% include 'accident_report/includes/field.html' with field=form.other_holder_name label='Name, Vorname / Firma' %}
+                            {% include 'accident_report/includes/field.html' with field=form.other_holder_phone label='Telefon' %}
+                            {% include 'accident_report/includes/field.html' with field=form.other_holder_address label='Anschrift' extra_class='md:col-span-2' %}
+                        </div>
                     </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Unfallort *</label>
-                        {{ form.location }}
-                        {% if form.location.errors %}<p class="mt-1 text-sm text-red-600">{{ form.location.errors.0 }}</p>{% endif %}
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-base font-semibold text-gray-900 mb-3">Versicherung</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% include 'accident_report/includes/field.html' with field=form.other_insurer label='Versicherer' %}
+                            {% include 'accident_report/includes/field.html' with field=form.other_insurance_number label='Versicherungsschein-Nr.' %}
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tätigkeit zum Unfallzeitpunkt</label>
-                        {{ form.activity_type }}
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-base font-semibold text-gray-900 mb-3">Fahrer/in (falls nicht der Halter)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% include 'accident_report/includes/field.html' with field=form.other_driver_name label='Name, Vorname' %}
+                            {% include 'accident_report/includes/field.html' with field=form.other_driver_license_number label='Führerschein-Nr.' %}
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Bezug (Einsatz-Nr. / Bezeichnung)</label>
-                        {{ form.activity_detail }}
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-base font-semibold text-gray-900 mb-3">Anstoß und Schäden</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% include 'accident_report/includes/field.html' with field=form.other_impact_point label='Punkt des ersten Anstoßes' %}
+                            {% include 'accident_report/includes/field.html' with field=form.other_damage label='Sichtbare Schäden' extra_class='md:col-span-2' %}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Hergang -->
-            <div class="border-b border-gray-200 pb-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Hergang & Ursache</h2>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Unfallhergang *</label>
-                        {{ form.description }}
-                        {% if form.description.errors %}<p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>{% endif %}
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Unfallursache</label>
-                        {{ form.cause }}
+            <!-- 5. Umstände -->
+            <section data-step="umstaende" x-show="current === 'umstaende'" class="space-y-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-1">Umstände</h2>
+                    <p class="text-xs text-gray-500">Bitte ankreuzen, was zum Unfallzeitpunkt auf das jeweilige Fahrzeug zutraf (Ziffer 12 des Europäischen Unfallberichts). Mehrfachauswahl möglich.</p>
+                </div>
+                {% include 'accident_report/includes/circumstances_table.html' %}
+            </section>
+
+            <!-- 6. Hergang, Sachschäden, Polizei, Zeugen -->
+            <section data-step="hergang" x-show="current === 'hergang'" class="space-y-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Unfallhergang</h2>
+                    <div class="space-y-4">
+                        {% include 'accident_report/includes/field.html' with field=form.description label='Was ist passiert?' required=True help='Keine Schuldanerkenntnis – nur eine Wiedergabe des Hergangs.' %}
+                        {% include 'accident_report/includes/field.html' with field=form.cause label='Unfallursache' %}
                     </div>
                 </div>
-            </div>
-
-            <!-- Verletzung -->
-            <div class="border-b border-gray-200 pb-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Verletzung & Erstversorgung</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Art der Verletzung</label>
-                        {{ form.injury_type }}
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Betroffene Körperteile</label>
-                        {{ form.body_part }}
-                    </div>
-                    <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.first_aid_given }} Erste Hilfe geleistet</label>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Erste Hilfe durch</label>
-                        {{ form.first_aid_by }}
-                    </div>
-                    <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.doctor_visited }} Ärztliche Behandlung</label>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Arzt / Krankenhaus</label>
-                        {{ form.doctor_hospital }}
+                <div class="border-t border-gray-200 pt-6 space-y-4" x-show="isTraffic">
+                    {% include 'accident_report/includes/yesno.html' with field=form.other_property_damage label='Andere Sachschäden als an den Fahrzeugen?' model='propertyDamage' %}
+                    <div x-show="propertyDamage === 'True'">
+                        {% include 'accident_report/includes/field.html' with field=form.other_property_damage_detail label='Welche Sachschäden?' %}
                     </div>
                 </div>
-            </div>
+                <div class="border-t border-gray-200 pt-6 space-y-4">
+                    {% include 'accident_report/includes/yesno.html' with field=form.police_involved label='Hat die Polizei den Unfall aufgenommen?' model='police' %}
+                    <div x-show="police === 'True'">
+                        {% include 'accident_report/includes/field.html' with field=form.police_detail label='Dienststelle / Tagebuch-Nr.' %}
+                    </div>
+                </div>
+                <div class="border-t border-gray-200 pt-6">
+                    {% include 'accident_report/includes/field.html' with field=form.witnesses label='Zeugen' help='Name, Anschrift, Telefon – Insassen der beteiligten Fahrzeuge bitte kennzeichnen.' %}
+                </div>
+            </section>
 
-            <!-- Zeugen -->
-            <div class="border-b border-gray-200 pb-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Zeugen</h2>
-                {{ form.witnesses }}
-            </div>
+            <!-- 7. Verletzte -->
+            <section data-step="verletzte" x-show="current === 'verletzte'" class="space-y-6">
+                <h2 class="text-lg font-semibold text-gray-900">Verletzte</h2>
+                <div x-show="isTraffic">
+                    {% include 'accident_report/includes/yesno.html' with field=form.injuries_occurred label='Gab es Verletzte (auch leicht)?' model='injuries' %}
+                </div>
+                <div x-show="injuriesRequired" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% include 'accident_report/includes/field.html' with field=form.injured_name label='Verletzte Person' required=True %}
+                        {% include 'accident_report/includes/field.html' with field=form.injured_birthdate label='Geburtsdatum' %}
+                        {% include 'accident_report/includes/field.html' with field=form.injured_function label='Funktion / Dienstgrad' %}
+                        {% include 'accident_report/includes/field.html' with field=form.injured_contact label='Kontakt' %}
+                    </div>
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-base font-semibold text-gray-900 mb-3">Verletzung & Erstversorgung</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% include 'accident_report/includes/field.html' with field=form.injury_type label='Art der Verletzung' %}
+                            {% include 'accident_report/includes/field.html' with field=form.body_part label='Betroffene Körperteile' %}
+                            <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.first_aid_given }} Erste Hilfe geleistet</label>
+                            {% include 'accident_report/includes/field.html' with field=form.first_aid_by label='Erste Hilfe durch' %}
+                            <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.doctor_visited }} Ärztliche Behandlung</label>
+                            {% include 'accident_report/includes/field.html' with field=form.doctor_hospital label='Arzt / Krankenhaus' %}
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500">Bei mehreren Verletzten bitte die weiteren Personen im Unfallhergang oder in den Bemerkungen nennen.</p>
+                </div>
+            </section>
 
-            <!-- Fotos -->
-            <div>
-                <h2 class="text-lg font-semibold text-gray-900 mb-2">Fotos / Anhänge (optional)</h2>
-                <input type="file" name="images" accept="image/*" multiple
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                <p class="mt-1 text-xs text-gray-500">Mehrere Bilder möglich. Sie werden automatisch verkleinert.</p>
-            </div>
+            <!-- 8. Fotos & Absenden -->
+            <section data-step="fotos" x-show="current === 'fotos'" class="space-y-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-1">Fotos, Skizze & Absenden</h2>
+                    <p class="text-xs text-gray-500 mb-4">Fotos der Unfallstelle, der Schäden und der Kennzeichen erleichtern die Regulierung. Eine Unfallskizze (Straßenführung, Fahrtrichtungen, Position beim Zusammenstoß) kann auf Papier gezeichnet und fotografiert werden.</p>
+                    <input type="file" name="images" accept="image/*" multiple
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                    <p class="mt-1 text-xs text-gray-500">Mehrere Bilder möglich. Sie werden automatisch verkleinert.</p>
+                    {% if form.images.errors %}<p class="mt-1 text-sm text-red-600">{{ form.images.errors.0 }}</p>{% endif %}
+                </div>
+                <div x-show="isTraffic">
+                    <label class="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                        {{ form.paper_report_completed }}
+                        <span class="text-sm text-gray-800">
+                            <span class="font-medium">Europäischer Unfallbericht in Papierform mit dem Unfallgegner ausgefüllt</span>
+                            <span class="block text-xs text-gray-500">Bitte beide Seiten fotografieren und oben anhängen.</span>
+                        </span>
+                    </label>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm text-emerald-900">
+                    Mit dem Absenden wird der Bericht an die zuständige Stelle (Unfallbeauftragte/r) übermittelt. Sie können vorher über die Schrittleiste oben noch einmal alle Angaben prüfen.
+                </div>
+            </section>
 
-            <!-- Actions -->
-            <div class="flex flex-col sm:flex-row gap-3 justify-end pt-2">
-                <a href="{% url 'core:landing' %}" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm text-center">
-                    Abbrechen
-                </a>
-                <button type="submit" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm">
-                    Unfallbericht absenden
-                </button>
+            <!-- Navigation -->
+            <div class="flex flex-col-reverse sm:flex-row gap-3 justify-between pt-2 border-t border-gray-200">
+                <div class="flex gap-3">
+                    <a href="{% url 'core:landing' %}" class="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm text-center">
+                        Abbrechen
+                    </a>
+                    <button type="button" @click="prev()" x-show="!isFirst"
+                            class="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm">
+                        ← Zurück
+                    </button>
+                </div>
+                <div class="flex gap-3 justify-end">
+                    <button type="button" @click="next()" x-show="!isLast"
+                            class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm">
+                        Weiter →
+                    </button>
+                    <button type="submit" x-show="isLast"
+                            class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm">
+                        Unfallbericht absenden
+                    </button>
+                </div>
             </div>
         </form>
     </div>
 
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('accidentWizard', () => ({
+        type: 'verkehrsunfall',
+        injuries: 'False',
+        otherVehicle: 'True',
+        propertyDamage: 'False',
+        police: 'False',
+        allSteps: [],
+        current: 'basis',
+        visited: [],
+
+        init() {
+            const d = this.$root.dataset;
+            const norm = (v, fallback) => (v === 'True' || v === 'False') ? v : fallback;
+            this.type = d.type || 'verkehrsunfall';
+            this.injuries = norm(d.injuries, 'False');
+            this.otherVehicle = norm(d.otherVehicle, 'True');
+            this.propertyDamage = norm(d.propertyDamage, 'False');
+            this.police = norm(d.police, 'False');
+            this.allSteps = JSON.parse(document.getElementById('wizard-steps').textContent);
+            this.current = d.start || 'basis';
+            // Nach Server-Fehlern: alle Schritte bis zum fehlerhaften gelten als besucht.
+            const idx = this.steps.findIndex(s => s.key === this.current);
+            this.visited = this.steps.slice(0, Math.max(idx, 0) + 1).map(s => s.key);
+            if (this.allSteps.some(s => s.has_errors)) {
+                this.visited = this.steps.map(s => s.key);
+            }
+            this.$watch('type', () => {
+                if (this.index === -1) this.current = this.steps[0].key;
+            });
+        },
+
+        get isTraffic() { return this.type === 'verkehrsunfall'; },
+        get injuriesRequired() { return !this.isTraffic || this.injuries === 'True'; },
+        get steps() { return this.allSteps.filter(s => !s.traffic_only || this.isTraffic); },
+        get index() { return this.steps.findIndex(s => s.key === this.current); },
+        get isFirst() { return this.index <= 0; },
+        get isLast() { return this.index === this.steps.length - 1; },
+        get progress() { return this.steps.length ? Math.round((this.index + 1) / this.steps.length * 100) : 0; },
+        get firstErrorIndex() { return this.steps.findIndex(s => s.has_errors); },
+
+        panel(key) { return this.$root.querySelector('[data-step="' + key + '"]'); },
+
+        // Ist das Element innerhalb seines Schritts ausgeblendet (x-show setzt display:none)?
+        hiddenWithin(el, panel) {
+            let node = el;
+            while (node && node !== panel) {
+                if (node.style && node.style.display === 'none') return true;
+                node = node.parentElement;
+            }
+            return false;
+        },
+
+        // Erstes ungültiges Feld eines Schritts (Browser-Validierung), sonst null.
+        firstInvalid(key) {
+            const panel = this.panel(key);
+            if (!panel) return null;
+            for (const el of panel.querySelectorAll('input, select, textarea')) {
+                if (el.disabled || this.hiddenWithin(el, panel)) continue;
+                if (!el.checkValidity()) return el;
+            }
+            return null;
+        },
+
+        validate(key) {
+            const el = this.firstInvalid(key);
+            if (!el) return true;
+            if (this.current !== key) this.go(key);
+            this.$nextTick(() => { el.reportValidity(); el.focus(); });
+            return false;
+        },
+
+        go(key) {
+            this.current = key;
+            if (!this.visited.includes(key)) this.visited.push(key);
+            this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        },
+        next() {
+            if (!this.validate(this.current)) return;
+            const n = this.steps[this.index + 1];
+            if (n) this.go(n.key);
+        },
+        prev() {
+            const p = this.steps[this.index - 1];
+            if (p) this.go(p.key);
+        },
+        jump(key) {
+            const target = this.steps.findIndex(s => s.key === key);
+            if (target === -1 || key === this.current) return;
+            if (target < this.index) { this.go(key); return; }
+            if (!this.visited.includes(key)) return;
+            if (this.validate(this.current)) this.go(key);
+        },
+        onEnter(e) {
+            const tag = e.target.tagName;
+            if (tag === 'TEXTAREA' || (tag === 'BUTTON' && e.target.type === 'submit')) return;
+            e.preventDefault();
+            if (!this.isLast) this.next();
+        },
+        onSubmit(e) {
+            if (!this.isLast) { e.preventDefault(); this.next(); return; }
+            for (const s of this.steps) {
+                if (!this.validate(s.key)) { e.preventDefault(); return; }
+            }
+        },
+    }));
+});
+</script>
 {% endblock %}

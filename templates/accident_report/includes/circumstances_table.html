@@ -1,0 +1,29 @@
+{# Ziffer 12 des Europäischen Unfallberichts: Umstände für Fahrzeug A und B nebeneinander #}
+<div class="overflow-x-auto -mx-2">
+    <table class="min-w-full text-sm">
+        <thead>
+            <tr class="text-xs uppercase tracking-wider text-gray-500">
+                <th class="px-2 py-2 text-center w-16"><span class="inline-block px-2 py-0.5 rounded bg-blue-600 text-white">A</span></th>
+                <th class="px-2 py-2 text-left">Fahrzeug …</th>
+                <th class="px-2 py-2 text-center w-16" x-show="otherVehicle === 'True'"><span class="inline-block px-2 py-0.5 rounded bg-amber-400 text-gray-900">B</span></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for row in circumstance_rows %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-2 py-2 text-center">
+                    <input type="checkbox" name="own_circumstances" value="{{ row.value }}" id="own_c_{{ row.value }}"
+                           class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if row.own_checked %}checked{% endif %}>
+                </td>
+                <td class="px-2 py-2 text-gray-800"><span class="text-gray-400 mr-1">{{ row.value }}.</span>{{ row.label }}</td>
+                <td class="px-2 py-2 text-center" x-show="otherVehicle === 'True'">
+                    <input type="checkbox" name="other_circumstances" value="{{ row.value }}" id="other_c_{{ row.value }}"
+                           class="w-5 h-5 rounded border-gray-300 text-amber-500 focus:ring-amber-400" {% if row.other_checked %}checked{% endif %}>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if form.own_circumstances.errors %}<p class="mt-1 text-sm text-red-600">{{ form.own_circumstances.errors.0 }}</p>{% endif %}
+{% if form.other_circumstances.errors %}<p class="mt-1 text-sm text-red-600">{{ form.other_circumstances.errors.0 }}</p>{% endif %}
