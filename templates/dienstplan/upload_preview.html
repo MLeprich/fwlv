@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load dienstplan_tags %}
+
+{% block title %}Vorschau {{ parsed.month_label }} - Dienstplan - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-full mx-auto py-6 px-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{% if upload.status == 'pending' %}Vorschau{% else %}Upload{% endif %}: {{ parsed.month_label|default:parsed.period_start|date:"m/Y" }}</h1>
+            <p class="text-sm text-gray-600">{{ parsed.period_start|date:"d.m.Y" }} – {{ parsed.period_end|date:"d.m.Y" }} · {{ parsed.persons|length }} Personen · {{ days|length }} Tage{% if parsed.department %} · {{ parsed.department }}{% endif %}{% if parsed.plan_status %} · Zustand: {{ parsed.plan_status }}{% endif %} · {{ upload.get_status_display }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'dienstplan:dashboard' %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Zurück</a>
+            {% if upload.status == 'pending' and perms.dienstplan.add_rosterupload %}
+            <form method="post" action="{% url 'dienstplan:upload_confirm' upload.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Übernehmen{% if replaced %} und {{ replaced|length }} Stand ersetzen{% endif %}</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="bg-white rounded-lg shadow p-4">
+            <h2 class="text-sm font-semibold text-gray-900 mb-2">Plausibilität je Funktion</h2>
+            {% if function_check %}
+            <ul class="text-sm space-y-1">
+                {% for f in function_check %}
+                <li class="flex justify-between"><span>{{ f.label }}</span>
+                    <span>{% if f.days_without or f.days_multiple %}<span class="text-yellow-700">{% if f.days_without %}{{ f.days_without }} Tag(e) unbesetzt{% endif %}{% if f.days_multiple %} {{ f.days_multiple }} Tag(e) mehrfach{% endif %}</span>{% else %}<span class="text-green-700">jeden Tag genau 1</span>{% endif %}</span></li>
+                {% endfor %}
+            </ul>
+            {% else %}<p class="text-sm text-gray-500">Keine Codes mit Funktionszuordnung enthalten.</p>{% endif %}
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <h2 class="text-sm font-semibold text-gray-900 mb-2">Codes in der Datei</h2>
+            <div class="flex flex-wrap gap-1">
+                {% for code in parsed.codes %}<span class="px-2 py-0.5 rounded text-xs {% if code in unknown_codes %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}" title="{% if code in unknown_codes %}unbekannt – wird beim Übernehmen angelegt{% endif %}">{{ code }}</span>{% endfor %}
+            </div>
+            {% if unknown_codes %}<p class="text-xs text-red-700 mt-2">Unbekannte Codes werden beim Übernehmen in die Code-Tabelle aufgenommen und müssen dort zugeordnet werden.</p>{% endif %}
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <h2 class="text-sm font-semibold text-gray-900 mb-2">Hinweise</h2>
+            {% if parsed.warnings %}<ul class="text-xs text-yellow-800 space-y-1">{% for w in parsed.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+            {% else %}<p class="text-sm text-green-700">Keine Auffälligkeiten.</p>{% endif %}
+            {% if replaced %}<p class="text-xs text-gray-600 mt-2">Ersetzt beim Übernehmen: {% for r in replaced %}{{ r }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+            {% if upload.pdf_file %}<p class="text-xs mt-2"><a href="{{ upload.pdf_file.url }}" target="_blank" class="text-primary-600 hover:underline">PDF öffnen</a></p>{% endif %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow overflow-x-auto">
+        <table class="text-xs whitespace-nowrap">
+            <thead class="bg-gray-50 sticky top-0">
+                <tr>
+                    <th class="px-3 py-2 text-left sticky left-0 bg-gray-50">Name</th>
+                    {% for d in days %}<th class="px-1 py-2 text-center {% if d.weekday >= 5 %}bg-gray-100{% endif %}">{{ d|date:"D" }}<br>{{ d.day }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for name, cells in persons %}
+                <tr>
+                    <td class="px-3 py-1 font-medium text-gray-900 sticky left-0 bg-white">{{ name }}</td>
+                    {% for code, duty in cells %}
+                    <td class="px-0.5 py-1 text-center"><span class="inline-block min-w-[2rem] px-1 rounded {{ duty|code_classes }}" title="{{ duty|code_title }}">{{ code|default:"·" }}</span></td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

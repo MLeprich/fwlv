@@ -37,6 +37,7 @@ class Roles:
     MODUL_OBJEKTVERWALTUNG = 'Modulverantwortlicher Objektverwaltung'
     MODUL_SURVEYS = 'Modulverantwortlicher Umfragen'
     MODUL_IUK = 'Modulverantwortlicher IUK'
+    MODUL_DIENSTPLAN = 'Modulverantwortlicher Dienstplan'
 
     # Sachbearbeiter pro Modul (view + add)
     SACHBEARBEITER_MEDICAL = 'Sachbearbeiter Medical'
@@ -56,6 +57,7 @@ class Roles:
     SACHBEARBEITER_CIVIL_PROTECTION = 'Sachbearbeiter Civil Protection'
     SACHBEARBEITER_OBJEKTVERWALTUNG = 'Sachbearbeiter Objektverwaltung'
     SACHBEARBEITER_IUK = 'Sachbearbeiter IUK'
+    SACHBEARBEITER_DIENSTPLAN = 'Sachbearbeiter Dienstplan'
 
     # Freigabe-Gruppen (Procurement Approval)
     FREIGABE_STUFE_1 = 'Freigabe Stufe 1'  # bis 1.000€
@@ -112,6 +114,7 @@ class Roles:
             cls.MODUL_OBJEKTVERWALTUNG,
             cls.MODUL_SURVEYS,
             cls.MODUL_IUK,
+            cls.MODUL_DIENSTPLAN,
             cls.SACHBEARBEITER_MEDICAL,
             cls.SACHBEARBEITER_CLOTHING,
             cls.SACHBEARBEITER_MAGAZINE,
@@ -129,6 +132,7 @@ class Roles:
             cls.SACHBEARBEITER_CIVIL_PROTECTION,
             cls.SACHBEARBEITER_OBJEKTVERWALTUNG,
             cls.SACHBEARBEITER_IUK,
+            cls.SACHBEARBEITER_DIENSTPLAN,
             cls.LST_INFOMONITOR,
             cls.LST_MAPPE,
             cls.BVS_LESER,
@@ -171,6 +175,7 @@ class Roles:
             cls.MODUL_OBJEKTVERWALTUNG,
             cls.MODUL_SURVEYS,
             cls.MODUL_IUK,
+            cls.MODUL_DIENSTPLAN,
         ]
 
     @classmethod
@@ -194,6 +199,7 @@ class Roles:
             cls.SACHBEARBEITER_CIVIL_PROTECTION,
             cls.SACHBEARBEITER_OBJEKTVERWALTUNG,
             cls.SACHBEARBEITER_IUK,
+            cls.SACHBEARBEITER_DIENSTPLAN,
         ]
 
     @classmethod
@@ -260,6 +266,9 @@ class Modules:
     # IUK / Drohnenstaffel
     IUK = 'iuk'
 
+    # Dienstplan
+    DIENSTPLAN = 'dienstplan'
+
     @classmethod
     def get_all_modules(cls):
         """Alle Module"""
@@ -293,6 +302,7 @@ class Modules:
             cls.OBJEKTVERWALTUNG,
             cls.SURVEYS,
             cls.IUK,
+            cls.DIENSTPLAN,
         ]
 
     @classmethod

@@ -135,6 +135,12 @@ class SystemSettings(models.Model):
         help_text="Drohnenstaffel: Drohnen, Drohnenführerscheine und Gutscheincodes"
     )
 
+    dienstplan_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Dienstplan",
+        help_text="Dienstplan-Export importieren; Führungsdienst als Widget auf Info-Monitoren"
+    )
+
     # ============================================================================
     # PERSONAL - TAB VISIBILITY
     # ============================================================================
@@ -381,4 +387,6 @@ class SystemSettings(models.Model):
             modules.append('surveys')
         if self.iuk_enabled:
             modules.append('iuk')
+        if self.dienstplan_enabled:
+            modules.append('dienstplan')
         return modules

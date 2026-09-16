@@ -38,6 +38,7 @@ class WidgetType(models.TextChoices):
     PDF = 'pdf', _('PDF-Dokument')
     ANNOUNCEMENTS = 'announcements', _('Bekanntmachungen')
     EVENTS = 'events', _('Termine/Kalender')
+    DIENSTPLAN = 'dienstplan', _('Dienstplan / Führungsdienst')
     CUSTOM = 'custom', _('Benutzerdefiniert')
 
 

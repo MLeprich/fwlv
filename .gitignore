@@ -141,3 +141,6 @@ CLAUDE.md
 # Selbstsigniertes internes TLS (pro Installation erzeugt, siehe enable-internal-https.sh)
 docker/certbot/conf/internal/
 docker/nginx/conf.d/https-internal.conf
+
+# Musterdateien (Dienstplan-Exporte), nicht versionieren
+/tmp/

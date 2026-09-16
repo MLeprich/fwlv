@@ -657,6 +657,9 @@ class WidgetEditView(LoginRequiredMixin, View):
             'widget': widget,
             'current_module': 'info_monitors'
         }
+        if widget.widget_type == WidgetType.DIENSTPLAN:
+            from dienstplan.models import DutyFunction
+            context['duty_functions'] = DutyFunction.choices
         return render(request, self.template_name, context)
 
     def post(self, request, widget_id):
@@ -701,6 +704,10 @@ class WidgetEditView(LoginRequiredMixin, View):
         elif widget.widget_type == WidgetType.EVENTS:
             # Termine (Format: YYYY-MM-DD | Titel | Beschreibung)
             widget.config['content'] = request.POST.get('content', '')
+
+        elif widget.widget_type == WidgetType.DIENSTPLAN:
+            widget.config['mode'] = 'week' if request.POST.get('mode') == 'week' else 'today'
+            widget.config['functions'] = request.POST.getlist('functions')
 
         elif widget.widget_type == WidgetType.CLOCK:
             # Uhr-Einstellungen

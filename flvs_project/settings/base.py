@@ -106,6 +106,7 @@ LOCAL_APPS = [
     'accident_report.apps.AccidentReportConfig',
     'surveys.apps.SurveysConfig',
     'iuk.apps.IukConfig',
+    'dienstplan.apps.DienstplanConfig',
     # Weitere Apps werden hier hinzugefuegt
 ]
 

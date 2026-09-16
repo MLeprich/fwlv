@@ -1,0 +1,40 @@
+{% load dienstplan_tags %}
+<!-- Dienstplan / Führungsdienst Widget -->
+{% dienstplan_widget widget as plan %}
+<div class="h-full flex flex-col">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="text-xl font-bold flex items-center gap-2"><span class="text-2xl">📆</span>{{ widget.title|default:"Führungsdienst" }}</h3>
+        <span class="text-sm opacity-70">{% if plan.mode == 'week' %}ab {{ plan.today|date:"d.m." }}{% else %}{{ plan.today|date:"l, d.m.Y" }}{% endif %}</span>
+    </div>
+    <div class="flex-1 overflow-auto p-4">
+        {% if not plan.has_plan %}
+        <p class="text-lg opacity-60 italic">Kein Dienstplan für diesen Zeitraum hinterlegt.</p>
+        {% elif plan.mode == 'week' %}
+        <table class="w-full text-base">
+            <thead>
+                <tr class="text-left text-sm uppercase tracking-wider opacity-70">
+                    <th class="py-1 pr-3">Tag</th>
+                    {% for key, label in plan.functions %}<th class="py-1 pr-3">{{ label }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in plan.days %}
+                <tr class="border-t border-gray-200 {% if day.date == plan.today %}font-bold{% endif %}">
+                    <td class="py-1.5 pr-3 whitespace-nowrap">{{ day.date|date:"D d.m." }}</td>
+                    {% for names in day.cells %}<td class="py-1.5 pr-3">{% if names %}{{ names|join:", " }}{% else %}<span class="opacity-40">–</span>{% endif %}</td>{% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <dl class="space-y-3">
+            {% for label, names in plan.rows %}
+            <div class="flex items-baseline justify-between gap-4 border-b border-gray-200 pb-2">
+                <dt class="text-sm uppercase tracking-wider opacity-70 whitespace-nowrap">{{ label }}</dt>
+                <dd class="text-2xl font-bold text-right leading-tight">{% if names %}{{ names|join:", " }}{% else %}<span class="opacity-40">–</span>{% endif %}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+        {% endif %}
+    </div>
+</div>
