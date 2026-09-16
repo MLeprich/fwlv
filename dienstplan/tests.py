@@ -208,6 +208,26 @@ class ImportFlowTests(TestCase):
         self.assertTrue(target.has_perm('dienstplan.dienstplan_stats'))
         self.assertFalse(target.has_perm('dienstplan.delete_rosterupload'))
 
+    def test_day_view(self):
+        upload = self._upload({'Müller, Anna': ['A1', '-', 'BÜ'], 'Schmidt, Ben': ['B', 'A1', 'U'], 'Weber, Cem': ['U', 'CTF', 'A1']})
+        self.client.post(reverse('dienstplan:upload_confirm', args=[upload.pk]))
+        response = self.client.get(reverse('dienstplan:day'))  # heute
+        self.assertEqual(response.status_code, 200)
+        functions = dict(response.context['functions'])
+        self.assertEqual(functions['A1-Dienst'], ['Müller, Anna'])
+        self.assertEqual(functions['B-Dienst'], ['Schmidt, Ben'])
+        groups = {g['code'].code: g['names'] for g in response.context['groups']}
+        self.assertEqual(groups['U'], ['Weber, Cem'])
+        self.assertContains(response, 'Urlaub')
+        tomorrow = (self.today + timedelta(days=1)).isoformat()
+        response = self.client.get(reverse('dienstplan:day'), {'datum': tomorrow, 'name': 'schmidt'})
+        functions = dict(response.context['functions'])
+        self.assertEqual(functions['A1-Dienst'], ['Schmidt, Ben'])
+        self.assertEqual(functions['C-Dienst'], [])  # Weber vom Namensfilter ausgeblendet
+        response = self.client.get(reverse('dienstplan:day'), {'datum': '2001-01-01'})
+        self.assertContains(response, 'liegt kein Dienstplan vor')
+        self.assertEqual(self.client.get(reverse('dienstplan:day'), {'datum': 'kaputt'}).status_code, 200)
+
     def test_bad_file_is_rejected_with_message(self):
         response = self.client.post(reverse('dienstplan:upload'), {
             'file': SimpleUploadedFile('x.csv', b'a;b;c\n1;2;3\n', content_type='text/csv'),

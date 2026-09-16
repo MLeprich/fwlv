@@ -28,7 +28,7 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-3 py-2 text-left sticky left-0 bg-gray-50">Name</th>
-                    {% for d in days %}<th class="px-1 py-2 text-center {% if d == today %}bg-primary-100{% elif d.weekday >= 5 %}bg-gray-100{% endif %}">{{ d|date:"D" }}<br>{{ d.day }}</th>{% endfor %}
+                    {% for d in days %}<th class="px-1 py-2 text-center {% if d == today %}bg-primary-100{% elif d.weekday >= 5 %}bg-gray-100{% endif %}"><a href="{% url 'dienstplan:day' %}?datum={{ d|date:'Y-m-d' }}" class="hover:text-primary-600" title="Tagesansicht {{ d|date:'d.m.Y' }}">{{ d|date:"D" }}<br>{{ d.day }}</a></th>{% endfor %}
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">

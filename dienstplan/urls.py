@@ -7,6 +7,7 @@ app_name = 'dienstplan'
 urlpatterns = [
     path('', views.DashboardView.as_view(), name='dashboard'),
     path('monat/', views.MonthView.as_view(), name='month'),
+    path('tag/', views.DayView.as_view(), name='day'),
     path('statistik/', views.StatsView.as_view(), name='stats'),
     path('upload/', views.UploadView.as_view(), name='upload'),
     path('upload/<int:pk>/', views.UploadPreviewView.as_view(), name='upload_preview'),

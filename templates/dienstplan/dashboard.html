@@ -14,6 +14,7 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
+            <a href="{% url 'dienstplan:day' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Tagesansicht</a>
             <a href="{% url 'dienstplan:month' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Monatsansicht</a>
             {% if perms.dienstplan.dienstplan_stats %}<a href="{% url 'dienstplan:stats' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Statistik</a>{% endif %}
             {% if perms.dienstplan.dienstplan_view %}
@@ -57,7 +58,7 @@
                     <tbody class="divide-y divide-gray-100">
                         {% for day in week %}
                         <tr class="{% if day.date == today %}bg-primary-50{% endif %}">
-                            <td class="px-3 py-2 whitespace-nowrap font-medium text-gray-900">{{ day.date|date:"D d.m." }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap font-medium"><a href="{% url 'dienstplan:day' %}?datum={{ day.date|date:'Y-m-d' }}" class="text-gray-900 hover:text-primary-600">{{ day.date|date:"D d.m." }}</a></td>
                             {% for key, label in function_labels.items %}
                             {% with names=day.functions|get_item:key %}
                             <td class="px-3 py-2 text-gray-800">{% if names %}{{ names|join:", " }}{% else %}<span class="text-gray-300">–</span>{% endif %}</td>

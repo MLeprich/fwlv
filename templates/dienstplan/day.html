@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load dienstplan_tags %}
+
+{% block title %}{{ day|date:"d.m.Y" }} - Dienstplan - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-6 px-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'dienstplan:day' %}?datum={{ prev|date:'Y-m-d' }}{% if name %}&name={{ name|urlencode }}{% endif %}" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200" title="Vortag">‹</a>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ day|date:"l, d.m.Y" }}</h1>
+                {% if day == today %}<p class="text-xs text-primary-700">heute</p>{% endif %}
+            </div>
+            <a href="{% url 'dienstplan:day' %}?datum={{ next|date:'Y-m-d' }}{% if name %}&name={{ name|urlencode }}{% endif %}" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200" title="Folgetag">›</a>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'dienstplan:month' %}?year={{ day.year }}&month={{ day.month }}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">Monatsansicht</a>
+            <a href="{% url 'dienstplan:dashboard' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">Übersicht</a>
+        </div>
+    </div>
+
+    <form method="get" class="bg-white rounded-lg shadow px-4 py-3 mb-4 flex flex-wrap items-end gap-3 text-sm">
+        <div><label class="block text-xs text-gray-500 mb-1">Datum</label><input type="date" name="datum" value="{{ day|date:'Y-m-d' }}" class="px-3 py-1.5 border border-gray-300 rounded-lg"></div>
+        <div><label class="block text-xs text-gray-500 mb-1">Name</label><input type="text" name="name" value="{{ name }}" placeholder="Name enthält …" class="px-3 py-1.5 border border-gray-300 rounded-lg w-44"></div>
+        <button type="submit" class="px-3 py-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900">Anzeigen</button>
+        {% if day != today %}<a href="{% url 'dienstplan:day' %}" class="px-3 py-1.5 text-gray-600 hover:text-gray-900">Heute</a>{% endif %}
+    </form>
+
+    {% if not has_plan %}
+    <div class="bg-white rounded-lg shadow p-10 text-center text-sm text-gray-500">Für den {{ day|date:"d.m.Y" }} liegt kein Dienstplan vor.</div>
+    {% else %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="font-semibold text-gray-900 mb-4">Führungsdienst</h2>
+            <dl class="space-y-2">
+                {% for label, names in functions %}
+                <div class="flex items-baseline justify-between gap-3 border-b border-gray-100 pb-1">
+                    <dt class="text-xs uppercase tracking-wider text-gray-500">{{ label }}</dt>
+                    <dd class="text-base font-semibold text-gray-900 text-right">{% if names %}{{ names|join:", " }}{% else %}<span class="text-gray-300">–</span>{% endif %}</dd>
+                </div>
+                {% endfor %}
+            </dl>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="font-semibold text-gray-900 mb-4">Weitere Dienste und Abwesenheiten</h2>
+            {% if groups %}
+            <div class="space-y-3">
+                {% for g in groups %}
+                <div class="flex items-start gap-3">
+                    <span class="shrink-0 inline-block min-w-[2.5rem] text-center px-1.5 py-0.5 rounded text-xs font-mono {{ g.code|code_classes }}" title="{{ g.code.label }}">{{ g.code.code }}</span>
+                    <div class="min-w-0">
+                        <p class="text-xs text-gray-500">{{ g.code.label }} · {{ g.names|length }}</p>
+                        <p class="text-sm text-gray-900">{{ g.names|join:", " }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}<p class="text-sm text-gray-500">Keine weiteren Einträge{% if name %} zum Filter{% endif %}.</p>{% endif %}
+            {% if unknown %}
+            <p class="mt-4 text-xs text-yellow-800">Unbekannte Codes: {% for code, person in unknown %}{{ code }} ({{ person }}){% if not forloop.last %}, {% endif %}{% endfor %}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

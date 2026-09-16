@@ -231,6 +231,36 @@ class MonthView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
         return context
 
 
+class DayView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    """Alle Dienste eines Tages."""
+    template_name = 'dienstplan/day.html'
+    permission_required = 'dienstplan.dienstplan_view'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        try:
+            day = date.fromisoformat(self.request.GET.get('datum') or today.isoformat())
+        except ValueError:
+            day = today
+        overview = services.day_overview(day)
+        name = self.request.GET.get('name', '').strip().lower()
+        if name:
+            overview['functions'] = [(label, [n for n in names if name in n.lower()]) for label, names in overview['functions']]
+            overview['groups'] = [g for g in overview['groups'] if any(name in n.lower() for n in g['names'])]
+            for g in overview['groups']:
+                g['names'] = [n for n in g['names'] if name in n.lower()]
+        context.update(overview)
+        context.update({
+            'current_module': 'dienstplan',
+            'day': day, 'today': today,
+            'prev': day - timedelta(days=1), 'next': day + timedelta(days=1),
+            'name': self.request.GET.get('name', '').strip(),
+            'weekday': WEEKDAYS[day.weekday()],
+        })
+        return context
+
+
 class CodeListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = DutyCode
     template_name = 'dienstplan/code_list.html'

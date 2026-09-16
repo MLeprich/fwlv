@@ -159,3 +159,29 @@ def statistics(date_from, date_to, function='', name=''):
         'days_covered': len(days_covered),
         'days_in_range': (date_to - date_from).days + 1,
     }
+
+
+def day_overview(day):
+    """
+    Alle Einträge eines Tages: Führungsdienste (Funktion → Personen) und die übrigen
+    Codes gruppiert nach Code (Reihenfolge nach Art/sort_order).
+    """
+    codes = code_map()
+    functions = {f: [] for f in DutyFunction.values}
+    groups = {}
+    unknown = []
+    for entry in current_entries(day, day):
+        duty = codes.get(entry.code)
+        if duty and duty.function:
+            functions[duty.function].append(entry.person_name)
+        elif duty:
+            groups.setdefault(entry.code, {'code': duty, 'names': []})['names'].append(entry.person_name)
+        else:
+            unknown.append((entry.code, entry.person_name))
+    labels = dict(DutyFunction.choices)
+    return {
+        'functions': [(labels[f], names) for f, names in functions.items()],
+        'groups': sorted(groups.values(), key=lambda g: (g['code'].sort_order, g['code'].code)),
+        'unknown': unknown,
+        'has_plan': has_plan_for(day),
+    }
