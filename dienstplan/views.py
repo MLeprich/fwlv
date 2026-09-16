@@ -15,13 +15,37 @@ from .models import DutyCode, DutyFunction, RosterUpload, UploadStatus
 from .parser import RosterFormatError, parse_roster_csv
 
 WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+
+
+def _filters(request):
+    """Gemeinsamer Filter (Name enthält …, Dienstcode) für Vorschau und Monatsansicht."""
+    return {
+        'name': request.GET.get('name', '').strip(),
+        'code': request.GET.get('code', '').strip(),
+        'code_choices': list(DutyCode.objects.order_by('sort_order', 'code')),
+    }
+
+
+def _apply_filters(rows, filters, code_of):
+    """rows: [(name, cells)]; code_of(cell) liefert den Code-String einer Zelle."""
+    name, code = filters['name'].lower(), filters['code']
+    out = []
+    for person, cells in rows:
+        if name and name not in person.lower():
+            continue
+        if code:
+            if not any(code_of(c) == code for c in cells):
+                continue
+            cells = [c if code_of(c) == code else None for c in cells]
+        out.append((person, cells))
+    return out
 MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August',
           'September', 'Oktober', 'November', 'Dezember']
 
 
 class DashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
     template_name = 'dienstplan/dashboard.html'
-    permission_required = 'dienstplan.view_rosterupload'
+    permission_required = 'dienstplan.dienstplan_view'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -41,7 +65,7 @@ class DashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
 
 class UploadView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """CSV (und optional PDF) hochladen, prüfen und Vorschau zeigen."""
-    permission_required = 'dienstplan.add_rosterupload'
+    permission_required = 'dienstplan.dienstplan_edit'
 
     def post(self, request):
         form = RosterUploadForm(request.POST, request.FILES)
@@ -80,7 +104,7 @@ def _parse_upload(upload):
 
 
 class UploadPreviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    permission_required = 'dienstplan.view_rosterupload'
+    permission_required = 'dienstplan.dienstplan_view'
 
     def get(self, request, pk):
         upload = get_object_or_404(RosterUpload, pk=pk)
@@ -110,13 +134,18 @@ class UploadPreviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
         replaced = RosterUpload.objects.filter(
             status=UploadStatus.IMPORTED, period_start__lte=parsed.period_end, period_end__gte=parsed.period_start,
         ).exclude(pk=upload.pk)
+        filters = _filters(request)
+        persons = _apply_filters([(name, [(c, codes.get(c)) for c in cs]) for name, cs in parsed.persons],
+                                 filters, lambda cell: cell[0] if cell else None)
         return render(request, 'dienstplan/upload_preview.html', {
             'current_module': 'dienstplan',
             'upload': upload,
             'parsed': parsed,
             'days': days,
             'weekdays': [WEEKDAYS[d.weekday()] for d in days],
-            'persons': [(name, [(c, codes.get(c)) for c in cs]) for name, cs in parsed.persons],
+            'persons': persons,
+            'filters': filters,
+            'total_persons': len(parsed.persons),
             'function_check': function_check,
             'unknown_codes': unknown,
             'replaced': replaced,
@@ -124,7 +153,7 @@ class UploadPreviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 
 class UploadConfirmView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    permission_required = 'dienstplan.add_rosterupload'
+    permission_required = 'dienstplan.dienstplan_edit'
 
     def post(self, request, pk):
         upload = get_object_or_404(RosterUpload, pk=pk)
@@ -159,7 +188,7 @@ class UploadDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
 class MonthView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
     """Personen × Tage eines Monats, wie im Export."""
     template_name = 'dienstplan/month.html'
-    permission_required = 'dienstplan.view_rosterupload'
+    permission_required = 'dienstplan.dienstplan_view'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -182,6 +211,8 @@ class MonthView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
             rows = [(name, [c if isinstance(c, DutyCode) and c.function else None for c in cells])
                     for name, cells in rows]
             rows = [(name, cells) for name, cells in rows if any(cells)]
+        filters = _filters(self.request)
+        rows = _apply_filters(rows, filters, lambda c: getattr(c, 'code', c) if c else None)
         prev_month = (first - timedelta(days=1)).replace(day=1)
         next_month = (last + timedelta(days=1))
         context.update({
@@ -192,6 +223,9 @@ class MonthView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
             'title': f'{MONTHS[first.month - 1]} {first.year}',
             'prev': prev_month, 'next': next_month,
             'only_function': only_function,
+            'filters': filters,
+            'month_hidden': {'year': first.year, 'month': first.month, 'nur': 'fuehrung' if only_function else ''},
+            'month_hidden_query': f'year={first.year}&month={first.month}' + ('&nur=fuehrung' if only_function else ''),
             'legend': [c for c in codes.values() if c.function or c.show_on_monitor],
         })
         return context
@@ -201,7 +235,7 @@ class CodeListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = DutyCode
     template_name = 'dienstplan/code_list.html'
     context_object_name = 'codes'
-    permission_required = 'dienstplan.view_dutycode'
+    permission_required = 'dienstplan.dienstplan_view'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -214,7 +248,7 @@ class CodeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = DutyCode
     form_class = DutyCodeForm
     template_name = 'dienstplan/code_form.html'
-    permission_required = 'dienstplan.add_dutycode'
+    permission_required = 'dienstplan.dienstplan_edit'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -233,7 +267,7 @@ class CodeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = DutyCode
     form_class = DutyCodeForm
     template_name = 'dienstplan/code_form.html'
-    permission_required = 'dienstplan.change_dutycode'
+    permission_required = 'dienstplan.dienstplan_edit'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -246,3 +280,62 @@ class CodeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 
     def get_success_url(self):
         return '/dienstplan/codes/'
+
+
+class StatsView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    """Statistische Auswertung: Dienste je Person, Funktion und Wochentag."""
+    template_name = 'dienstplan/stats.html'
+    permission_required = 'dienstplan.dienstplan_stats'
+
+    def get(self, request, *args, **kwargs):
+        if request.GET.get('export') == 'csv':
+            return self._export_csv(self._stats())
+        return super().get(request, *args, **kwargs)
+
+    def _range(self):
+        bounds = services.plan_bounds()
+        today = timezone.localdate()
+        default_from = bounds[0] if bounds else today.replace(month=1, day=1)
+        default_to = bounds[1] if bounds else today
+        try:
+            date_from = date.fromisoformat(self.request.GET.get('von') or default_from.isoformat())
+            date_to = date.fromisoformat(self.request.GET.get('bis') or default_to.isoformat())
+        except ValueError:
+            date_from, date_to = default_from, default_to
+        if date_to < date_from:
+            date_from, date_to = date_to, date_from
+        return date_from, date_to
+
+    def _stats(self):
+        date_from, date_to = self._range()
+        function = self.request.GET.get('funktion', '')
+        if function not in DutyFunction.values:
+            function = ''
+        name = self.request.GET.get('name', '').strip()
+        return services.statistics(date_from, date_to, function=function, name=name)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        stats = self._stats()
+        context.update(stats)
+        context.update({
+            'current_module': 'dienstplan',
+            'weekdays': WEEKDAYS,
+            'function_choices': DutyFunction.choices,
+            'query': self.request.GET.urlencode(),
+        })
+        return context
+
+    def _export_csv(self, stats):
+        import csv
+        from django.http import HttpResponse
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = (
+            f'attachment; filename="dienstplan-statistik_{stats["date_from"]:%Y-%m-%d}_{stats["date_to"]:%Y-%m-%d}.csv"')
+        response.write('\ufeff')
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(['Name'] + [label for _key, label in stats['functions']] + ['Führungsdienste gesamt', 'davon Sa/So']
+                        + [f'{w}' for w in WEEKDAYS])
+        for row in stats['persons']:
+            writer.writerow([row['name']] + row['counts'] + [row['total'], row['weekend']] + row['weekday_counts'])
+        return response

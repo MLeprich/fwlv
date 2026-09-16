@@ -104,3 +104,58 @@ def monitor_entries(day, functions=None):
     rows.sort(key=lambda r: (order.get(r['code'].function, 99), r['code'].sort_order, r['name']))
     return rows
 
+
+
+def plan_bounds():
+    """(erster, letzter) Tag aller aktuellen Dienstpläne oder None."""
+    from django.db.models import Max, Min
+    agg = RosterUpload.objects.filter(status=UploadStatus.IMPORTED).aggregate(a=Min('period_start'), b=Max('period_end'))
+    return (agg['a'], agg['b']) if agg['a'] else None
+
+
+def statistics(date_from, date_to, function='', name=''):
+    """
+    Dienste je Person: Anzahl je Führungsdienst-Funktion, Summe, davon am Wochenende,
+    Verteilung auf Wochentage (bei gewählter Funktion nur diese, sonst alle Funktionen).
+    Dazu die Verteilung Funktion × Wochentag über alle Personen.
+    """
+    codes = code_map()
+    functions = [(f, label) for f, label in DutyFunction.choices if not function or f == function]
+    function_keys = [f for f, _ in functions]
+    per_person = {}
+    weekday_by_function = {f: [0] * 7 for f in function_keys}
+    days_covered = set()
+    for entry in current_entries(date_from, date_to):
+        days_covered.add(entry.date)
+        duty = codes.get(entry.code)
+        if not duty or not duty.function or duty.function not in function_keys:
+            continue
+        if name and name.lower() not in entry.person_name.lower():
+            continue
+        person = per_person.setdefault(entry.person_name, {
+            'name': entry.person_name, 'by_function': defaultdict(int), 'weekday_counts': [0] * 7,
+            'total': 0, 'weekend': 0, 'by_code': defaultdict(int),
+        })
+        weekday = entry.date.weekday()
+        person['by_function'][duty.function] += 1
+        person['by_code'][entry.code] += 1
+        person['weekday_counts'][weekday] += 1
+        person['total'] += 1
+        if weekday >= 5:
+            person['weekend'] += 1
+        weekday_by_function[duty.function][weekday] += 1
+    persons = []
+    for row in sorted(per_person.values(), key=lambda r: (-r['total'], r['name'])):
+        row['counts'] = [row['by_function'].get(f, 0) for f in function_keys]
+        row['codes'] = sorted(row['by_code'].items())
+        persons.append(row)
+    totals = [sum(r['counts'][i] for r in persons) for i in range(len(function_keys))]
+    return {
+        'date_from': date_from, 'date_to': date_to, 'function': function, 'name': name,
+        'functions': functions, 'persons': persons, 'totals': totals,
+        'total_all': sum(r['total'] for r in persons),
+        'weekday_by_function': [(label, weekday_by_function[f]) for f, label in functions],
+        'weekday_totals': [sum(weekday_by_function[f][i] for f in function_keys) for i in range(7)],
+        'days_covered': len(days_covered),
+        'days_in_range': (date_to - date_from).days + 1,
+    }

@@ -12,7 +12,7 @@
         </div>
         <div class="flex items-center gap-2">
             <a href="{% url 'dienstplan:dashboard' %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Zurück</a>
-            {% if upload.status == 'pending' and perms.dienstplan.add_rosterupload %}
+            {% if upload.status == 'pending' and perms.dienstplan.dienstplan_edit %}
             <form method="post" action="{% url 'dienstplan:upload_confirm' upload.pk %}">
                 {% csrf_token %}
                 <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Übernehmen{% if replaced %} und {{ replaced|length }} Stand ersetzen{% endif %}</button>
@@ -49,6 +49,11 @@
         </div>
     </div>
 
+    <div class="bg-white rounded-lg shadow px-4 py-3 mb-3 flex flex-wrap items-center justify-between gap-3">
+        {% url 'dienstplan:upload_preview' upload.pk as preview_url %}
+        {% include 'dienstplan/_filter.html' with form_action=preview_url hidden=None %}
+        <span class="text-xs text-gray-500">{{ persons|length }} von {{ total_persons }} Personen</span>
+    </div>
     <div class="bg-white rounded-lg shadow overflow-x-auto">
         <table class="text-xs whitespace-nowrap">
             <thead class="bg-gray-50 sticky top-0">
@@ -61,10 +66,12 @@
                 {% for name, cells in persons %}
                 <tr>
                     <td class="px-3 py-1 font-medium text-gray-900 sticky left-0 bg-white">{{ name }}</td>
-                    {% for code, duty in cells %}
-                    <td class="px-0.5 py-1 text-center"><span class="inline-block min-w-[2rem] px-1 rounded {{ duty|code_classes }}" title="{{ duty|code_title }}">{{ code|default:"·" }}</span></td>
+                    {% for cell in cells %}
+                    <td class="px-0.5 py-1 text-center">{% if cell %}<span class="inline-block min-w-[2rem] px-1 rounded {{ cell.1|code_classes }}" title="{{ cell.1|code_title }}">{{ cell.0|default:"·" }}</span>{% endif %}</td>
                     {% endfor %}
                 </tr>
+                {% empty %}
+                <tr><td colspan="{{ days|length|add:1 }}" class="px-3 py-6 text-center text-gray-500">Keine Person passt zum Filter.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -112,6 +112,12 @@ class RosterUpload(models.Model):
         verbose_name_plural = 'Dienstplan-Uploads'
         ordering = ['-uploaded_at']
         indexes = [models.Index(fields=['status', 'period_start', 'period_end'])]
+        # Eigene Rechte statt der Modellrechte (vergeben über die Zugriffsstufen in der Benutzerverwaltung)
+        permissions = [
+            ('dienstplan_view', 'Dienstplan: ansehen (Übersicht, Monatsansicht, Uploads)'),
+            ('dienstplan_edit', 'Dienstplan: bearbeiten (hochladen, übernehmen, Dienstcodes pflegen)'),
+            ('dienstplan_stats', 'Dienstplan: statistische Auswertung'),
+        ]
 
     def __str__(self):
         label = self.month_label or f'{self.period_start:%m/%Y}'

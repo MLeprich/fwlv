@@ -795,7 +795,7 @@
 
     <!-- Dienstplan (Import aus dem Dienstplansystem, Führungsdienst) -->
     {% if modules.dienstplan_enabled %}
-    {% if perms.dienstplan.view_rosterupload %}
+    {% if perms.dienstplan.dienstplan_view %}
     <a
         href="{% url 'dienstplan:dashboard' %}"
         class="flex items-center py-2 mx-2 rounded-lg transition-colors mt-1

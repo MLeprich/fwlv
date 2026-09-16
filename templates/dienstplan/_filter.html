@@ -1,0 +1,17 @@
+{# Filter Name / Dienstcode; erwartet: filters, form_action, hidden (dict) #}
+<form method="get" action="{{ form_action }}" class="flex flex-wrap items-end gap-2 text-sm">
+    {% for key, value in hidden.items %}{% if value %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
+    <div>
+        <label class="block text-xs text-gray-500 mb-1">Name</label>
+        <input type="text" name="name" value="{{ filters.name }}" placeholder="Name enthält …" class="px-3 py-1.5 border border-gray-300 rounded-lg w-44">
+    </div>
+    <div>
+        <label class="block text-xs text-gray-500 mb-1">Dienst</label>
+        <select name="code" class="px-3 py-1.5 border border-gray-300 rounded-lg">
+            <option value="">alle</option>
+            {% for c in filters.code_choices %}<option value="{{ c.code }}" {% if filters.code == c.code %}selected{% endif %}>{{ c.code }} – {{ c.label }}</option>{% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="px-3 py-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900">Filtern</button>
+    {% if filters.name or filters.code %}<a href="{{ form_action }}{% if hidden_query %}?{{ hidden_query }}{% endif %}" class="px-3 py-1.5 text-gray-600 hover:text-gray-900">Zurücksetzen</a>{% endif %}
+</form>

@@ -15,7 +15,8 @@
         </div>
         <div class="flex items-center gap-2">
             <a href="{% url 'dienstplan:month' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Monatsansicht</a>
-            {% if perms.dienstplan.view_dutycode %}
+            {% if perms.dienstplan.dienstplan_stats %}<a href="{% url 'dienstplan:stats' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Statistik</a>{% endif %}
+            {% if perms.dienstplan.dienstplan_view %}
             <a href="{% url 'dienstplan:code_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">
                 Dienstcodes{% if unverified_codes %} <span class="ml-1 inline-flex items-center px-1.5 rounded-full text-xs bg-yellow-100 text-yellow-800">{{ unverified_codes }} ungeprüft</span>{% endif %}
             </a>
@@ -71,7 +72,7 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {% if perms.dienstplan.add_rosterupload %}
+        {% if perms.dienstplan.dienstplan_edit %}
         <div class="bg-white rounded-lg shadow p-6">
             <h2 class="font-semibold text-gray-900 mb-1">Dienstplan hochladen</h2>
             <p class="text-xs text-gray-500 mb-4">CSV-Export „Dienstplan: Querformat“ aus dem Dienstplansystem. Ein neuer Upload für denselben Zeitraum ersetzt den bisherigen Stand. Optional das PDF zur Anzeige mitgeben.</p>

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Statistik - Dienstplan - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 px-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Dienststatistik</h1>
+            <p class="text-sm text-gray-600">{{ date_from|date:"d.m.Y" }} – {{ date_to|date:"d.m.Y" }} · {{ days_covered }} von {{ days_in_range }} Tagen mit Dienstplan · {{ total_all }} Führungsdienste</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'dienstplan:stats' %}?{{ query }}{% if query %}&{% endif %}export=csv" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">CSV exportieren</a>
+            <a href="{% url 'dienstplan:dashboard' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">Übersicht</a>
+        </div>
+    </div>
+
+    <form method="get" class="bg-white rounded-lg shadow px-4 py-3 mb-4 flex flex-wrap items-end gap-3 text-sm">
+        <div><label class="block text-xs text-gray-500 mb-1">Von</label><input type="date" name="von" value="{{ date_from|date:'Y-m-d' }}" class="px-3 py-1.5 border border-gray-300 rounded-lg"></div>
+        <div><label class="block text-xs text-gray-500 mb-1">Bis</label><input type="date" name="bis" value="{{ date_to|date:'Y-m-d' }}" class="px-3 py-1.5 border border-gray-300 rounded-lg"></div>
+        <div><label class="block text-xs text-gray-500 mb-1">Funktion</label>
+            <select name="funktion" class="px-3 py-1.5 border border-gray-300 rounded-lg">
+                <option value="">alle Führungsdienste</option>
+                {% for key, label in function_choices %}<option value="{{ key }}" {% if function == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div><label class="block text-xs text-gray-500 mb-1">Name</label><input type="text" name="name" value="{{ name }}" placeholder="Name enthält …" class="px-3 py-1.5 border border-gray-300 rounded-lg w-44"></div>
+        <button type="submit" class="px-3 py-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900">Auswerten</button>
+    </form>
+
+    <div class="bg-white rounded-lg shadow overflow-x-auto mb-6">
+        <div class="px-5 py-3 border-b border-gray-200"><h2 class="font-semibold text-gray-900">Dienste je Person</h2></div>
+        <table class="min-w-full text-sm whitespace-nowrap">
+            <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+                <tr>
+                    <th class="px-3 py-2 text-left">Name</th>
+                    {% for key, label in functions %}<th class="px-3 py-2 text-right">{{ label }}</th>{% endfor %}
+                    <th class="px-3 py-2 text-right border-l border-gray-200">Gesamt</th>
+                    <th class="px-3 py-2 text-right">davon Sa/So</th>
+                    {% for w in weekdays %}<th class="px-2 py-2 text-right {% if forloop.counter0 >= 5 %}bg-gray-100{% endif %}">{{ w }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for row in persons %}
+                <tr>
+                    <td class="px-3 py-1.5 font-medium text-gray-900">{{ row.name }}</td>
+                    {% for n in row.counts %}<td class="px-3 py-1.5 text-right {% if not n %}text-gray-300{% endif %}">{{ n }}</td>{% endfor %}
+                    <td class="px-3 py-1.5 text-right font-semibold border-l border-gray-200">{{ row.total }}</td>
+                    <td class="px-3 py-1.5 text-right">{{ row.weekend }}</td>
+                    {% for n in row.weekday_counts %}<td class="px-2 py-1.5 text-right {% if forloop.counter0 >= 5 %}bg-gray-50{% endif %} {% if not n %}text-gray-300{% endif %}">{{ n }}</td>{% endfor %}
+                </tr>
+                {% empty %}
+                <tr><td colspan="20" class="px-3 py-8 text-center text-gray-500">Keine Führungsdienste im gewählten Zeitraum.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if persons %}
+            <tfoot class="bg-gray-50 text-sm font-semibold">
+                <tr>
+                    <td class="px-3 py-2">Summe ({{ persons|length }} Personen)</td>
+                    {% for n in totals %}<td class="px-3 py-2 text-right">{{ n }}</td>{% endfor %}
+                    <td class="px-3 py-2 text-right border-l border-gray-200">{{ total_all }}</td>
+                    <td></td>
+                    {% for n in weekday_totals %}<td class="px-2 py-2 text-right">{{ n }}</td>{% endfor %}
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+
+    <div class="bg-white rounded-lg shadow overflow-x-auto">
+        <div class="px-5 py-3 border-b border-gray-200"><h2 class="font-semibold text-gray-900">Verteilung nach Wochentag</h2></div>
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+                <tr><th class="px-3 py-2 text-left">Funktion</th>{% for w in weekdays %}<th class="px-3 py-2 text-right {% if forloop.counter0 >= 5 %}bg-gray-100{% endif %}">{{ w }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for label, counts in weekday_by_function %}
+                <tr><td class="px-3 py-1.5 font-medium text-gray-900">{{ label }}</td>{% for n in counts %}<td class="px-3 py-1.5 text-right {% if forloop.counter0 >= 5 %}bg-gray-50{% endif %} {% if not n %}text-gray-300{% endif %}">{{ n }}</td>{% endfor %}</tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

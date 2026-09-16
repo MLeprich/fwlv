@@ -57,7 +57,7 @@ class Roles:
     SACHBEARBEITER_CIVIL_PROTECTION = 'Sachbearbeiter Civil Protection'
     SACHBEARBEITER_OBJEKTVERWALTUNG = 'Sachbearbeiter Objektverwaltung'
     SACHBEARBEITER_IUK = 'Sachbearbeiter IUK'
-    SACHBEARBEITER_DIENSTPLAN = 'Sachbearbeiter Dienstplan'
+    SACHBEARBEITER_DIENSTPLAN = 'Sachbearbeiter Dienstplan'  # Dienstplan: ansehen + bearbeiten
 
     # Freigabe-Gruppen (Procurement Approval)
     FREIGABE_STUFE_1 = 'Freigabe Stufe 1'  # bis 1.000€
@@ -72,6 +72,10 @@ class Roles:
     BVS_LESER = 'BVS Leser'                        # nur ansehen
     BVS_SACHBEARBEITER = 'BVS Sachbearbeiter'      # durchführen, PSV-Fristen pflegen
     BVS_VERANTWORTLICHER = 'BVS Verantwortlicher'  # zusätzlich Mustersätze/Prüfarten
+
+    # Dienstplan (eigene Rechte dienstplan_*; Sachbearbeiter/Modulverantwortlicher siehe oben)
+    DIENSTPLAN_LESER = 'Dienstplan Leser'          # nur ansehen
+    DIENSTPLAN_STATISTIK = 'Dienstplan Statistik'  # Zusatz: statistische Auswertung
 
     # Operative Rollen
     BEREICHSLEITUNG = 'Bereichsleitung'
@@ -138,6 +142,8 @@ class Roles:
             cls.BVS_LESER,
             cls.BVS_SACHBEARBEITER,
             cls.BVS_VERANTWORTLICHER,
+            cls.DIENSTPLAN_LESER,
+            cls.DIENSTPLAN_STATISTIK,
             cls.FREIGABE_STUFE_1,
             cls.FREIGABE_STUFE_2,
             cls.FREIGABE_STUFE_3,

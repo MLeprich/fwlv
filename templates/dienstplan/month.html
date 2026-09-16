@@ -7,16 +7,21 @@
 <div class="max-w-full mx-auto py-6 px-4">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div class="flex items-center gap-3">
-            <a href="{% url 'dienstplan:month' %}?year={{ prev.year }}&month={{ prev.month }}" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200">‹</a>
+            <a href="{% url 'dienstplan:month' %}?year={{ prev.year }}&month={{ prev.month }}{% if only_function %}&nur=fuehrung{% endif %}{% if filters.name %}&name={{ filters.name|urlencode }}{% endif %}{% if filters.code %}&code={{ filters.code|urlencode }}{% endif %}" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200">‹</a>
             <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
-            <a href="{% url 'dienstplan:month' %}?year={{ next.year }}&month={{ next.month }}" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200">›</a>
+            <a href="{% url 'dienstplan:month' %}?year={{ next.year }}&month={{ next.month }}{% if only_function %}&nur=fuehrung{% endif %}{% if filters.name %}&name={{ filters.name|urlencode }}{% endif %}{% if filters.code %}&code={{ filters.code|urlencode }}{% endif %}" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200">›</a>
         </div>
         <div class="flex items-center gap-2">
-            <a href="{% url 'dienstplan:month' %}?year={{ first.year }}&month={{ first.month }}{% if not only_function %}&nur=fuehrung{% endif %}" class="px-4 py-2 rounded-lg text-sm font-medium {% if only_function %}bg-primary-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Nur Führungsdienst</a>
+            {% if perms.dienstplan.dienstplan_stats %}<a href="{% url 'dienstplan:stats' %}?von={{ first|date:'Y-m-d' }}&bis={{ days|last|date:'Y-m-d' }}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">Statistik</a>{% endif %}
+            <a href="{% url 'dienstplan:month' %}?year={{ first.year }}&month={{ first.month }}{% if not only_function %}&nur=fuehrung{% endif %}{% if filters.name %}&name={{ filters.name|urlencode }}{% endif %}{% if filters.code %}&code={{ filters.code|urlencode }}{% endif %}" class="px-4 py-2 rounded-lg text-sm font-medium {% if only_function %}bg-primary-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Nur Führungsdienst</a>
             <a href="{% url 'dienstplan:dashboard' %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm font-medium">Übersicht</a>
         </div>
     </div>
 
+    <div class="bg-white rounded-lg shadow px-4 py-3 mb-3">
+        {% url 'dienstplan:month' as month_url %}
+        {% include 'dienstplan/_filter.html' with form_action=month_url hidden=month_hidden hidden_query=month_hidden_query %}
+    </div>
     {% if rows %}
     <div class="bg-white rounded-lg shadow overflow-x-auto">
         <table class="text-xs whitespace-nowrap">
@@ -44,7 +49,7 @@
     </div>
     {% endif %}
     {% else %}
-    <div class="bg-white rounded-lg shadow p-10 text-center text-sm text-gray-500">Für {{ title }} liegt kein Dienstplan vor.</div>
+    <div class="bg-white rounded-lg shadow p-10 text-center text-sm text-gray-500">{% if filters.name or filters.code %}Keine Person passt zum Filter.{% else %}Für {{ title }} liegt kein Dienstplan vor.{% endif %}</div>
     {% endif %}
 </div>
 {% endblock %}

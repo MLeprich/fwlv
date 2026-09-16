@@ -131,6 +131,83 @@ class ImportFlowTests(TestCase):
         response = self.client.get(reverse('dienstplan:month'), {'year': self.today.year, 'month': self.today.month, 'nur': 'fuehrung'})
         self.assertContains(response, 'Schmidt, Ben')
 
+    def test_filters_in_preview_and_month(self):
+        upload = self._upload({'Müller, Anna': ['A1', '-', 'BÜ'], 'Schmidt, Ben': ['B', 'A1', 'U'], 'Weber, Cem': ['CT', 'CTF', 'A1']})
+        url = reverse('dienstplan:upload_preview', args=[upload.pk])
+        response = self.client.get(url, {'name': 'schmidt'})
+        self.assertContains(response, 'Schmidt, Ben')
+        self.assertNotContains(response, 'Müller, Anna')
+        self.assertContains(response, '1 von 3 Personen')
+        response = self.client.get(url, {'code': 'CT'})
+        self.assertContains(response, 'Weber, Cem')
+        self.assertNotContains(response, 'Schmidt, Ben')
+        self.assertNotContains(response, 'title="C-Dienst (Freitag)"')  # andere Codes der Person ausgeblendet
+        response = self.client.get(url, {'name': 'niemand'})
+        self.assertContains(response, 'Keine Person passt zum Filter')
+
+        self.client.post(reverse('dienstplan:upload_confirm', args=[upload.pk]))
+        month = {'year': self.today.year, 'month': self.today.month}
+        response = self.client.get(reverse('dienstplan:month'), {**month, 'code': 'A1', 'name': 'weber'})
+        self.assertContains(response, 'Weber, Cem')
+        self.assertNotContains(response, 'Müller, Anna')
+        self.assertNotContains(response, '>CT<')
+
+    def test_stats_view_csv_and_permission(self):
+        from django.contrib.auth.models import Group
+        from dienstplan import roles
+        upload = self._upload({'Müller, Anna': ['A1', 'A1', 'BÜ'], 'Schmidt, Ben': ['B', 'B', 'A1'], 'Weber, Cem': ['CT', 'CTF', 'CW']})
+        self.client.post(reverse('dienstplan:upload_confirm', args=[upload.pk]))
+        response = self.client.get(reverse('dienstplan:stats'))
+        self.assertEqual(response.status_code, 200)
+        rows = {r['name']: r for r in response.context['persons']}
+        functions = [key for key, _ in response.context['functions']]
+        self.assertEqual(rows['Müller, Anna']['counts'][functions.index('a1')], 2)
+        self.assertEqual(rows['Schmidt, Ben']['counts'][functions.index('b')], 2)
+        self.assertEqual(rows['Schmidt, Ben']['total'], 3)
+        self.assertEqual(rows['Weber, Cem']['counts'][functions.index('c')], 3)
+        self.assertEqual(sum(rows['Weber, Cem']['weekday_counts']), 3)
+        self.assertEqual(response.context['total_all'], 8)
+        # Nur eine Funktion
+        response = self.client.get(reverse('dienstplan:stats'), {'funktion': 'a1'})
+        names = [r['name'] for r in response.context['persons']]
+        self.assertEqual(names, ['Müller, Anna', 'Schmidt, Ben'])
+        # CSV
+        response = self.client.get(reverse('dienstplan:stats'), {'export': 'csv'})
+        self.assertEqual(response['Content-Type'], 'text/csv; charset=utf-8')
+        self.assertIn('Müller, Anna;', response.content.decode('utf-8-sig'))
+        # Rechte: Leser ohne Statistik-Zusatz sieht die Auswertung nicht, mit Zusatz schon
+        reader = User.objects.create_user(username='leser', password='pw')
+        roles.set_level(reader, 'view')
+        self.client.force_login(reader)
+        self.assertEqual(self.client.get(reverse('dienstplan:dashboard')).status_code, 200)
+        self.assertEqual(self.client.get(reverse('dienstplan:stats')).status_code, 403)
+        self.assertEqual(self.client.post(reverse('dienstplan:upload'), {}).status_code, 403)
+        roles.set_level(reader, 'view', stats=True)
+        reader = User.objects.get(pk=reader.pk)
+        self.client.force_login(reader)
+        self.assertEqual(self.client.get(reverse('dienstplan:stats')).status_code, 200)
+        self.assertEqual(roles.group_level(reader), 'view')
+        self.assertTrue(roles.has_stats_group(reader))
+        roles.set_level(reader, 'none', stats=False)
+        self.assertEqual(roles.group_level(reader), 'none')
+        self.assertFalse(Group.objects.get(name='Dienstplan Statistik').user_set.filter(pk=reader.pk).exists())
+
+    def test_user_management_card_sets_level(self):
+        from core.models import SystemSettings
+        settings_obj = SystemSettings.load(); settings_obj.dienstplan_enabled = True; settings_obj.save()
+        admin = User.objects.create_superuser(username='root', password='pw', email='r@x.de')
+        target = User.objects.create_user(username='ziel', password='pw')
+        self.client.force_login(admin)
+        response = self.client.get(reverse('core:user_detail', args=[target.pk]))
+        self.assertContains(response, 'name="dienstplan_level"')
+        response = self.client.post(reverse('core:user_dienstplan_permissions', args=[target.pk]),
+                                    {'dienstplan_level': 'edit', 'dienstplan_stats': '1'})
+        self.assertRedirects(response, reverse('core:user_detail', args=[target.pk]))
+        target = User.objects.get(pk=target.pk)
+        self.assertTrue(target.has_perm('dienstplan.dienstplan_edit'))
+        self.assertTrue(target.has_perm('dienstplan.dienstplan_stats'))
+        self.assertFalse(target.has_perm('dienstplan.delete_rosterupload'))
+
     def test_bad_file_is_rejected_with_message(self):
         response = self.client.post(reverse('dienstplan:upload'), {
             'file': SimpleUploadedFile('x.csv', b'a;b;c\n1;2;3\n', content_type='text/csv'),

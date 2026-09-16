@@ -240,6 +240,19 @@ class UserDetailView(UserManagementMixin, DetailView):
             if order.index(effective) > order.index(context['bvs_level']) else ''
         )
 
+        # Dienstplan: Zugriffsstufe + Statistik-Zusatz über Gruppen
+        from dienstplan import roles as dienstplan_roles
+        context['dienstplan_levels'] = dienstplan_roles.DIENSTPLAN_LEVELS
+        context['dienstplan_level'] = dienstplan_roles.group_level(user_obj)
+        context['dienstplan_stats'] = dienstplan_roles.has_stats_group(user_obj)
+        context['dienstplan_stats_effective'] = user_obj.has_perm('dienstplan.dienstplan_stats')
+        dp_order = [key for key, *_rest in dienstplan_roles.DIENSTPLAN_LEVELS]
+        dp_effective = dienstplan_roles.effective_level(user_obj)
+        context['dienstplan_effective_label'] = (
+            dict((key, label) for key, label, *_rest in dienstplan_roles.DIENSTPLAN_LEVELS)[dp_effective]
+            if dp_order.index(dp_effective) > dp_order.index(context['dienstplan_level']) else ''
+        )
+
         # Feuerwachen für WBF-Dropdown (Typ 'site' = Standort/Wache)
         context['wbf_locations'] = Location.objects.filter(
             location_type='site'
@@ -367,6 +380,30 @@ class UserBVSPermissionsView(UserManagementMixin, DetailView):
         messages.success(
             request,
             f'Brandverhütungsschau für {user_obj.get_full_name() or user_obj.username}: „{labels[level]}“.'
+        )
+        return redirect('core:user_detail', pk=user_obj.pk)
+
+
+class UserDienstplanPermissionsView(UserManagementMixin, DetailView):
+    """Zugriffsstufe Dienstplan setzen (genau eine Stufen-Gruppe) plus Statistik-Zusatz."""
+    model = User
+    required_permission = 'core.assign_roles'
+
+    def post(self, request, *args, **kwargs):
+        from dienstplan import roles as dienstplan_roles
+
+        user_obj = self.get_object()
+        level = request.POST.get('dienstplan_level', '')
+        labels = {key: label for key, label, _group, _desc in dienstplan_roles.DIENSTPLAN_LEVELS}
+        if level not in labels:
+            messages.error(request, 'Bitte eine Zugriffsstufe auswählen.')
+            return redirect('core:user_detail', pk=user_obj.pk)
+        stats = request.POST.get('dienstplan_stats') == '1'
+        dienstplan_roles.set_level(user_obj, level, stats=stats, assigned_by=request.user)
+        messages.success(
+            request,
+            f'Dienstplan für {user_obj.get_full_name() or user_obj.username}: „{labels[level]}“'
+            f'{", mit Statistik" if stats else ""}.'
         )
         return redirect('core:user_detail', pk=user_obj.pk)
 
@@ -564,6 +601,7 @@ class UserFFSettingsView(UserManagementMixin, View):
 
     def post(self, request, pk):
         from organization.models import VolunteerUnit
+        from personnel.ff_leadership import sync_ff_roles
 
         user_obj = get_object_or_404(User, pk=pk)
 
@@ -584,25 +622,21 @@ class UserFFSettingsView(UserManagementMixin, View):
         ff_role = request.POST.get('ff_role', '')  # 'leader', 'deputy', or ''
         ff_unit_id = request.POST.get('ff_unit')
 
-        # Alte Zuweisungen entfernen
+        # Alte Zuweisungen entfernen; Rollen werden aus der Einheitsführung abgeleitet
         VolunteerUnit.objects.filter(leader=person).update(leader=None)
         VolunteerUnit.objects.filter(deputy_leader=person).update(deputy_leader=None)
-
-        # Alte FF-Gruppen entfernen
-        PermissionHelper.remove_role(user_obj, Roles.FF_EINHEITSFUEHRER, removed_by=request.user)
-        PermissionHelper.remove_role(user_obj, Roles.FF_VERTRETER, removed_by=request.user)
 
         if ff_role and ff_unit_id:
             try:
                 unit = VolunteerUnit.objects.get(pk=ff_unit_id, is_active=True)
             except VolunteerUnit.DoesNotExist:
+                sync_ff_roles(person, actor=request.user)
                 messages.error(request, 'Ungültige FF-Einheit ausgewählt.')
                 return redirect('core:user_detail', pk=user_obj.pk)
 
             if ff_role == 'leader':
                 unit.leader = person
                 unit.save(update_fields=['leader'])
-                PermissionHelper.assign_role(user_obj, Roles.FF_EINHEITSFUEHRER, assigned_by=request.user)
                 messages.success(
                     request,
                     f'{user_obj.get_full_name()} ist jetzt Einheitsführer von {unit.name}.'
@@ -610,7 +644,6 @@ class UserFFSettingsView(UserManagementMixin, View):
             elif ff_role == 'deputy':
                 unit.deputy_leader = person
                 unit.save(update_fields=['deputy_leader'])
-                PermissionHelper.assign_role(user_obj, Roles.FF_VERTRETER, assigned_by=request.user)
                 messages.success(
                     request,
                     f'{user_obj.get_full_name()} ist jetzt Stellv. Einheitsführer von {unit.name}.'
@@ -621,6 +654,7 @@ class UserFFSettingsView(UserManagementMixin, View):
                 f'FF-Zuweisung für {user_obj.get_full_name()} wurde entfernt.'
             )
 
+        sync_ff_roles(person, actor=request.user)
         return redirect('core:user_detail', pk=user_obj.pk)
 
 
