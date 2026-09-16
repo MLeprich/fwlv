@@ -16,6 +16,7 @@ class DutyFunction(models.TextChoices):
     """Führungsdienst-Funktionen, auf die ein Dienstcode abgebildet werden kann"""
     A1 = 'a1', 'A1-Dienst'
     A2 = 'a2', 'A2-Dienst'
+    A2E = 'a2e', 'Ersatz A-Dienst'
     B = 'b', 'B-Dienst'
     C = 'c', 'C-Dienst'
     LAGEDIENST = 'lagedienst', 'Lagedienst'
