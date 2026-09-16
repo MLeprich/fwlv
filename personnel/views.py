@@ -3287,7 +3287,9 @@ def ff_dashboard(request):
 
     # ===== EINHEITENAUSWAHL =====
     accessible_units = _get_ff_accessible_units(request.user)
-    all_units = VolunteerUnit.objects.filter(is_active=True).order_by('sort_order', 'name')
+    all_units = VolunteerUnit.objects.filter(is_active=True).select_related(
+        'leader__user', 'deputy_leader__user'
+    ).order_by('sort_order', 'name')
 
     selected_unit_pk = request.GET.get('unit')
     selected_unit = None
@@ -3300,6 +3302,9 @@ def ff_dashboard(request):
                     selected_unit = accessible_units.first()
         except VolunteerUnit.DoesNotExist:
             selected_unit = accessible_units.first()
+    elif 'unit' in request.GET and _ff_has_all_units(request.user):
+        # Ansicht "Alle" (?unit=) für Administratoren und FF Verwalter
+        selected_unit = None
     else:
         selected_unit = accessible_units.first()
 
@@ -3497,6 +3502,59 @@ def ff_person_create(request):
     }
 
     return render(request, 'personnel/ff_person_create.html', context)
+
+
+@login_required
+def ff_unit_leadership(request, pk):
+    """
+    Einheitsführer und Vertreter einer FF-Einheit festlegen.
+    Nur für Administratoren und FF Verwalter; die Rollen der betroffenen
+    Personen werden mitgezogen (siehe personnel.ff_leadership).
+    """
+    from personnel.ff_leadership import leadership_candidates, set_unit_leadership
+
+    if not _is_ff_leader(request.user) or not _ff_has_all_units(request.user):
+        messages.error(request, 'Nur FF Verwalter und Administratoren dürfen die Einheitsführung festlegen.')
+        return redirect('personnel:ff_dashboard')
+
+    unit = get_object_or_404(VolunteerUnit, pk=pk, is_active=True)
+    candidates = leadership_candidates(unit)
+    back_url = f"{reverse('personnel:ff_dashboard')}?unit={unit.pk}"
+
+    if request.method == 'POST':
+        def _pick(field):
+            value = request.POST.get(field) or ''
+            if not value:
+                return None, None
+            person = candidates.filter(pk=value).first()
+            if person is None:
+                return None, 'Ungültige Auswahl.'
+            return person, None
+
+        leader, err_l = _pick('leader')
+        deputy, err_d = _pick('deputy')
+        error = err_l or err_d
+        if not error and leader and deputy and leader.pk == deputy.pk:
+            error = 'Einheitsführer und Vertreter müssen verschiedene Personen sein.'
+        if error:
+            messages.error(request, error)
+        else:
+            ohne_konto = set_unit_leadership(unit, leader, deputy, actor=request.user)
+            messages.success(request, f'Einheitsführung von {unit.name} wurde gespeichert.')
+            for person in ohne_konto:
+                messages.warning(
+                    request,
+                    f'{person.get_full_name()} hat kein Benutzerkonto und kann sich daher nicht anmelden. '
+                    f'Ein Konto legt die Benutzerverwaltung an.'
+                )
+            return redirect(back_url)
+
+    context = {
+        'unit': unit,
+        'candidates': candidates,
+        'back_url': back_url,
+    }
+    return render(request, 'personnel/ff_unit_leadership.html', context)
 
 
 class RankListView(LoginRequiredMixin, ListView):
