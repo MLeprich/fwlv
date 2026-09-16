@@ -35,19 +35,32 @@
         }
         {% endif %}
 
-        {% if dashboard.fullscreen_default %}
         html, body {
             width: 100%;
             height: 100%;
         }
-        {% endif %}
+
+        /* Canvas wird proportional auf den Bildschirm skaliert (Quer- wie Hochformat) */
+        #canvas-stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        #canvas-stage.with-header { height: calc(100% - 4rem); }
+        #dashboard-canvas {
+            position: absolute;
+            left: 0;
+            top: 0;
+            transform-origin: 0 0;
+        }
     </style>
 </head>
 <body>
-    <div class="{% if not dashboard.fullscreen_default %}container mx-auto p-4{% else %}w-full h-full{% endif %}">
+    <div class="w-full h-full">
         <!-- Dashboard Title (optional) -->
         {% if not dashboard.hide_header %}
-        <div class="mb-4 text-center">
+        <div class="h-16 flex items-center justify-center">
             <h1 class="text-3xl font-bold {% if dashboard.theme == 'dark' %}text-white{% else %}text-gray-900{% endif %}">
                 {{ dashboard.name }}
             </h1>
@@ -57,14 +70,17 @@
         <!-- Dashboard Container -->
         {% if dashboard.use_canvas_layout %}
         <!-- Canvas Layout -->
-        <div id="dashboard-canvas" class="relative {% if dashboard.theme == 'dark' %}bg-gray-800{% else %}bg-white{% endif %} rounded-lg"
-             style="width: {{ dashboard.canvas_width }}px; height: {{ dashboard.canvas_height }}px; max-width: 100%; margin: 0 auto;">
+        <div id="canvas-stage" class="{% if not dashboard.hide_header %}with-header{% endif %}">
+        <div id="dashboard-canvas" class="{% if dashboard.theme == 'dark' %}bg-gray-800{% else %}bg-white{% endif %}"
+             data-canvas-width="{{ dashboard.canvas_width }}" data-canvas-height="{{ dashboard.canvas_height }}"
+             style="width: {{ dashboard.canvas_width }}px; height: {{ dashboard.canvas_height }}px;">
             {% for widget in widgets %}
             <div class="widget-container absolute"
                  style="left: {{ widget.x_position }}px; top: {{ widget.y_position }}px; width: {{ widget.canvas_width }}px; height: {{ widget.height }}px;">
                 {% include 'info_monitors/widgets/widget_display.html' with widget=widget %}
             </div>
             {% endfor %}
+        </div>
         </div>
         {% else %}
         <!-- Grid Layout -->
@@ -79,6 +95,23 @@
     </div>
 
     <script>
+        // Canvas auf den Bildschirm einpassen (Seitenverhältnis bleibt erhalten)
+        (function () {
+            var stage = document.getElementById('canvas-stage');
+            var canvas = document.getElementById('dashboard-canvas');
+            if (!stage || !canvas) { return; }
+            var cw = parseInt(canvas.dataset.canvasWidth, 10);
+            var ch = parseInt(canvas.dataset.canvasHeight, 10);
+            function fit() {
+                var scale = Math.min(stage.clientWidth / cw, stage.clientHeight / ch);
+                var left = (stage.clientWidth - cw * scale) / 2;
+                var top = (stage.clientHeight - ch * scale) / 2;
+                canvas.style.transform = 'translate(' + left + 'px,' + top + 'px) scale(' + scale + ')';
+            }
+            window.addEventListener('resize', fit);
+            fit();
+        })();
+
         // Auto-Refresh
         {% if dashboard.auto_refresh %}
         setInterval(function() {

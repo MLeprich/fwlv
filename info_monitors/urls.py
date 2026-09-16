@@ -15,6 +15,10 @@ urlpatterns = [
     path('dashboard/<int:pk>/', views.DashboardDetailView.as_view(), name='dashboard_detail'),
     path('dashboard/<int:pk>/edit/', views.DashboardEditorView.as_view(), name='dashboard_editor'),
     path('dashboard/<int:pk>/delete/', views.DashboardDeleteView.as_view(), name='dashboard_delete'),
+    path('dashboard/<int:pk>/settings/', views.DashboardSettingsView.as_view(), name='dashboard_settings'),
+
+    # Vollbild per Link-Name (analog zum Leitstellen-Infomonitor)
+    path('kiosk/<slug:slug>/', views.DashboardKioskView.as_view(), name='dashboard_kiosk'),
 
     # Öffentlicher Zugriff via Token
     path('public/<str:token>/', views.PublicDashboardView.as_view(), name='public_dashboard'),

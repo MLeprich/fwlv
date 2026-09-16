@@ -172,6 +172,13 @@
                         </div>
                     </div>
 
+                    <!-- Vollbild-Link -->
+                    <div class="px-4 py-2 border-b border-gray-200 text-xs text-gray-600 flex items-center gap-2 min-w-0">
+                        <span class="shrink-0">🖥️</span>
+                        <a href="{{ dashboard.get_kiosk_url }}" target="_blank" class="font-mono text-blue-700 hover:underline truncate" title="Vollbild-Ansicht öffnen">/monitors/kiosk/{{ dashboard.slug }}/</a>
+                        <span class="ml-auto shrink-0 {% if dashboard.is_public %}text-green-700{% else %}text-yellow-700{% endif %}">{% if dashboard.is_public %}öffentlich{% else %}mit Login{% endif %}</span>
+                    </div>
+
                     <!-- Actions -->
                     <div class="p-4 flex gap-2">
                         <a href="{% url 'info_monitors:dashboard_detail' dashboard.pk %}" class="flex-1 inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">

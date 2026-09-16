@@ -66,6 +66,9 @@
                 Bearbeiten
             </a>
             {% endif %}
+            <a href="{{ dashboard.get_kiosk_url }}" target="_blank" class="inline-flex items-center px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors" title="Vollbild-Ansicht für den Monitor (eigener Link)">
+                🖥️ Vollbild-Link
+            </a>
             <button onclick="toggleFullscreen()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
@@ -75,15 +78,28 @@
         </div>
     </div>
 
+    <!-- Vollbild-Link für den Monitor -->
+    <div class="mb-4 bg-white border border-gray-200 rounded-lg px-4 py-3 flex flex-wrap items-center gap-3">
+        <span class="text-sm text-gray-600">Vollbild-Link für den Monitor:</span>
+        <input type="text" readonly id="kiosk-url" value="{{ request.scheme }}://{{ request.get_host }}{{ dashboard.get_kiosk_url }}" class="flex-1 min-w-[16rem] px-3 py-1.5 text-sm font-mono border border-gray-300 rounded bg-gray-50 text-gray-800">
+        <button type="button" onclick="copyKioskUrl()" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded">📋 Kopieren</button>
+        <span class="text-xs {% if dashboard.is_public %}text-green-700{% else %}text-yellow-700{% endif %}">
+            {% if dashboard.is_public %}öffentlich, ohne Anmeldung abrufbar{% else %}nicht öffentlich – Anmeldung erforderlich{% endif %}
+        </span>
+        <span class="text-xs text-gray-500">{{ dashboard.canvas_width }}×{{ dashboard.canvas_height }} px · {{ dashboard.orientation_display }}</span>
+    </div>
+
     <!-- Dashboard Container -->
     {% if dashboard.use_canvas_layout %}
-    <!-- Canvas Layout -->
-    <div id="dashboard-canvas" class="relative bg-white border border-gray-200 rounded-lg" style="width: {{ dashboard.canvas_width }}px; height: {{ dashboard.canvas_height }}px; max-width: 100%; overflow: auto;">
-        {% for widget in widgets %}
-        <div class="widget-container absolute" style="left: {{ widget.x_position }}px; top: {{ widget.y_position }}px; width: {{ widget.canvas_width }}px; height: {{ widget.height }}px;">
-            {% include 'info_monitors/widgets/widget_display.html' with widget=widget %}
+    <!-- Canvas Layout (proportional auf die Seitenbreite skaliert) -->
+    <div id="canvas-stage" class="relative overflow-hidden mx-auto" data-canvas-width="{{ dashboard.canvas_width }}" data-canvas-height="{{ dashboard.canvas_height }}">
+        <div id="dashboard-canvas" class="absolute left-0 top-0 bg-white border border-gray-200 rounded-lg" style="width: {{ dashboard.canvas_width }}px; height: {{ dashboard.canvas_height }}px; transform-origin: 0 0;">
+            {% for widget in widgets %}
+            <div class="widget-container absolute" style="left: {{ widget.x_position }}px; top: {{ widget.y_position }}px; width: {{ widget.canvas_width }}px; height: {{ widget.height }}px;">
+                {% include 'info_monitors/widgets/widget_display.html' with widget=widget %}
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
     {% else %}
     <!-- Grid Layout -->
@@ -112,6 +128,30 @@
 </div>
 
 <script>
+function copyKioskUrl() {
+    const input = document.getElementById('kiosk-url');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => alert('Link kopiert:\n' + input.value));
+}
+
+// Canvas proportional in die verfügbare Breite/Höhe einpassen
+(function () {
+    const stage = document.getElementById('canvas-stage');
+    const canvas = document.getElementById('dashboard-canvas');
+    if (!stage || !canvas) return;
+    const cw = parseInt(stage.dataset.canvasWidth), ch = parseInt(stage.dataset.canvasHeight);
+    function fit() {
+        const maxW = stage.parentElement.clientWidth;
+        const maxH = Math.max(400, window.innerHeight - stage.getBoundingClientRect().top - 40);
+        const scale = Math.min(1, maxW / cw, maxH / ch);
+        canvas.style.transform = 'scale(' + scale + ')';
+        stage.style.width = Math.round(cw * scale) + 'px';
+        stage.style.height = Math.round(ch * scale) + 'px';
+    }
+    window.addEventListener('resize', fit);
+    fit();
+})();
+
 // Fullscreen Toggle
 function toggleFullscreen() {
     if (!document.fullscreenElement) {

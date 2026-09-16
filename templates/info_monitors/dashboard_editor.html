@@ -5,8 +5,16 @@
 {% block extra_css %}
 <style>
     /* Canvas Editor Styles */
-    #canvas-editor {
+    #canvas-stage {
         position: relative;
+        width: 100%;
+        overflow: hidden;
+    }
+    #canvas-editor {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform-origin: 0 0;
         background: #f9fafb;
         background-image:
             linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
@@ -147,13 +155,16 @@
                 <p class="text-sm text-gray-600 mt-1">
                     {{ dashboard.profile.name }} •
                     {% if dashboard.use_canvas_layout %}
-                    🎨 Canvas-Modus ({{ dashboard.canvas_width }}×{{ dashboard.canvas_height }}px)
+                    🎨 Canvas-Modus ({{ dashboard.canvas_width }}×{{ dashboard.canvas_height }}px, {{ dashboard.orientation_display }})
                     {% else %}
                     📐 Grid-Modus (12 Spalten)
                     {% endif %}
                 </p>
             </div>
             <div class="flex gap-3">
+                <a href="{{ dashboard.get_kiosk_url }}" target="_blank" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors" title="Vollbild-Ansicht in neuem Tab">
+                    🖥️ Vollbild
+                </a>
                 <a href="{% url 'info_monitors:dashboard_detail' dashboard.pk %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -177,6 +188,59 @@
     <div class="flex-1 flex overflow-hidden">
         <!-- Widget Palette (Sidebar) -->
         <div class="w-64 bg-gray-50 border-r border-gray-200 overflow-y-auto">
+            <div class="p-4 border-b border-gray-200" x-data="{ open: {% if messages %}true{% else %}false{% endif %} }">
+                <button type="button" @click="open = !open" class="w-full flex items-center justify-between text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                    <span>Monitor-Einstellungen</span>
+                    <span class="text-gray-400" x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-collapse class="mt-3 space-y-3">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Vollbild-Link</label>
+                        <div class="flex gap-1">
+                            <input type="text" readonly value="{{ kiosk_url }}" id="kiosk-url" class="flex-1 min-w-0 px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-700">
+                            <button type="button" onclick="copyKioskUrl()" class="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded" title="Link kopieren">📋</button>
+                        </div>
+                        {% if not dashboard.is_public %}<p class="text-xs text-yellow-700 mt-1">Nicht öffentlich: Link verlangt Anmeldung.</p>{% endif %}
+                    </div>
+                    <form method="post" action="{% url 'info_monitors:dashboard_settings' dashboard.pk %}" class="space-y-3"
+                          x-data="{ w: {{ dashboard.canvas_width }}, h: {{ dashboard.canvas_height }} }">
+                        {% csrf_token %}
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Link-Name</label>
+                            <input type="text" name="slug" value="{{ dashboard.slug }}" class="w-full px-2 py-1 text-xs border border-gray-300 rounded" pattern="[a-z0-9\-]+">
+                        </div>
+                        {% if dashboard.use_canvas_layout %}
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Ausrichtung</label>
+                            <div class="grid grid-cols-2 gap-1">
+                                <button type="button" @click="if (h > w) { const t = w; w = h; h = t }"
+                                        :class="w >= h ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'"
+                                        class="px-2 py-1 text-xs rounded">▭ Quer</button>
+                                <button type="button" @click="if (w > h) { const t = w; w = h; h = t }"
+                                        :class="h > w ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'"
+                                        class="px-2 py-1 text-xs rounded">▯ Hoch</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Breite</label>
+                                <input type="number" name="canvas_width" x-model.number="w" min="800" max="7680" class="w-full px-2 py-1 text-xs border border-gray-300 rounded">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Höhe</label>
+                                <input type="number" name="canvas_height" x-model.number="h" min="600" max="7680" class="w-full px-2 py-1 text-xs border border-gray-300 rounded">
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                            <button type="button" @click="w=1920; h=1080" class="px-2 py-0.5 text-xs bg-gray-200 hover:bg-gray-300 rounded">Full HD</button>
+                            <button type="button" @click="w=1080; h=1920" class="px-2 py-0.5 text-xs bg-gray-200 hover:bg-gray-300 rounded">Full HD hoch</button>
+                            <button type="button" @click="w=3840; h=2160" class="px-2 py-0.5 text-xs bg-gray-200 hover:bg-gray-300 rounded">4K</button>
+                        </div>
+                        {% endif %}
+                        <button type="submit" class="w-full px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Übernehmen</button>
+                    </form>
+                </div>
+            </div>
             <div class="p-4">
                 <h3 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Widget-Palette</h3>
                 <p class="text-xs text-gray-500 mb-4">Ziehen Sie Widgets in den Editor</p>
@@ -300,8 +364,12 @@
         <!-- Editor Area -->
         <div class="flex-1 overflow-auto p-6 bg-gray-100">
             {% if dashboard.use_canvas_layout %}
-            <!-- Canvas Editor -->
-            <div class="flex justify-center">
+            <!-- Canvas Editor: wird proportional in die Fläche eingepasst (Zoom siehe unten) -->
+            <div class="flex items-center justify-between text-xs text-gray-500 mb-2">
+                <span>{{ dashboard.canvas_width }}×{{ dashboard.canvas_height }} px · {{ dashboard.orientation_display }}</span>
+                <span>Zoom: <span id="canvas-zoom">100</span> %</span>
+            </div>
+            <div id="canvas-stage" data-canvas-width="{{ dashboard.canvas_width }}" data-canvas-height="{{ dashboard.canvas_height }}">
                 <div id="canvas-editor"
                      class="border-2 border-gray-300 rounded-lg shadow-lg bg-white drop-zone"
                      style="width: {{ dashboard.canvas_width }}px; height: {{ dashboard.canvas_height }}px;">
@@ -380,6 +448,34 @@ let draggedPaletteItem = null;
 let resizingWidget = null;
 let offsetX = 0;
 let offsetY = 0;
+let canvasScale = 1;  // Darstellungsmaßstab des Canvas im Editor (1 = 100 %)
+
+function copyKioskUrl() {
+    const input = document.getElementById('kiosk-url');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => alert('Link kopiert:\n' + input.value));
+}
+
+{% if dashboard.use_canvas_layout %}
+// Canvas in die verfügbare Fläche einpassen; Widget-Koordinaten bleiben in Canvas-Pixeln
+function fitCanvas() {
+    const stage = document.getElementById('canvas-stage');
+    const canvas = document.getElementById('canvas-editor');
+    if (!stage || !canvas) return;
+    const cw = parseInt(stage.dataset.canvasWidth), ch = parseInt(stage.dataset.canvasHeight);
+    const area = stage.parentElement;
+    const availW = area.clientWidth - 48;
+    const availH = area.clientHeight - 80;
+    canvasScale = Math.min(1, availW / cw, availH / ch);
+    canvas.style.transform = 'scale(' + canvasScale + ')';
+    stage.style.width = Math.round(cw * canvasScale) + 'px';
+    stage.style.height = Math.round(ch * canvasScale) + 'px';
+    stage.style.margin = '0 auto';
+    document.getElementById('canvas-zoom').textContent = Math.round(canvasScale * 100);
+}
+document.addEventListener('DOMContentLoaded', fitCanvas);
+window.addEventListener('resize', fitCanvas);
+{% endif %}
 
 // Drag & Drop von Palette
 document.querySelectorAll('.widget-palette-item').forEach(item => {
@@ -420,9 +516,9 @@ dropZones.forEach(zone => {
             {% if dashboard.use_canvas_layout %}
             // Canvas-Modus: Position aus Drop-Event
             const rect = this.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            createWidget(widgetType, widgetTitle, x, y);
+            const x = (e.clientX - rect.left) / canvasScale;
+            const y = (e.clientY - rect.top) / canvasScale;
+            createWidget(widgetType, widgetTitle, Math.round(x), Math.round(y));
             {% else %}
             // Grid-Modus: Automatische Platzierung
             createWidget(widgetType, widgetTitle);
@@ -544,8 +640,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             draggedWidget = widget;
             // Berechne Offset vom Mausklick zur Widget-Position
-            dragOffsetX = e.clientX - widgetRect.left;
-            dragOffsetY = e.clientY - widgetRect.top;
+            dragOffsetX = (e.clientX - widgetRect.left) / canvasScale;
+            dragOffsetY = (e.clientY - widgetRect.top) / canvasScale;
             widget.classList.add('dragging');
             e.preventDefault();
         }
@@ -555,18 +651,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (draggedWidget) {
             const canvasRect = canvas.getBoundingClientRect();
             // Neue Position = Mausposition - Offset
-            let newX = e.clientX - canvasRect.left - dragOffsetX;
-            let newY = e.clientY - canvasRect.top - dragOffsetY;
+            let newX = (e.clientX - canvasRect.left) / canvasScale - dragOffsetX;
+            let newY = (e.clientY - canvasRect.top) / canvasScale - dragOffsetY;
 
             // Begrenzung auf Canvas
             newX = Math.max(0, Math.min(newX, canvas.clientWidth - draggedWidget.offsetWidth));
             newY = Math.max(0, Math.min(newY, canvas.clientHeight - draggedWidget.offsetHeight));
 
-            draggedWidget.style.left = newX + 'px';
-            draggedWidget.style.top = newY + 'px';
+            draggedWidget.style.left = Math.round(newX) + 'px';
+            draggedWidget.style.top = Math.round(newY) + 'px';
         } else if (resizingWidget) {
-            const deltaX = e.clientX - resizeStartX;
-            const deltaY = e.clientY - resizeStartY;
+            const deltaX = (e.clientX - resizeStartX) / canvasScale;
+            const deltaY = (e.clientY - resizeStartY) / canvasScale;
 
             let newWidth = parseInt(resizingWidget.style.width) + deltaX;
             let newHeight = parseInt(resizingWidget.style.height) + deltaY;
@@ -574,8 +670,8 @@ document.addEventListener('DOMContentLoaded', function() {
             newWidth = Math.max(200, Math.min(newWidth, canvas.clientWidth - parseInt(resizingWidget.style.left)));
             newHeight = Math.max(150, Math.min(newHeight, canvas.clientHeight - parseInt(resizingWidget.style.top)));
 
-            resizingWidget.style.width = newWidth + 'px';
-            resizingWidget.style.height = newHeight + 'px';
+            resizingWidget.style.width = Math.round(newWidth) + 'px';
+            resizingWidget.style.height = Math.round(newHeight) + 'px';
 
             resizeStartX = e.clientX;
             resizeStartY = e.clientY;

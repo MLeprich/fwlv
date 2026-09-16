@@ -157,6 +157,14 @@ class Dashboard(AuditedModel):
         max_length=200
     )
 
+    slug = models.SlugField(
+        _('Link-Name'),
+        max_length=120,
+        unique=True,
+        blank=True,
+        help_text=_('Endung des Vollbild-Links (/monitors/kiosk/<link-name>/); wird aus dem Namen erzeugt')
+    )
+
     description = models.TextField(
         _('Beschreibung'),
         blank=True
@@ -280,6 +288,38 @@ class Dashboard(AuditedModel):
 
     def __str__(self):
         return f"{self.profile.name} - {self.name}"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = self.make_unique_slug(self.name, exclude_pk=self.pk)
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def make_unique_slug(cls, text, exclude_pk=None):
+        """Slug aus Text; bei Kollision wird -2, -3, … angehängt."""
+        from django.utils.text import slugify
+        base = slugify(text)[:100] or 'monitor'
+        qs = cls.objects.all()
+        if exclude_pk:
+            qs = qs.exclude(pk=exclude_pk)
+        slug, n = base, 1
+        while qs.filter(slug=slug).exists():
+            n += 1
+            slug = f'{base}-{n}'
+        return slug
+
+    @property
+    def is_portrait(self):
+        """Hochformat, wenn das Canvas höher als breit ist."""
+        return self.use_canvas_layout and self.canvas_height > self.canvas_width
+
+    @property
+    def orientation_display(self):
+        return 'Hochformat' if self.is_portrait else 'Querformat'
+
+    def get_kiosk_url(self):
+        from django.urls import reverse
+        return reverse('info_monitors:dashboard_kiosk', kwargs={'slug': self.slug})
 
     def increment_view_count(self):
         """Erhöht Aufrufzähler"""

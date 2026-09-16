@@ -40,7 +40,7 @@ class DashboardCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVie
     model = Dashboard
     template_name = 'info_monitors/dashboard_create.html'
     permission_required = 'info_monitors.add_dashboard'
-    fields = ['name', 'description', 'profile', 'use_canvas_layout', 'canvas_width',
+    fields = ['name', 'slug', 'description', 'profile', 'use_canvas_layout', 'canvas_width',
               'canvas_height', 'theme', 'is_public', 'auto_refresh',
               'refresh_interval', 'allowed_users']
 
@@ -50,6 +50,8 @@ class DashboardCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVie
         text_input_classes = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
 
         form.fields['name'].widget.attrs.update({'class': text_input_classes, 'placeholder': 'z.B. Haupteingang Monitor'})
+        form.fields['slug'].widget.attrs.update({'class': text_input_classes, 'placeholder': 'wird aus dem Namen erzeugt'})
+        form.fields['slug'].required = False
         form.fields['description'].widget.attrs.update({'class': text_input_classes, 'rows': 3, 'placeholder': 'Optionale Beschreibung'})
         form.fields['profile'].widget.attrs.update({'class': text_input_classes})
         form.fields['theme'].widget.attrs.update({'class': text_input_classes})
@@ -236,8 +238,113 @@ class DashboardEditorView(LoginRequiredMixin, DetailView):
         context['widgets'] = self.object.widgets.all().order_by('display_order')
         context['widget_types'] = WidgetType.choices
         context['available_kpis'] = []  # TODO: KPI-Liste laden wenn reporting-Modul aktiv
+        context['kiosk_url'] = self.request.build_absolute_uri(self.object.get_kiosk_url())
 
         return context
+
+
+def _can_edit_dashboard(user, dashboard):
+    return (user in dashboard.allowed_users.all()
+            or user.has_perm('info_monitors.change_dashboard')
+            or user.is_superuser)
+
+
+class DashboardSettingsView(LoginRequiredMixin, View):
+    """
+    Canvas-Größe / Ausrichtung und Link-Name aus dem Editor heraus ändern.
+    Widgets, die nach einem Wechsel außerhalb des Canvas lägen, werden hineingeschoben.
+    """
+
+    def post(self, request, pk):
+        dashboard = get_object_or_404(Dashboard.objects.filter(is_active=True), pk=pk)
+        if not _can_edit_dashboard(request.user, dashboard):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("Sie haben keine Berechtigung dieses Dashboard zu bearbeiten.")
+
+        errors = []
+        try:
+            width = int(request.POST.get('canvas_width', dashboard.canvas_width))
+            height = int(request.POST.get('canvas_height', dashboard.canvas_height))
+        except (TypeError, ValueError):
+            errors.append('Breite und Höhe müssen Zahlen sein.')
+            width, height = dashboard.canvas_width, dashboard.canvas_height
+        if request.POST.get('orientation') == 'portrait' and width > height:
+            width, height = height, width
+        elif request.POST.get('orientation') == 'landscape' and height > width:
+            width, height = height, width
+        if width < 800 or height < 600 or width > 7680 or height > 7680:
+            errors.append('Canvas-Größe: Breite 800–7680 px, Höhe 600–7680 px.')
+
+        slug = request.POST.get('slug', dashboard.slug).strip()
+        if slug:
+            from django.utils.text import slugify
+            slug = slugify(slug)[:120]
+            if Dashboard.objects.exclude(pk=dashboard.pk).filter(slug=slug).exists():
+                errors.append(f'Der Link-Name „{slug}“ wird bereits verwendet.')
+        else:
+            slug = Dashboard.make_unique_slug(dashboard.name, exclude_pk=dashboard.pk)
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+            return redirect('info_monitors:dashboard_editor', pk=dashboard.pk)
+
+        dashboard.canvas_width = width
+        dashboard.canvas_height = height
+        dashboard.slug = slug
+        dashboard.updated_by = request.user
+        dashboard.save()
+
+        # Widgets in den (ggf. kleineren) Canvas holen
+        for widget in dashboard.widgets.all():
+            w = min(widget.canvas_width, width)
+            h = min(widget.height, height)
+            x = max(0, min(widget.x_position, width - w))
+            y = max(0, min(widget.y_position, height - h))
+            if (w, h, x, y) != (widget.canvas_width, widget.height, widget.x_position, widget.y_position):
+                widget.canvas_width, widget.height, widget.x_position, widget.y_position = w, h, x, y
+                widget.save(update_fields=['canvas_width', 'height', 'x_position', 'y_position'])
+
+        messages.success(request, f'Canvas auf {width}×{height} px ({dashboard.orientation_display}) gesetzt.')
+        return redirect('info_monitors:dashboard_editor', pk=dashboard.pk)
+
+
+class DashboardKioskView(View):
+    """
+    Vollbild-Anzeige eines Monitors unter /monitors/kiosk/<link-name>/
+    (analog zum Leitstellen-Infomonitor). Öffentliche Dashboards brauchen
+    keinen Login; private nur für berechtigte, angemeldete Benutzer.
+    """
+    template_name = 'info_monitors/public_dashboard.html'
+
+    def get(self, request, slug):
+        dashboard = get_object_or_404(
+            Dashboard.objects.filter(is_active=True).select_related('profile'), slug=slug)
+
+        if not dashboard.is_public:
+            if not request.user.is_authenticated:
+                from django.contrib.auth.views import redirect_to_login
+                return redirect_to_login(request.get_full_path())
+            if not (request.user.is_superuser
+                    or request.user.has_perm('info_monitors.view_all_dashboards')
+                    or request.user in dashboard.allowed_users.all()):
+                from django.core.exceptions import PermissionDenied
+                raise PermissionDenied("Sie haben keine Berechtigung dieses Dashboard anzusehen.")
+
+        dashboard.increment_view_count()
+
+        if dashboard.use_canvas_layout:
+            widgets = dashboard.widgets.filter(is_active=True).order_by('display_order')
+        else:
+            widgets = dashboard.widgets.filter(is_active=True).order_by('row', 'column', 'display_order')
+
+        return render(request, self.template_name, {
+            'dashboard': dashboard,
+            'widgets': widgets,
+            'is_public': dashboard.is_public,
+            'is_kiosk': True,
+            'hide_navigation': True,
+        })
 
 
 # =============================================================================
