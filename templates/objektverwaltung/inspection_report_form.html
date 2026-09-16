@@ -74,11 +74,130 @@
             </label>
             {% endif %}
 
-            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+            <fieldset class="border border-gray-200 rounded-lg p-4">
+                <legend class="text-sm font-semibold text-gray-700 px-1">Digitale Unterschriften</legend>
+                <p class="text-xs text-gray-500 mb-3">Mit Finger, Stift oder Maus im Feld unterschreiben. Die Unterschriften erscheinen im PDF-Prüfbericht.</p>
+                {% if form.signature_operator.errors or form.signature_fire_dept.errors %}
+                <p class="mb-3 text-sm text-red-600">{{ form.signature_operator.errors.0 }}{{ form.signature_fire_dept.errors.0 }}</p>
+                {% endif %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div data-signature-pad>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs text-gray-500">Firma / Objekt{% if form.participant_operator.value %} · {{ form.participant_operator.value }}{% endif %}</label>
+                            <button type="button" data-signature-clear class="text-xs text-gray-500 hover:text-red-600">Löschen</button>
+                        </div>
+                        <canvas data-signature-canvas class="w-full border border-gray-300 rounded-lg bg-white touch-none cursor-crosshair" style="height: 140px; touch-action: none; background-image: linear-gradient(to right, #d1d5db 50%, transparent 50%); background-size: 8px 1px; background-repeat: repeat-x; background-position: 12px calc(100% - 28px);" aria-label="Unterschrift Firma / Objekt"></canvas>
+                        {{ form.signature_operator }}
+                    </div>
+                    <div data-signature-pad>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs text-gray-500">Feuerwehr{% if form.participant_fire_dept.value %} · {{ form.participant_fire_dept.value }}{% endif %}</label>
+                            <button type="button" data-signature-clear class="text-xs text-gray-500 hover:text-red-600">Löschen</button>
+                        </div>
+                        <canvas data-signature-canvas class="w-full border border-gray-300 rounded-lg bg-white touch-none cursor-crosshair" style="height: 140px; touch-action: none; background-image: linear-gradient(to right, #d1d5db 50%, transparent 50%); background-size: 8px 1px; background-repeat: repeat-x; background-position: 12px calc(100% - 28px);" aria-label="Unterschrift Feuerwehr"></canvas>
+                        {{ form.signature_fire_dept }}
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-gray-200">
                 <a href="{{ asset.get_absolute_url }}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Abbrechen</a>
-                <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Speichern</button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="submit" name="save_pdf" value="1" class="px-4 py-2 text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 font-medium">Speichern und PDF speichern</button>
+                    <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Speichern</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+(function () {
+    // Einfaches Unterschriften-Feld ohne externe Bibliothek (läuft auch offline).
+    // Zeichnet mit Pointer-Events (Maus, Finger, Stift) und legt das Ergebnis als
+    // PNG-Data-URL im zugehörigen Hidden-Input ab.
+    function setupPad(root) {
+        var canvas = root.querySelector('[data-signature-canvas]');
+        var input = root.querySelector('input[type=hidden]');
+        var clearBtn = root.querySelector('[data-signature-clear]');
+        var ctx = canvas.getContext('2d');
+        var drawing = false, dirty = false, last = null;
+        var ratio = Math.max(window.devicePixelRatio || 1, 1);
+
+        function resize() {
+            var snapshot = dirty ? canvas.toDataURL('image/png') : (input.value || '');
+            var rect = canvas.getBoundingClientRect();
+            canvas.width = Math.round(rect.width * ratio);
+            canvas.height = Math.round(rect.height * ratio);
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#111827';
+            if (snapshot) { loadImage(snapshot); }
+        }
+
+        function loadImage(src) {
+            var img = new Image();
+            img.onload = function () {
+                var w = canvas.width / ratio, h = canvas.height / ratio;
+                ctx.drawImage(img, 0, 0, w, h);
+                dirty = true;
+            };
+            img.src = src;
+        }
+
+        function pos(evt) {
+            var rect = canvas.getBoundingClientRect();
+            return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+        }
+
+        function save() {
+            input.value = dirty ? canvas.toDataURL('image/png') : '';
+        }
+
+        canvas.addEventListener('pointerdown', function (evt) {
+            if (evt.button !== undefined && evt.button !== 0 && evt.pointerType === 'mouse') { return; }
+            evt.preventDefault();
+            canvas.setPointerCapture(evt.pointerId);
+            drawing = true;
+            last = pos(evt);
+            ctx.beginPath();
+            ctx.moveTo(last.x, last.y);
+            ctx.lineTo(last.x + 0.1, last.y + 0.1);
+            ctx.stroke();
+            dirty = true;
+        });
+        canvas.addEventListener('pointermove', function (evt) {
+            if (!drawing) { return; }
+            evt.preventDefault();
+            var p = pos(evt);
+            ctx.beginPath();
+            ctx.moveTo(last.x, last.y);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+            last = p;
+        });
+        function stop(evt) {
+            if (!drawing) { return; }
+            drawing = false;
+            save();
+        }
+        canvas.addEventListener('pointerup', stop);
+        canvas.addEventListener('pointercancel', stop);
+        canvas.addEventListener('pointerleave', stop);
+
+        clearBtn.addEventListener('click', function () {
+            dirty = false;
+            input.value = '';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        window.addEventListener('resize', resize);
+        resize();
+    }
+
+    document.querySelectorAll('[data-signature-pad]').forEach(setupPad);
+})();
+</script>
 {% endblock %}

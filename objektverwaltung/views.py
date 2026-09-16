@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import (
     TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView,
@@ -29,7 +29,7 @@ from .models import (
     BuildingObject, Floor, EscapeRoute, FireAlarmPanel,
     BuildingContact, BuildingPlan, UsageCategory, ObjectStatus,
     FireSuppressionSystem, CompensationMeasure,
-    FireKeyDepot, InspectionReport, InspectionType,
+    FireKeyDepot, InspectionReport, InspectionType, FSDType,
 )
 from .resources import BuildingObjectResource
 from . import akte
@@ -48,9 +48,13 @@ class ObjektDashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateV
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'objektverwaltung'
         context['object_count'] = BuildingObject.objects.filter(status=ObjectStatus.ACTIVE).count()
-        context['followed_count'] = BuildingObject.objects.filter(
-            followers=self.request.user
-        ).count()
+        # Objekte mit Anlagen (je Objekt einmal gezählt, unabhängig von der Anzahl der Anlagen)
+        context['bmz_object_count'] = BuildingObject.objects.filter(
+            fire_alarm_panels__isnull=False).distinct().count()
+        context['fsd1_object_count'] = BuildingObject.objects.filter(
+            key_depots__is_active=True, key_depots__depot_type=FSDType.FSD1).distinct().count()
+        context['fsd3_object_count'] = BuildingObject.objects.filter(
+            key_depots__is_active=True, key_depots__depot_type=FSDType.FSD3).distinct().count()
         context['recent_objects'] = BuildingObject.objects.order_by('-updated_at')[:5]
         due_assets = _due_assets()
         context['due_assets'] = due_assets[:8]
@@ -75,6 +79,8 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
     FILTERS = (
         ('bmz', 'mit Brandmeldezentrale'),
         ('fsd', 'mit Schlüsseldepot'),
+        ('fsd1', 'mit Schlüsseldepot FSD 1'),
+        ('fsd3', 'mit Schlüsseldepot FSD 3'),
         ('due', 'Prüfung fällig / überfällig (FSD, BMZ, Löschanlage)'),
         ('komp', 'aktive Kompensationsmaßnahme'),
         ('planung', 'nur Objekte in Planung'),
@@ -139,6 +145,8 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
             qs = qs.filter(fire_alarm_panels__isnull=False)
         elif f == 'fsd':
             qs = qs.filter(key_depots__is_active=True)
+        elif f in ('fsd1', 'fsd3'):
+            qs = qs.filter(key_depots__is_active=True, key_depots__depot_type=f)
         elif f == 'due':
             limit = today + timedelta(days=FireKeyDepot.DUE_SOON_DAYS)
             qs = qs.filter(
@@ -805,7 +813,14 @@ class AddReportView(_ReportFormView):
                       f'{report.inspection_date:%d.%m.%Y} ({report.get_result_display()})', obj=report)
         messages.success(request, 'Prüfbericht gespeichert. Nächste Prüfung: '
                          + (asset.next_inspection.strftime('%d.%m.%Y') if asset.next_inspection else '–'))
-        return redirect(asset.get_absolute_url())
+        return _after_report_save(request, asset, report)
+
+
+def _after_report_save(request, asset, report):
+    """Weiterleitung nach dem Speichern: zur Anlage oder (Button „Speichern und PDF“) zum PDF-Download."""
+    if request.POST.get('save_pdf'):
+        return redirect(reverse('objektverwaltung:report_pdf', args=[report.pk]) + '?download=1')
+    return redirect(asset.get_absolute_url())
 
 
 def _get_report(pk):
@@ -833,7 +848,7 @@ class EditReportView(_ReportFormView):
         obj.save()
         akte.log_updated(request, asset.building, obj, akte.diff(obj, old_snapshot))
         messages.success(request, 'Prüfbericht aktualisiert.')
-        return redirect(asset.get_absolute_url())
+        return _after_report_save(request, asset, obj)
 
 
 class DeleteReportView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -849,8 +864,11 @@ class DeleteReportView(LoginRequiredMixin, PermissionRequiredMixin, View):
         return redirect(asset.get_absolute_url())
 
 
-def _render_report_pdf(request, asset, report=None):
-    """Prüfbericht als PDF: FSD nach der Vorlage, sonst allgemeines Layout."""
+def _render_report_pdf(request, asset, report=None, download=False):
+    """Prüfbericht als PDF: FSD nach der Vorlage, sonst allgemeines Layout.
+
+    ``download=True`` liefert das PDF als Datei zum Speichern (attachment) statt zur Anzeige im Browser.
+    """
     from django.template.loader import render_to_string
     from django.utils import timezone
     from weasyprint import HTML
@@ -876,17 +894,18 @@ def _render_report_pdf(request, asset, report=None):
     else:
         filename = f'{prefix}_{safe_number}_leer.pdf'
     response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    disposition = 'attachment' if download else 'inline'
+    response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
     return response
 
 
 class ReportPdfView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """Ausgefüllter Prüfbericht als PDF."""
+    """Ausgefüllter Prüfbericht als PDF (``?download=1`` zum Speichern)."""
     permission_required = 'objektverwaltung.view_buildingobject'
 
     def get(self, request, pk):
         report = _get_report(pk)
-        return _render_report_pdf(request, report.asset, report)
+        return _render_report_pdf(request, report.asset, report, download=bool(request.GET.get('download')))
 
 
 class AssetBlankPdfView(LoginRequiredMixin, PermissionRequiredMixin, View):

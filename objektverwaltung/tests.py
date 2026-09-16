@@ -243,6 +243,56 @@ class FireKeyDepotTests(TestCase):
         if out_dir:
             open(os.path.join(out_dir, 'leer.pdf'), 'wb').write(response.content)
 
+    def test_report_with_digital_signature_and_pdf_download(self):
+        import base64
+        import io
+        from datetime import date
+        from PIL import Image
+        from .models import FSDInspectionReport
+        depot = self._depot()
+        buf = io.BytesIO()
+        from PIL import ImageDraw
+        img = Image.new('RGBA', (300, 100), (0, 0, 0, 0))
+        ImageDraw.Draw(img).line([(20, 70), (80, 30), (140, 75), (200, 25), (280, 65)], fill=(17, 24, 39, 255), width=4)
+        img.save(buf, format='PNG')
+        signature = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode()
+        url = reverse('objektverwaltung:fsd_report_add', args=[depot.pk])
+        data = {
+            'inspection_date': '2026-04-01', 'participant_operator': 'Hr. Meier', 'participant_fire_dept': 'Max Prüfer',
+            'participant_other': '', 'depot_contents': '', 'condition_report': 'i.O.', 'result': 'ok', 'keys_match': 'on',
+            'signature_operator': signature, 'signature_fire_dept': '',
+        }
+        # Ungültige Unterschrift wird abgewiesen
+        response = self.client.post(url, {**data, 'signature_fire_dept': 'kein-bild'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Ungültige Unterschrift')
+        self.assertEqual(FSDInspectionReport.objects.count(), 0)
+        # „Speichern und PDF speichern“ leitet zum Download weiter
+        response = self.client.post(url, {**data, 'save_pdf': '1'})
+        report = FSDInspectionReport.objects.get()
+        self.assertEqual(report.signature_operator, signature)
+        self.assertEqual(report.signature_fire_dept, '')
+        self.assertTrue(report.is_signed)
+        pdf_url = reverse('objektverwaltung:report_pdf', args=[report.pk])
+        self.assertRedirects(response, pdf_url + '?download=1', fetch_redirect_response=False)
+        response = self.client.get(pdf_url + '?download=1')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response['Content-Disposition'].startswith('attachment;'))
+        self.assertTrue(response.content.startswith(b'%PDF'))
+        import os
+        if os.environ.get('FSD_PDF_OUT'):
+            open(os.path.join(os.environ['FSD_PDF_OUT'], 'signiert.pdf'), 'wb').write(response.content)
+        self.assertTrue(self.client.get(pdf_url)['Content-Disposition'].startswith('inline;'))
+        # Detailseite und Bearbeiten zeigen die Unterschrift; Akte enthält kein Base64
+        response = self.client.get(depot.get_absolute_url())
+        self.assertContains(response, 'unterschrieben')
+        self.assertContains(response, 'PDF speichern')
+        response = self.client.get(reverse('objektverwaltung:fsd_report_edit', args=[report.pk]))
+        self.assertContains(response, 'data-signature-canvas')
+        self.assertContains(response, signature[:60])
+        from . import akte
+        self.assertEqual(akte.snapshot(report, ['signature_operator'])['signature_operator'], 'Unterschrift vorhanden')
+
     def test_view_only_user_cannot_add_report(self):
         depot = self._depot()
         self.user.user_permissions.clear()
@@ -625,7 +675,27 @@ class StatusAndUsageCategoryTests(TestCase):
         self.assertLess(html.index('>Neubau<'), html.index('>Abriss<'))
         response = self.client.get(reverse('objektverwaltung:dashboard'))
         self.assertEqual(response.context['object_count'], 1)
+        self.assertNotContains(response, 'Von mir abonniert')
         self.assertEqual(planned.get_status_display(), 'In Planung')
+
+    def test_dashboard_counts_objects_with_bmz_and_fsd_types(self):
+        from .models import FireAlarmPanel, FireKeyDepot
+        other = BuildingObject.objects.create(object_number='OBJ-8', name='Hallenbad Ost', street='Weg', house_number='2',
+                                              postal_code='46047', city='Oberhausen', created_by=self.user, updated_by=self.user)
+        FireAlarmPanel.objects.create(building=self.building, designation='BMZ 1')
+        FireAlarmPanel.objects.create(building=self.building, designation='BMZ 2')  # gleiches Objekt → zählt einmal
+        FireKeyDepot.objects.create(building=self.building, designation='FSD A', depot_type='fsd1')
+        FireKeyDepot.objects.create(building=other, designation='FSD B', depot_type='fsd3')
+        FireKeyDepot.objects.create(building=other, designation='FSD alt', depot_type='fsd1', is_active=False)
+        response = self.client.get(reverse('objektverwaltung:dashboard'))
+        self.assertEqual(response.context['bmz_object_count'], 1)
+        self.assertEqual(response.context['fsd1_object_count'], 1)
+        self.assertEqual(response.context['fsd3_object_count'], 1)
+        self.assertContains(response, 'Objekte mit BMZ')
+        list_url = reverse('objektverwaltung:list')
+        self.assertContains(self.client.get(list_url, {'filter': 'fsd1'}), 'Rathaus')
+        self.assertNotContains(self.client.get(list_url, {'filter': 'fsd1'}), '>Hallenbad Ost<')
+        self.assertContains(self.client.get(list_url, {'filter': 'fsd3'}), '>Hallenbad Ost<')
 
     def test_usage_category_crud(self):
         list_url = reverse('objektverwaltung:usage_category_list')

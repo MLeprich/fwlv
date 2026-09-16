@@ -77,6 +77,8 @@ def _display_value(instance, field):
         return value.strftime('%d.%m.%Y')
     if isinstance(value, Model):
         return str(value)
+    if isinstance(value, str) and value.startswith('data:image/'):
+        return 'Unterschrift vorhanden'
     return str(value)
 
 

@@ -526,6 +526,13 @@ class InspectionReport(AuditedModel):
         help_text="Bescheinigung: Die deponierten Schlüssel entsprechen der General- bzw. "
                   "Torschließanlage und öffnen alle Toranlagen und Türen gewaltfrei."
     )
+    # Digitale Unterschriften (PNG als Data-URL, im Formular per Touch/Maus erfasst)
+    signature_operator = models.TextField(
+        blank=True, verbose_name="Unterschrift Firma / Objekt"
+    )
+    signature_fire_dept = models.TextField(
+        blank=True, verbose_name="Unterschrift Feuerwehr"
+    )
 
     class Meta:
         verbose_name = "Prüfbericht"
@@ -534,6 +541,10 @@ class InspectionReport(AuditedModel):
 
     def __str__(self):
         return f"Prüfbericht {self.inspection_date:%d.%m.%Y} – {self.asset}"
+
+    @property
+    def is_signed(self):
+        return bool(self.signature_operator or self.signature_fire_dept)
 
     @property
     def asset(self):

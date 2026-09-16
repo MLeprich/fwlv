@@ -23,19 +23,32 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div class="bg-white rounded-lg shadow p-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <a href="{% url 'objektverwaltung:list' %}" class="bg-white rounded-lg shadow p-6 block hover:bg-gray-50">
             <p class="text-sm text-gray-500">Aktive Objekte</p>
             <p class="text-3xl font-bold text-gray-900">{{ object_count }}</p>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <p class="text-sm text-gray-500">Von mir abonniert</p>
-            <p class="text-3xl font-bold text-gray-900">{{ followed_count }}</p>
-        </div>
+        </a>
         <a href="{% url 'objektverwaltung:inspection_list' %}?status=due" class="bg-white rounded-lg shadow p-6 block hover:bg-gray-50">
             <p class="text-sm text-gray-500">Prüfungen fällig</p>
             <p class="text-3xl font-bold {% if due_asset_count %}text-red-600{% else %}text-gray-900{% endif %}">{{ due_asset_count }}</p>
             <p class="text-xs text-gray-400 mt-1">überfällig oder in den nächsten 30 Tagen</p>
+        </a>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <a href="{% url 'objektverwaltung:list' %}?filter=bmz" class="bg-white rounded-lg shadow p-5 block hover:bg-gray-50">
+            <p class="text-sm text-gray-500">Objekte mit BMZ</p>
+            <p class="text-2xl font-bold text-gray-900">{{ bmz_object_count }}</p>
+            <p class="text-xs text-gray-400 mt-1">Brandmeldezentrale vorhanden</p>
+        </a>
+        <a href="{% url 'objektverwaltung:list' %}?filter=fsd1" class="bg-white rounded-lg shadow p-5 block hover:bg-gray-50">
+            <p class="text-sm text-gray-500">Objekte mit FSD 1</p>
+            <p class="text-2xl font-bold text-gray-900">{{ fsd1_object_count }}</p>
+            <p class="text-xs text-gray-400 mt-1">aktives Schlüsseldepot Typ 1</p>
+        </a>
+        <a href="{% url 'objektverwaltung:list' %}?filter=fsd3" class="bg-white rounded-lg shadow p-5 block hover:bg-gray-50">
+            <p class="text-sm text-gray-500">Objekte mit FSD 3</p>
+            <p class="text-2xl font-bold text-gray-900">{{ fsd3_object_count }}</p>
+            <p class="text-xs text-gray-400 mt-1">aktives Schlüsseldepot Typ 3</p>
         </a>
     </div>
 

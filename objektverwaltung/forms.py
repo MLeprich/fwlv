@@ -227,15 +227,23 @@ class FireKeyDepotForm(forms.ModelForm):
         }
 
 
+SIGNATURE_PREFIX = 'data:image/png;base64,'
+SIGNATURE_MAX_LENGTH = 300_000  # ~220 KB PNG; ein Unterschriften-Canvas liegt weit darunter
+
+
 class InspectionReportForm(forms.ModelForm):
     """Prüfbericht; Depot-Inhalt und Schlüssel-Bescheinigung nur bei FSD."""
     FSD_ONLY = ('depot_contents', 'keys_match')
+    SIGNATURE_FIELDS = ('signature_operator', 'signature_fire_dept')
 
     class Meta:
         model = InspectionReport
         fields = ['inspection_date', 'participant_operator', 'participant_fire_dept',
-                  'participant_other', 'depot_contents', 'condition_report', 'result', 'keys_match']
+                  'participant_other', 'depot_contents', 'condition_report', 'result', 'keys_match',
+                  'signature_operator', 'signature_fire_dept']
         widgets = {
+            'signature_operator': forms.HiddenInput(),
+            'signature_fire_dept': forms.HiddenInput(),
             'inspection_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT}),
             'participant_operator': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'Name(n) Betrieb / Objekt'}),
             'participant_fire_dept': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'Name(n) Feuerwehr'}),
@@ -260,6 +268,26 @@ class InspectionReportForm(forms.ModelForm):
             self.fields['condition_report'].label = 'Prüfergebnis / Feststellungen'
             self.fields['condition_report'].widget.attrs['placeholder'] = (
                 'z.B. Funktionsprüfung, Druck, Auslöseeinrichtungen, Mängel …')
+
+    def _clean_signature(self, name):
+        value = (self.cleaned_data.get(name) or '').strip()
+        if not value:
+            return ''
+        if not value.startswith(SIGNATURE_PREFIX) or len(value) > SIGNATURE_MAX_LENGTH:
+            raise forms.ValidationError('Ungültige Unterschrift. Bitte erneut unterschreiben.')
+        import base64
+        import binascii
+        try:
+            base64.b64decode(value[len(SIGNATURE_PREFIX):], validate=True)
+        except (binascii.Error, ValueError):
+            raise forms.ValidationError('Ungültige Unterschrift. Bitte erneut unterschreiben.')
+        return value
+
+    def clean_signature_operator(self):
+        return self._clean_signature('signature_operator')
+
+    def clean_signature_fire_dept(self):
+        return self._clean_signature('signature_fire_dept')
 
 
 # Rückwärtskompatibler Name

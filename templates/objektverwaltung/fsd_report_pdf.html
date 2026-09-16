@@ -30,6 +30,8 @@
         .foot { margin-top: 9mm; width: 100%; }
         .foot td { vertical-align: bottom; font-size: 9.5pt; padding: 0; }
         .sig { border-bottom: 1px solid #000; height: 9mm; }
+        .sig.signed { height: 18mm; position: relative; }
+        .sig.signed img { position: absolute; left: 0; bottom: 0.5mm; max-height: 17mm; max-width: 100%; }
         .sig-label { font-size: 8pt; text-align: center; padding-top: 1mm; }
         .stamp { font-size: 7pt; text-align: center; line-height: 1.25; }
         .stamp b { font-size: 8pt; }
@@ -107,14 +109,14 @@
         </tr>
         <tr>
             <td style="padding-top: 5mm;">Unterschriften:</td>
-            <td style="padding-top: 5mm;"><div class="sig"></div><div class="sig-label">(Firma / Objekt)</div></td>
+            <td style="padding-top: 5mm;"><div class="sig{% if report.signature_operator %} signed{% endif %}">{% if report.signature_operator %}<img src="{{ report.signature_operator }}" alt="">{% endif %}</div><div class="sig-label">(Firma / Objekt{% if report.participant_operator %}: {{ report.participant_operator }}{% endif %})</div></td>
             <td style="width: 12mm;"></td>
-            <td style="padding-top: 5mm;"><div class="sig"></div><div class="sig-label">(Feuerwehr)</div></td>
+            <td style="padding-top: 5mm;"><div class="sig{% if report.signature_fire_dept %} signed{% endif %}">{% if report.signature_fire_dept %}<img src="{{ report.signature_fire_dept }}" alt="">{% endif %}</div><div class="sig-label">(Feuerwehr{% if report.participant_fire_dept %}: {{ report.participant_fire_dept }}{% endif %})</div></td>
         </tr>
     </table>
 
     <div class="meta">
-        {% if report %}Erfasst im FLVS am {{ report.created_at|date:"d.m.Y H:i" }}{% if report.created_by %} von {{ report.created_by.get_full_name|default:report.created_by.username }}{% endif %} · Ergebnis: {{ report.get_result_display }}{% if depot.next_inspection %} · Nächste Prüfung: {{ depot.next_inspection|date:"d.m.Y" }}{% endif %}
+        {% if report %}Erfasst im FLVS am {{ report.created_at|date:"d.m.Y H:i" }}{% if report.created_by %} von {{ report.created_by.get_full_name|default:report.created_by.username }}{% endif %}{% if report.is_signed %} · digital unterschrieben{% endif %} · Ergebnis: {{ report.get_result_display }}{% if depot.next_inspection %} · Nächste Prüfung: {{ depot.next_inspection|date:"d.m.Y" }}{% endif %}
         {% else %}Leerformular, erzeugt im FLVS · Prüfintervall: {{ depot.inspection_interval_months }} Monate{% if depot.last_inspection %} · Letzte Prüfung: {{ depot.last_inspection|date:"d.m.Y" }}{% endif %}{% endif %}
     </div>
 </body>
