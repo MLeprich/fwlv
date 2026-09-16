@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load termine_tags %}
+
+{% block title %}Kategorien - Termine - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-6 px-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h1 class="text-2xl font-bold text-gray-900">Terminkategorien</h1>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'termine:calendar' %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm font-medium">Kalender</a>
+            <a href="{% url 'termine:category_create' %}" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium">+ Kategorie</a>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500"><tr><th class="px-4 py-2 text-left">Kategorie</th><th class="px-4 py-2 text-left">Termine</th><th class="px-4 py-2 text-left">Aktiv</th><th></th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for c in categories %}
+                <tr class="{% if not c.is_active %}text-gray-400{% endif %}">
+                    <td class="px-4 py-2"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border {{ c|category_classes }}">{{ c.icon }} {{ c.name }}</span></td>
+                    <td class="px-4 py-2">{{ c.events.count }}</td>
+                    <td class="px-4 py-2">{% if c.is_active %}✓{% else %}–{% endif %}</td>
+                    <td class="px-4 py-2 text-right"><a href="{% url 'termine:category_edit' c.pk %}" class="text-primary-600 hover:text-primary-800 text-xs">Bearbeiten</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}ICS-Import - Termine - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto py-6 px-4">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-1">ICS-Import</h1>
+        <p class="text-sm text-gray-600 mb-4">Kalenderdatei (.ics), z.B. aus Outlook exportiert. Termine mit bekannter Kennung werden aktualisiert statt doppelt angelegt. Serientermine werden nur mit dem ersten Vorkommen übernommen.</p>
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">ICS-Datei *</label>{{ form.file }}{% if form.file.errors %}<p class="text-sm text-red-600 mt-1">{{ form.file.errors.0 }}</p>{% endif %}</div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Kategorie *</label>{{ form.category }}{% if form.category.errors %}<p class="text-sm text-red-600 mt-1">{{ form.category.errors.0 }}</p>{% endif %}</div>
+            <label class="flex items-center gap-3 cursor-pointer">{{ form.show_on_monitor }}<span class="text-sm text-gray-700">Auf Info-Monitoren anzeigen</span></label>
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <a href="{% url 'termine:calendar' %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Abbrechen</a>
+                <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Importieren</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

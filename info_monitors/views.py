@@ -660,6 +660,11 @@ class WidgetEditView(LoginRequiredMixin, View):
         if widget.widget_type == WidgetType.DIENSTPLAN:
             from dienstplan.models import DutyFunction
             context['duty_functions'] = DutyFunction.choices
+        elif widget.widget_type == WidgetType.KALENDER:
+            from locations.models import Location
+            from termine.models import EventCategory
+            context['event_categories'] = EventCategory.objects.filter(is_active=True)
+            context['event_sites'] = Location.objects.filter(location_type='site').order_by('name')
         return render(request, self.template_name, context)
 
     def post(self, request, widget_id):
@@ -708,6 +713,12 @@ class WidgetEditView(LoginRequiredMixin, View):
         elif widget.widget_type == WidgetType.DIENSTPLAN:
             widget.config['mode'] = 'week' if request.POST.get('mode') == 'week' else 'today'
             widget.config['functions'] = request.POST.getlist('functions')
+
+        elif widget.widget_type == WidgetType.KALENDER:
+            widget.config['days'] = request.POST.get('days', '14')
+            widget.config['limit'] = request.POST.get('limit', '12')
+            widget.config['categories'] = request.POST.getlist('categories')
+            widget.config['sites'] = request.POST.getlist('sites')
 
         elif widget.widget_type == WidgetType.CLOCK:
             # Uhr-Einstellungen

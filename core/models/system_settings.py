@@ -141,6 +141,12 @@ class SystemSettings(models.Model):
         help_text="Dienstplan-Export importieren; Führungsdienst als Widget auf Info-Monitoren"
     )
 
+    termine_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Termine",
+        help_text="Zentraler Kalender mit Kategorien; Widget „Kalender“ auf Info-Monitoren"
+    )
+
     # ============================================================================
     # PERSONAL - TAB VISIBILITY
     # ============================================================================
@@ -389,4 +395,6 @@ class SystemSettings(models.Model):
             modules.append('iuk')
         if self.dienstplan_enabled:
             modules.append('dienstplan')
+        if self.termine_enabled:
+            modules.append('termine')
         return modules

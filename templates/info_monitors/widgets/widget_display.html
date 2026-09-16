@@ -18,6 +18,8 @@
         {% include 'info_monitors/widgets/weather.html' with widget=widget %}
     {% elif widget.widget_type == 'dienstplan' %}
         {% include 'info_monitors/widgets/dienstplan.html' with widget=widget %}
+    {% elif widget.widget_type == 'kalender' %}
+        {% include 'info_monitors/widgets/kalender.html' with widget=widget %}
     {% else %}
         {% include 'info_monitors/widgets/default.html' with widget=widget %}
     {% endif %}

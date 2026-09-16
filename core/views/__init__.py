@@ -78,6 +78,16 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
 
+        # Termine: nächste Termine (Modul aktiv + Leserecht)
+        try:
+            from core.models import SystemSettings as _SS
+            if _SS.load().termine_enabled and user.has_perm('termine.termine_view'):
+                from termine import services as termine_services
+                context['upcoming_events'] = termine_services.upcoming(days=14, limit=6)
+        except Exception:
+            context['upcoming_events'] = []
+
+
         # Aktuelles Datum
         context['today'] = timezone.now()
         today_date = timezone.now().date()
@@ -466,6 +476,7 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.surveys_enabled = request.POST.get('surveys_enabled') == 'true'
                 sys_settings.iuk_enabled = request.POST.get('iuk_enabled') == 'true'
                 sys_settings.dienstplan_enabled = request.POST.get('dienstplan_enabled') == 'true'
+                sys_settings.termine_enabled = request.POST.get('termine_enabled') == 'true'
                 sys_settings.person_tab_duty_hours_visible = request.POST.get('person_tab_duty_hours_visible') == 'true'
                 sys_settings.person_tab_qualifications_visible = request.POST.get('person_tab_qualifications_visible') == 'true'
                 sys_settings.person_tab_inspections_visible = request.POST.get('person_tab_inspections_visible') == 'true'

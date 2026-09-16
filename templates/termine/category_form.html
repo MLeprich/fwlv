@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Kategorie - Termine - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto py-6 px-4">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">{% if form.instance.pk %}Kategorie „{{ form.instance.name }}“{% else %}Neue Kategorie{% endif %}</h1>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>{{ form.name }}{% if form.name.errors %}<p class="text-sm text-red-600 mt-1">{{ form.name.errors.0 }}</p>{% endif %}</div>
+            <div class="grid grid-cols-3 gap-4">
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Farbe</label>{{ form.color }}</div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Symbol</label>{{ form.icon }}</div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Reihenfolge</label>{{ form.sort_order }}</div>
+            </div>
+            <label class="flex items-center gap-3 cursor-pointer">{{ form.is_active }}<span class="text-sm text-gray-700">Aktiv</span></label>
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <a href="{% url 'termine:category_list' %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Abbrechen</a>
+                <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Speichern</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

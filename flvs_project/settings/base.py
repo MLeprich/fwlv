@@ -107,6 +107,7 @@ LOCAL_APPS = [
     'surveys.apps.SurveysConfig',
     'iuk.apps.IukConfig',
     'dienstplan.apps.DienstplanConfig',
+    'termine.apps.TermineConfig',
     # Weitere Apps werden hier hinzugefuegt
 ]
 

@@ -38,6 +38,7 @@ class Roles:
     MODUL_SURVEYS = 'Modulverantwortlicher Umfragen'
     MODUL_IUK = 'Modulverantwortlicher IUK'
     MODUL_DIENSTPLAN = 'Modulverantwortlicher Dienstplan'
+    MODUL_TERMINE = 'Modulverantwortlicher Termine'
 
     # Sachbearbeiter pro Modul (view + add)
     SACHBEARBEITER_MEDICAL = 'Sachbearbeiter Medical'
@@ -58,6 +59,7 @@ class Roles:
     SACHBEARBEITER_OBJEKTVERWALTUNG = 'Sachbearbeiter Objektverwaltung'
     SACHBEARBEITER_IUK = 'Sachbearbeiter IUK'
     SACHBEARBEITER_DIENSTPLAN = 'Sachbearbeiter Dienstplan'  # Dienstplan: ansehen + bearbeiten
+    SACHBEARBEITER_TERMINE = 'Sachbearbeiter Termine'        # Termine: ansehen + bearbeiten
 
     # Freigabe-Gruppen (Procurement Approval)
     FREIGABE_STUFE_1 = 'Freigabe Stufe 1'  # bis 1.000€
@@ -76,6 +78,9 @@ class Roles:
     # Dienstplan (eigene Rechte dienstplan_*; Sachbearbeiter/Modulverantwortlicher siehe oben)
     DIENSTPLAN_LESER = 'Dienstplan Leser'          # nur ansehen
     DIENSTPLAN_STATISTIK = 'Dienstplan Statistik'  # Zusatz: statistische Auswertung
+
+    # Termine (eigene Rechte termine_*)
+    TERMINE_LESER = 'Termine Leser'
 
     # Operative Rollen
     BEREICHSLEITUNG = 'Bereichsleitung'
@@ -119,6 +124,7 @@ class Roles:
             cls.MODUL_SURVEYS,
             cls.MODUL_IUK,
             cls.MODUL_DIENSTPLAN,
+            cls.MODUL_TERMINE,
             cls.SACHBEARBEITER_MEDICAL,
             cls.SACHBEARBEITER_CLOTHING,
             cls.SACHBEARBEITER_MAGAZINE,
@@ -137,6 +143,7 @@ class Roles:
             cls.SACHBEARBEITER_OBJEKTVERWALTUNG,
             cls.SACHBEARBEITER_IUK,
             cls.SACHBEARBEITER_DIENSTPLAN,
+            cls.SACHBEARBEITER_TERMINE,
             cls.LST_INFOMONITOR,
             cls.LST_MAPPE,
             cls.BVS_LESER,
@@ -144,6 +151,7 @@ class Roles:
             cls.BVS_VERANTWORTLICHER,
             cls.DIENSTPLAN_LESER,
             cls.DIENSTPLAN_STATISTIK,
+            cls.TERMINE_LESER,
             cls.FREIGABE_STUFE_1,
             cls.FREIGABE_STUFE_2,
             cls.FREIGABE_STUFE_3,
@@ -182,6 +190,7 @@ class Roles:
             cls.MODUL_SURVEYS,
             cls.MODUL_IUK,
             cls.MODUL_DIENSTPLAN,
+            cls.MODUL_TERMINE,
         ]
 
     @classmethod
@@ -206,6 +215,7 @@ class Roles:
             cls.SACHBEARBEITER_OBJEKTVERWALTUNG,
             cls.SACHBEARBEITER_IUK,
             cls.SACHBEARBEITER_DIENSTPLAN,
+            cls.SACHBEARBEITER_TERMINE,
         ]
 
     @classmethod
@@ -275,6 +285,9 @@ class Modules:
     # Dienstplan
     DIENSTPLAN = 'dienstplan'
 
+    # Termine
+    TERMINE = 'termine'
+
     @classmethod
     def get_all_modules(cls):
         """Alle Module"""
@@ -309,6 +322,7 @@ class Modules:
             cls.SURVEYS,
             cls.IUK,
             cls.DIENSTPLAN,
+            cls.TERMINE,
         ]
 
     @classmethod

@@ -253,6 +253,17 @@ class UserDetailView(UserManagementMixin, DetailView):
             if dp_order.index(dp_effective) > dp_order.index(context['dienstplan_level']) else ''
         )
 
+        # Termine: Zugriffsstufe über Gruppen
+        from termine import roles as termine_roles
+        context['termine_levels'] = termine_roles.TERMINE_LEVELS
+        context['termine_level'] = termine_roles.group_level(user_obj)
+        t_order = [key for key, *_rest in termine_roles.TERMINE_LEVELS]
+        t_effective = termine_roles.effective_level(user_obj)
+        context['termine_effective_label'] = (
+            dict((key, label) for key, label, *_rest in termine_roles.TERMINE_LEVELS)[t_effective]
+            if t_order.index(t_effective) > t_order.index(context['termine_level']) else ''
+        )
+
         # Feuerwachen für WBF-Dropdown (Typ 'site' = Standort/Wache)
         context['wbf_locations'] = Location.objects.filter(
             location_type='site'
@@ -405,6 +416,25 @@ class UserDienstplanPermissionsView(UserManagementMixin, DetailView):
             f'Dienstplan für {user_obj.get_full_name() or user_obj.username}: „{labels[level]}“'
             f'{", mit Statistik" if stats else ""}.'
         )
+        return redirect('core:user_detail', pk=user_obj.pk)
+
+
+class UserTerminePermissionsView(UserManagementMixin, DetailView):
+    """Zugriffsstufe Termine setzen (genau eine Stufen-Gruppe)."""
+    model = User
+    required_permission = 'core.assign_roles'
+
+    def post(self, request, *args, **kwargs):
+        from termine import roles as termine_roles
+
+        user_obj = self.get_object()
+        level = request.POST.get('termine_level', '')
+        labels = {key: label for key, label, _group, _desc in termine_roles.TERMINE_LEVELS}
+        if level not in labels:
+            messages.error(request, 'Bitte eine Zugriffsstufe auswählen.')
+            return redirect('core:user_detail', pk=user_obj.pk)
+        termine_roles.set_level(user_obj, level, assigned_by=request.user)
+        messages.success(request, f'Termine für {user_obj.get_full_name() or user_obj.username}: „{labels[level]}“.')
         return redirect('core:user_detail', pk=user_obj.pk)
 
 

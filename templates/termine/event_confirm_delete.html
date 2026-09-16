@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Termin löschen - Termine - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto py-6 px-4">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-xl font-bold text-gray-900 mb-2">Termin löschen?</h1>
+        <p class="text-sm text-gray-700 mb-4">„{{ object.title }}“ am {{ object.start_date|date:"d.m.Y" }}{% if object.is_recurring %} inklusive aller Wiederholungen{% endif %} wird unwiderruflich gelöscht.</p>
+        <form method="post" class="flex items-center justify-between">
+            {% csrf_token %}
+            <a href="{{ object.get_absolute_url }}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Abbrechen</a>
+            <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Löschen</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

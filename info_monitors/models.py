@@ -39,6 +39,7 @@ class WidgetType(models.TextChoices):
     ANNOUNCEMENTS = 'announcements', _('Bekanntmachungen')
     EVENTS = 'events', _('Termine/Kalender')
     DIENSTPLAN = 'dienstplan', _('Dienstplan / Führungsdienst')
+    KALENDER = 'kalender', _('Kalender (Termine-Modul)')
     CUSTOM = 'custom', _('Benutzerdefiniert')
 
 

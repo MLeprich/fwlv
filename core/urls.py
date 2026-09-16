@@ -101,6 +101,7 @@ urlpatterns = [
     path('verwaltung/users/<int:pk>/ticket-permissions/', user_management.UserTicketPermissionsView.as_view(), name='user_ticket_permissions'),
     path('verwaltung/users/<int:pk>/bvs-permissions/', user_management.UserBVSPermissionsView.as_view(), name='user_bvs_permissions'),
     path('verwaltung/users/<int:pk>/dienstplan-permissions/', user_management.UserDienstplanPermissionsView.as_view(), name='user_dienstplan_permissions'),
+    path('verwaltung/users/<int:pk>/termine-permissions/', user_management.UserTerminePermissionsView.as_view(), name='user_termine_permissions'),
     path('verwaltung/users/<int:pk>/wbf-settings/', user_management.UserWBFSettingsView.as_view(), name='user_wbf_settings'),
     path('verwaltung/users/<int:pk>/ff-settings/', user_management.UserFFSettingsView.as_view(), name='user_ff_settings'),
     path('verwaltung/users/<int:pk>/create-person/', user_management.UserCreatePersonView.as_view(), name='user_create_person'),

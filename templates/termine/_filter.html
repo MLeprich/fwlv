@@ -1,0 +1,26 @@
+{# Filter Kategorien / Wache / Suche; erwartet filters, form_action, hidden (dict) #}
+<form method="get" action="{{ form_action }}" class="flex flex-wrap items-end gap-2 text-sm">
+    {% for key, value in hidden.items %}{% if value %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
+    <div>
+        <label class="block text-xs text-gray-500 mb-1">Suche</label>
+        <input type="text" name="q" value="{{ filters.q }}" placeholder="Titel, Ort, Text …" class="px-3 py-1.5 border border-gray-300 rounded-lg w-44">
+    </div>
+    <div>
+        <label class="block text-xs text-gray-500 mb-1">Kategorie</label>
+        <select name="kategorie" class="px-3 py-1.5 border border-gray-300 rounded-lg" style="min-width: 10rem;">
+            <option value="">alle</option>
+            {% for c in filters.category_choices %}<option value="{{ c.pk }}" {% if c.pk in filters.categories %}selected{% endif %}>{{ c.icon }} {{ c.name }}</option>{% endfor %}
+        </select>
+    </div>
+    {% if filters.site_choices %}
+    <div>
+        <label class="block text-xs text-gray-500 mb-1">Wache</label>
+        <select name="wache" class="px-3 py-1.5 border border-gray-300 rounded-lg">
+            <option value="">alle</option>
+            {% for s in filters.site_choices %}<option value="{{ s.pk }}" {% if filters.site == s.pk %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    <button type="submit" class="px-3 py-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900">Filtern</button>
+    {% if filters.q or filters.categories or filters.site %}<a href="{{ form_action }}{% if hidden_query %}?{{ hidden_query }}{% endif %}" class="px-3 py-1.5 text-gray-600 hover:text-gray-900">Zurücksetzen</a>{% endif %}
+</form>

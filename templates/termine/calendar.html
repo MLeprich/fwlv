@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load termine_tags %}
+
+{% block title %}{{ title }} - Termine - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 px-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'termine:calendar' %}?year={{ prev.year }}&month={{ prev.month }}{% if filter_query %}&{{ filter_query }}{% endif %}" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200">‹</a>
+            <h1 class="text-2xl font-bold text-gray-900">🗓️ {{ title }}</h1>
+            <a href="{% url 'termine:calendar' %}?year={{ next.year }}&month={{ next.month }}{% if filter_query %}&{{ filter_query }}{% endif %}" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200">›</a>
+            {% if first.year != today.year or first.month != today.month %}<a href="{% url 'termine:calendar' %}{% if filter_query %}?{{ filter_query }}{% endif %}" class="text-sm text-primary-600 hover:underline">Heute</a>{% endif %}
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'termine:list' %}{% if filter_query %}?{{ filter_query }}{% endif %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Liste</a>
+            <a href="{% url 'termine:ics_export' %}{% if filter_query %}?{{ filter_query }}{% endif %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200" title="Als ICS-Datei herunterladen">ICS</a>
+            {% if perms.termine.termine_manage %}
+            <a href="{% url 'termine:ics_import' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Import</a>
+            <a href="{% url 'termine:category_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Kategorien</a>
+            {% endif %}
+            {% if perms.termine.termine_edit %}
+            <a href="{% url 'termine:event_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">+ Termin</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow px-4 py-3 mb-4">
+        {% url 'termine:calendar' as calendar_url %}
+        {% include 'termine/_filter.html' with form_action=calendar_url hidden=month_hidden hidden_query=month_hidden_query %}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-3 bg-white rounded-lg shadow overflow-hidden">
+            <div class="grid grid-cols-7 bg-gray-50 text-xs uppercase tracking-wider text-gray-500 border-b border-gray-200">
+                {% for w in weekdays %}<div class="px-2 py-2 text-center {% if forloop.counter0 >= 5 %}bg-gray-100{% endif %}">{{ w }}</div>{% endfor %}
+            </div>
+            {% for week in weeks %}
+            <div class="grid grid-cols-7 border-b border-gray-100 last:border-b-0" style="min-height: 6.5rem;">
+                {% for day in week %}
+                <div class="border-r border-gray-100 last:border-r-0 p-1.5 {% if day.date.month != first.month %}bg-gray-50 text-gray-400{% elif day.date.weekday >= 5 %}bg-gray-50{% endif %} {% if day.date == today %}ring-2 ring-inset ring-primary-400{% endif %}">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-semibold {% if day.date == today %}text-primary-700{% endif %}">{{ day.date.day }}</span>
+                        {% if perms.termine.termine_edit and day.date.month == first.month %}<a href="{% url 'termine:event_create' %}?datum={{ day.date|date:'Y-m-d' }}" class="text-gray-300 hover:text-primary-600 text-xs" title="Termin anlegen">+</a>{% endif %}
+                    </div>
+                    <div class="space-y-0.5">
+                        {% for o in day.items|slice:":4" %}
+                        <a href="{{ o.event.get_absolute_url }}" class="block truncate text-xs px-1.5 py-0.5 rounded border {{ o.category|category_classes }}" title="{{ o.title }} · {{ o.event.time_display }}{% if o.event.location %} · {{ o.event.location }}{% endif %}">{% if not o.event.all_day and o.start == day.date %}{{ o.event.start_time|time:"H:i" }} {% endif %}{{ o.title }}</a>
+                        {% endfor %}
+                        {% if day.items|length > 4 %}<a href="{% url 'termine:list' %}?von={{ day.date|date:'Y-m-d' }}&bis={{ day.date|date:'Y-m-d' }}" class="block text-xs text-gray-500 px-1.5">+ {{ day.items|length|add:"-4" }} weitere</a>{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="bg-white rounded-lg shadow p-5">
+            <h2 class="font-semibold text-gray-900 mb-2">Nächste 14 Tage</h2>
+            {% if upcoming %}
+            <div class="divide-y divide-gray-100">
+                {% for o in upcoming %}{% include 'termine/_occurrence.html' with o=o show_date=True %}{% endfor %}
+            </div>
+            {% else %}<p class="text-sm text-gray-500">Keine Termine in den nächsten 14 Tagen.</p>{% endif %}
+            {% if filters.category_choices %}
+            <div class="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-1.5">
+                {% for c in filters.category_choices %}<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border {{ c|category_classes }}">{{ c.icon }} {{ c.name }}</span>{% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

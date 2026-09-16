@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load termine_tags %}
+
+{% block title %}Terminliste - Termine - FLVS{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-6 px-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Terminliste</h1>
+            <p class="text-sm text-gray-600">{{ date_from|date:"d.m.Y" }} – {{ date_to|date:"d.m.Y" }} · {{ items|length }} Termin{{ items|length|pluralize:"e" }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'termine:ics_export' %}?{{ export_query }}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">ICS</a>
+            <a href="{% url 'termine:calendar' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Kalender</a>
+            {% if perms.termine.termine_edit %}<a href="{% url 'termine:event_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">+ Termin</a>{% endif %}
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow px-4 py-3 mb-4">
+        <form method="get" class="flex flex-wrap items-end gap-2 text-sm">
+            <div><label class="block text-xs text-gray-500 mb-1">Von</label><input type="date" name="von" value="{{ date_from|date:'Y-m-d' }}" class="px-3 py-1.5 border border-gray-300 rounded-lg"></div>
+            <div><label class="block text-xs text-gray-500 mb-1">Bis</label><input type="date" name="bis" value="{{ date_to|date:'Y-m-d' }}" class="px-3 py-1.5 border border-gray-300 rounded-lg"></div>
+            <div><label class="block text-xs text-gray-500 mb-1">Suche</label><input type="text" name="q" value="{{ filters.q }}" placeholder="Titel, Ort, Text …" class="px-3 py-1.5 border border-gray-300 rounded-lg w-44"></div>
+            <div><label class="block text-xs text-gray-500 mb-1">Kategorie</label>
+                <select name="kategorie" class="px-3 py-1.5 border border-gray-300 rounded-lg">
+                    <option value="">alle</option>
+                    {% for c in filters.category_choices %}<option value="{{ c.pk }}" {% if c.pk in filters.categories %}selected{% endif %}>{{ c.icon }} {{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            {% if filters.site_choices %}
+            <div><label class="block text-xs text-gray-500 mb-1">Wache</label>
+                <select name="wache" class="px-3 py-1.5 border border-gray-300 rounded-lg">
+                    <option value="">alle</option>
+                    {% for s in filters.site_choices %}<option value="{{ s.pk }}" {% if filters.site == s.pk %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <button type="submit" class="px-3 py-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900">Anzeigen</button>
+        </form>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5">
+        {% if items %}
+        <div class="divide-y divide-gray-100">
+            {% for o in items %}{% include 'termine/_occurrence.html' with o=o show_date=True %}{% endfor %}
+        </div>
+        {% else %}<p class="text-sm text-gray-500 text-center py-6">Keine Termine im Zeitraum.</p>{% endif %}
+    </div>
+</div>
+{% endblock %}

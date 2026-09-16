@@ -218,6 +218,31 @@
     </div>
 </div>
 
+<!-- Termine: nächste Termine -->
+{% if modules.termine_enabled and perms.termine.termine_view %}
+<div class="mb-6">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="font-semibold text-gray-900">🗓️ Nächste Termine</h3>
+            <a href="{% url 'termine:calendar' %}" class="text-sm text-primary-600 hover:text-primary-700">Kalender</a>
+        </div>
+        <div class="p-5">
+            {% if upcoming_events %}
+            <ul class="divide-y divide-gray-100">
+                {% for o in upcoming_events %}
+                <li>{% include 'termine/_occurrence.html' with o=o show_date=True %}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="text-center py-6 text-gray-500">
+                <p class="text-sm">Keine Termine in den nächsten 14 Tagen.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Objektverwaltung: abonnierte Änderungen -->
 {% if modules.objektverwaltung_enabled and perms.objektverwaltung.view_buildingobject %}
 <div class="mb-6">

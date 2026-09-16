@@ -1,0 +1,11 @@
+{% load termine_tags %}
+{# Eine Terminzeile; erwartet o (Occurrence), optional show_date #}
+<a href="{{ o.event.get_absolute_url }}" class="flex items-start gap-3 py-2 hover:bg-gray-50 -mx-2 px-2 rounded">
+    <span class="mt-1.5 w-2.5 h-2.5 rounded-full shrink-0 {{ o.category|category_dot }}" title="{{ o.category.name }}"></span>
+    <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-gray-900 truncate">{{ o.category.icon }} {{ o.title }}</p>
+        <p class="text-xs text-gray-500">
+            {% if show_date %}{{ o.start|date:"D d.m.Y" }}{% if o.is_multi_day %} – {{ o.end|date:"D d.m.Y" }}{% endif %} · {% endif %}{{ o.event.time_display }}{% if o.event.location %} · {{ o.event.location }}{% endif %}{% if o.event.is_recurring %} · ↻{% endif %}
+        </p>
+    </div>
+</a>
