@@ -289,6 +289,10 @@ class DashboardSettingsView(LoginRequiredMixin, View):
                 messages.error(request, error)
             return redirect('info_monitors:dashboard_editor', pk=dashboard.pk)
 
+        # Öffentlich = Vollbild-Link ohne Anmeldung (wie der Leitstellen-Infomonitor)
+        was_public = dashboard.is_public
+        dashboard.is_public = bool(request.POST.get('is_public'))
+
         dashboard.canvas_width = width
         dashboard.canvas_height = height
         dashboard.slug = slug
@@ -305,6 +309,9 @@ class DashboardSettingsView(LoginRequiredMixin, View):
                 widget.canvas_width, widget.height, widget.x_position, widget.y_position = w, h, x, y
                 widget.save(update_fields=['canvas_width', 'height', 'x_position', 'y_position'])
 
+        if dashboard.is_public != was_public:
+            messages.success(request, 'Vollbild-Link ist jetzt ohne Anmeldung abrufbar.' if dashboard.is_public
+                             else 'Vollbild-Link verlangt jetzt eine Anmeldung.')
         messages.success(request, f'Canvas auf {width}×{height} px ({dashboard.orientation_display}) gesetzt.')
         return redirect('info_monitors:dashboard_editor', pk=dashboard.pk)
 

@@ -85,6 +85,21 @@ class DashboardKioskTests(TestCase):
         self.assertEqual(dashboard.slug, 'foyer-hoch')
         self.assertEqual(widget.x_position, 1080 - 400)
 
+        # Öffentlich schalten: Vollbild-Link ohne Anmeldung
+        self.client.post(reverse('info_monitors:dashboard_settings', args=[dashboard.pk]), {
+            'canvas_width': 1080, 'canvas_height': 1920, 'slug': 'foyer-hoch', 'is_public': '1',
+        })
+        dashboard.refresh_from_db()
+        self.assertTrue(dashboard.is_public)
+        self.client.logout()
+        self.assertEqual(self.client.get(dashboard.get_kiosk_url()).status_code, 200)
+        self.client.force_login(self.user)
+        self.client.post(reverse('info_monitors:dashboard_settings', args=[dashboard.pk]), {
+            'canvas_width': 1080, 'canvas_height': 1920, 'slug': 'foyer-hoch',
+        })
+        dashboard.refresh_from_db()
+        self.assertFalse(dashboard.is_public)
+
         # Doppelter Link-Name wird abgewiesen
         self._dashboard('Anderer', slug='anderer')
         self.client.post(reverse('info_monitors:dashboard_settings', args=[dashboard.pk]), {

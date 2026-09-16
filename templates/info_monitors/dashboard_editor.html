@@ -200,11 +200,17 @@
                             <input type="text" readonly value="{{ kiosk_url }}" id="kiosk-url" class="flex-1 min-w-0 px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-700">
                             <button type="button" onclick="copyKioskUrl()" class="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded" title="Link kopieren">📋</button>
                         </div>
-                        {% if not dashboard.is_public %}<p class="text-xs text-yellow-700 mt-1">Nicht öffentlich: Link verlangt Anmeldung.</p>{% endif %}
                     </div>
                     <form method="post" action="{% url 'info_monitors:dashboard_settings' dashboard.pk %}" class="space-y-3"
                           x-data="{ w: {{ dashboard.canvas_width }}, h: {{ dashboard.canvas_height }} }">
                         {% csrf_token %}
+                        <label class="flex items-start gap-2 cursor-pointer">
+                            <input type="checkbox" name="is_public" value="1" {% if dashboard.is_public %}checked{% endif %} class="mt-0.5 w-4 h-4 text-blue-600 rounded">
+                            <span class="text-xs text-gray-700">
+                                <span class="font-medium">Öffentlich anzeigen</span><br>
+                                <span class="text-gray-500">Vollbild-Link ohne Anmeldung abrufbar (wie der Leitstellen-Infomonitor)</span>
+                            </span>
+                        </label>
                         <div>
                             <label class="block text-xs text-gray-500 mb-1">Link-Name</label>
                             <input type="text" name="slug" value="{{ dashboard.slug }}" class="w-full px-2 py-1 text-xs border border-gray-300 rounded" pattern="[a-z0-9\-]+">
