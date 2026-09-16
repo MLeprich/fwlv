@@ -64,7 +64,7 @@ class DashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
 
 
 class UploadView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """CSV (und optional PDF) hochladen, prüfen und Vorschau zeigen."""
+    """CSV hochladen, prüfen und Vorschau zeigen."""
     permission_required = 'dienstplan.dienstplan_edit'
 
     def post(self, request):

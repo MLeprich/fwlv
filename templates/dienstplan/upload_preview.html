@@ -45,7 +45,6 @@
             {% if parsed.warnings %}<ul class="text-xs text-yellow-800 space-y-1">{% for w in parsed.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
             {% else %}<p class="text-sm text-green-700">Keine Auffälligkeiten.</p>{% endif %}
             {% if replaced %}<p class="text-xs text-gray-600 mt-2">Ersetzt beim Übernehmen: {% for r in replaced %}{{ r }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
-            {% if upload.pdf_file %}<p class="text-xs mt-2"><a href="{{ upload.pdf_file.url }}" target="_blank" class="text-primary-600 hover:underline">PDF öffnen</a></p>{% endif %}
         </div>
     </div>
 

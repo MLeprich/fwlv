@@ -87,9 +87,8 @@ def _upload_path(instance, filename):
 
 
 class RosterUpload(models.Model):
-    """Ein hochgeladener Dienstplan-Export (CSV, optional mit PDF zur Anzeige)"""
+    """Ein hochgeladener Dienstplan-Export (CSV)"""
     file = models.FileField('CSV-Datei', upload_to=_upload_path)
-    pdf_file = models.FileField('PDF-Datei (optional)', upload_to=_upload_path, blank=True, null=True)
     original_name = models.CharField('Dateiname', max_length=255, blank=True)
     period_start = models.DateField('Zeitraum von')
     period_end = models.DateField('Zeitraum bis')
