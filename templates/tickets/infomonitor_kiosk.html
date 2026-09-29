@@ -208,7 +208,7 @@
         </div>
 
         <!-- Navigation -->
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1" data-kiosk-region="nav">
             <button @click="view = 'dashboard'; search = ''" class="nav-pill val-secondary" :class="{ 'active': view === 'dashboard' }">
                 <span class="flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
@@ -245,7 +245,7 @@
 
         <div class="flex items-center gap-6">
             <span class="text-base font-mono val-secondary" id="clock"></span>
-            <span class="text-sm val-muted">Aktualisiert: {% if monitor.updated_at %}{{ monitor.updated_at|date:"d.m.Y H:i" }}{% endif %}</span>
+            <span class="text-sm val-muted" data-kiosk-region="updated">Aktualisiert:{% if monitor.updated_at %}{{ monitor.updated_at|date:"d.m.Y H:i" }}{% endif %}</span>
             {% if request.user.is_authenticated %}
             <!-- Benachrichtigungen -->
             <div class="relative" x-data="{ open: false, count: {{ notification_count|default:0 }}, notifications: [] }" x-init="
@@ -284,6 +284,9 @@
             </button>
         </div>
     </div>
+
+    <!-- Ansichten: werden vom Auto-Refresh ohne Seiten-Reload ausgetauscht (display: contents = layoutneutral) -->
+    <div data-kiosk-region="views" style="display: contents;">
 
     <!-- ==================== DASHBOARD VIEW ==================== -->
     <template x-if="view === 'dashboard'">
@@ -335,15 +338,16 @@
                             <div class="flex items-start gap-3 py-1.5 border-b border-table-light">
                                 <p class="flex-shrink-0 text-xs uppercase tracking-wider val-muted font-medium pt-1" style="width: 7.5rem;">{{ e.label }}</p>
                                 <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-3 flex-wrap">
-                                        <p class="text-lg font-bold val-primary leading-snug">{{ e.value|default:"&mdash;" }}</p>
+                                    <div class="flex items-start gap-2">
+                                        <p class="min-w-0 text-lg font-bold val-primary leading-snug">{{ e.value|default:"&mdash;" }}</p>
                                         {% if e.contact_json %}
+                                        {# Nur Symbol, kein Umbruch: die Kachel soll nicht höher werden, sobald Kontaktdaten hinterlegt sind #}
                                         <button type="button" data-contact="{{ e.contact_json }}"
                                                 @click="contact = JSON.parse($el.dataset.contact)"
-                                                class="contact-btn flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold"
-                                                title="Telefonnummer anzeigen">
+                                                class="contact-btn flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg"
+                                                style="margin: -2px 0;"
+                                                title="Kontakt anzeigen" aria-label="Kontakt anzeigen">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
-                                            Kontakt
                                         </button>
                                         {% endif %}
                                     </div>
@@ -866,6 +870,9 @@
     </template>
     {% endif %}
 
+    </div>
+
+    <div data-kiosk-region="laufband" style="display: contents;">
     {% if monitor.show_laufband and monitor.laufband_text %}
     <!-- LAUFBAND / TICKER -->
     <div class="marquee-bar">
@@ -874,6 +881,7 @@
         </div>
     </div>
     {% endif %}
+    </div>
 
     <!-- Kontakt-Modal Bereitschaft -->
     <div x-show="contact" x-cloak x-transition.opacity
@@ -974,17 +982,47 @@ function geTick() {
 geTick();
 setInterval(geTick, 15000);
 
-// Auto-Refresh: Seite alle 30 s neu laden, damit Fahrzeug-/Bereitschaftsdaten aktuell bleiben.
-// Nur auf der Übersicht (view === 'dashboard') – in den anderen Ansichten (z. B. geöffnete
-// PDF unter "Informationen") würde ein Reload das iframe zerstören und die PDF jedes Mal
-// komplett neu laden. Wird zurück zur Übersicht gewechselt, wird nachgeholt, falls der
-// letzte Reload länger als das Intervall her ist.
+// Auto-Refresh: Inhalte alle 30 s nachladen, damit Fahrzeug-/Bereitschaftsdaten aktuell bleiben.
+// Die Seite wird dabei NICHT neu geladen (ein Reload beendet den Vollbildmodus des Browsers):
+// Die Kiosk-Seite wird per fetch geholt und nur die Bereiche [data-kiosk-region] werden
+// ausgetauscht – und auch nur, wenn sich ihr Inhalt geändert hat.
+// Nur auf der Übersicht (view === 'dashboard') und nicht bei geöffnetem Kontakt-Fenster – in den
+// anderen Ansichten (z. B. geöffnete PDF unter "Informationen") würde der Austausch das iframe
+// zerstören. Wird zurück zur Übersicht gewechselt, wird nachgeholt, falls die letzte
+// Aktualisierung länger als das Intervall her ist.
 const KIOSK_REFRESH_MS = 30000;
-const kioskLoadedAt = Date.now();
+const KIOSK_SCROLL_IDS = ['vehicle-scroll-container', 'sonstiges-scroll-container', 'bereitschaft-scroll-container'];
+let kioskRefreshedAt = Date.now();
+let kioskRefreshing = false;
+
+function kioskRegions(doc) {
+    const regions = {};
+    doc.querySelectorAll('[data-kiosk-region]').forEach(el => { regions[el.dataset.kioskRegion] = el; });
+    return regions;
+}
+
+// Styles und Scripts der Seite: ändern sie sich (Deployment), reicht ein Austausch der
+// Inhalte nicht – dann wird einmalig komplett neu geladen.
+function kioskAssetSignature(doc) {
+    return Array.from(doc.querySelectorAll('link[rel="stylesheet"], style, script'))
+        .map(el => el.getAttribute('href') || el.getAttribute('src') || el.textContent)
+        .join('\n');
+}
+
+// Ausgangsstand merken, solange das DOM unverändert ist (Alpine startet erst nach diesem Script).
+// Verglichen wird immer Server-HTML mit Server-HTML, nie das von Alpine gerenderte DOM.
+const kioskAssets = kioskAssetSignature(document);
+const kioskSource = {};
+Object.entries(kioskRegions(document)).forEach(([name, el]) => { kioskSource[name] = el.innerHTML; });
 
 function kioskRootData() {
     const root = document.querySelector('[x-data]');
     return (root && window.Alpine) ? Alpine.$data(root) : null;
+}
+
+function kioskRefreshAllowed() {
+    const data = kioskRootData();
+    return !data || (data.view === 'dashboard' && !data.contact);
 }
 
 function kioskReload() {
@@ -998,13 +1036,61 @@ function kioskReload() {
     location.reload();
 }
 
+async function kioskRefresh() {
+    if (kioskRefreshing) return;
+    kioskRefreshing = true;
+    try {
+        const resp = await fetch(location.href, { credentials: 'same-origin', cache: 'no-store' });
+        if (!resp.ok || resp.redirected) return;
+        const doc = new DOMParser().parseFromString(await resp.text(), 'text/html');
+        const fresh = kioskRegions(doc);
+        // Keine Kiosk-Seite (Wartungs-/Fehlerseite) → Anzeige stehen lassen, später erneut versuchen
+        if (!Object.keys(fresh).length) return;
+        // Während des Ladens Ansicht gewechselt oder Kontakt geöffnet → wird nachgeholt
+        if (!kioskRefreshAllowed()) return;
+
+        const current = kioskRegions(document);
+        const names = Object.keys(current);
+        if (kioskAssetSignature(doc) !== kioskAssets || names.some(name => !fresh[name])) {
+            kioskReload();
+            return;
+        }
+
+        const changed = names.filter(name => fresh[name].innerHTML !== kioskSource[name]);
+        if (changed.length) {
+            // Scroll-Positionen der Kacheln über den Austausch hinweg behalten
+            const scrollTops = {};
+            KIOSK_SCROLL_IDS.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) scrollTops[id] = el.scrollTop;
+            });
+            changed.forEach(name => {
+                kioskSource[name] = fresh[name].innerHTML;
+                current[name].innerHTML = kioskSource[name];
+            });
+            // Alpine initialisiert die neuen Elemente selbst (MutationObserver)
+            const afterRender = () => {
+                KIOSK_SCROLL_IDS.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && scrollTops[id]) el.scrollTop = scrollTops[id];
+                });
+                geTick();
+            };
+            if (window.Alpine) Alpine.nextTick(afterRender); else afterRender();
+        }
+        kioskRefreshedAt = Date.now();
+    } catch (err) {
+        // Server/Netz nicht erreichbar → letzte Anzeige behalten, nächstes Intervall versucht es erneut
+    } finally {
+        kioskRefreshing = false;
+    }
+}
+
 setInterval(() => {
-    const data = kioskRootData();
-    if (data && (data.view !== 'dashboard' || data.contact)) return;
-    kioskReload();
+    if (kioskRefreshAllowed()) kioskRefresh();
 }, KIOSK_REFRESH_MS);
 
-// View-State nach Reload wiederherstellen + Nachhol-Reload beim Rückwechsel zur Übersicht
+// View-State nach Reload wiederherstellen + Nachhol-Aktualisierung beim Rückwechsel zur Übersicht
 document.addEventListener('alpine:init', () => {
     const savedView = localStorage.getItem('kiosk-view');
     const savedGv = localStorage.getItem('kiosk-gv-selected');
@@ -1018,11 +1104,11 @@ document.addEventListener('alpine:init', () => {
             if (savedGv) data.gvSelected = savedGv;
             if (savedZoom) data.zoom = savedZoom;
         }
-        // Wenn von einer anderen Ansicht zurück zur Übersicht gewechselt wird und die
-        // Daten älter als ein Intervall sind → sofort einmal neu laden.
+        // Wenn von einer anderen Ansicht zurück zur Übersicht gewechselt (oder das Kontakt-Fenster
+        // geschlossen) wird und die Daten älter als ein Intervall sind → sofort einmal aktualisieren.
         Alpine.effect(() => {
-            if (data.view === 'dashboard' && Date.now() - kioskLoadedAt > KIOSK_REFRESH_MS) {
-                kioskReload();
+            if (data.view === 'dashboard' && !data.contact && Date.now() - kioskRefreshedAt > KIOSK_REFRESH_MS) {
+                kioskRefresh();
             }
         });
     }, 50);
@@ -1030,58 +1116,53 @@ document.addEventListener('alpine:init', () => {
 
 // Auto-Scroll für Kachel-Container (Endlos-Loop)
 // Scrollt nach unten, pausiert kurz am Ende, springt nach oben, wiederholt.
+// Container und Checkbox werden in jedem Frame per ID gesucht: Alpine rendert die Kacheln beim
+// Ansichtswechsel und beim Auto-Refresh neu, feste Element-Referenzen würden ins Leere laufen.
 function initAutoScroll(containerId, toggleId, storageKey) {
-    const container = document.getElementById(containerId);
-    const toggle = document.getElementById(toggleId);
-    if (!container) {
-        setTimeout(function() { initAutoScroll(containerId, toggleId, storageKey); }, 200);
-        return;
-    }
-
     const SCROLL_SPEED = 0.5;     // px pro Frame
     const PAUSE_FRAMES = 120;     // ~2 Sek. Pause am Ende (bei 60fps)
-    let isHovered = false;
     let pauseCounter = 0;
     let enabled = localStorage.getItem(storageKey) !== 'off';
+    let syncedToggle = null;
 
-    // Checkbox synchronisieren
-    if (toggle) {
-        toggle.checked = enabled;
-        toggle.addEventListener('change', function() {
-            enabled = this.checked;
-            localStorage.setItem(storageKey, enabled ? 'on' : 'off');
-            if (enabled) { container.scrollTop = 0; pauseCounter = 0; }
-        });
-    }
+    document.addEventListener('change', function(ev) {
+        if (ev.target.id !== toggleId) return;
+        enabled = ev.target.checked;
+        localStorage.setItem(storageKey, enabled ? 'on' : 'off');
+        const container = document.getElementById(containerId);
+        if (enabled && container) { container.scrollTop = 0; pauseCounter = 0; }
+    });
 
     function autoScroll() {
-        if (enabled && !isHovered && container.scrollHeight > container.clientHeight) {
+        const container = document.getElementById(containerId);
+        const toggle = document.getElementById(toggleId);
+        // Checkbox synchronisieren (einmal je neu gerendertem Element)
+        if (toggle && toggle !== syncedToggle) {
+            toggle.checked = enabled;
+            syncedToggle = toggle;
+        }
+        if (container && enabled && !container.matches(':hover') && container.scrollHeight > container.clientHeight) {
             if (pauseCounter > 0) {
                 pauseCounter--;
+                // Pause vorbei → zum Anfang springen
+                if (pauseCounter === 0) container.scrollTop = 0;
             } else {
                 container.scrollTop += SCROLL_SPEED;
-                // Am Ende angekommen → pausieren, dann zum Anfang springen
+                // Am Ende angekommen → pausieren
                 if (container.scrollTop + container.clientHeight >= container.scrollHeight) {
                     pauseCounter = PAUSE_FRAMES;
-                    setTimeout(function() {
-                        container.scrollTop = 0;
-                    }, PAUSE_FRAMES * (1000 / 60));
                 }
             }
         }
         requestAnimationFrame(autoScroll);
     }
 
-    container.addEventListener('mouseenter', function() { isHovered = true; });
-    container.addEventListener('mouseleave', function() { isHovered = false; });
-
     requestAnimationFrame(autoScroll);
 }
 
-// Starte nach Alpine-Init
-setTimeout(function() { initAutoScroll('vehicle-scroll-container', 'vehicle-autoscroll-toggle', 'kiosk-vehicle-autoscroll'); }, 300);
-setTimeout(function() { initAutoScroll('sonstiges-scroll-container', 'sonstiges-autoscroll-toggle', 'kiosk-sonstiges-autoscroll'); }, 300);
-setTimeout(function() { initAutoScroll('bereitschaft-scroll-container', 'bereitschaft-autoscroll-toggle', 'kiosk-bereitschaft-autoscroll'); }, 300);
+initAutoScroll('vehicle-scroll-container', 'vehicle-autoscroll-toggle', 'kiosk-vehicle-autoscroll');
+initAutoScroll('sonstiges-scroll-container', 'sonstiges-autoscroll-toggle', 'kiosk-sonstiges-autoscroll');
+initAutoScroll('bereitschaft-scroll-container', 'bereitschaft-autoscroll-toggle', 'kiosk-bereitschaft-autoscroll');
 </script>
 </body>
 </html>
