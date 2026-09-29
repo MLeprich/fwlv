@@ -178,6 +178,12 @@ class GrossereignisTests(TestCase):
 class BereitschaftFreitextTests(TestCase):
     """Freitext in der Bereitschafts-Kachel."""
 
+    def setUp(self):
+        # InfoMonitor.load() cached das Objekt – ohne Leeren bliebe der Stand eines
+        # vorherigen Tests im Cache, obwohl dessen Datenbank zurückgerollt wurde.
+        from django.core.cache import cache
+        cache.clear()
+
     def test_freitext_shown_on_display_and_kiosk(self):
         monitor = InfoMonitor.load()
         monitor.bereitschaft_freitext = 'Vertretung LNA ab 18 Uhr'
@@ -198,6 +204,21 @@ class BereitschaftFreitextTests(TestCase):
         self.assertContains(resp, '0208-123')
         self.assertContains(resp, '0170-456')
         self.assertEqual(resp.context['bereitschaft_entries'][0]['phones'], ['0208-123', '0170-456'])
+
+    def test_kiosk_changed_at_behind_button(self):
+        """Änderungsdatum steht nicht mehr als eigene Zeile in der Kachel, sondern hinter einem Symbol-Button."""
+        from django.utils import timezone
+        monitor = InfoMonitor.load()
+        monitor.bereitschaft_a1_dienst = BereitschaftPerson.objects.create(name='Max Mustermann')
+        monitor.bereitschaft_a1_dienst_note = 'Vertretung bis Freitag'
+        monitor.save()
+        changed_at = InfoMonitor.objects.get(pk=monitor.pk).bereitschaft_a1_dienst_changed_at
+        self.assertIsNotNone(changed_at)
+        changed = timezone.localtime(changed_at)
+        resp = self.client.get(reverse('tickets:infomonitor_kiosk'))
+        self.assertContains(resp, 'data-changed="%s"' % changed.strftime('%d.%m.%Y %H:%M'), count=1)
+        self.assertContains(resp, 'data-note="Vertretung bis Freitag"')
+        self.assertNotContains(resp, '&#x1F552;')
 
 
 class FFStammfahrzeugTests(TestCase):

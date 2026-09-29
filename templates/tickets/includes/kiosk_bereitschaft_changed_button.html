@@ -1,0 +1,9 @@
+{# Änderungsdatum eines Bereitschaftseintrags: nur Symbol, das Datum erscheint im Kontakt-Fenster #}
+<button type="button"
+        data-label="{{ e.label }}" data-name="{{ e.value|default:'' }}" data-note="{{ e.note }}"
+        data-changed="{{ e.changed_at|date:'d.m.Y H:i' }}"
+        @click="contact = { label: $el.dataset.label, name: $el.dataset.name, note: $el.dataset.note, phones: [], changed: $el.dataset.changed }"
+        class="info-btn flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-lg"
+        title="&Auml;nderungsdatum anzeigen" aria-label="&Auml;nderungsdatum anzeigen">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+</button>
