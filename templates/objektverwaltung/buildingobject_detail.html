@@ -180,6 +180,12 @@
                         <p class="text-sm text-gray-700 whitespace-pre-line">{{ object.notes }}</p>
                     </div>
                     {% endif %}
+                    {% if object.internal_notes %}
+                    <div class="mt-4 pt-4 border-t border-gray-100 bg-yellow-50 -mx-6 -mb-6 px-6 py-4 rounded-b-lg">
+                        <p class="text-xs text-yellow-800 mb-1">🔒 Interne Vermerke <span class="text-yellow-700">(nicht in PDF, Akte-Auszug oder Export)</span></p>
+                        <p class="text-sm text-gray-800 whitespace-pre-line">{{ object.internal_notes }}</p>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <!-- Kurzübersicht der Bereiche -->

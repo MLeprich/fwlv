@@ -32,7 +32,7 @@ class BuildingObjectForm(forms.ModelForm):
             'street', 'house_number', 'postal_code', 'city',
             'latitude', 'longitude',
             'floor_count', 'basement_count', 'has_fire_alarm_system',
-            'notes',
+            'notes', 'internal_notes',
         ]
         widgets = {
             'object_number': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'z.B. OBJ-001'}),
@@ -49,6 +49,8 @@ class BuildingObjectForm(forms.ModelForm):
             'basement_count': forms.NumberInput(attrs={'class': INPUT, 'min': '0'}),
             'has_fire_alarm_system': forms.CheckboxInput(attrs={'class': CHECKBOX}),
             'notes': forms.Textarea(attrs={'class': INPUT, 'rows': 4}),
+            'internal_notes': forms.Textarea(attrs={'class': INPUT, 'rows': 4,
+                                                    'placeholder': 'z.B. Absprachen, Besonderheiten, offene Punkte'}),
         }
 
     def __init__(self, *args, **kwargs):

@@ -113,6 +113,12 @@
                 {{ form.notes }}
             </div>
 
+            <div class="pb-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.internal_notes.label }}</label>
+                {{ form.internal_notes }}
+                <p class="mt-1 text-xs text-gray-500">{{ form.internal_notes.help_text }}</p>
+            </div>
+
             <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
                 <a href="{% if is_update %}{{ object.get_absolute_url }}{% else %}{% url 'objektverwaltung:list' %}{% endif %}"
                    class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">Abbrechen</a>

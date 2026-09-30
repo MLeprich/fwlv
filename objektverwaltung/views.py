@@ -339,7 +339,8 @@ class BuildingObjectUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Upda
 
     def get_object(self, queryset=None):
         obj = super().get_object(queryset)
-        self._old_snapshot = akte.snapshot(obj, BuildingObjectForm._meta.fields)
+        # Interne Vermerke bleiben aus der Akte (und damit aus dem Aktenauszug) heraus
+        self._old_snapshot = akte.snapshot(obj, [f for f in BuildingObjectForm._meta.fields if f != 'internal_notes'])
         return obj
 
     def form_valid(self, form):

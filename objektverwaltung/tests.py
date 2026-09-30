@@ -1109,3 +1109,39 @@ class ObjectPdfTests(TestCase):
         self.assertContains(response, 'value="bvs"')
         response = self.client.get(reverse('objektverwaltung:object_pdf', args=[self.building.pk]), {'teile': 'bvs'})
         self.assertEqual(response.status_code, 200)
+
+
+class InternalNotesTests(TestCase):
+    """Interne Vermerke: im Formular und auf der Detailseite, aber nicht im PDF/Export."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw')
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label='objektverwaltung',
+                                       codename__in=['view_buildingobject', 'change_buildingobject'])
+        )
+        self.client.force_login(self.user)
+        self.building = BuildingObject.objects.create(
+            object_number='OBJ-1', name='Rathaus', created_by=self.user, updated_by=self.user,
+        )
+
+    def test_edit_and_display(self):
+        data = {'object_number': 'OBJ-1', 'name': 'Rathaus', 'status': 'active', 'street': '', 'house_number': '',
+                'postal_code': '', 'city': '', 'floor_count': '', 'basement_count': '', 'notes': 'öffentlich',
+                'internal_notes': 'Geheime Absprache mit Hausmeister'}
+        response = self.client.post(reverse('objektverwaltung:update', args=[self.building.pk]), data)
+        self.assertEqual(response.status_code, 302)
+        self.building.refresh_from_db()
+        self.assertEqual(self.building.internal_notes, 'Geheime Absprache mit Hausmeister')
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Interne Vermerke')
+        self.assertContains(response, 'Geheime Absprache')
+        # Akte (Zeitleiste) nennt den Inhalt nicht – nur die öffentlichen Hinweise
+        from . import akte
+        titles = ' '.join(str(e['changes']) for e in akte.build_timeline(self.building))
+        self.assertIn('öffentlich', titles)
+        self.assertNotIn('Geheime Absprache', titles)
+        self.assertEqual(self.client.get(reverse('objektverwaltung:object_pdf', args=[self.building.pk])).status_code, 200)
+        export = self.client.get(reverse('objektverwaltung:export')).content.decode('utf-8-sig')
+        self.assertIn('öffentlich', export)
+        self.assertNotIn('Geheime Absprache', export)

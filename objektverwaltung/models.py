@@ -139,6 +139,10 @@ class BuildingObject(FullAuditModel):
     )
 
     notes = models.TextField(blank=True, verbose_name="Allgemeine Hinweise")
+    internal_notes = models.TextField(
+        blank=True, verbose_name="Interne Vermerke",
+        help_text="Nur für die eigene Sachbearbeitung – erscheint nicht in Objekt-PDF, Akte-Auszug oder Export"
+    )
 
     status = models.CharField(
         max_length=20,

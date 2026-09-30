@@ -99,7 +99,7 @@ class BuildingObjectAdmin(AuditSaveMixin, admin.ModelAdmin):
             'fields': ('floor_count', 'basement_count', 'has_fire_alarm_system')
         }),
         ('Sonstiges', {
-            'fields': ('notes', 'followers')
+            'fields': ('notes', 'internal_notes', 'followers')
         }),
     )
 
