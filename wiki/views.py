@@ -15,8 +15,9 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 import json
 
-from .models import WikiPage, WikiCategory, WikiBlock
-from .forms import WikiCategoryForm
+from .models import WikiPage, WikiCategory, WikiBlock, WikiPageRevision, WikiAttachment
+from .forms import WikiCategoryForm, WikiPageForm, WikiPageCreateForm, MarkdownImportForm
+from .text import PAGE_TEMPLATES, markdown_to_blocks
 from permissions.mixins import RoleRequiredMixin
 from permissions.constants import Roles
 
@@ -134,7 +135,38 @@ class WikiPageDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'wiki'
+        page = self.object
+        context['headings'] = page.headings()
+        context['ancestors'] = page.ancestors()
+        context['children'] = [c for c in page.children.filter(is_deleted=False).order_by('title')
+                               if c.can_user_view(self.request.user)]
+        context['related_pages'] = _related_pages(page, self.request.user)
+        context['attachments'] = page.attachments.all()
+        context['can_edit'] = (page.created_by == self.request.user or self.request.user.has_perm('wiki.change_wikipage')
+                               or self.request.user.is_superuser)
         return context
+
+
+def _related_pages(page, user, limit=6):
+    """Seiten mit gleicher Kategorie oder gemeinsamen Schlagwörtern."""
+    qs = WikiPage.objects.filter(is_deleted=False, status=WikiPage.STATUS_PUBLISHED).exclude(pk=page.pk)
+    tags = set(t.lower() for t in (page.tags or []))
+    scored = []
+    for other in qs.select_related('category'):
+        score = 0
+        if page.category_id and other.category_id == page.category_id:
+            score += 1
+        score += 2 * len(tags & set(t.lower() for t in (other.tags or [])))
+        if other.parent_id and other.parent_id == page.parent_id:
+            score += 1
+        if score and other.can_user_view(user):
+            scored.append((score, other))
+    scored.sort(key=lambda x: (-x[0], x[1].title))
+    return [o for _s, o in scored[:limit]]
+
+
+def _can_edit(page, user):
+    return page.created_by == user or user.has_perm('wiki.change_wikipage') or user.is_superuser
 
 
 class WikiPageEditView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -143,8 +175,12 @@ class WikiPageEditView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     model = WikiPage
     template_name = 'wiki/page_edit.html'
-    fields = ['title', 'category', 'description', 'status', 'visibility']
+    form_class = WikiPageForm
     permission_required = 'wiki.change_wikipage'
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -158,13 +194,29 @@ class WikiPageCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
     """
     model = WikiPage
     template_name = 'wiki/page_create.html'
-    fields = ['title', 'category', 'description', 'visibility']
+    form_class = WikiPageCreateForm
     permission_required = 'wiki.add_wikipage'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        parent = self.request.GET.get('parent', '')
+        if parent.isdigit():
+            initial['parent'] = int(parent)
+            parent_page = WikiPage.objects.filter(pk=int(parent)).first()
+            if parent_page and parent_page.category_id:
+                initial['category'] = parent_page.category_id
+        category = self.request.GET.get('category', '')
+        if category.isdigit():
+            initial['category'] = int(category)
+        return initial
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
         response = super().form_valid(form)
+        template = PAGE_TEMPLATES.get(form.cleaned_data.get('template') or 'leer')
+        if template and template['blocks']:
+            self.object.append_blocks(template['blocks'])
         # Nach Erstellung direkt zum Block-Editor
         from django.urls import reverse
         return redirect(reverse('wiki:block_editor', kwargs={'slug': self.object.slug}))
@@ -172,6 +224,7 @@ class WikiPageCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_module'] = 'wiki'
+        context['page_templates'] = PAGE_TEMPLATES
         return context
 
 
@@ -205,6 +258,8 @@ class WikiBlockEditorView(LoginRequiredMixin, DetailView):
         context['current_module'] = 'wiki'
         context['blocks'] = self.object.blocks.all().order_by('order')
         context['block_types'] = WikiBlock.BLOCK_TYPE_CHOICES
+        context['attachments'] = self.object.attachments.all()
+        context['revision_count'] = self.object.revisions.count()
         return context
 
 
@@ -240,6 +295,7 @@ class WikiBlockCreateView(LoginRequiredMixin, View):
                 order=next_order
             )
 
+            page.rebuild_search_text()
             return JsonResponse({
                 'success': True,
                 'block_id': block.id,
@@ -273,6 +329,7 @@ class WikiBlockUpdateView(LoginRequiredMixin, View):
                 block.style_options = data['style_options']
 
             block.save()
+            page.rebuild_search_text()
 
             return JsonResponse({'success': True})
 
@@ -296,6 +353,7 @@ class WikiBlockDeleteView(LoginRequiredMixin, View):
 
         try:
             block.delete()
+            page.rebuild_search_text()
             return JsonResponse({'success': True})
 
         except Exception as e:
@@ -473,6 +531,8 @@ class WikiPagePublishView(LoginRequiredMixin, View):
         from django.utils import timezone
         page.published_at = timezone.now()
         page.save(update_fields=['status', 'published_at', 'updated_at'])
+        page.rebuild_search_text()
+        page.create_revision(request.user, summary='Veröffentlicht')
 
         messages.success(request, f'Die Seite "{page.title}" wurde erfolgreich veröffentlicht.')
         return redirect('wiki:block_editor', slug=slug)
@@ -498,3 +558,207 @@ class WikiPageUnpublishView(LoginRequiredMixin, View):
 
         messages.success(request, f'Die Seite "{page.title}" wurde zurück zum Entwurf gesetzt.')
         return redirect('wiki:block_editor', slug=slug)
+
+
+# =====================
+# Wissenszentrum: Suche, Uploads, Text-Import, Versionen, PDF
+# =====================
+
+def _visible_pages(user):
+    """Seiten, die der Benutzer sehen darf (veröffentlicht oder eigene)."""
+    qs = WikiPage.objects.filter(is_deleted=False).filter(
+        Q(status=WikiPage.STATUS_PUBLISHED) | Q(created_by=user)
+    ).select_related('category', 'created_by')
+    return [p for p in qs if p.can_user_view(user)]
+
+
+class WikiSearchView(LoginRequiredMixin, ListView):
+    """Volltextsuche über Titel, Beschreibung, Schlagwörter und Blockinhalte."""
+    template_name = 'wiki/search.html'
+    context_object_name = 'results'
+    paginate_by = 25
+
+    def get_queryset(self):
+        self.query = self.request.GET.get('q', '').strip()
+        self.category = self.request.GET.get('kategorie', '')
+        if not self.query:
+            return []
+        terms = [t for t in self.query.lower().split() if t]
+        results = []
+        for page in _visible_pages(self.request.user):
+            if self.category.isdigit() and page.category_id != int(self.category):
+                continue
+            title = page.title.lower()
+            hay = ' '.join([title, (page.description or '').lower(), ' '.join(page.tags or []).lower(),
+                            (page.search_text or '').lower()])
+            if not all(t in hay for t in terms):
+                continue
+            score = sum(10 for t in terms if t in title) + sum(3 for t in terms if t in ' '.join(page.tags or []).lower())
+            score += sum(2 for t in terms if t in (page.description or '').lower()) + 1
+            results.append((score, page, _snippet(page.search_text or page.description or '', terms)))
+        results.sort(key=lambda r: (-r[0], r[1].title))
+        return [{'page': p, 'snippet': sn} for _s, p, sn in results]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_module'] = 'wiki'
+        context['query'] = self.query
+        context['current_category'] = self.category
+        context['categories'] = WikiCategory.objects.filter(is_active=True).order_by('order', 'name')
+        return context
+
+
+def _snippet(text, terms, width=180):
+    low = text.lower()
+    pos = min((low.find(t) for t in terms if low.find(t) >= 0), default=-1)
+    if pos < 0:
+        return text[:width] + ('…' if len(text) > width else '')
+    start = max(0, pos - width // 3)
+    end = min(len(text), start + width)
+    return ('…' if start else '') + text[start:end] + ('…' if end < len(text) else '')
+
+
+class WikiAttachmentUploadView(LoginRequiredMixin, View):
+    """Bild/Datei zu einer Seite hochladen (aus dem Block-Editor)."""
+    MAX_SIZE = 25 * 1024 * 1024
+
+    def post(self, request, slug):
+        page = get_object_or_404(WikiPage, slug=slug, is_deleted=False)
+        if not _can_edit(page, request.user):
+            return JsonResponse({'error': 'Keine Berechtigung'}, status=403)
+        upload = request.FILES.get('file')
+        if not upload:
+            return JsonResponse({'error': 'Keine Datei übermittelt'}, status=400)
+        if upload.size > self.MAX_SIZE:
+            return JsonResponse({'error': 'Datei ist größer als 25 MB'}, status=400)
+        attachment = WikiAttachment.objects.create(
+            page=page, file=upload, original_name=upload.name[:255],
+            content_type=getattr(upload, 'content_type', '') or '', size=upload.size, uploaded_by=request.user,
+        )
+        return JsonResponse({
+            'success': True, 'id': attachment.pk, 'url': attachment.file.url, 'name': attachment.original_name,
+            'size': attachment.size_display, 'is_image': attachment.is_image,
+        })
+
+
+class WikiAttachmentDeleteView(LoginRequiredMixin, View):
+    def post(self, request, slug, pk):
+        page = get_object_or_404(WikiPage, slug=slug, is_deleted=False)
+        if not _can_edit(page, request.user):
+            return JsonResponse({'error': 'Keine Berechtigung'}, status=403)
+        attachment = get_object_or_404(WikiAttachment, pk=pk, page=page)
+        attachment.file.delete(save=False)
+        attachment.delete()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True})
+        messages.success(request, 'Anhang gelöscht.')
+        return redirect('wiki:block_editor', slug=slug)
+
+
+class WikiMarkdownImportView(LoginRequiredMixin, View):
+    """Text/Markdown einfügen und in Blöcke umwandeln."""
+
+    def _page(self, request, slug):
+        page = get_object_or_404(WikiPage, slug=slug, is_deleted=False)
+        if not _can_edit(page, request.user):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return page
+
+    def get(self, request, slug):
+        page = self._page(request, slug)
+        return render(request, 'wiki/markdown_import.html', {'page': page, 'form': MarkdownImportForm(), 'current_module': 'wiki'})
+
+    def post(self, request, slug):
+        page = self._page(request, slug)
+        form = MarkdownImportForm(request.POST)
+        if not form.is_valid():
+            return render(request, 'wiki/markdown_import.html', {'page': page, 'form': form, 'current_module': 'wiki'})
+        blocks = markdown_to_blocks(form.cleaned_data['text'])
+        if not blocks:
+            messages.warning(request, 'Aus dem Text konnten keine Blöcke erzeugt werden.')
+            return redirect('wiki:markdown_import', slug=slug)
+        if form.cleaned_data['mode'] == 'replace':
+            if page.blocks.exists():
+                page.create_revision(request.user, summary='Automatische Sicherung vor Ersetzen durch Text-Import')
+            page.replace_blocks(blocks)
+        else:
+            page.append_blocks(blocks)
+        page.updated_by = request.user
+        page.save(update_fields=['updated_by', 'updated_at'])
+        messages.success(request, f'{len(blocks)} Blöcke aus dem Text übernommen.', extra_tags='celebrate')
+        return redirect('wiki:block_editor', slug=slug)
+
+
+class WikiRevisionListView(LoginRequiredMixin, View):
+    def get(self, request, slug):
+        page = get_object_or_404(WikiPage, slug=slug, is_deleted=False)
+        if not page.can_user_view(request.user):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return render(request, 'wiki/revisions.html', {
+            'page': page, 'revisions': page.revisions.select_related('created_by'),
+            'can_edit': _can_edit(page, request.user), 'current_module': 'wiki',
+        })
+
+
+class WikiRevisionCreateView(LoginRequiredMixin, View):
+    def post(self, request, slug):
+        page = get_object_or_404(WikiPage, slug=slug, is_deleted=False)
+        if not _can_edit(page, request.user):
+            messages.error(request, 'Keine Berechtigung.')
+            return redirect('wiki:page_detail', slug=slug)
+        rev = page.create_revision(request.user, summary=request.POST.get('summary', '')[:500])
+        messages.success(request, f'Version {rev.version} gesichert.')
+        return redirect(request.POST.get('next') or reverse_lazy('wiki:revisions', kwargs={'slug': slug}))
+
+
+class WikiRevisionDetailView(LoginRequiredMixin, View):
+    """Eine gesicherte Version anzeigen (schreibgeschützt)."""
+
+    def get(self, request, slug, version):
+        page = get_object_or_404(WikiPage, slug=slug, is_deleted=False)
+        if not page.can_user_view(request.user):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        revision = get_object_or_404(WikiPageRevision, page=page, version=version)
+        blocks = [{'id': i, 'block_type': b.get('block_type'), 'content': b.get('content', {}),
+                   'style_options': b.get('style_options', {})} for i, b in enumerate(revision.blocks_snapshot)]
+        return render(request, 'wiki/revision_detail.html', {
+            'page': page, 'revision': revision, 'blocks': blocks,
+            'can_edit': _can_edit(page, request.user), 'current_module': 'wiki',
+        })
+
+
+class WikiRevisionRestoreView(LoginRequiredMixin, View):
+    def post(self, request, slug, version):
+        page = get_object_or_404(WikiPage, slug=slug, is_deleted=False)
+        if not _can_edit(page, request.user):
+            messages.error(request, 'Keine Berechtigung.')
+            return redirect('wiki:revisions', slug=slug)
+        revision = get_object_or_404(WikiPageRevision, page=page, version=version)
+        page.restore_revision(revision, request.user)
+        messages.success(request, f'Version {revision.version} wiederhergestellt (der vorherige Stand wurde gesichert).')
+        return redirect('wiki:block_editor', slug=slug)
+
+
+class WikiPagePdfView(LoginRequiredMixin, View):
+    """Seite als PDF (Druckversion)."""
+
+    def get(self, request, slug):
+        from django.http import HttpResponse
+        from django.template.loader import render_to_string
+        from django.utils import timezone
+        from weasyprint import HTML
+
+        page = get_object_or_404(WikiPage, slug=slug, is_deleted=False)
+        if not page.can_user_view(request.user):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        html = render_to_string('wiki/page_pdf.html', {
+            'page': page, 'blocks': page.blocks.all().order_by('order'), 'now': timezone.localtime(), 'user': request.user,
+        }, request=request)
+        pdf = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf()
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="Wiki_{page.slug}.pdf"'
+        return response

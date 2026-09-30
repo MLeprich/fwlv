@@ -37,6 +37,17 @@ urlpatterns = [
     path('page/<slug:slug>/blocks/<int:block_id>/delete/', views.WikiBlockDeleteView.as_view(), name='block_delete'),
     path('page/<slug:slug>/blocks/reorder/', views.WikiBlockReorderView.as_view(), name='block_reorder'),
 
+    # Wissenszentrum: Suche, Uploads, Text-Import, Versionen, PDF
+    path('suche/', views.WikiSearchView.as_view(), name='search'),
+    path('page/<slug:slug>/upload/', views.WikiAttachmentUploadView.as_view(), name='attachment_upload'),
+    path('page/<slug:slug>/attachments/<int:pk>/delete/', views.WikiAttachmentDeleteView.as_view(), name='attachment_delete'),
+    path('page/<slug:slug>/import/', views.WikiMarkdownImportView.as_view(), name='markdown_import'),
+    path('page/<slug:slug>/versionen/', views.WikiRevisionListView.as_view(), name='revisions'),
+    path('page/<slug:slug>/versionen/sichern/', views.WikiRevisionCreateView.as_view(), name='revision_create'),
+    path('page/<slug:slug>/versionen/<int:version>/', views.WikiRevisionDetailView.as_view(), name='revision_detail'),
+    path('page/<slug:slug>/versionen/<int:version>/wiederherstellen/', views.WikiRevisionRestoreView.as_view(), name='revision_restore'),
+    path('page/<slug:slug>/pdf/', views.WikiPagePdfView.as_view(), name='page_pdf'),
+
     # API
     path('api/pages/', views.WikiPagesListAPIView.as_view(), name='api_pages_list'),
 ]

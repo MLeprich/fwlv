@@ -4,7 +4,7 @@ Django Admin-Konfiguration für Wiki-Models
 """
 
 from django.contrib import admin
-from .models import WikiCategory, WikiPage, WikiBlock, WikiPageRevision
+from .models import WikiCategory, WikiPage, WikiBlock, WikiPageRevision, WikiAttachment
 
 
 @admin.register(WikiCategory)
@@ -74,3 +74,9 @@ class WikiPageRevisionAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Revisionen sollten nicht gelöscht werden
         return False
+
+
+@admin.register(WikiAttachment)
+class WikiAttachmentAdmin(admin.ModelAdmin):
+    list_display = ['original_name', 'page', 'content_type', 'size', 'uploaded_by', 'created_at']
+    search_fields = ['original_name', 'page__title']

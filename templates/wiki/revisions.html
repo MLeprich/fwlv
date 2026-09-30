@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Versionen - {{ page.title }} - Wiki{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb"><ol class="flex items-center space-x-2 text-sm">
+        <li><a href="{% url 'wiki:dashboard' %}" class="text-gray-500 hover:text-gray-700">Wiki</a></li><li class="text-gray-400">/</li>
+        <li><a href="{{ page.get_absolute_url }}" class="text-gray-500 hover:text-gray-700">{{ page.title|truncatechars:40 }}</a></li><li class="text-gray-400">/</li>
+        <li><span class="text-gray-900 font-semibold">Versionen</span></li></ol></nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h1 class="text-2xl font-bold text-gray-900">Versionen: {{ page.title }}</h1>
+        {% if can_edit %}
+        <form method="post" action="{% url 'wiki:revision_create' page.slug %}" class="flex items-center gap-2">{% csrf_token %}
+            <input type="text" name="summary" placeholder="Was wurde geändert? (optional)" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-72">
+            <button type="submit" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">Aktuellen Stand sichern</button>
+        </form>
+        {% endif %}
+    </div>
+    <p class="text-sm text-gray-500 mb-4">Beim Veröffentlichen, vor dem Ersetzen durch einen Text-Import und vor jeder Wiederherstellung wird automatisch eine Version gesichert.</p>
+    <div class="bg-white rounded-lg shadow divide-y divide-gray-100">
+        {% for r in revisions %}
+        <div class="p-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="font-medium text-gray-900">Version {{ r.version }} <span class="text-sm font-normal text-gray-500">· {{ r.created_at|date:"d.m.Y H:i" }}{% if r.created_by %} · {{ r.created_by.get_full_name|default:r.created_by.username }}{% endif %}</span></p>
+                <p class="text-sm text-gray-600">{{ r.change_summary|default:"–" }} <span class="text-xs text-gray-400">({{ r.blocks_snapshot|length }} Blöcke)</span></p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'wiki:revision_detail' page.slug r.version %}" class="text-sm text-primary-600 hover:text-primary-800">Ansehen</a>
+                {% if can_edit %}
+                <form method="post" action="{% url 'wiki:revision_restore' page.slug r.version %}" onsubmit="return confirm('Version {{ r.version }} wiederherstellen? Der aktuelle Stand wird vorher gesichert.');">{% csrf_token %}
+                    <button type="submit" class="text-sm text-gray-600 hover:text-gray-900">Wiederherstellen</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <p class="p-8 text-center text-gray-500">Noch keine Versionen gesichert.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

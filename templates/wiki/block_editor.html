@@ -39,9 +39,15 @@
                     {% endif %}
                 </div>
                 <p class="text-sm text-gray-600 mt-1">{{ page.title }}</p>
-                <p class="text-xs text-gray-500 mt-1">💾 Alle Änderungen werden automatisch gespeichert</p>
+                <p class="text-xs text-gray-500 mt-1">💾 Alle Änderungen werden automatisch gespeichert · Formatierung im Text: **fett**, *kursiv*, `Code`, [Text](URL), [[Wiki-Seite]]</p>
             </div>
-            <div class="flex gap-3">
+            <div class="flex flex-wrap gap-2 justify-end">
+                <a href="{% url 'wiki:markdown_import' page.slug %}" class="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors" title="Text aus Word/Markdown einfügen und in Blöcke umwandeln">📋 Text einfügen</a>
+                <a href="{% url 'wiki:revisions' page.slug %}" class="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors" title="Versionsverlauf">🕘 Versionen{% if revision_count %} ({{ revision_count }}){% endif %}</a>
+                <form method="post" action="{% url 'wiki:revision_create' page.slug %}" class="inline">{% csrf_token %}<input type="hidden" name="next" value="{% url 'wiki:block_editor' page.slug %}">
+                    <button type="submit" class="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors" title="Aktuellen Stand als Version sichern">💾 Version sichern</button>
+                </form>
+                <a href="{% url 'wiki:page_edit' page.slug %}" class="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">⚙️ Einstellungen</a>
                 <a href="{% url 'wiki:page_detail' page.slug %}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                     👁️ Vorschau
                 </a>
@@ -77,7 +83,8 @@
                 "styleOptions": {{ block.style_options|tojson_safe }}
             }
             </script>
-            <div class="block-item group relative bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-blue-400 transition-colors"
+            <div class="block-item group relative bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-blue-400 transition-colors scroll-mt-24"
+                 id="block-{{ block.id }}"
                  data-block-id="{{ block.id }}"
                  x-data="(function() {
                      const data = JSON.parse(document.getElementById('block-data-{{ block.id }}').textContent);
@@ -144,6 +151,46 @@
                                 </svg>
                                 Weiteres Element hinzufügen
                             </button>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'bullet_list' || blockType === 'numbered_list'">
+                        <div class="space-y-2">
+                            <div class="text-xs text-gray-500 mb-2 font-medium" x-text="blockType === 'bullet_list' ? '• Aufzählung' : '1. Nummerierte Liste'"></div>
+                            <template x-for="(item, index) in content.items" :key="index">
+                                <div class="flex items-center gap-2 group">
+                                    <span class="w-6 text-right text-gray-400 text-sm" x-text="blockType === 'bullet_list' ? '•' : (index + 1) + '.'"></span>
+                                    <input type="text" x-model="item.text" @input="debouncedSave()" @keydown.enter.prevent="addListItem(index)" placeholder="Listenpunkt (Enter = neuer Punkt)" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                    <button @click="removeListItem(index)" class="opacity-0 group-hover:opacity-100 px-2 text-red-600 hover:text-red-800" title="Entfernen">✕</button>
+                                </div>
+                            </template>
+                            <button @click="addListItem()" class="mt-2 px-3 py-1.5 text-sm text-blue-600 bg-blue-50 border border-dashed border-blue-300 rounded-lg hover:bg-blue-100">+ Punkt</button>
+                        </div>
+                    </template>
+
+                    <template x-if="blockType === 'steps'">
+                        <div class="space-y-3">
+                            <div class="text-xs text-gray-500 font-medium">🧭 Schritt-für-Schritt – jeder Schritt mit Titel, Text und optionalem Bild</div>
+                            <template x-for="(step, index) in content.steps" :key="index">
+                                <div class="flex gap-3 p-3 border border-gray-200 rounded-lg group">
+                                    <span class="flex-shrink-0 w-8 h-8 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center" x-text="index + 1"></span>
+                                    <div class="flex-1 space-y-2">
+                                        <input type="text" x-model="step.title" @input="debouncedSave()" placeholder="Titel des Schritts" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium">
+                                        <textarea x-model="step.text" @input="debouncedSave()" placeholder="Was ist zu tun?" rows="2" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm resize-y"></textarea>
+                                        <div class="flex flex-wrap items-center gap-3">
+                                            <label class="inline-flex items-center gap-2 px-2 py-1 bg-primary-50 text-primary-700 rounded text-xs font-medium cursor-pointer hover:bg-primary-100">🖼️ Bild
+                                                <input type="file" accept="image/*" class="hidden" @change="uploadFile($event, (r) => { step.image = r.url; debouncedSave(); })"></label>
+                                            <template x-if="step.image"><span class="flex items-center gap-2"><img :src="step.image" class="h-12 rounded border"><button @click="step.image = ''; debouncedSave()" class="text-xs text-red-600">Bild entfernen</button></span></template>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col gap-1 opacity-0 group-hover:opacity-100">
+                                        <button @click="moveStep(index, -1)" class="text-gray-400 hover:text-gray-700 text-xs" title="Nach oben">▲</button>
+                                        <button @click="moveStep(index, 1)" class="text-gray-400 hover:text-gray-700 text-xs" title="Nach unten">▼</button>
+                                        <button @click="removeStep(index)" class="text-red-500 hover:text-red-700 text-xs" title="Schritt entfernen">✕</button>
+                                    </div>
+                                </div>
+                            </template>
+                            <button @click="addStep()" class="px-3 py-1.5 text-sm text-blue-600 bg-blue-50 border border-dashed border-blue-300 rounded-lg hover:bg-blue-100">+ Schritt</button>
                         </div>
                     </template>
 
@@ -227,7 +274,14 @@
 
                     <template x-if="blockType === 'image'">
                         <div>
-                            <input type="url" x-model="content.url" @input="debouncedSave()" placeholder="Bild-URL eingeben..." class="w-full border border-gray-300 rounded p-2 mb-2">
+                            <div class="flex flex-wrap items-center gap-3 mb-2">
+                                <label class="inline-flex items-center gap-2 px-3 py-2 bg-primary-50 text-primary-700 rounded-lg text-sm font-medium cursor-pointer hover:bg-primary-100">
+                                    🖼️ Bild hochladen
+                                    <input type="file" accept="image/*" class="hidden" @change="uploadFile($event, (r) => { content.url = r.url; if (!content.alt) content.alt = r.name; debouncedSave(); })">
+                                </label>
+                                <span class="text-xs text-gray-500" x-text="uploadStatus"></span>
+                            </div>
+                            <input type="url" x-model="content.url" @input="debouncedSave()" placeholder="… oder Bild-URL eingeben" class="w-full border border-gray-300 rounded p-2 mb-2">
                             <input type="text" x-model="content.alt" @input="debouncedSave()" placeholder="Alt-Text" class="w-full border border-gray-300 rounded p-2 mb-2">
                             <input type="text" x-model="content.caption" @input="debouncedSave()" placeholder="Bildunterschrift (optional)" class="w-full border border-gray-300 rounded p-2">
                             <template x-if="content.url">
@@ -316,8 +370,15 @@
 
                     <template x-if="blockType === 'file'">
                         <div class="space-y-3">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <label class="inline-flex items-center gap-2 px-3 py-2 bg-primary-50 text-primary-700 rounded-lg text-sm font-medium cursor-pointer hover:bg-primary-100">
+                                    📎 Datei hochladen
+                                    <input type="file" class="hidden" @change="uploadFile($event, (r) => { content.url = r.url; content.filename = r.name; content.filesize = r.size; debouncedSave(); })">
+                                </label>
+                                <span class="text-xs text-gray-500" x-text="uploadStatus"></span>
+                            </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Datei-URL</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Datei-URL (oder oben hochladen)</label>
                                 <input type="url" x-model="content.url" @input="debouncedSave()" placeholder="https://example.com/document.pdf" class="w-full border border-gray-300 rounded p-2">
                             </div>
                             <div>
@@ -458,9 +519,21 @@
                     <div class="text-xl">"</div>
                     <div class="text-xs text-gray-500">Zitat</div>
                 </button>
+                <button @click="addBlock('bullet_list'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">•</div>
+                    <div class="text-xs text-gray-500">Aufzählung</div>
+                </button>
+                <button @click="addBlock('numbered_list'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">1.</div>
+                    <div class="text-xs text-gray-500">Nummerierte Liste</div>
+                </button>
                 <button @click="addBlock('checklist'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
                     <div class="text-xl">☑</div>
                     <div class="text-xs text-gray-500">Checkliste</div>
+                </button>
+                <button @click="addBlock('steps'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                    <div class="text-xl">🧭</div>
+                    <div class="text-xs text-gray-500">Schritt-für-Schritt</div>
                 </button>
                 <button @click="addBlock('wiki_link'); showMenu = false" class="p-3 text-left border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-400 transition-colors">
                     <div class="text-xl">🔗</div>
@@ -560,7 +633,8 @@ function blockEditor() {
                 const data = await response.json();
 
                 if (data.success) {
-                    // Reload page to show new block
+                    // Seite neu laden und zum neuen Block springen
+                    window.location.href = window.location.pathname + '#block-' + data.block_id;
                     window.location.reload();
                 } else {
                     alert('Fehler beim Erstellen des Blocks: ' + data.error);
@@ -630,6 +704,9 @@ function blockEditor() {
                 'paragraph': { text: '' },
                 'quote': { text: '' },
                 'checklist': { items: [{ text: '', checked: false }] },
+                'bullet_list': { items: [{ text: '' }] },
+                'numbered_list': { items: [{ text: '' }] },
+                'steps': { steps: [{ title: '', text: '', image: '' }] },
                 'wiki_link': { pageSlug: '', linkText: '', pageTitle: '' },
                 'table': { headers: ['Spalte 1', 'Spalte 2'], rows: [['', '']] },
                 'code': { code: '' },
@@ -686,6 +763,68 @@ function blockItem(blockId, blockType, content, styleOptions) {
             } catch (error) {
                 console.error('Error saving block:', error);
             }
+        },
+
+        uploadStatus: '',
+
+        async uploadFile(event, done) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            this.uploadStatus = 'Lade hoch …';
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const response = await fetch(`/wiki/page/{{ page.slug }}/upload/`, {
+                    method: 'POST', body: fd, credentials: 'same-origin',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || 'Upload fehlgeschlagen');
+                this.uploadStatus = data.name + ' (' + data.size + ') hochgeladen';
+                done(data);
+            } catch (err) {
+                this.uploadStatus = 'Fehler: ' + err.message;
+            }
+            event.target.value = '';
+        },
+
+        addListItem(afterIndex) {
+            if (!this.content.items) this.content.items = [];
+            const item = { text: '' };
+            if (afterIndex === undefined) this.content.items.push(item);
+            else this.content.items.splice(afterIndex + 1, 0, item);
+            this.debouncedSave();
+            this.$nextTick(() => {
+                const inputs = this.$el.querySelectorAll('input[type=text]');
+                const idx = afterIndex === undefined ? this.content.items.length - 1 : afterIndex + 1;
+                if (inputs[idx]) inputs[idx].focus();
+            });
+        },
+
+        removeListItem(index) {
+            this.content.items.splice(index, 1);
+            if (!this.content.items.length) this.content.items.push({ text: '' });
+            this.debouncedSave();
+        },
+
+        addStep() {
+            if (!this.content.steps) this.content.steps = [];
+            this.content.steps.push({ title: '', text: '', image: '' });
+            this.debouncedSave();
+        },
+
+        removeStep(index) {
+            this.content.steps.splice(index, 1);
+            this.debouncedSave();
+        },
+
+        moveStep(index, delta) {
+            const j = index + delta;
+            if (j < 0 || j >= this.content.steps.length) return;
+            const tmp = this.content.steps[index];
+            this.content.steps[index] = this.content.steps[j];
+            this.content.steps[j] = tmp;
+            this.debouncedSave();
         },
 
         addChecklistItem() {
@@ -746,6 +885,9 @@ function blockItem(blockId, blockType, content, styleOptions) {
                 'paragraph': 'Paragraph',
                 'quote': 'Zitat',
                 'checklist': 'Checkliste',
+                'bullet_list': 'Aufzählung',
+                'numbered_list': 'Nummerierte Liste',
+                'steps': 'Schritt-für-Schritt',
                 'wiki_link': 'Wiki-Link',
                 'table': 'Tabelle',
                 'code': 'Code',

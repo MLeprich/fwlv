@@ -1,0 +1,64 @@
+{% load wiki_tags %}<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ page.title }}</title>
+    <style>
+        @page { size: A4; margin: 18mm 16mm 18mm 16mm;
+            @bottom-right { content: "Seite " counter(page) " von " counter(pages); font-size: 8pt; color: #666; }
+            @bottom-left { content: "Wiki · {{ page.title|truncatechars:60 }} · Stand {{ page.updated_at|date:"d.m.Y" }}"; font-size: 8pt; color: #666; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 10pt; color: #222; line-height: 1.4; }
+        h1.title { font-size: 18pt; margin-bottom: 1mm; }
+        .sub { color: #555; font-size: 9pt; margin-bottom: 6mm; }
+        h1 { font-size: 15pt; margin: 6mm 0 2mm; } h2 { font-size: 13pt; margin: 5mm 0 2mm; } h3 { font-size: 11pt; margin: 4mm 0 1.5mm; }
+        p { margin-bottom: 2.5mm; }
+        ul, ol { margin: 0 0 3mm 6mm; } li { margin-bottom: 1mm; }
+        blockquote { border-left: 3px solid #bbb; padding-left: 4mm; color: #555; font-style: italic; margin-bottom: 3mm; }
+        pre { background: #f3f4f6; padding: 3mm; border-radius: 2mm; font-family: 'DejaVu Sans Mono', monospace; font-size: 8.5pt; white-space: pre-wrap; margin-bottom: 3mm; }
+        code { font-family: 'DejaVu Sans Mono', monospace; font-size: 9pt; background: #f3f4f6; padding: 0 1mm; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 4mm; font-size: 9pt; }
+        th, td { border: 0.5pt solid #999; padding: 1.5mm 2mm; vertical-align: top; text-align: left; }
+        th { background: #f3f4f6; }
+        .box { border: 0.6pt solid #ccc; border-left: 3px solid #999; padding: 3mm; margin-bottom: 3mm; border-radius: 1mm; }
+        .box.warning { border-left-color: #f59e0b; background: #fffbeb; } .box.error { border-left-color: #dc2626; background: #fef2f2; }
+        .box.success { border-left-color: #16a34a; background: #f0fdf4; } .box.info { border-left-color: #2563eb; background: #eff6ff; }
+        .box .t { font-weight: bold; margin-bottom: 1mm; }
+        img { max-width: 100%; max-height: 120mm; border-radius: 1mm; }
+        .caption { font-size: 8.5pt; color: #666; text-align: center; margin-bottom: 3mm; }
+        .step { display: flex; gap: 4mm; margin-bottom: 4mm; page-break-inside: avoid; }
+        .step .n { flex: 0 0 9mm; width: 9mm; height: 9mm; border-radius: 50%; background: #dc2626; color: #fff; font-weight: bold; text-align: center; line-height: 9mm; }
+        .step .t { font-weight: bold; }
+        .check { display: inline-block; width: 3.5mm; height: 3.5mm; border: 0.7pt solid #000; margin-right: 2mm; vertical-align: middle; text-align: center; font-size: 8pt; line-height: 3.3mm; }
+        hr { border: 0; border-top: 0.6pt solid #999; margin: 4mm 0; }
+        .cols { display: flex; gap: 4mm; margin-bottom: 3mm; } .cols div { flex: 1; border: 0.5pt solid #ddd; padding: 2mm; }
+        .file { border: 0.5pt solid #ccc; padding: 2mm; margin-bottom: 3mm; font-size: 9pt; }
+    </style>
+</head>
+<body>
+    <h1 class="title">{{ page.title }}</h1>
+    <div class="sub">{% if page.category %}{{ page.category.name }} · {% endif %}Stand {{ page.updated_at|date:"d.m.Y" }}{% if page.updated_by %} · {{ page.updated_by.get_full_name|default:page.updated_by.username }}{% endif %} · Version {{ page.version }} · gedruckt {{ now|date:"d.m.Y H:i" }}{% if page.description %}<br>{{ page.description }}{% endif %}</div>
+    {% for block in blocks %}{% with c=block.content %}
+        {% if block.block_type == 'heading_1' %}<h1>{{ c.text }}</h1>
+        {% elif block.block_type == 'heading_2' %}<h2>{{ c.text }}</h2>
+        {% elif block.block_type == 'heading_3' %}<h3>{{ c.text }}</h3>
+        {% elif block.block_type == 'paragraph' %}<p>{{ c.text|wikitext }}</p>
+        {% elif block.block_type == 'quote' %}<blockquote>{{ c.text|wikitext }}</blockquote>
+        {% elif block.block_type == 'bullet_list' %}<ul>{% for it in c.items %}<li>{{ it.text|wikitext }}</li>{% endfor %}</ul>
+        {% elif block.block_type == 'numbered_list' %}<ol>{% for it in c.items %}<li>{{ it.text|wikitext }}</li>{% endfor %}</ol>
+        {% elif block.block_type == 'checklist' %}<div style="margin-bottom:3mm">{% for it in c.items %}<div><span class="check">{% if it.checked %}✓{% endif %}</span>{{ it.text|wikitext }}</div>{% endfor %}</div>
+        {% elif block.block_type == 'steps' %}{% for st in c.steps %}<div class="step"><div class="n">{{ forloop.counter }}</div><div>{% if st.title %}<div class="t">{{ st.title }}</div>{% endif %}<div>{{ st.text|wikitext }}</div>{% if st.image %}<img src="{{ st.image }}" alt="">{% endif %}</div></div>{% endfor %}
+        {% elif block.block_type == 'table' %}<table><thead><tr>{% for h in c.headers %}<th>{{ h }}</th>{% endfor %}</tr></thead><tbody>{% for row in c.rows %}<tr>{% for cell in row %}<td>{{ cell|wikitext }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+        {% elif block.block_type == 'code' %}<pre>{{ c.code }}</pre>
+        {% elif block.block_type == 'image' %}{% if c.url %}<img src="{{ c.url }}" alt="{{ c.alt }}">{% if c.caption %}<div class="caption">{{ c.caption }}</div>{% endif %}{% endif %}
+        {% elif block.block_type == 'divider' %}<hr>
+        {% elif block.block_type == 'callout' %}<div class="box {{ block.style_options.color|default:'info' }}">{% if c.title %}<div class="t">{{ c.icon }} {{ c.title }}</div>{% endif %}{{ c.text|wikitext }}</div>
+        {% elif block.block_type == 'alert' %}<div class="box {{ c.type|default:'info' }}">{% if c.title %}<div class="t">{{ c.title }}</div>{% endif %}{{ c.text|wikitext }}</div>
+        {% elif block.block_type == 'accordion' %}<div class="box"><div class="t">{{ c.title }}</div>{{ c.text|wikitext }}</div>
+        {% elif block.block_type == 'columns' %}<div class="cols">{% for col in c.columns %}<div>{{ col|wikitext }}</div>{% endfor %}</div>
+        {% elif block.block_type == 'file' %}{% if c.filename %}<div class="file">📄 {{ c.filename }}{% if c.description %} – {{ c.description }}{% endif %}{% if c.url %}<br><span style="color:#666">{{ c.url }}</span>{% endif %}</div>{% endif %}
+        {% elif block.block_type == 'wiki_link' %}<p>→ {{ c.linkText|default:c.pageTitle|default:c.pageSlug }}</p>
+        {% endif %}
+    {% endwith %}{% endfor %}
+</body>
+</html>

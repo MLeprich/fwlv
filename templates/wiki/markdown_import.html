@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Text einfügen - {{ page.title }} - Wiki{% endblock %}
+{% block breadcrumb %}
+<div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="flex" aria-label="Breadcrumb"><ol class="flex items-center space-x-2 text-sm">
+        <li><a href="{% url 'wiki:dashboard' %}" class="text-gray-500 hover:text-gray-700">Wiki</a></li><li class="text-gray-400">/</li>
+        <li><a href="{{ page.get_absolute_url }}" class="text-gray-500 hover:text-gray-700">{{ page.title|truncatechars:40 }}</a></li><li class="text-gray-400">/</li>
+        <li><span class="text-gray-900 font-semibold">Text einfügen</span></li></ol></nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <form method="post" class="lg:col-span-2 bg-white rounded-lg shadow p-6 space-y-4">
+        {% csrf_token %}
+        <h1 class="text-2xl font-bold text-gray-900">Text einfügen</h1>
+        <p class="text-sm text-gray-600">Text aus Word, E-Mail oder Markdown hier einfügen – er wird automatisch in Blöcke umgewandelt, die Sie danach im Editor weiter bearbeiten können.</p>
+        {{ form.text }}
+        <div class="flex flex-wrap items-center gap-4">
+            {% for radio in form.mode %}<label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">{{ radio.tag }} {{ radio.choice_label }}</label>{% endfor %}
+        </div>
+        <p class="text-xs text-gray-500">Beim Ersetzen wird der bisherige Inhalt vorher automatisch als Version gesichert.</p>
+        <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+            <a href="{% url 'wiki:block_editor' page.slug %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Abbrechen</a>
+            <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">In Blöcke umwandeln</button>
+        </div>
+    </form>
+    <div class="bg-white rounded-lg shadow p-6 text-sm text-gray-700">
+        <h2 class="font-semibold text-gray-900 mb-2">Erkannte Schreibweisen</h2>
+        <table class="w-full text-xs">
+            <tbody class="divide-y divide-gray-100">
+                <tr><td class="py-1 font-mono text-gray-500"># / ## / ###</td><td>Überschriften</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">- Punkt</td><td>Aufzählung</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">1. Punkt</td><td>Nummerierte Liste</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">- [ ] / - [x]</td><td>Checkliste</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">&gt; Text</td><td>Zitat</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">&gt; [!WARNUNG] Text</td><td>Warnbox (auch INFO, TIPP, FEHLER)</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">```</td><td>Code-Block</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">| a | b |</td><td>Tabelle (mit Trennzeile |---|---|)</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">![Text](URL)</td><td>Bild</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">---</td><td>Trennlinie</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">**fett** *kursiv* `Code`</td><td>Formatierung im Text</td></tr>
+                <tr><td class="py-1 font-mono text-gray-500">[[Seitentitel]]</td><td>Link auf eine Wiki-Seite</td></tr>
+            </tbody>
+        </table>
+        <p class="text-xs text-gray-500 mt-3">Leerzeilen trennen Absätze. Alles andere wird als Absatz übernommen.</p>
+    </div>
+</div>
+{% endblock %}

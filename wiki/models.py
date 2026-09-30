@@ -159,6 +159,15 @@ class WikiPage(AuditedModel):
         help_text="Für Suche und Übersichten (max. 200 Zeichen)"
     )
 
+    parent = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='children', verbose_name="Übergeordnete Seite",
+        help_text="Für Handbücher mit Kapiteln: die Seite, unter der diese Seite einsortiert wird"
+    )
+    search_text = models.TextField(
+        blank=True, editable=False, verbose_name="Volltext",
+        help_text="Automatisch aus den Blöcken erzeugter Text für die Suche"
+    )
     tags = models.JSONField(
         default=list,
         blank=True,
@@ -274,6 +283,68 @@ class WikiPage(AuditedModel):
     def get_absolute_url(self):
         return reverse('wiki:page_detail', kwargs={'slug': self.slug})
 
+    # ---- Wissenszentrum: Volltext, Versionen, Seitenbaum ----------------
+
+    def rebuild_search_text(self, save=True):
+        from .text import page_plain_text
+        self.search_text = page_plain_text(self.blocks.all().order_by('order'))
+        if save:
+            WikiPage.objects.filter(pk=self.pk).update(search_text=self.search_text)
+        return self.search_text
+
+    def blocks_snapshot(self):
+        return [{'block_type': b.block_type, 'content': b.content, 'style_options': b.style_options}
+                for b in self.blocks.all().order_by('order')]
+
+    def create_revision(self, user, summary=''):
+        """Aktuellen Inhalt als Version sichern (Versionsnummer zählt hoch)."""
+        from django.db.models import Max
+        self.version = (self.revisions.aggregate(m=Max('version'))['m'] or 0) + 1
+        WikiPage.objects.filter(pk=self.pk).update(version=self.version)
+        return WikiPageRevision.objects.create(
+            page=self, version=self.version, title=self.title,
+            blocks_snapshot=self.blocks_snapshot(), change_summary=summary, created_by=user,
+        )
+
+    def replace_blocks(self, block_specs):
+        """Alle Blöcke durch [(block_type, content, style_options), …] bzw. Snapshot-Dicts ersetzen."""
+        self.blocks.all().delete()
+        self.append_blocks(block_specs)
+
+    def append_blocks(self, block_specs):
+        last = self.blocks.all().order_by('-order').first()
+        order = (last.order + 1) if last else 0
+        for spec in block_specs:
+            if isinstance(spec, dict):
+                block_type, content, style = spec.get('block_type'), spec.get('content', {}), spec.get('style_options', {})
+            else:
+                block_type, content, style = spec
+            WikiBlock.objects.create(page=self, block_type=block_type, content=content, style_options=style or {}, order=order)
+            order += 1
+        self.rebuild_search_text()
+
+    def restore_revision(self, revision, user):
+        self.create_revision(user, summary=f'Automatische Sicherung vor Wiederherstellung von Version {revision.version}')
+        self.replace_blocks(revision.blocks_snapshot)
+        self.updated_by = user
+        self.save(update_fields=['updated_by', 'updated_at'])
+
+    def ancestors(self):
+        chain, node, seen = [], self.parent, set()
+        while node and node.pk not in seen:
+            chain.append(node)
+            seen.add(node.pk)
+            node = node.parent
+        return list(reversed(chain))
+
+    def headings(self):
+        """Inhaltsverzeichnis: [(level, text, anchor), …] aus den Überschriften-Blöcken."""
+        result = []
+        for b in self.blocks.all().order_by('order'):
+            if b.block_type in ('heading_1', 'heading_2', 'heading_3') and (b.content or {}).get('text'):
+                result.append((int(b.block_type[-1]), b.content['text'], f'block-{b.pk}'))
+        return result
+
     def can_user_view(self, user):
         """Prüft ob User die Seite sehen darf"""
         # Gelöschte Seiten nie anzeigen
@@ -328,6 +399,9 @@ class WikiBlock(models.Model):
     BLOCK_ALERT = 'alert'
     BLOCK_EMBED = 'embed'
     BLOCK_WIKI_LINK = 'wiki_link'
+    BLOCK_BULLET_LIST = 'bullet_list'
+    BLOCK_NUMBERED_LIST = 'numbered_list'
+    BLOCK_STEPS = 'steps'
 
     BLOCK_TYPE_CHOICES = [
         ('Text', (
@@ -338,7 +412,10 @@ class WikiBlock(models.Model):
             (BLOCK_QUOTE, 'Zitat'),
         )),
         ('Listen & Aufzählungen', (
+            (BLOCK_BULLET_LIST, 'Aufzählung'),
+            (BLOCK_NUMBERED_LIST, 'Nummerierte Liste'),
             (BLOCK_CHECKLIST, 'Checkliste'),
+            (BLOCK_STEPS, 'Schritt-für-Schritt'),
         )),
         ('Verlinkung', (
             (BLOCK_WIKI_LINK, 'Wiki-Link'),
@@ -465,3 +542,42 @@ class WikiPageRevision(models.Model):
 
     def __str__(self):
         return f"{self.page.title} - Version {self.version}"
+
+
+def wiki_attachment_upload_path(instance, filename):
+    return f"wiki/attachments/{instance.page_id}/{filename}"
+
+
+class WikiAttachment(models.Model):
+    """Hochgeladene Datei/Bild einer Wiki-Seite (Offline-tauglich statt externer URLs)."""
+    IMAGE_TYPES = ('image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml')
+
+    page = models.ForeignKey(WikiPage, on_delete=models.CASCADE, related_name='attachments', verbose_name="Wiki-Seite")
+    file = models.FileField(upload_to=wiki_attachment_upload_path, verbose_name="Datei")
+    original_name = models.CharField(max_length=255, verbose_name="Dateiname")
+    content_type = models.CharField(max_length=100, blank=True, verbose_name="Typ")
+    size = models.PositiveIntegerField(default=0, verbose_name="Größe (Bytes)")
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                    related_name='wiki_uploads', verbose_name="Hochgeladen von")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Hochgeladen am")
+
+    class Meta:
+        verbose_name = "Wiki-Anhang"
+        verbose_name_plural = "Wiki-Anhänge"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.original_name
+
+    @property
+    def is_image(self):
+        return self.content_type in self.IMAGE_TYPES
+
+    @property
+    def size_display(self):
+        size = float(self.size)
+        for unit in ('B', 'KB', 'MB', 'GB'):
+            if size < 1024 or unit == 'GB':
+                return f'{size:.0f} {unit}' if unit == 'B' else f'{size:.1f} {unit}'
+            size /= 1024
+        return f'{self.size} B'

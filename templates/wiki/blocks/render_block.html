@@ -1,22 +1,22 @@
 <!-- Wiki Block Renderer -->
-{% load static %}
+{% load static wiki_tags %}
 
-<div class="wiki-block mb-4" data-block-id="{{ block.id }}" data-block-type="{{ block.block_type }}">
+<div class="wiki-block mb-4" id="block-{{ block.id }}" data-block-id="{{ block.id }}" data-block-type="{{ block.block_type }}">
     {% if block.block_type == 'heading_1' %}
-        <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ block.content.text|default:"Überschrift 1" }}</h1>
+        <h1 class="text-3xl font-bold text-gray-900 mb-4 scroll-mt-24">{{ block.content.text|default:"Überschrift 1" }}</h1>
 
     {% elif block.block_type == 'heading_2' %}
-        <h2 class="text-2xl font-bold text-gray-900 mb-3">{{ block.content.text|default:"Überschrift 2" }}</h2>
+        <h2 class="text-2xl font-bold text-gray-900 mb-3 scroll-mt-24">{{ block.content.text|default:"Überschrift 2" }}</h2>
 
     {% elif block.block_type == 'heading_3' %}
-        <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ block.content.text|default:"Überschrift 3" }}</h3>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2 scroll-mt-24">{{ block.content.text|default:"Überschrift 3" }}</h3>
 
     {% elif block.block_type == 'paragraph' %}
-        <p class="text-gray-700 leading-relaxed mb-4">{{ block.content.text|default:"" }}</p>
+        <p class="text-gray-700 leading-relaxed mb-4">{{ block.content.text|wikitext }}</p>
 
     {% elif block.block_type == 'quote' %}
         <blockquote class="border-l-4 border-gray-300 pl-4 italic text-gray-700 mb-4">
-            {{ block.content.text|default:"Zitat" }}
+            {{ block.content.text|wikitext }}
         </blockquote>
 
     {% elif block.block_type == 'checklist' %}
@@ -26,7 +26,7 @@
                 {% for item in block.content.items %}
                 <li class="flex items-start gap-2">
                     <input type="checkbox" {% if item.checked %}checked{% endif %} disabled class="mt-1">
-                    <span class="{% if item.checked %}line-through text-gray-500{% else %}text-gray-700{% endif %}">{{ item.text }}</span>
+                    <span class="{% if item.checked %}line-through text-gray-500{% else %}text-gray-700{% endif %}">{{ item.text|wikitext }}</span>
                 </li>
                 {% endfor %}
             </ul>
@@ -69,7 +69,7 @@
                     {% for row in block.content.rows %}
                     <tr>
                         {% for cell in row %}
-                        <td class="px-4 py-2 text-sm text-gray-700 border-r">{{ cell }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-700 border-r">{{ cell|wikitext }}</td>
                         {% endfor %}
                     </tr>
                     {% endfor %}
@@ -103,7 +103,7 @@
                     {% if block.content.title %}
                     <p class="font-semibold mb-1">{{ block.content.title }}</p>
                     {% endif %}
-                    <p class="text-sm">{{ block.content.text|default:"" }}</p>
+                    <p class="text-sm">{{ block.content.text|wikitext }}</p>
                 </div>
             </div>
         </div>
@@ -118,7 +118,7 @@
                     {% if block.content.title %}
                     <p class="font-semibold mb-1">{{ block.content.title }}</p>
                     {% endif %}
-                    <p class="text-sm">{{ block.content.text|default:"" }}</p>
+                    <p class="text-sm">{{ block.content.text|wikitext }}</p>
                 </div>
             </div>
         </div>
@@ -135,7 +135,7 @@
                 </svg>
             </button>
             <div x-show="open" x-collapse class="p-4 bg-white border border-gray-200 rounded-b-lg mt-px">
-                <p class="text-gray-700">{{ block.content.text|default:"" }}</p>
+                <p class="text-gray-700">{{ block.content.text|wikitext }}</p>
             </div>
         </div>
 
@@ -186,7 +186,7 @@
                 {% if block.content.columns %}
                     {% for column in block.content.columns %}
                     <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                        <p class="text-gray-700 whitespace-pre-wrap">{{ column }}</p>
+                        <p class="text-gray-700">{{ column|wikitext }}</p>
                     </div>
                     {% endfor %}
                 {% endif %}
@@ -216,6 +216,30 @@
                 </div>
             {% endif %}
         </div>
+
+    {% elif block.block_type == 'bullet_list' %}
+        <ul class="list-disc pl-6 mb-4 space-y-1 text-gray-700">
+            {% for item in block.content.items %}<li>{{ item.text|wikitext }}</li>{% endfor %}
+        </ul>
+
+    {% elif block.block_type == 'numbered_list' %}
+        <ol class="list-decimal pl-6 mb-4 space-y-1 text-gray-700">
+            {% for item in block.content.items %}<li>{{ item.text|wikitext }}</li>{% endfor %}
+        </ol>
+
+    {% elif block.block_type == 'steps' %}
+        <ol class="mb-6 space-y-4">
+            {% for step in block.content.steps %}
+            <li class="flex gap-4">
+                <span class="flex-shrink-0 w-9 h-9 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center">{{ forloop.counter }}</span>
+                <div class="flex-1 min-w-0 pt-1">
+                    {% if step.title %}<p class="font-semibold text-gray-900">{{ step.title }}</p>{% endif %}
+                    {% if step.text %}<p class="text-gray-700 mt-1">{{ step.text|wikitext }}</p>{% endif %}
+                    {% if step.image %}<img src="{{ step.image }}" alt="{{ step.title|default:'' }}" class="mt-3 max-w-full rounded-lg border border-gray-200">{% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ol>
 
     {% else %}
         <!-- Fallback für unbekannte Block-Typen -->

@@ -28,12 +28,11 @@
                 </svg>
                 <div class="ml-3">
                     <p class="text-sm text-green-700 font-medium mb-1">
-                        🎉 Vollständiger Block-Editor verfügbar!
+                        So geht es weiter
                     </p>
                     <p class="text-sm text-green-700">
-                        Erstellen Sie zunächst die Seite mit grundlegenden Metadaten (Titel, Kategorie, Sichtbarkeit).
-                        Direkt danach öffnet sich automatisch der <strong>vollständige Block-Editor</strong> mit 17 Block-Typen:
-                        Text, Überschriften, Checklisten, Tabellen, Code, Bilder, Videos, Dateien, Spalten, Embeds und mehr!
+                        Titel, Kategorie und Vorlage wählen – danach öffnet sich der Block-Editor. Dort können Sie Text auch
+                        direkt aus Word oder Markdown einfügen, Bilder und Dateien hochladen und Schritt-für-Schritt-Anleitungen anlegen.
                     </p>
                 </div>
             </div>
@@ -85,6 +84,30 @@
                         {% if form.description.errors %}<p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>{% endif %}
                         <p class="mt-1 text-xs text-gray-500">Kurze Zusammenfassung (wird in Vorschau und Suchergebnissen angezeigt)</p>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.parent.label }}</label>
+                        {{ form.parent }}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.parent.help_text }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.tags_input.label }}</label>
+                        {{ form.tags_input }}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.tags_input.help_text }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vorlage -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-1">🧩 Vorlage</h2>
+                <p class="text-sm text-gray-500 mb-4">Eine Vorlage legt passende Blöcke an, die Sie nur noch ausfüllen. Alles lässt sich danach ändern.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {% for key, t in page_templates.items %}
+                    <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-primary-400 cursor-pointer has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50">
+                        <input type="radio" name="template" value="{{ key }}" {% if key == 'leer' %}checked{% endif %} class="mt-1">
+                        <span><span class="block text-sm font-medium text-gray-900">{{ t.icon }} {{ t.label }}</span><span class="block text-xs text-gray-500 mt-0.5">{{ t.description }}</span></span>
+                    </label>
+                    {% endfor %}
                 </div>
             </div>
 

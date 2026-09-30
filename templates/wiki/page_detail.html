@@ -13,6 +13,10 @@
             <li class="text-gray-400">/</li>
             <li><a href="{% url 'wiki:category' page.category.slug %}" class="text-gray-500 hover:text-gray-700">{{ page.category.icon }} {{ page.category.name }}</a></li>
             {% endif %}
+            {% for a in ancestors %}
+            <li class="text-gray-400">/</li>
+            <li><a href="{{ a.get_absolute_url }}" class="text-gray-500 hover:text-gray-700">{{ a.title|truncatechars:30 }}</a></li>
+            {% endfor %}
             <li class="text-gray-400">/</li>
             <li><span class="text-gray-900 font-semibold">{{ page.title }}</span></li>
         </ol>
@@ -37,8 +41,10 @@
                 {% endif %}
             </div>
 
-            {% if perms.wiki.change_wikipage %}
-            <div class="ml-4 flex gap-2">
+            <div class="ml-4 flex flex-wrap gap-2 justify-end">
+                <a href="{% url 'wiki:page_pdf' page.slug %}" target="_blank" class="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2" title="Druckversion als PDF">🖨️ PDF</a>
+                <a href="{% url 'wiki:revisions' page.slug %}" class="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors" title="Versionsverlauf">🕘 Versionen</a>
+            {% if can_edit %}
                 <a href="{% url 'wiki:block_editor' page.slug %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -52,8 +58,8 @@
                     </svg>
                     Einstellungen
                 </a>
-            </div>
             {% endif %}
+            </div>
         </div>
 
         <!-- Meta -->
@@ -90,8 +96,46 @@
         </div>
     </div>
 
+    <div class="grid grid-cols-1 {% if headings or children or related_pages or attachments %}lg:grid-cols-4{% endif %} gap-6">
+    {% if headings or children or related_pages or attachments %}
+    <aside class="lg:col-span-1 space-y-4 lg:order-last">
+        {% if headings|length > 1 %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:sticky lg:top-20">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Inhalt</p>
+            <ul class="space-y-1 text-sm">
+                {% for level, text, anchor in headings %}
+                <li class="{% if level == 2 %}pl-3{% elif level == 3 %}pl-6{% endif %}"><a href="#{{ anchor }}" class="text-gray-700 hover:text-primary-600">{{ text }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if children %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Unterseiten</p>
+            <ul class="space-y-1 text-sm">{% for c in children %}<li><a href="{{ c.get_absolute_url }}" class="text-gray-700 hover:text-primary-600">📄 {{ c.title }}</a></li>{% endfor %}</ul>
+            {% if can_edit %}<a href="{% url 'wiki:page_create' %}?parent={{ page.pk }}" class="block mt-2 text-xs text-primary-600 hover:text-primary-800">+ Unterseite anlegen</a>{% endif %}
+        </div>
+        {% elif can_edit %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <a href="{% url 'wiki:page_create' %}?parent={{ page.pk }}" class="text-xs text-primary-600 hover:text-primary-800">+ Unterseite anlegen</a>
+        </div>
+        {% endif %}
+        {% if attachments %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Anhänge</p>
+            <ul class="space-y-1 text-sm">{% for a in attachments %}<li><a href="{{ a.file.url }}" target="_blank" class="text-gray-700 hover:text-primary-600 break-all">{% if a.is_image %}🖼️{% else %}📎{% endif %} {{ a.original_name }}</a> <span class="text-xs text-gray-400">{{ a.size_display }}</span></li>{% endfor %}</ul>
+        </div>
+        {% endif %}
+        {% if related_pages %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Verwandte Seiten</p>
+            <ul class="space-y-1 text-sm">{% for r in related_pages %}<li><a href="{{ r.get_absolute_url }}" class="text-gray-700 hover:text-primary-600">{{ r.title }}</a></li>{% endfor %}</ul>
+        </div>
+        {% endif %}
+    </aside>
+    {% endif %}
     <!-- Content Blocks -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+    <div class="{% if headings or children or related_pages or attachments %}lg:col-span-3{% endif %} bg-white rounded-lg shadow-sm border border-gray-200 p-8">
         {% if page.blocks.all %}
         <div class="prose max-w-none" id="wiki-content">
             {% for block in page.blocks.all %}
@@ -104,13 +148,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
             <p class="mt-2 text-sm text-gray-500">Diese Seite hat noch keinen Inhalt</p>
-            {% if perms.wiki.change_wikipage %}
-            <a href="{% url 'wiki:page_edit' page.slug %}" class="mt-4 inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+            {% if can_edit %}
+            <a href="{% url 'wiki:block_editor' page.slug %}" class="mt-4 inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
                 Inhalt hinzufügen
             </a>
             {% endif %}
         </div>
         {% endif %}
+    </div>
     </div>
 </div>
 {% endblock %}
