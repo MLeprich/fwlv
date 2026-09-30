@@ -1065,3 +1065,47 @@ class SuccessBurstTests(TestCase):
         # Ohne Speichern keine Animation
         response = self.client.get(obj.get_absolute_url())
         self.assertNotContains(response, 'flvs-burst-badge')
+
+
+class ObjectPdfTests(TestCase):
+    """Komplettes Objekt als PDF, wahlweise nur ausgewählte Bereiche."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw')
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label='objektverwaltung',
+                                       codename__in=['view_buildingobject', 'change_buildingobject'])
+        )
+        self.client.force_login(self.user)
+        self.building = BuildingObject.objects.create(
+            object_number='OBJ-1', name='Rathaus', street='Markt', house_number='1',
+            created_by=self.user, updated_by=self.user,
+        )
+        Floor.objects.create(building=self.building, level=0, name='EG')
+        BuildingContact.objects.create(building=self.building, name='Erna', phone='1')
+
+    def test_detail_offers_parts(self):
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Objekt als PDF')
+        self.assertContains(response, reverse('objektverwaltung:object_pdf', args=[self.building.pk]))
+        self.assertNotContains(response, 'value="bvs"')  # ohne bvs_view nicht wählbar
+
+    def test_full_and_partial_pdf(self):
+        url = reverse('objektverwaltung:object_pdf', args=[self.building.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF'))
+        response = self.client.get(url, {'teile': 'gebaeude,bvs,unbekannt', 'download': '1'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('attachment', response['Content-Disposition'])
+        # Export landet in der Akte, nur die erlaubten/gewählten Teile werden genannt
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Objekt als PDF exportiert (Gebäude (Etagen, Fluchtwege))')
+
+    def test_bvs_part_with_permission(self):
+        self.user.user_permissions.add(Permission.objects.get(codename='bvs_view'))
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'value="bvs"')
+        response = self.client.get(reverse('objektverwaltung:object_pdf', args=[self.building.pk]), {'teile': 'bvs'})
+        self.assertEqual(response.status_code, 200)

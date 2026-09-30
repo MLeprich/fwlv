@@ -32,7 +32,36 @@
                 </span>
             </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2" x-data="{ pdfOpen: false, parts: {{ pdf_parts|length }} ? [{% for key, label in pdf_parts %}'{{ key }}'{% if not forloop.last %}, {% endif %}{% endfor %}] : [] }">
+            <div class="relative">
+                <button type="button" @click="pdfOpen = !pdfOpen"
+                        class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">Objekt als PDF</button>
+                <div x-show="pdfOpen" @click.away="pdfOpen = false" @keydown.escape.window="pdfOpen = false" x-cloak
+                     class="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4 text-left">
+                    <p class="text-sm font-semibold text-gray-900 mb-1">Objektakte als PDF</p>
+                    <p class="text-xs text-gray-500 mb-3">Welche Bereiche sollen enthalten sein?</p>
+                    <div class="space-y-1.5">
+                        {% for key, label in pdf_parts %}
+                        <label class="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                            <input type="checkbox" value="{{ key }}" x-model="parts" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                            {{ label }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <div class="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-gray-100">
+                        <button type="button" @click="parts = parts.length ? [] : [{% for key, label in pdf_parts %}'{{ key }}'{% if not forloop.last %}, {% endif %}{% endfor %}]"
+                                class="text-xs text-gray-500 hover:text-gray-700" x-text="parts.length ? 'Keine' : 'Alle'"></button>
+                        <div class="flex items-center gap-2">
+                            <a :href="'{% url 'objektverwaltung:object_pdf' object.pk %}?teile=' + parts.join(',') + '&download=1'"
+                               :class="parts.length ? '' : 'opacity-50 pointer-events-none'"
+                               class="text-sm text-gray-600 hover:text-gray-900 px-2 py-1.5">Speichern</a>
+                            <a :href="'{% url 'objektverwaltung:object_pdf' object.pk %}?teile=' + parts.join(',')" target="_blank"
+                               :class="parts.length ? '' : 'opacity-50 pointer-events-none'"
+                               class="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-primary-700">PDF öffnen</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {% include 'objektverwaltung/partials/follow_button.html' %}
             {% if perms.objektverwaltung.change_buildingobject %}
             <a href="{% url 'objektverwaltung:update' object.pk %}"

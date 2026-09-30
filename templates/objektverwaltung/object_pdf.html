@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Objekt {{ building.object_number }} – {{ building.name }}</title>
+    <style>
+        @page { size: A4; margin: 18mm 16mm 18mm 16mm;
+            @bottom-right { content: "Seite " counter(page) " von " counter(pages); font-size: 8pt; color: #666; }
+            @bottom-left { content: "Objekt {{ building.object_number }} · Stand {{ now|date:"d.m.Y H:i" }}"; font-size: 8pt; color: #666; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 9.5pt; color: #222; line-height: 1.35; }
+        h1 { font-size: 16pt; margin-bottom: 2mm; }
+        h2 { font-size: 12pt; margin: 8mm 0 3mm; padding-bottom: 1mm; border-bottom: 1.5px solid #333; page-break-after: avoid; }
+        h3 { font-size: 10pt; margin: 4mm 0 1.5mm; color: #444; page-break-after: avoid; }
+        .sub { color: #555; font-size: 9pt; margin-bottom: 4mm; }
+        .toc { font-size: 8.5pt; color: #555; margin-bottom: 4mm; }
+        table.meta { border-collapse: collapse; font-size: 9pt; width: 100%; }
+        table.meta td { padding: 0.8mm 6mm 0.8mm 0; vertical-align: top; }
+        table.meta td.k { color: #666; width: 40mm; }
+        table.list { width: 100%; border-collapse: collapse; margin-bottom: 3mm; }
+        table.list th { text-align: left; font-size: 8pt; text-transform: uppercase; color: #666; border-bottom: 1px solid #999; padding: 1.2mm 1.5mm; }
+        table.list td { border-bottom: 1px solid #ddd; padding: 1.5mm 1.5mm; vertical-align: top; font-size: 9pt; }
+        tr { page-break-inside: avoid; }
+        .muted { color: #777; }
+        .badge { display: inline-block; font-size: 7.5pt; padding: 0.3mm 1.5mm; border: 1px solid #bbb; border-radius: 2mm; margin-right: 1mm; color: #333; white-space: nowrap; }
+        .warn { color: #b91c1c; font-weight: bold; }
+        .pre { white-space: pre-wrap; }
+        .small { font-size: 8pt; color: #555; }
+        ol.req { margin-left: 5mm; font-size: 9pt; }
+    </style>
+</head>
+<body>
+    <h1>{{ building.name }}</h1>
+    <div class="sub">Objektakte · {{ building.object_number }} · {{ building.get_usage_type_display }} · Status: {{ building.get_status_display }}<br>
+        Stand {{ now|date:"d.m.Y H:i" }} Uhr · erstellt von {{ user.get_full_name|default:user.username }}</div>
+    <div class="toc">Enthaltene Bereiche: {{ part_labels|join:" · " }}</div>
+
+    {% if 'stammdaten' in parts %}
+    <h2>Übersicht &amp; Stammdaten</h2>
+    <table class="meta">
+        <tr><td class="k">Objektnummer</td><td>{{ building.object_number }}</td></tr>
+        <tr><td class="k">Bezeichnung</td><td>{{ building.name }}</td></tr>
+        <tr><td class="k">Nutzungsart</td><td>{{ building.get_usage_type_display }}</td></tr>
+        <tr><td class="k">Anschrift</td><td>{{ building.full_address|default:"–" }}</td></tr>
+        {% if building.latitude and building.longitude %}<tr><td class="k">Koordinaten</td><td>{{ building.latitude }}, {{ building.longitude }}</td></tr>{% endif %}
+        <tr><td class="k">Obergeschosse / Untergeschosse</td><td>{{ building.floor_count|default:"–" }} / {{ building.basement_count|default:"–" }}</td></tr>
+        <tr><td class="k">Brandmeldeanlage</td><td>{% if building.has_fire_alarm_system %}Ja{% else %}Nein{% endif %}</td></tr>
+        <tr><td class="k">Status</td><td>{{ building.get_status_display }}</td></tr>
+        {% if building.notes %}<tr><td class="k">Allgemeine Hinweise</td><td class="pre">{{ building.notes }}</td></tr>{% endif %}
+        <tr><td class="k">Erstellt / Geändert</td><td>{{ building.created_at|date:"d.m.Y" }} / {{ building.updated_at|date:"d.m.Y" }}</td></tr>
+    </table>
+    <h3>Ansprechpartner ({{ contacts|length }})</h3>
+    {% if contacts %}
+    <table class="list">
+        <thead><tr><th>Name</th><th>Funktion</th><th>Telefon</th><th>Mobil</th><th>E-Mail</th><th>Hinweise</th></tr></thead>
+        <tbody>
+        {% for c in contacts %}
+        <tr><td>{{ c.name }}{% if c.is_primary %} <span class="badge">Haupt</span>{% endif %}</td><td>{{ c.role|default:"–" }}</td><td>{{ c.phone|default:"–" }}</td><td>{{ c.mobile|default:"–" }}</td><td>{{ c.email|default:"–" }}</td><td class="small">{{ c.notes }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}<p class="muted">Keine Ansprechpartner erfasst.</p>{% endif %}
+    {% endif %}
+
+    {% if 'gebaeude' in parts %}
+    <h2>Gebäude</h2>
+    <h3>Etagen ({{ floors|length }})</h3>
+    {% if floors %}
+    <table class="list">
+        <thead><tr><th>Ebene</th><th>Bezeichnung</th><th>Beschreibung</th></tr></thead>
+        <tbody>{% for f in floors %}<tr><td>{{ f.level }}</td><td>{{ f.name|default:"–" }}</td><td class="pre">{{ f.description }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% else %}<p class="muted">Keine Etagen erfasst.</p>{% endif %}
+    <h3>Fluchtwege ({{ escape_routes|length }})</h3>
+    {% if escape_routes %}
+    <table class="list">
+        <thead><tr><th>Bezeichnung</th><th>Etage</th><th>Beschreibung</th></tr></thead>
+        <tbody>{% for r in escape_routes %}<tr><td>{{ r.name }}</td><td>{% if r.floor %}{{ r.floor.name|default:r.floor.level }}{% else %}–{% endif %}</td><td class="pre">{{ r.description }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% else %}<p class="muted">Keine Fluchtwege erfasst.</p>{% endif %}
+    {% endif %}
+
+    {% if 'technik' in parts %}
+    <h2>Brandschutztechnik</h2>
+    {% if assets %}
+    <table class="list">
+        <thead><tr><th>Anlage</th><th>Bezeichnung</th><th>Standort</th><th>Hersteller</th><th>Letzte Prüfung</th><th>Nächste Prüfung</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for a in assets %}
+        <tr>
+            <td>{{ a.inspection_type_label }}{% if a.depot_type %} <span class="small">({{ a.get_depot_type_display }})</span>{% endif %}{% if a.system_type %} <span class="small">({{ a.get_system_type_display }})</span>{% endif %}</td>
+            <td>{{ a.display_name }}{% if a.serial_number %}<br><span class="small">SN {{ a.serial_number }}</span>{% endif %}</td>
+            <td>{{ a.location_description|default:"–" }}</td>
+            <td>{{ a.manufacturer|default:"–" }}{% if a.model %} {{ a.model }}{% endif %}</td>
+            <td>{{ a.last_inspection|date:"d.m.Y"|default:"–" }}</td>
+            <td>{{ a.next_inspection|date:"d.m.Y"|default:"–" }}</td>
+            <td>{% if a.inspection_status == 'overdue' %}<span class="warn">überfällig</span>{% elif a.inspection_status == 'due_soon' %}bald fällig{% else %}{{ a.inspection_status_display|default:"–" }}{% endif %}
+                {% if a.is_active is False %}<br><span class="small">außer Betrieb</span>{% endif %}{% if a.is_operational is False %}<br><span class="warn">nicht betriebsbereit</span>{% endif %}</td>
+        </tr>
+        {% if a.notes or a.contents %}<tr><td></td><td colspan="6" class="small pre">{% if a.contents %}Inhalt: {{ a.contents }}{% endif %}{% if a.notes %}{% if a.contents %} · {% endif %}{{ a.notes }}{% endif %}</td></tr>{% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}<p class="muted">Keine Brandmeldezentralen, Löschanlagen oder Schlüsseldepots erfasst.</p>{% endif %}
+    {% if reports %}
+    <h3>Letzte Prüfberichte</h3>
+    <table class="list">
+        <thead><tr><th>Datum</th><th>Anlage</th><th>Ergebnis</th><th>Teilnehmer</th><th>Zustand / Bemerkung</th></tr></thead>
+        <tbody>
+        {% for r in reports %}
+        <tr><td>{{ r.inspection_date|date:"d.m.Y" }}</td><td>{% if r.asset %}{{ r.asset.inspection_type_label }} {{ r.asset.display_name }}{% endif %}</td>
+            <td>{% if r.result == 'ok' %}{{ r.get_result_display }}{% else %}<span class="warn">{{ r.get_result_display }}</span>{% endif %}</td>
+            <td class="small">{{ r.participant_fire_dept }}{% if r.participant_operator %} / {{ r.participant_operator }}{% endif %}</td>
+            <td class="small pre">{{ r.condition_report }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% endif %}
+
+    {% if 'stellungnahmen' in parts %}
+    <h2>Stellungnahmen ({{ statements|length }})</h2>
+    {% if statements %}
+    {% for st in statements %}
+    <table class="meta" style="margin-bottom: 3mm; border-top: 1px solid #ddd; padding-top: 2mm">
+        <tr><td class="k">{{ st.get_statement_type_display }}</td><td><strong>{{ st.subject }}</strong> <span class="badge">{{ st.get_status_display }}</span>{% if st.result %}<span class="badge">{{ st.get_result_display }}</span>{% endif %}{% if st.is_overdue %}<span class="badge warn">Frist überschritten</span>{% endif %}</td></tr>
+        <tr><td class="k">Anfragende Stelle / Az.</td><td>{{ st.requesting_authority|default:"–" }}{% if st.reference_number %} · Az. {{ st.reference_number }}{% endif %}{% if st.our_reference %} · Unser Zeichen {{ st.our_reference }}{% endif %}</td></tr>
+        {% if st.applicant %}<tr><td class="k">Antragsteller</td><td>{{ st.applicant }}</td></tr>{% endif %}
+        <tr><td class="k">Eingang / Frist / Abgabe</td><td>{{ st.received_on|date:"d.m.Y" }} / {{ st.due_on|date:"d.m.Y"|default:"–" }} / {{ st.issued_on|date:"d.m.Y"|default:"–" }}{% if st.clerk %} · {{ st.clerk }}{% endif %}</td></tr>
+        {% if st.text %}<tr><td class="k">Stellungnahme</td><td class="pre">{{ st.rendered_text }}</td></tr>{% endif %}
+        {% if st.rendered_requirement_lines %}<tr><td class="k">Auflagen</td><td><ol class="req">{% for line in st.rendered_requirement_lines %}<li>{{ line }}</li>{% endfor %}</ol></td></tr>{% endif %}
+    </table>
+    {% endfor %}
+    {% else %}<p class="muted">Keine Stellungnahmen erfasst.</p>{% endif %}
+    {% endif %}
+
+    {% if 'kompensation' in parts %}
+    <h2>Kompensationsmaßnahmen ({{ compensations|length }})</h2>
+    {% if compensations %}
+    <table class="list">
+        <thead><tr><th>Bezeichnung</th><th>Status</th><th>Grund / Mangel</th><th>Maßnahme</th><th>Bezug</th><th>Zeitraum</th><th>Verantwortlich</th></tr></thead>
+        <tbody>
+        {% for m in compensations %}
+        <tr><td>{{ m.title }}</td><td>{{ m.get_status_display }}</td><td class="pre">{{ m.reason }}</td><td class="pre">{{ m.description }}</td>
+            <td class="small">{% if m.escape_route %}Fluchtweg {{ m.escape_route.name }}{% endif %}{% if m.suppression_system %}{% if m.escape_route %}<br>{% endif %}Löschanlage {{ m.suppression_system.designation }}{% endif %}</td>
+            <td>{{ m.start_date|date:"d.m.Y"|default:"–" }} – {{ m.end_date|date:"d.m.Y"|default:"offen" }}</td><td>{{ m.responsible|default:"–" }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}<p class="muted">Keine Kompensationsmaßnahmen erfasst.</p>{% endif %}
+    {% endif %}
+
+    {% if 'plaene' in parts %}
+    <h2>Pläne &amp; Laufkarten ({{ plans|length }})</h2>
+    {% if plans %}
+    <table class="list">
+        <thead><tr><th>Art</th><th>Titel</th><th>Etage</th><th>Datei</th><th>Hochgeladen</th><th>Hinweise</th></tr></thead>
+        <tbody>
+        {% for p in plans %}
+        <tr><td>{{ p.get_plan_type_display }}</td><td>{{ p.title }}</td><td>{% if p.floor %}{{ p.floor.name|default:p.floor.level }}{% else %}–{% endif %}</td>
+            <td class="small">{{ p.file.name|cut:"objektverwaltung/plans/"|default:"–" }}</td><td>{{ p.created_at|date:"d.m.Y" }}</td><td class="small pre">{{ p.notes }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p class="small">Die Dateien selbst sind nicht eingebettet; sie liegen im System beim Objekt.</p>
+    {% else %}<p class="muted">Keine Pläne oder Laufkarten hochgeladen.</p>{% endif %}
+    {% endif %}
+
+    {% if 'bvs' in parts %}
+    <h2>Brandverhütungsschau</h2>
+    <h3>PSV-Prüfpflichten ({{ psv_requirements|length }})</h3>
+    {% if psv_requirements %}
+    <table class="list">
+        <thead><tr><th>Prüfart</th><th>Anlage</th><th>Letzte Prüfung</th><th>Gültig bis</th><th>Status</th><th>Hinweise</th></tr></thead>
+        <tbody>
+        {% for r in psv_requirements %}
+        <tr><td>{{ r.inspection_type.name }}</td><td>{{ r.designation|default:"–" }}{% if not r.is_active %} <span class="small">(inaktiv)</span>{% endif %}</td>
+            <td>{{ r.last_inspection|date:"d.m.Y"|default:"–" }}</td><td>{{ r.valid_until|date:"d.m.Y"|default:"–" }}</td>
+            <td>{% if r.needs_action %}<span class="warn">{{ r.status_display }}</span>{% else %}{{ r.status_display }}{% endif %}</td><td class="small pre">{{ r.notes }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}<p class="muted">Keine PSV-Prüfpflichten erfasst.</p>{% endif %}
+    <h3>Brandverhütungsschauen ({{ bvs_inspections|length }})</h3>
+    {% if bvs_inspections %}
+    {% for i in bvs_inspections %}
+    <table class="meta" style="margin-bottom: 3mm; border-top: 1px solid #ddd">
+        <tr><td class="k">{{ i.inspection_date|date:"d.m.Y" }}</td><td><strong>Brandverhütungsschau</strong> <span class="badge">{{ i.get_status_display }}</span>{% if i.report_number %} · Bericht {{ i.report_number }}{% endif %}{% if i.clerk_name %} · {{ i.clerk_name }}{% endif %}</td></tr>
+        <tr><td class="k">Fristen</td><td>Mängelbeseitigung bis {{ i.defect_deadline|date:"d.m.Y"|default:"–" }} · nächste Schau {{ i.next_inspection|date:"F Y"|default:"–" }}</td></tr>
+        {% if i.defects.all %}
+        <tr><td class="k">Mängel ({{ i.defects.all|length }})</td><td>
+            <table class="list">
+                <thead><tr><th>Punkt</th><th>Ort</th><th>Mangel / Maßnahme</th><th>Behoben</th></tr></thead>
+                <tbody>{% for d in i.defects.all %}<tr><td>{{ d.number }}</td><td>{{ d.location }}</td><td class="pre">{{ d.rendered_text }}</td><td>{% if d.resolved_on %}{{ d.resolved_on|date:"d.m.Y" }}{% else %}<span class="warn">offen</span>{% endif %}</td></tr>{% endfor %}</tbody>
+            </table></td></tr>
+        {% else %}<tr><td class="k">Mängel</td><td class="muted">keine</td></tr>{% endif %}
+    </table>
+    {% endfor %}
+    {% else %}<p class="muted">Noch keine Brandverhütungsschau erfasst.</p>{% endif %}
+    {% endif %}
+
+    {% if 'akte' in parts %}
+    <h2>Akte ({{ akte_entries|length }} Einträge)</h2>
+    {% if akte_entries %}
+    <table class="list">
+        <thead><tr><th>Datum</th><th>Bearbeiter</th><th>Bereich</th><th>Vorgang</th></tr></thead>
+        <tbody>
+        {% for e in akte_entries %}
+        <tr>
+            <td style="white-space: nowrap">{{ e.when|date:"d.m.Y" }}<br><span class="small">{{ e.when|date:"H:i" }}</span></td>
+            <td class="small">{% if e.user %}{{ e.user.get_full_name|default:e.user.username }}{% else %}–{% endif %}</td>
+            <td class="small">{{ e.kind_label }}</td>
+            <td><span class="badge">{{ e.badge }}</span>{{ e.title }}
+                {% if e.detail %}<div class="small pre">{{ e.detail }}</div>{% endif %}
+                {% if e.changes %}<div class="small">{% for field, vals in e.changes.items %}<div>{{ field }}: <span style="text-decoration: line-through; color: #999">{{ vals.old }}</span> → {{ vals.new }}</div>{% endfor %}</div>{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}<p class="muted">Keine Einträge.</p>{% endif %}
+    {% endif %}
+</body>
+</html>

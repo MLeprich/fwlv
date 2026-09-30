@@ -269,6 +269,7 @@ class BuildingObjectDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['statements_open'] = sum(1 for st in statements if st.is_open)
         context['statements_overdue'] = sum(1 for st in statements if st.is_overdue)
         context['placeholder_groups'] = placeholders.catalogue('stellungnahme', building=self.object)
+        context['pdf_parts'] = object_pdf_parts(self.request.user)
         can_bvs = self.request.user.has_perm('objektverwaltung.bvs_view')
         context['akte_entries'] = akte.build_timeline(self.object, include_bvs=can_bvs)
         context['due_assets'] = _building_due_assets(self.object)
@@ -1034,6 +1035,72 @@ class BuildingObjectAktePdfView(LoginRequiredMixin, PermissionRequiredMixin, Vie
         safe_number = ''.join(ch for ch in building.object_number if ch.isalnum() or ch in '-_') or 'objekt'
         response = HttpResponse(pdf, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="Akte_{safe_number}_{timezone.localdate():%Y-%m-%d}.pdf"'
+        return response
+
+
+#: Abschnitte der Objekt-PDF (Schlüssel, Bezeichnung, benötigtes Recht)
+OBJECT_PDF_PARTS = (
+    ('stammdaten', 'Übersicht & Stammdaten', None),
+    ('gebaeude', 'Gebäude (Etagen, Fluchtwege)', None),
+    ('technik', 'Brandschutztechnik (BMZ, Löschanlagen, FSD)', None),
+    ('stellungnahmen', 'Stellungnahmen', None),
+    ('kompensation', 'Kompensationsmaßnahmen', None),
+    ('plaene', 'Pläne & Laufkarten (Liste)', None),
+    ('bvs', 'Brandverhütungsschau & PSV-Fristen', 'objektverwaltung.bvs_view'),
+    ('akte', 'Akte (Chronologie)', None),
+)
+
+
+def object_pdf_parts(user):
+    return [(key, label) for key, label, perm in OBJECT_PDF_PARTS if not perm or user.has_perm(perm)]
+
+
+class BuildingObjectPdfView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Komplettes Objekt als PDF; ``?teile=stammdaten,technik,…`` wählt die Abschnitte
+    (ohne Angabe alle, die der Nutzer sehen darf). ``?download=1`` zum Speichern.
+    """
+    permission_required = 'objektverwaltung.view_buildingobject'
+
+    def get(self, request, pk):
+        from django.template.loader import render_to_string
+        from weasyprint import HTML
+
+        building = get_object_or_404(BuildingObject.objects.prefetch_related(
+            'floors', 'escape_routes', 'fire_alarm_panels', 'suppression_systems', 'key_depots',
+            'compensation_measures', 'contacts', 'plans', 'statements'), pk=pk)
+        allowed = object_pdf_parts(request.user)
+        allowed_keys = [k for k, _ in allowed]
+        wanted = [k for k in request.GET.get('teile', '').split(',') if k in allowed_keys]
+        parts = wanted or allowed_keys
+        can_bvs = 'bvs' in parts
+        context = {
+            'building': building, 'parts': parts,
+            'part_labels': [label for key, label in allowed if key in parts],
+            'now': timezone.localtime(), 'user': request.user,
+            'contacts': building.contacts.all(),
+            'floors': building.floors.all(), 'escape_routes': building.escape_routes.select_related('floor'),
+            'assets': [a for a in list(building.fire_alarm_panels.all()) + list(building.suppression_systems.all())
+                       + list(building.key_depots.all())],
+            'reports': akte.building_reports(building).order_by('-inspection_date')[:20] if 'technik' in parts else [],
+            'statements': building.statements.all(),
+            'compensations': building.compensation_measures.select_related('escape_route', 'suppression_system'),
+            'plans': building.plans.select_related('floor'),
+            'akte_entries': akte.build_timeline(building, include_bvs=request.user.has_perm(
+                'objektverwaltung.bvs_view')) if 'akte' in parts else [],
+        }
+        if can_bvs:
+            from .views_bvs import psv_panel_context
+            context.update(psv_panel_context(building, request))
+            context['bvs_inspections'] = building.fire_safety_inspections.prefetch_related('defects')
+        html = render_to_string('objektverwaltung/object_pdf.html', context, request=request)
+        pdf = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf()
+        akte.log_akte(request, building, AuditAction.EXPORT,
+                      f'Objekt als PDF exportiert ({", ".join(context["part_labels"])})')
+        safe_number = ''.join(ch for ch in building.object_number if ch.isalnum() or ch in '-_') or 'objekt'
+        response = HttpResponse(pdf, content_type='application/pdf')
+        disposition = 'attachment' if request.GET.get('download') else 'inline'
+        response['Content-Disposition'] = f'{disposition}; filename="Objekt_{safe_number}_{timezone.localdate():%Y-%m-%d}.pdf"'
         return response
 
 

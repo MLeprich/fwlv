@@ -19,6 +19,7 @@ urlpatterns = [
     path('objekte/<int:pk>/bearbeiten/', views.BuildingObjectUpdateView.as_view(), name='update'),
     path('objekte/<int:pk>/loeschen/', views.BuildingObjectDeleteView.as_view(), name='delete'),
     path('objekte/<int:pk>/akte.pdf', views.BuildingObjectAktePdfView.as_view(), name='akte_pdf'),
+    path('objekte/<int:pk>/objekt.pdf', views.BuildingObjectPdfView.as_view(), name='object_pdf'),
 
     # Nutzungsarten verwalten
     path('nutzungsarten/', views.UsageCategoryListView.as_view(), name='usage_category_list'),
