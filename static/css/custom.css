@@ -645,3 +645,102 @@ html body button[type="submit"].bg-blue-600:hover {
         max-width: none;
     }
 }
+
+/* ============================================
+   ERFOLGS-ANIMATION (grüner Haken + Konfetti, reines CSS)
+   Eingeblendet über includes/success_burst.html, wenn eine
+   Django-Message das Extra-Tag „celebrate“ trägt.
+   ============================================ */
+.flvs-burst {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+.flvs-burst-badge {
+    position: relative;
+    width: 7rem;
+    height: 7rem;
+    border-radius: 9999px;
+    background: #16a34a;
+    box-shadow: 0 10px 30px rgba(22, 163, 74, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: flvs-burst-pop 0.45s cubic-bezier(0.22, 1.4, 0.36, 1) both,
+               flvs-burst-fade 0.4s ease-in 1.7s forwards;
+}
+.flvs-burst-badge svg {
+    width: 4rem;
+    height: 4rem;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 60;
+    stroke-dashoffset: 60;
+    animation: flvs-burst-draw 0.4s ease-out 0.3s forwards;
+}
+.flvs-burst-ring {
+    position: absolute;
+    inset: -0.5rem;
+    border-radius: 9999px;
+    border: 3px solid #4ade80;
+    opacity: 0;
+    animation: flvs-burst-ring 0.9s ease-out 0.15s;
+}
+.flvs-burst-piece {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.6rem;
+    height: 0.9rem;
+    border-radius: 2px;
+    opacity: 0;
+    transform-origin: center;
+    animation: flvs-burst-confetti 1.4s cubic-bezier(0.15, 0.7, 0.4, 1) 0.2s forwards;
+}
+.flvs-burst-piece:nth-child(3n) { background: #f59e0b; }
+.flvs-burst-piece:nth-child(3n+1) { background: #ef4444; border-radius: 9999px; }
+.flvs-burst-piece:nth-child(3n+2) { background: #3b82f6; }
+.flvs-burst-piece:nth-child(4n) { background: #22c55e; }
+.flvs-burst-piece:nth-child(1)  { --dx: -140px; --dy: -160px; --rot: 320deg; }
+.flvs-burst-piece:nth-child(2)  { --dx: -60px;  --dy: -200px; --rot: -260deg; animation-delay: 0.25s; }
+.flvs-burst-piece:nth-child(3)  { --dx: 50px;   --dy: -190px; --rot: 200deg; }
+.flvs-burst-piece:nth-child(4)  { --dx: 150px;  --dy: -150px; --rot: -340deg; animation-delay: 0.28s; }
+.flvs-burst-piece:nth-child(5)  { --dx: -190px; --dy: -60px;  --rot: 180deg; animation-delay: 0.22s; }
+.flvs-burst-piece:nth-child(6)  { --dx: 200px;  --dy: -40px;  --rot: -150deg; }
+.flvs-burst-piece:nth-child(7)  { --dx: -170px; --dy: 90px;   --rot: 280deg; animation-delay: 0.3s; }
+.flvs-burst-piece:nth-child(8)  { --dx: 180px;  --dy: 110px;  --rot: -220deg; animation-delay: 0.24s; }
+.flvs-burst-piece:nth-child(9)  { --dx: -90px;  --dy: 170px;  --rot: 160deg; }
+.flvs-burst-piece:nth-child(10) { --dx: 100px;  --dy: 180px;  --rot: -300deg; animation-delay: 0.26s; }
+.flvs-burst-piece:nth-child(11) { --dx: -20px;  --dy: -230px; --rot: 90deg;  animation-delay: 0.32s; }
+.flvs-burst-piece:nth-child(12) { --dx: 20px;   --dy: 210px;  --rot: -120deg; animation-delay: 0.2s; }
+@keyframes flvs-burst-pop {
+    from { transform: scale(0.2); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+@keyframes flvs-burst-draw {
+    to { stroke-dashoffset: 0; }
+}
+@keyframes flvs-burst-ring {
+    0%   { transform: scale(0.8); opacity: 0.9; }
+    100% { transform: scale(1.8); opacity: 0; }
+}
+@keyframes flvs-burst-confetti {
+    0%   { transform: translate(-50%, -50%) rotate(0) scale(0.6); opacity: 1; }
+    70%  { opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + 80px)) rotate(var(--rot)) scale(1); opacity: 0; }
+}
+@keyframes flvs-burst-fade {
+    to { transform: scale(0.9); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .flvs-burst-piece, .flvs-burst-ring { display: none; }
+    .flvs-burst-badge { animation: flvs-burst-fade 0.3s ease-in 1.2s forwards; }
+    .flvs-burst-badge svg { stroke-dashoffset: 0; animation: none; }
+}

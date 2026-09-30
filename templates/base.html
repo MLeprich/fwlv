@@ -335,7 +335,8 @@
             <!-- Messages/Toasts -->
             <div id="messages-container" class="mb-4">
                 {% for message in messages %}
-                <div class="p-4 rounded-lg border {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800{% elif message.tags == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}"
+                {% if 'celebrate' in message.tags %}{% include 'includes/success_burst.html' %}{% endif %}
+                <div class="p-4 rounded-lg border {% if 'success' in message.tags %}bg-green-50 border-green-200 text-green-800{% elif 'error' in message.tags %}bg-red-50 border-red-200 text-red-800{% elif 'warning' in message.tags %}bg-yellow-50 border-yellow-200 text-yellow-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}"
                      x-data="{ show: true }"
                      x-show="show"
                      x-init="setTimeout(() => show = false, 5000)"

@@ -1,0 +1,15 @@
+{% comment %}
+Erfolgs-Animation: grüner Haken mit Konfetti, verschwindet nach gut zwei Sekunden.
+Wird aus base.html eingebunden, wenn eine Message das Extra-Tag „celebrate“ trägt
+(messages.success(request, '…', extra_tags='celebrate')). Reines CSS, siehe custom.css.
+{% endcomment %}
+<div class="flvs-burst" aria-hidden="true" x-data="{ on: true }" x-show="on" x-init="setTimeout(() => on = false, 2300)">
+    <div class="flvs-burst-badge">
+        <span class="flvs-burst-ring"></span>
+        <svg viewBox="0 0 52 52"><path d="M14 27l8 8 16-17"/></svg>
+        <span class="flvs-burst-piece"></span><span class="flvs-burst-piece"></span><span class="flvs-burst-piece"></span>
+        <span class="flvs-burst-piece"></span><span class="flvs-burst-piece"></span><span class="flvs-burst-piece"></span>
+        <span class="flvs-burst-piece"></span><span class="flvs-burst-piece"></span><span class="flvs-burst-piece"></span>
+        <span class="flvs-burst-piece"></span><span class="flvs-burst-piece"></span><span class="flvs-burst-piece"></span>
+    </div>
+</div>

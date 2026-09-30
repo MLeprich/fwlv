@@ -304,7 +304,7 @@ class BuildingObjectCreateView(LoginRequiredMixin, PermissionRequiredMixin, Crea
         form.save_m2m()
         self.object = obj
         akte.log_created(self.request, obj, obj)
-        messages.success(self.request, f'Objekt „{obj.name}" wurde angelegt.')
+        messages.success(self.request, f'Objekt „{obj.name}" wurde angelegt.', extra_tags='celebrate')
         return redirect(obj.get_absolute_url())
 
 
@@ -332,7 +332,7 @@ class BuildingObjectUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Upda
         form.save_m2m()
         self.object = obj
         akte.log_updated(self.request, obj, obj, akte.diff(obj, getattr(self, '_old_snapshot', {})))
-        messages.success(self.request, 'Objekt wurde aktualisiert.')
+        messages.success(self.request, 'Objekt wurde aktualisiert.', extra_tags='celebrate')
         return redirect(obj.get_absolute_url())
 
 

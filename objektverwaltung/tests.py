@@ -1039,3 +1039,29 @@ class PlaceholderTests(TestCase):
         by_key = {it['key']: it['value'] for g in groups for it in g['items']}
         self.assertEqual(by_key['bvs.frist_maengel'], '01.12.2026')
         self.assertEqual(by_key['ansprechpartner.liste'], 'Erna Muster (Hausmeisterin), Tel. 0208-1')
+
+
+class SuccessBurstTests(TestCase):
+    """Nach Anlegen/Speichern eines Objekts erscheint die Erfolgs-Animation auf der Detailseite."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw')
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label='objektverwaltung',
+                                       codename__in=['view_buildingobject', 'add_buildingobject',
+                                                     'change_buildingobject'])
+        )
+        self.client.force_login(self.user)
+
+    def test_create_and_update_show_burst(self):
+        data = {'object_number': 'OBJ-9', 'name': 'Neu', 'status': 'active', 'street': '', 'house_number': '',
+                'postal_code': '', 'city': '', 'floor_count': '', 'basement_count': '', 'notes': ''}
+        response = self.client.post(reverse('objektverwaltung:create'), data, follow=True)
+        self.assertContains(response, 'flvs-burst-badge')
+        self.assertContains(response, 'bg-green-50')  # Meldung bleibt grün trotz Zusatz-Tag
+        obj = BuildingObject.objects.get(object_number='OBJ-9')
+        response = self.client.post(reverse('objektverwaltung:update', args=[obj.pk]), data, follow=True)
+        self.assertContains(response, 'flvs-burst-badge')
+        # Ohne Speichern keine Animation
+        response = self.client.get(obj.get_absolute_url())
+        self.assertNotContains(response, 'flvs-burst-badge')
