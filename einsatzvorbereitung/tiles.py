@@ -10,6 +10,8 @@ geholt und mit ``manage.py tiles_import`` auf der abgeschotteten Maschine einges
 """
 import math
 import os
+import shutil
+import zipfile
 from pathlib import Path
 
 from django.conf import settings
@@ -84,3 +86,88 @@ def tile_response(z, x, y):
         response = HttpResponse(status=404)
     response['Cache-Control'] = 'private, max-age=86400'
     return response
+
+
+# ---------------------------------------------------------------------------
+# Einspielen (Upload im Browser oder manage.py tiles_import)
+# ---------------------------------------------------------------------------
+
+PNG_MAGIC = (b'\x89PNG',)
+JPEG_MAGIC = (b'\xff\xd8\xff',)
+
+
+def _looks_like_tile(data):
+    return data[:4] in PNG_MAGIC or data[:3] in JPEG_MAGIC
+
+
+def tile_parts(path_text):
+    """„…/13/4252/2724.png“ → (13, 4252, 2724) oder None (nur z/x/y.png wird akzeptiert)."""
+    parts = [p for p in str(path_text).replace('\\', '/').split('/') if p and p != '.']
+    if len(parts) < 3:
+        return None
+    z, x, y = parts[-3], parts[-2], parts[-1]
+    if not (z.isdigit() and x.isdigit()):
+        return None
+    name, dot, ext = y.rpartition('.')
+    if not dot or ext.lower() not in ('png', 'jpg', 'jpeg') or not name.isdigit():
+        return None
+    return int(z), int(x), int(name)
+
+
+def store_tile(z, x, y, data, out=None):
+    """Eine Kachel ablegen (immer als <y>.png); liefert True bei Erfolg."""
+    if not _looks_like_tile(data):
+        return False
+    target = (out or tiles_dir()) / str(z) / str(x) / f'{y}.png'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(data)
+    return True
+
+
+def clear_tiles(out=None):
+    root = out or tiles_dir()
+    if root.is_dir():
+        shutil.rmtree(root)
+    root.mkdir(parents=True, exist_ok=True)
+
+
+def import_zip(fileobj, out=None, replace=False):
+    """ZIP mit z/x/y.png-Struktur (beliebig tief verschachtelt) einspielen; liefert (eingespielt, übersprungen)."""
+    out = out or tiles_dir()
+    if replace:
+        clear_tiles(out)
+    imported = skipped = 0
+    with zipfile.ZipFile(fileobj) as zf:
+        for member in zf.namelist():
+            if member.endswith('/'):
+                continue  # Ordnereinträge zählen nicht als übersprungene Dateien
+            parts = tile_parts(member)
+            if parts is None:
+                skipped += 1
+                continue
+            with zf.open(member) as f:
+                data = f.read()
+            if store_tile(*parts, data, out=out):
+                imported += 1
+            else:
+                skipped += 1
+    return imported, skipped
+
+
+def import_files(files_with_paths, out=None, replace=False):
+    """Lose Kacheln aus einem Ordner-Upload: [(relativer Pfad, Dateiobjekt), …]."""
+    out = out or tiles_dir()
+    if replace:
+        clear_tiles(out)
+    imported = skipped = 0
+    for rel_path, f in files_with_paths:
+        parts = tile_parts(rel_path)
+        if parts is None:
+            skipped += 1
+            continue
+        data = f.read()
+        if store_tile(*parts, data, out=out):
+            imported += 1
+        else:
+            skipped += 1
+    return imported, skipped

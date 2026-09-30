@@ -188,7 +188,7 @@ class ViewTests(TestCase):
         self.assertRedirects(response, reverse('einsatzvorbereitung:settings'))
         self.assertEqual(MapConfig.load().max_zoom, 16)
         response = self.client.get(reverse('einsatzvorbereitung:settings'))
-        self.assertContains(response, 'tiles_download --bbox 51.44,6.78,51.56,6.95 --zoom 11-16')
+        self.assertContains(response, 'Kacheln hochladen')
         self.assertContains(response, 'ca. ')
 
     def test_widget_tag(self):
@@ -403,3 +403,60 @@ class HandoverTests(TestCase):
             title = ''
         html = Template('{% include "info_monitors/widgets/gefahrenstellen.html" with widget=w %}').render(Context({'w': W()}))
         self.assertIn('1 offene Übergabepunkte', html)
+
+
+class TileUploadTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='m', password='pw')
+        self.user.user_permissions.add(*Permission.objects.filter(
+            content_type__app_label='einsatzvorbereitung', codename__in=['einsatz_view', 'einsatz_manage']))
+        self.client.force_login(self.user)
+
+    def test_upload_zip_folder_and_delete(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        with TemporaryDirectory() as tmp:
+            with override_settings(OFFLINE_TILES_DIR=tmp):
+                buf = io.BytesIO()
+                with zipfile.ZipFile(buf, 'w') as zf:
+                    zf.writestr('stadt/13/4252/2724.png', b'\x89PNG-a')
+                    zf.writestr('stadt/13/4252/2725.jpg', b'\xff\xd8\xff\xe0-b')
+                    zf.writestr('stadt/readme.txt', b'x')
+                    zf.writestr('13/4252/evil.png', b'\x89PNG-x')  # y keine Zahl
+                response = self.client.post(reverse('einsatzvorbereitung:tiles_upload'),
+                                            {'archive': SimpleUploadedFile('k.zip', buf.getvalue())})
+                self.assertRedirects(response, reverse('einsatzvorbereitung:settings'))
+                self.assertEqual(tiles.tiles_status()['total'], 2)
+                self.assertTrue((Path(tmp) / '13/4252/2725.png').is_file())
+                # Ordner-Upload mit relativen Pfaden, ersetzt den Bestand
+                response = self.client.post(reverse('einsatzvorbereitung:tiles_upload'), {
+                    'files': [SimpleUploadedFile('2730.png', b'\x89PNG-c'), SimpleUploadedFile('x.png', b'kein bild')],
+                    'paths': ['kacheln/14/8504/2730.png', 'kacheln/14/8504/x.png'], 'replace': 'on'})
+                self.assertRedirects(response, reverse('einsatzvorbereitung:settings'))
+                status = tiles.tiles_status()
+                self.assertEqual(status['zooms'], [(14, 1)])
+                # Ungültiges ZIP → Fehlermeldung, kein Absturz
+                response = self.client.post(reverse('einsatzvorbereitung:tiles_upload'),
+                                            {'archive': SimpleUploadedFile('k.zip', b'kein zip')}, follow=True)
+                self.assertContains(response, 'konnten nicht eingespielt werden')
+                response = self.client.post(reverse('einsatzvorbereitung:tiles_delete'))
+                self.assertEqual(tiles.tiles_status()['total'], 0)
+                response = self.client.get(reverse('einsatzvorbereitung:settings'))
+                self.assertContains(response, 'Kacheln hochladen')
+                self.assertNotContains(response, 'So kommen die Kacheln')
+
+    def test_upload_requires_manage(self):
+        self.user.user_permissions.remove(Permission.objects.get(codename='einsatz_manage'))
+        self.assertEqual(self.client.post(reverse('einsatzvorbereitung:tiles_upload')).status_code, 403)
+
+    def test_ajax_batch_returns_json(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        with TemporaryDirectory() as tmp:
+            with override_settings(OFFLINE_TILES_DIR=tmp):
+                response = self.client.post(reverse('einsatzvorbereitung:tiles_upload'), {
+                    'files': [SimpleUploadedFile('2730.png', b'\x89PNG-c')], 'paths': ['k/14/8504/2730.png']},
+                    HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+                self.assertEqual(response.json()['imported'], 1)
+                self.assertEqual(response.json()['total'], 1)
+                response = self.client.post(reverse('einsatzvorbereitung:tiles_upload'),
+                                            {'archive': SimpleUploadedFile('k.zip', b'kein zip')}, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+                self.assertEqual(response.status_code, 400)

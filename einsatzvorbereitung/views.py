@@ -256,6 +256,53 @@ class MapConfigView(_Mixin, View):
         return redirect('einsatzvorbereitung:settings')
 
 
+class TilesUploadView(_Mixin, View):
+    """Kacheln im Browser einspielen: ZIP (z/x/y.png) oder Ordner-Upload mit relativen Pfaden."""
+    permission_required = PERM_MANAGE
+
+    def post(self, request):
+        replace = request.POST.get('replace') == 'on'
+        archive = request.FILES.get('archive')
+        files = request.FILES.getlist('files')
+        paths = request.POST.getlist('paths')
+        try:
+            if archive:
+                imported, skipped = tiles.import_zip(archive, replace=replace)
+            elif files:
+                if len(paths) != len(files):
+                    paths = [f.name for f in files]
+                imported, skipped = tiles.import_files(zip(paths, files), replace=replace)
+            else:
+                messages.error(request, 'Bitte eine ZIP-Datei oder einen Kachel-Ordner auswählen.')
+                return redirect('einsatzvorbereitung:settings')
+        except Exception as exc:  # noqa: BLE001 – z.B. kein gültiges ZIP
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'error': str(exc)}, status=400)
+            messages.error(request, f'Kacheln konnten nicht eingespielt werden: {exc}')
+            return redirect('einsatzvorbereitung:settings')
+        status = tiles.tiles_status()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Ordner-Upload in Teilen (siehe settings.html): nur Zahlen zurück, Meldung macht der Browser
+            return JsonResponse({'imported': imported, 'skipped': skipped, 'total': status['total'],
+                                 'size_mb': status['size_mb']})
+        if imported:
+            messages.success(request, f'{imported} Kacheln eingespielt'
+                             + (f', {skipped} Dateien übersprungen (keine z/x/y.png-Kacheln)' if skipped else '')
+                             + f'. Bestand: {status["total"]} Kacheln, {status["size_mb"]} MB.', extra_tags='celebrate')
+        else:
+            messages.warning(request, f'Keine Kacheln erkannt ({skipped} Dateien übersprungen). Erwartet wird die Ordnerstruktur Zoom/X/Y.png.')
+        return redirect('einsatzvorbereitung:settings')
+
+
+class TilesDeleteView(_Mixin, View):
+    permission_required = PERM_MANAGE
+
+    def post(self, request):
+        tiles.clear_tiles()
+        messages.success(request, 'Alle Kacheln gelöscht.')
+        return redirect('einsatzvorbereitung:settings')
+
+
 class TileView(LoginRequiredMixin, View):
     """Kachel aus dem Offline-Bestand (oder Platzhalter)."""
 

@@ -31,17 +31,94 @@
                 </dl>
                 {% if not tiles.total %}<p class="text-sm text-yellow-800 bg-yellow-50 rounded-lg px-3 py-2">Noch keine Kacheln vorhanden – die Karte zeigt Markierungen auf grauem Grund.</p>{% endif %}
             </div>
-            <div class="bg-white rounded-lg shadow p-6 text-sm text-gray-700 space-y-3">
-                <h2 class="text-lg font-semibold text-gray-900">So kommen die Kacheln auf die Offline-Maschine</h2>
-                <p><strong>1. Auf einem Rechner mit Internet</strong> (z.B. dieser Server) das Stadtgebiet herunterladen und als ZIP verpacken:</p>
-                <pre class="bg-gray-900 text-gray-100 rounded-lg p-3 text-xs overflow-x-auto">python manage.py tiles_download --bbox {{ config.bbox|default:"51.44,6.78,51.56,6.95" }} --zoom {{ config.min_zoom }}-{{ config.max_zoom }} --zip stadt-kacheln.zip</pre>
-                <p class="text-xs text-gray-500">Standardquelle ist <strong>TopPlusOpen</strong> des Bundesamts für Kartographie und Geodäsie (offene Daten, Quellenangabe „© GeoBasis-DE / BKG“). Alternativ das Luftbild von Geobasis NRW: <code>--url "https://www.wmts.nrw.de/geobasis/wmts_nw_dop/tiles/nw_dop/EPSG_3857_16/{z}/{y}/{x}"</code>. Der öffentliche OpenStreetMap-Server sperrt Massen-Downloads und liefert nur Sperrbilder.</p>
-                <p><strong>2. ZIP auf die Offline-Maschine kopieren</strong> (USB/Netzlaufwerk) und einspielen:</p>
-                <pre class="bg-gray-900 text-gray-100 rounded-lg p-3 text-xs overflow-x-auto">python manage.py tiles_import stadt-kacheln.zip</pre>
-                <p class="text-xs text-gray-500">Im Docker-Betrieb: <code>docker compose exec web python manage.py tiles_import /app/media/stadt-kacheln.zip</code> – die Kacheln liegen danach dauerhaft im Media-Volume.</p>
-                <p><strong>Größenordnung:</strong> Ein Stadtgebiet von ca. 10 × 12 km braucht bei Zoom 11–17 rund 6.000 Kacheln (≈ 60–120 MB).</p>
+            <div class="bg-white rounded-lg shadow p-6" x-data="{ mode: 'zip' }">
+                <h2 class="text-lg font-semibold text-gray-900 mb-1">Kacheln hochladen</h2>
+                <p class="text-xs text-gray-500 mb-4">Erwartet wird die Ordnerstruktur <code>Zoom/X/Y.png</code> – als ZIP-Datei oder als kompletter Ordner. Vorhandene Kacheln werden ergänzt bzw. überschrieben.</p>
+                <form method="post" enctype="multipart/form-data" action="{% url 'einsatzvorbereitung:tiles_upload' %}" id="tiles-upload-form" class="space-y-4">
+                    {% csrf_token %}
+                    <div class="flex items-center gap-2">
+                        <button type="button" @click="mode = 'zip'" :class="mode === 'zip' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'" class="px-3 py-1.5 rounded-lg text-sm font-medium">ZIP-Datei</button>
+                        <button type="button" @click="mode = 'folder'" :class="mode === 'folder' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'" class="px-3 py-1.5 rounded-lg text-sm font-medium">Ordner mit Kacheln</button>
+                    </div>
+                    <div x-show="mode === 'zip'">
+                        <p class="text-xs text-gray-500 mb-1">Eine ZIP-Datei je Upload; die Obergrenze pro Upload gibt der Webserver vor (hier 20 MB). Größere Bestände als Ordner hochladen oder in mehrere ZIPs teilen.</p>
+                        <input type="file" name="archive" accept=".zip,application/zip" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100">
+                    </div>
+                    <div x-show="mode === 'folder'" x-cloak>
+                        <input type="file" name="files" id="tiles-folder" multiple webkitdirectory directory class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100">
+                        <p class="text-xs text-gray-500 mt-1">Den Ordner auswählen, der die Zoom-Unterordner enthält. Die Dateien werden automatisch in Teilen übertragen, daher spielt die Größe des Bestands keine Rolle.</p>
+                        <div id="tiles-paths"></div>
+                    </div>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" name="replace" class="w-4 h-4 text-primary-600 border-gray-300 rounded"> Vorhandene Kacheln vorher komplett löschen</label>
+                    <div class="flex items-center justify-between gap-2">
+                        <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm" id="tiles-upload-btn">Hochladen</button>
+                        <p class="text-xs text-gray-500" id="tiles-upload-status"></p>
+                    </div>
+                </form>
+                {% if tiles.total %}
+                <form method="post" action="{% url 'einsatzvorbereitung:tiles_delete' %}" class="mt-4 pt-4 border-t border-gray-100" onsubmit="return confirm('Wirklich alle {{ tiles.total }} Kacheln löschen?');">
+                    {% csrf_token %}
+                    <button type="submit" class="text-sm text-red-600 hover:text-red-800">Alle Kacheln löschen</button>
+                </form>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('tiles-upload-form');
+    const folder = document.getElementById('tiles-folder');
+    const box = document.getElementById('tiles-paths');
+    const status = document.getElementById('tiles-upload-status');
+    folder.addEventListener('change', function () {
+        box.innerHTML = '';
+        status.textContent = folder.files.length + ' Dateien ausgewählt';
+    });
+    const csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+    const LIMIT_BYTES = 12 * 1024 * 1024, LIMIT_FILES = 400;
+
+    async function uploadFolder(files) {
+        const replace = form.querySelector('[name=replace]').checked;
+        let batch = [], size = 0, sent = 0, imported = 0, skipped = 0, first = true, last = null;
+        const flush = async () => {
+            if (!batch.length) return;
+            const fd = new FormData();
+            fd.append('csrfmiddlewaretoken', csrf);
+            if (first && replace) fd.append('replace', 'on');
+            first = false;
+            batch.forEach(f => { fd.append('files', f, f.name); fd.append('paths', f.webkitRelativePath || f.name); });
+            const r = await fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+            imported += data.imported; skipped += data.skipped; last = data; sent += batch.length;
+            status.textContent = sent + ' von ' + files.length + ' Dateien übertragen …';
+            batch = []; size = 0;
+        };
+        for (const f of files) {
+            if (batch.length && (size + f.size > LIMIT_BYTES || batch.length >= LIMIT_FILES)) await flush();
+            batch.push(f); size += f.size;
+        }
+        await flush();
+        status.textContent = imported + ' Kacheln eingespielt' + (skipped ? ', ' + skipped + ' übersprungen' : '') + ' – Bestand ' + (last ? last.total : '?') + ' Kacheln. Seite wird neu geladen …';
+        setTimeout(() => window.location.reload(), 1200);
+    }
+
+    form.addEventListener('submit', function (e) {
+        const btn = document.getElementById('tiles-upload-btn');
+        if (folder.files && folder.files.length && form.querySelector('[name=archive]').files.length === 0) {
+            e.preventDefault();
+            btn.disabled = true;
+            status.textContent = 'Upload läuft – bitte Seite nicht schließen …';
+            uploadFolder(Array.from(folder.files)).catch(err => {
+                btn.disabled = false;
+                status.textContent = 'Fehler: ' + err.message;
+            });
+            return;
+        }
+        btn.disabled = true;
+        status.textContent = 'Upload läuft – bitte Seite nicht schließen …';
+    });
+});
+</script>
 {% endblock %}
