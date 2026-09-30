@@ -632,3 +632,16 @@ html body button.bg-blue-600:hover,
 html body button[type="submit"].bg-blue-600:hover {
     background-color: #1d4ed8 !important;
 }
+
+/* ============================================
+   BREITE DES INHALTSBEREICHS AUF GROSSEN BILDSCHIRMEN
+   Listen (max-w-7xl) und Detailseiten (max-w-6xl) nutzen ab 1536px
+   die verfügbare Breite neben der Sidebar, statt bei 1280px zu enden.
+   Formulare (max-w-2xl … max-w-5xl) bleiben bewusst schmal.
+   ============================================ */
+@media (min-width: 1536px) {
+    main .max-w-7xl,
+    main .max-w-6xl {
+        max-width: none;
+    }
+}

@@ -9,6 +9,7 @@ from .models import (
     BuildingObject, Floor, EscapeRoute, FireAlarmPanel,
     BuildingContact, BuildingPlan, FireSuppressionSystem, CompensationMeasure,
     FireKeyDepot, InspectionReport, InspectionType, UsageCategory,
+    FireSafetyStatement, StatementStatus,
 )
 
 DATE = forms.DateInput(format='%Y-%m-%d', attrs={
@@ -158,6 +159,47 @@ class BuildingPlanForm(forms.ModelForm):
             self.fields['floor'].queryset = building.floors.all()
         self.fields['floor'].required = False
         self.fields['floor'].empty_label = '— keine Etage —'
+
+
+class FireSafetyStatementForm(forms.ModelForm):
+    class Meta:
+        model = FireSafetyStatement
+        fields = ['statement_type', 'subject', 'reference_number', 'our_reference',
+                  'requesting_authority', 'applicant',
+                  'received_on', 'due_on', 'issued_on', 'status', 'result',
+                  'text', 'requirements', 'clerk', 'request_file', 'file', 'notes']
+        widgets = {
+            'statement_type': forms.Select(attrs={'class': INPUT}),
+            'subject': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'z.B. Umbau und Erweiterung der Sporthalle'}),
+            'reference_number': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'z.B. 63-2026-0815'}),
+            'our_reference': forms.TextInput(attrs={'class': INPUT}),
+            'requesting_authority': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'z.B. Untere Bauaufsichtsbehörde'}),
+            'applicant': forms.TextInput(attrs={'class': INPUT}),
+            'received_on': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT}),
+            'due_on': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT}),
+            'issued_on': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': INPUT}),
+            'status': forms.Select(attrs={'class': INPUT}),
+            'result': forms.Select(attrs={'class': INPUT}),
+            'text': forms.Textarea(attrs={'class': INPUT, 'rows': 6}),
+            'requirements': forms.Textarea(attrs={'class': INPUT, 'rows': 4, 'placeholder': 'Je Zeile eine Auflage'}),
+            'clerk': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'Name / Funktion'}),
+            'request_file': forms.ClearableFileInput(attrs={'class': FILE, 'accept': '.pdf,image/*'}),
+            'file': forms.ClearableFileInput(attrs={'class': FILE, 'accept': '.pdf,image/*'}),
+            'notes': forms.Textarea(attrs={'class': INPUT, 'rows': 2}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        status = cleaned.get('status')
+        issued_on = cleaned.get('issued_on')
+        # Abgegeben/abgeschlossen ohne Datum: heutiges Datum eintragen
+        if status in (StatementStatus.ISSUED, StatementStatus.CLOSED) and not issued_on:
+            from django.utils import timezone
+            cleaned['issued_on'] = timezone.localdate()
+        received_on = cleaned.get('received_on')
+        if received_on and cleaned.get('issued_on') and cleaned['issued_on'] < received_on:
+            self.add_error('issued_on', 'Das Abgabedatum darf nicht vor dem Eingang liegen.')
+        return cleaned
 
 
 class FireSuppressionSystemForm(forms.ModelForm):

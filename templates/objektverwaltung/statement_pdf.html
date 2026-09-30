@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Stellungnahme {{ building.object_number }} – {{ statement.subject }}</title>
+    <style>
+        @page { size: A4; margin: 20mm 18mm 20mm 20mm;
+            @bottom-right { content: "Seite " counter(page) " von " counter(pages); font-size: 8pt; color: #666; }
+            @bottom-left { content: "Stellungnahme {{ building.object_number }} · Stand {{ now|date:"d.m.Y" }}"; font-size: 8pt; color: #666; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 10pt; color: #222; line-height: 1.4; }
+        h1 { font-size: 15pt; margin-bottom: 1mm; }
+        h2 { font-size: 11pt; margin: 6mm 0 2mm; padding-bottom: 1mm; border-bottom: 1px solid #999; }
+        .sub { color: #555; font-size: 9pt; margin-bottom: 6mm; }
+        table.meta { border-collapse: collapse; width: 100%; font-size: 9.5pt; }
+        table.meta td { padding: 1mm 4mm 1mm 0; vertical-align: top; }
+        table.meta td.k { color: #666; width: 42mm; }
+        .text { white-space: pre-wrap; }
+        ol.req { margin-left: 6mm; }
+        ol.req li { margin-bottom: 1.5mm; }
+        .badge { display: inline-block; font-size: 8pt; padding: 0.3mm 2mm; border: 1px solid #bbb; border-radius: 2mm; margin-right: 1.5mm; color: #333; }
+        .sig { margin-top: 18mm; width: 100%; }
+        .sig td { width: 50%; padding-top: 10mm; font-size: 9pt; color: #555; border-top: 1px solid #999; }
+        .muted { color: #777; }
+    </style>
+</head>
+<body>
+    <h1>Brandschutztechnische Stellungnahme</h1>
+    <div class="sub">{{ statement.get_statement_type_display }} · Objektverwaltung · Stand {{ now|date:"d.m.Y H:i" }} Uhr</div>
+
+    <h2>Objekt</h2>
+    <table class="meta">
+        <tr><td class="k">Objekt</td><td>{{ building.object_number }} – {{ building.name }}</td></tr>
+        <tr><td class="k">Anschrift</td><td>{{ building.full_address|default:"–" }}</td></tr>
+        <tr><td class="k">Nutzungsart</td><td>{{ building.get_usage_type_display }}</td></tr>
+    </table>
+
+    <h2>Vorgang</h2>
+    <table class="meta">
+        <tr><td class="k">Betreff / Vorhaben</td><td><strong>{{ statement.subject }}</strong></td></tr>
+        <tr><td class="k">Art</td><td>{{ statement.get_statement_type_display }}</td></tr>
+        <tr><td class="k">Anfragende Stelle</td><td>{{ statement.requesting_authority|default:"–" }}</td></tr>
+        <tr><td class="k">Antragsteller / Bauherr</td><td>{{ statement.applicant|default:"–" }}</td></tr>
+        <tr><td class="k">Aktenzeichen</td><td>{{ statement.reference_number|default:"–" }}</td></tr>
+        <tr><td class="k">Eigenes Zeichen</td><td>{{ statement.our_reference|default:"–" }}</td></tr>
+        <tr><td class="k">Eingang</td><td>{{ statement.received_on|date:"d.m.Y" }}</td></tr>
+        <tr><td class="k">Frist</td><td>{% if statement.due_on %}{{ statement.due_on|date:"d.m.Y" }}{% else %}–{% endif %}</td></tr>
+        <tr><td class="k">Abgegeben am</td><td>{% if statement.issued_on %}{{ statement.issued_on|date:"d.m.Y" }}{% else %}–{% endif %}</td></tr>
+        <tr><td class="k">Status</td><td><span class="badge">{{ statement.get_status_display }}</span>{% if statement.result %}<span class="badge">{{ statement.get_result_display }}</span>{% endif %}</td></tr>
+        <tr><td class="k">Bearbeiter/in</td><td>{{ statement.clerk|default:"–" }}</td></tr>
+    </table>
+
+    <h2>Stellungnahme</h2>
+    {% if statement.text %}
+    <div class="text">{{ statement.text }}</div>
+    {% else %}
+    <p class="muted">Noch kein Text erfasst.</p>
+    {% endif %}
+
+    {% if statement.requirement_lines %}
+    <h2>Auflagen / Forderungen</h2>
+    <ol class="req">
+        {% for line in statement.requirement_lines %}<li>{{ line }}</li>{% endfor %}
+    </ol>
+    {% endif %}
+
+    <table class="sig">
+        <tr>
+            <td>Ort, Datum</td>
+            <td>Unterschrift{% if statement.clerk %} ({{ statement.clerk }}){% endif %}</td>
+        </tr>
+    </table>
+</body>
+</html>

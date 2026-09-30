@@ -13,6 +13,7 @@ from django.db.models import Case, IntegerField, Q, Value, When
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views import View
 from django.views.generic import (
     TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView,
@@ -24,16 +25,19 @@ from .forms import (
     BuildingContactForm, BuildingPlanForm,
     FireSuppressionSystemForm, CompensationMeasureForm,
     FireKeyDepotForm, InspectionReportForm, UsageCategoryForm,
+    FireSafetyStatementForm,
 )
 from .models import (
     BuildingObject, Floor, EscapeRoute, FireAlarmPanel,
     BuildingContact, BuildingPlan, UsageCategory, ObjectStatus,
     FireSuppressionSystem, CompensationMeasure,
     FireKeyDepot, InspectionReport, InspectionType, FSDType,
+    FireSafetyStatement,
 )
 from .resources import BuildingObjectResource
 from . import akte
 from audit.models import AuditAction
+from core.table_columns import resolve_columns, columns_json
 
 
 # ============================================================================
@@ -83,6 +87,7 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
         ('fsd3', 'mit Schlüsseldepot FSD 3'),
         ('due', 'Prüfung fällig / überfällig (FSD, BMZ, Löschanlage)'),
         ('komp', 'aktive Kompensationsmaßnahme'),
+        ('stellungnahme', 'offene Stellungnahme'),
         ('planung', 'nur Objekte in Planung'),
         ('inaktiv', 'nur inaktive Objekte'),
         ('loeschen', 'nur zum Löschen vorgemerkte Objekte'),
@@ -98,6 +103,21 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
         'status': ('status_order', 'name'),
     }
     DEFAULT_SORT = 'name'
+
+    # Spalten der Liste; Reihenfolge/Sichtbarkeit je Benutzer (core.table_columns)
+    TABLE_KEY = 'objektverwaltung-objekte'
+    COLUMNS = (
+        {'key': 'number', 'label': 'Objektnummer', 'sortable': True},
+        {'key': 'name', 'label': 'Name', 'sortable': True},
+        {'key': 'usage', 'label': 'Nutzungsart', 'sortable': True},
+        {'key': 'street', 'label': 'Straße', 'sortable': True},
+        {'key': 'city', 'label': 'Ort', 'sortable': True},
+        {'key': 'technik', 'label': 'Technik'},
+        {'key': 'stellungnahmen', 'label': 'Stellungnahmen', 'default_visible': False},
+        {'key': 'kontakt', 'label': 'Ansprechpartner', 'default_visible': False},
+        {'key': 'status', 'label': 'Status', 'sortable': True},
+        {'key': 'aktionen', 'label': 'Aktionen', 'align': 'right', 'locked': True},
+    )
 
     def get_sort(self):
         sort = self.request.GET.get('sort', '')
@@ -156,6 +176,8 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
             )
         elif f == 'komp':
             qs = qs.filter(compensation_measures__status='active')
+        elif f == 'stellungnahme':
+            qs = qs.filter(statements__status__in=FireSafetyStatement.OPEN_STATUSES)
         elif f == 'planung':
             qs = qs.filter(status=ObjectStatus.PLANNED)
         elif f == 'inaktiv':
@@ -178,7 +200,13 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
             sys_count=Count('suppression_systems', distinct=True),
             sys_due_count=Count('suppression_systems', filter=Q(suppression_systems__next_inspection__lte=limit), distinct=True),
             komp_count=Count('compensation_measures', filter=Q(compensation_measures__status='active'), distinct=True),
-        ).order_by(*self.get_ordering())
+            stmt_count=Count('statements', distinct=True),
+            stmt_open_count=Count('statements', filter=Q(
+                statements__status__in=FireSafetyStatement.OPEN_STATUSES), distinct=True),
+            stmt_overdue_count=Count('statements', filter=Q(
+                statements__status__in=FireSafetyStatement.OPEN_STATUSES,
+                statements__due_on__lt=today), distinct=True),
+        ).prefetch_related('contacts').order_by(*self.get_ordering())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -200,6 +228,11 @@ class BuildingObjectListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
         params.pop('sort', None)
         params.pop('dir', None)
         context['sort_query_string'] = params.urlencode()
+        columns = resolve_columns(self.request.user, self.TABLE_KEY, self.COLUMNS)
+        context['columns'] = columns
+        context['visible_columns'] = [c for c in columns if c['visible']]
+        context['table_key'] = self.TABLE_KEY
+        context['column_settings_json'] = columns_json(columns)
         return context
 
 
@@ -213,7 +246,7 @@ class BuildingObjectDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         return BuildingObject.objects.prefetch_related(
             'floors', 'escape_routes', 'fire_alarm_panels',
             'suppression_systems', 'compensation_measures',
-            'contacts', 'plans', 'followers', 'key_depots',
+            'contacts', 'plans', 'followers', 'key_depots', 'statements',
         )
 
     def get_context_data(self, **kwargs):
@@ -230,6 +263,11 @@ class BuildingObjectDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['contact_form'] = BuildingContactForm()
         context['plan_form'] = BuildingPlanForm(building=self.object)
         context['key_depot_form'] = FireKeyDepotForm()
+        context['statement_form'] = FireSafetyStatementForm(initial={'received_on': timezone.localdate()})
+        statements = list(self.object.statements.all())
+        context['statements'] = statements
+        context['statements_open'] = sum(1 for st in statements if st.is_open)
+        context['statements_overdue'] = sum(1 for st in statements if st.is_overdue)
         can_bvs = self.request.user.has_perm('objektverwaltung.bvs_view')
         context['akte_entries'] = akte.build_timeline(self.object, include_bvs=can_bvs)
         context['due_assets'] = _building_due_assets(self.object)
@@ -339,7 +377,7 @@ class ToggleFollowView(LoginRequiredMixin, View):
 # UNTEROBJEKTE: Hinzufügen (POST) + Löschen
 # ============================================================================
 
-_DETAIL_TABS = ('uebersicht', 'gebaeude', 'technik', 'kompensation', 'plaene', 'bvs')
+_DETAIL_TABS = ('uebersicht', 'gebaeude', 'technik', 'stellungnahmen', 'kompensation', 'plaene', 'bvs')
 
 
 def _redirect_to_building(request, building):
@@ -430,6 +468,15 @@ class AddPlanView(_AddChildMixin):
 
     def before_save(self, child, request):
         # BuildingPlan erbt AuditedModel -> created_by/updated_by erforderlich
+        child.created_by = request.user
+        child.updated_by = request.user
+
+
+class AddStatementView(_AddChildMixin):
+    form_class = FireSafetyStatementForm
+    success_message = 'Stellungnahme angelegt.'
+
+    def before_save(self, child, request):
         child.created_by = request.user
         child.updated_by = request.user
 
@@ -552,6 +599,16 @@ class EditPlanView(_EditChildView):
         child.updated_by = request.user
 
 
+class EditStatementView(_EditChildView):
+    model = FireSafetyStatement
+    form_class = FireSafetyStatementForm
+    title = 'Stellungnahme bearbeiten'
+    success_message = 'Stellungnahme aktualisiert.'
+
+    def before_save(self, child, request):
+        child.updated_by = request.user
+
+
 class _DeleteChildView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Unterobjekt löschen (POST), zurück zur Objekt-Detailseite."""
     permission_required = 'objektverwaltung.change_buildingobject'
@@ -605,6 +662,34 @@ class DeleteKeyDepotView(_DeleteChildView):
 class DeletePlanView(_DeleteChildView):
     model = BuildingPlan
     deleted_message = 'Plan/Laufkarte gelöscht.'
+
+
+class DeleteStatementView(_DeleteChildView):
+    model = FireSafetyStatement
+    deleted_message = 'Stellungnahme gelöscht.'
+
+
+class StatementPdfView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Stellungnahme als PDF (``?download=1`` zum Speichern)."""
+    permission_required = 'objektverwaltung.view_buildingobject'
+
+    def get(self, request, pk):
+        from django.template.loader import render_to_string
+        from weasyprint import HTML
+
+        statement = get_object_or_404(
+            FireSafetyStatement.objects.select_related('building', 'created_by', 'updated_by'), pk=pk)
+        html = render_to_string('objektverwaltung/statement_pdf.html', {
+            'statement': statement, 'building': statement.building,
+            'now': timezone.localtime(), 'user': request.user,
+        }, request=request)
+        pdf = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf()
+        safe_number = ''.join(ch for ch in statement.building.object_number if ch.isalnum() or ch in '-_') or 'objekt'
+        response = HttpResponse(pdf, content_type='application/pdf')
+        disposition = 'attachment' if request.GET.get('download') else 'inline'
+        response['Content-Disposition'] = (
+            f'{disposition}; filename="Stellungnahme_{safe_number}_{statement.received_on:%Y-%m-%d}.pdf"')
+        return response
 
 
 # ============================================================================

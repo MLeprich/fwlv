@@ -38,6 +38,7 @@ urlpatterns = [
     path('objekte/<int:pk>/fsd/neu/', views.AddKeyDepotView.as_view(), name='add_key_depot'),
     path('objekte/<int:pk>/loeschanlage/neu/', views.AddSuppressionSystemView.as_view(), name='add_suppression'),
     path('objekte/<int:pk>/kompensation/neu/', views.AddCompensationMeasureView.as_view(), name='add_compensation'),
+    path('objekte/<int:pk>/stellungnahme/neu/', views.AddStatementView.as_view(), name='add_statement'),
 
     # Unterobjekte bearbeiten
     path('etage/<int:pk>/bearbeiten/', views.EditFloorView.as_view(), name='edit_floor'),
@@ -48,6 +49,7 @@ urlpatterns = [
     path('fsd/<int:pk>/bearbeiten/', views.EditKeyDepotView.as_view(), name='edit_key_depot'),
     path('loeschanlage/<int:pk>/bearbeiten/', views.EditSuppressionSystemView.as_view(), name='edit_suppression'),
     path('kompensation/<int:pk>/bearbeiten/', views.EditCompensationMeasureView.as_view(), name='edit_compensation'),
+    path('stellungnahme/<int:pk>/bearbeiten/', views.EditStatementView.as_view(), name='edit_statement'),
 
     # Unterobjekte löschen
     path('etage/<int:pk>/loeschen/', views.DeleteFloorView.as_view(), name='delete_floor'),
@@ -58,6 +60,8 @@ urlpatterns = [
     path('fsd/<int:pk>/loeschen/', views.DeleteKeyDepotView.as_view(), name='delete_key_depot'),
     path('loeschanlage/<int:pk>/loeschen/', views.DeleteSuppressionSystemView.as_view(), name='delete_suppression'),
     path('kompensation/<int:pk>/loeschen/', views.DeleteCompensationMeasureView.as_view(), name='delete_compensation'),
+    path('stellungnahme/<int:pk>/loeschen/', views.DeleteStatementView.as_view(), name='delete_statement'),
+    path('stellungnahme/<int:pk>/pdf/', views.StatementPdfView.as_view(), name='statement_pdf'),
 
     # Prüfungen: Übersicht, zentraler Einstieg, Anlagen, Prüfberichte
     path('pruefungen/', views.InspectionOverviewView.as_view(), name='inspection_list'),

@@ -22,6 +22,7 @@ urlpatterns = [
     path('settings/api-token/revoke/', views.revoke_api_token, name='revoke_api_token'),
     path('settings/backup/export/', views.backup_export, name='backup_export'),
     path('settings/backup/import/', views.backup_import, name='backup_import'),
+    path('settings/tabellen/<slug:table_key>/', views.save_table_preferences, name='table_preferences'),
 
     # Search (HTMX)
     path('search/', views.global_search_view, name='global_search'),

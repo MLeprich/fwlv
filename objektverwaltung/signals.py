@@ -16,7 +16,7 @@ from django.dispatch import receiver
 
 from .models import (
     BuildingObject, BuildingPlan, BuildingContact, CompensationMeasure,
-    InspectionReport,
+    InspectionReport, FireSafetyStatement,
 )
 
 logger = logging.getLogger(__name__)
@@ -78,6 +78,18 @@ def compensation_saved(sender, instance, created, **kwargs):
         instance.building,
         title=f"Neue Kompensationsmaßnahme: {instance.building.name}",
         message=f'„{instance.title}" wurde erfasst (Status: {instance.get_status_display()}).',
+    )
+
+
+@receiver(post_save, sender=FireSafetyStatement)
+def statement_saved(sender, instance, created, **kwargs):
+    if not created:
+        return
+    notify_followers(
+        instance.building,
+        title=f"Neue Stellungnahme: {instance.building.name}",
+        message=f'{instance.get_statement_type_display()} „{instance.subject}“ wurde angelegt '
+                f'(Eingang {instance.received_on:%d.%m.%Y}).',
     )
 
 

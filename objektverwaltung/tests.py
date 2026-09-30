@@ -770,3 +770,177 @@ class StatusAndUsageCategoryTests(TestCase):
         self.assertContains(response, 'Raumstation')
         self.assertContains(response, 'unbekannt')
         self.assertFalse(BuildingObject.objects.filter(object_number='OBJ-8').exists())
+
+
+class StatementTests(TestCase):
+    """Stellungnahmen: Reiter, Anlegen/Bearbeiten/Löschen, PDF, Akte, Listenfilter."""
+
+    def setUp(self):
+        from datetime import date
+        self.user = User.objects.create_user(username='modul', password='pw')
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label='objektverwaltung',
+                                       codename__in=['view_buildingobject', 'change_buildingobject'])
+        )
+        self.client.force_login(self.user)
+        self.building = BuildingObject.objects.create(
+            object_number='OBJ-1', name='Rathaus', created_by=self.user, updated_by=self.user,
+        )
+        self.today = date.today()
+
+    def _add(self, **extra):
+        data = {
+            'statement_type': 'bauantrag', 'subject': 'Anbau Sporthalle',
+            'reference_number': '63-1', 'our_reference': '', 'requesting_authority': 'Bauaufsicht',
+            'applicant': 'Stadt', 'received_on': self.today.isoformat(), 'due_on': '', 'issued_on': '',
+            'status': 'open', 'result': '', 'text': '', 'requirements': '', 'clerk': '', 'notes': '',
+            'tab': 'stellungnahmen',
+        }
+        data.update(extra)
+        return self.client.post(reverse('objektverwaltung:add_statement', args=[self.building.pk]), data)
+
+    def test_detail_has_statements_tab(self):
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, "tab = 'stellungnahmen'")
+        self.assertContains(response, 'Noch keine Stellungnahmen erfasst.')
+
+    def test_add_statement_redirects_to_tab_and_logs(self):
+        from .models import FireSafetyStatement
+        response = self._add()
+        self.assertEqual(response['Location'], self.building.get_absolute_url() + '#stellungnahmen')
+        st = FireSafetyStatement.objects.get()
+        self.assertEqual(st.building, self.building)
+        self.assertEqual(st.created_by, self.user)
+        self.assertTrue(st.is_open)
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Anbau Sporthalle')
+        self.assertContains(response, 'Stellungnahme „Bauantrag / Baugenehmigung: Anbau Sporthalle“ angelegt')
+
+    def test_issued_without_date_gets_today_and_akte_event(self):
+        from .models import FireSafetyStatement
+        self._add(status='issued', result='conditions', requirements='Rauchabzug\nFeuerwehrzufahrt')
+        st = FireSafetyStatement.objects.get()
+        self.assertEqual(st.issued_on, self.today)
+        self.assertFalse(st.is_open)
+        self.assertEqual(st.requirement_lines, ['Rauchabzug', 'Feuerwehrzufahrt'])
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Stellungnahme abgegeben')
+
+    def test_overdue_marking(self):
+        from .models import FireSafetyStatement
+        self._add(due_on='2020-01-01')
+        self.assertTrue(FireSafetyStatement.objects.get().is_overdue)
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Frist überschritten')
+
+    def test_edit_and_delete(self):
+        from .models import FireSafetyStatement
+        self._add()
+        st = FireSafetyStatement.objects.get()
+        url = reverse('objektverwaltung:edit_statement', args=[st.pk])
+        response = self.client.get(url)
+        self.assertContains(response, 'Stellungnahme bearbeiten')
+        self.assertContains(response, 'value="Anbau Sporthalle"')
+        response = self.client.post(url, {
+            'statement_type': 'nutzungsaenderung', 'subject': 'Neu', 'reference_number': '', 'our_reference': '',
+            'requesting_authority': '', 'applicant': '', 'received_on': self.today.isoformat(),
+            'due_on': '', 'issued_on': '2019-01-01', 'status': 'issued', 'result': 'no_objection',
+            'text': 'Keine Bedenken.', 'requirements': '', 'clerk': 'M. Muster', 'notes': '', 'tab': 'stellungnahmen',
+        })
+        self.assertEqual(response.status_code, 200)  # Abgabedatum vor Eingang → Formfehler
+        self.assertContains(response, 'nicht vor dem Eingang')
+        response = self.client.post(url, {
+            'statement_type': 'nutzungsaenderung', 'subject': 'Neu', 'reference_number': '', 'our_reference': '',
+            'requesting_authority': '', 'applicant': '', 'received_on': self.today.isoformat(),
+            'due_on': '', 'issued_on': self.today.isoformat(), 'status': 'issued', 'result': 'no_objection',
+            'text': 'Keine Bedenken.', 'requirements': '', 'clerk': 'M. Muster', 'notes': '', 'tab': 'stellungnahmen',
+        })
+        self.assertEqual(response['Location'], self.building.get_absolute_url() + '#stellungnahmen')
+        st.refresh_from_db()
+        self.assertEqual(st.subject, 'Neu')
+        self.assertEqual(st.updated_by, self.user)
+        response = self.client.post(reverse('objektverwaltung:delete_statement', args=[st.pk]), {'tab': 'stellungnahmen'})
+        self.assertEqual(response['Location'], self.building.get_absolute_url() + '#stellungnahmen')
+        self.assertFalse(FireSafetyStatement.objects.exists())
+
+    def test_pdf(self):
+        from .models import FireSafetyStatement
+        self._add(text='Gegen das Vorhaben bestehen keine Bedenken.', requirements='Auflage 1')
+        st = FireSafetyStatement.objects.get()
+        response = self.client.get(reverse('objektverwaltung:statement_pdf', args=[st.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF'))
+
+    def test_write_requires_change_permission(self):
+        self.user.user_permissions.clear()
+        self.user.user_permissions.add(Permission.objects.get(codename='view_buildingobject'))
+        response = self._add()
+        self.assertEqual(response.status_code, 403)
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Stellungnahmen')
+        self.assertNotContains(response, reverse('objektverwaltung:add_statement', args=[self.building.pk]))
+
+    def test_list_filter_and_column(self):
+        other = BuildingObject.objects.create(
+            object_number='OBJ-2', name='Schule', created_by=self.user, updated_by=self.user,
+        )
+        self._add()
+        response = self.client.get(reverse('objektverwaltung:list'), {'filter': 'stellungnahme'})
+        self.assertContains(response, 'Rathaus')
+        self.assertNotContains(response, 'Schule')
+        # Spalte „Stellungnahmen“ ist standardmäßig ausgeblendet …
+        response = self.client.get(reverse('objektverwaltung:list'))
+        self.assertNotContains(response, '1 offen')
+        # … und erscheint nach Speichern der Benutzereinstellung
+        from core.models import UserSettings
+        UserSettings.set_table_preferences(self.user, 'objektverwaltung-objekte', {
+            'order': ['stellungnahmen', 'name', 'aktionen'], 'hidden': ['number'],
+        })
+        response = self.client.get(reverse('objektverwaltung:list'))
+        self.assertContains(response, '1 offen')
+        self.assertNotContains(response, 'Nach Objektnummer sortieren')
+        html = response.content.decode()
+        self.assertLess(html.index('Stellungnahmen</th>'), html.index('Nach Name sortieren'))
+        self.assertContains(response, other.name)
+
+
+class TableColumnPreferenceTests(TestCase):
+    """Spalten-Menü: Speichern und Zurücksetzen je Benutzer."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw')
+        self.user.user_permissions.add(Permission.objects.get(codename='view_buildingobject'))
+        self.client.force_login(self.user)
+        self.url = reverse('core:table_preferences', args=['objektverwaltung-objekte'])
+        BuildingObject.objects.create(object_number='OBJ-1', name='Rathaus',
+                                      created_by=self.user, updated_by=self.user)
+
+    def test_save_and_reset(self):
+        from core.models import UserSettings
+        response = self.client.post(self.url, data='{"order": ["city", "name"], "hidden": ["city", "aktionen"]}',
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(UserSettings.get_table_preferences(self.user, 'objektverwaltung-objekte'),
+                         {'order': ['city', 'name'], 'hidden': ['aktionen', 'city']})
+        html = self.client.get(reverse('objektverwaltung:list')).content.decode()
+        self.assertNotIn('Nach Ort sortieren', html)
+        self.assertLess(html.index('Nach Name sortieren'), html.index('Nach Objektnummer sortieren'))
+        self.assertIn('Aktionen</th>', html)  # gesperrte Spalte bleibt sichtbar
+        response = self.client.post(self.url, data='{"reset": true}', content_type='application/json')
+        self.assertEqual(response.json(), {'ok': True, 'reset': True})
+        self.assertEqual(UserSettings.get_table_preferences(self.user, 'objektverwaltung-objekte'), {})
+
+    def test_invalid_payload(self):
+        response = self.client.post(self.url, data='{"order": "name"}', content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        response = self.client.post(self.url, data='nicht json', content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)
+
+    def test_other_user_unaffected(self):
+        from core.models import UserSettings
+        other = User.objects.create_user(username='andere', password='pw')
+        self.client.post(self.url, data='{"order": ["city"], "hidden": ["name"]}', content_type='application/json')
+        self.assertEqual(UserSettings.get_table_preferences(other, 'objektverwaltung-objekte'), {})

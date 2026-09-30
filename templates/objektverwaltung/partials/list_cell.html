@@ -1,0 +1,51 @@
+{# Eine Zelle der Objektliste; include mit key=<spalten-key> und obj im Kontext #}
+{% if key == 'number' %}
+<td class="px-4 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">{{ obj.object_number }}</td>
+{% elif key == 'name' %}
+<td class="px-4 py-4">
+    <a href="{{ obj.get_absolute_url }}" class="text-sm font-medium text-gray-900 hover:text-primary-600">{{ obj.name }}</a>
+</td>
+{% elif key == 'usage' %}
+<td class="px-4 py-4 text-sm text-gray-500">{{ obj.get_usage_type_display }}</td>
+{% elif key == 'street' %}
+<td class="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">{{ obj.street }} {{ obj.house_number }}</td>
+{% elif key == 'city' %}
+<td class="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">{{ obj.postal_code }} {{ obj.city }}</td>
+{% elif key == 'technik' %}
+<td class="px-4 py-4">
+    <div class="flex flex-wrap gap-1">
+        {% if obj.bmz_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs {% if obj.bmz_due_count %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}" title="Brandmeldezentralen{% if obj.bmz_due_count %}, Prüfung fällig{% endif %}">BMZ {{ obj.bmz_count }}</span>{% endif %}
+        {% if obj.fsd_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs {% if obj.fsd_due_count %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}" title="Schlüsseldepots{% if obj.fsd_due_count %}, Prüfung fällig{% endif %}">FSD {{ obj.fsd_count }}</span>{% endif %}
+        {% if obj.sys_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs {% if obj.sys_due_count %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}" title="Löschanlagen{% if obj.sys_due_count %}, Prüfung fällig{% endif %}">Lösch. {{ obj.sys_count }}</span>{% endif %}
+        {% if obj.komp_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800" title="Aktive Kompensationsmaßnahmen">Komp. {{ obj.komp_count }}</span>{% endif %}
+    </div>
+</td>
+{% elif key == 'stellungnahmen' %}
+<td class="px-4 py-4 text-sm whitespace-nowrap">
+    {% if obj.stmt_count %}
+    <a href="{{ obj.get_absolute_url }}#stellungnahmen" class="inline-flex items-center gap-1 hover:text-primary-600">
+        <span class="text-gray-700">{{ obj.stmt_count }}</span>
+        {% if obj.stmt_open_count %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs {% if obj.stmt_overdue_count %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}" title="{% if obj.stmt_overdue_count %}Frist überschritten{% else %}offen{% endif %}">{{ obj.stmt_open_count }} offen</span>{% endif %}
+    </a>
+    {% else %}<span class="text-gray-400">–</span>{% endif %}
+</td>
+{% elif key == 'kontakt' %}
+<td class="px-4 py-4 text-sm text-gray-500">
+    {% with contact=obj.contacts.all|first %}
+    {% if contact %}{{ contact.name }}{% if contact.phone %} · {{ contact.phone }}{% elif contact.mobile %} · {{ contact.mobile }}{% endif %}{% else %}–{% endif %}
+    {% endwith %}
+</td>
+{% elif key == 'status' %}
+<td class="px-4 py-4">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap {{ obj.status_badge_class }}">
+        {{ obj.get_status_display }}
+    </span>
+</td>
+{% elif key == 'aktionen' %}
+<td class="px-4 py-4 text-right text-sm font-medium whitespace-nowrap">
+    <a href="{{ obj.get_absolute_url }}" class="text-primary-600 hover:text-primary-900 mr-3">Ansehen</a>
+    {% if perms.objektverwaltung.change_buildingobject %}
+    <a href="{% url 'objektverwaltung:update' obj.pk %}" class="text-primary-600 hover:text-primary-900">Bearbeiten</a>
+    {% endif %}
+</td>
+{% endif %}

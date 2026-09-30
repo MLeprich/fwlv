@@ -701,6 +701,153 @@ class BuildingPlan(AuditedModel):
 
 
 # ============================================================================
+# STELLUNGNAHMEN (Vorbeugender Brandschutz)
+#
+# Brandschutztechnische Stellungnahmen der Feuerwehr zu einem Objekt, z.B. im
+# Baugenehmigungsverfahren, bei Nutzungsänderungen oder zu Brandschutzkonzepten.
+# Schreibzugriff wie bei allen Unterobjekten über change_buildingobject.
+# ============================================================================
+
+class StatementType(models.TextChoices):
+    BAUANTRAG = 'bauantrag', 'Bauantrag / Baugenehmigung'
+    BAUVORANFRAGE = 'bauvoranfrage', 'Bauvoranfrage'
+    NUTZUNGSAENDERUNG = 'nutzungsaenderung', 'Nutzungsänderung'
+    BRANDSCHUTZKONZEPT = 'brandschutzkonzept', 'Brandschutzkonzept / -nachweis'
+    VERANSTALTUNG = 'veranstaltung', 'Veranstaltung / Nutzung auf Zeit'
+    ABWEICHUNG = 'abweichung', 'Abweichung / Befreiung'
+    SONSTIGES = 'sonstiges', 'Sonstiges'
+
+
+class StatementStatus(models.TextChoices):
+    OPEN = 'open', 'Offen'
+    IN_PROGRESS = 'in_progress', 'In Bearbeitung'
+    ISSUED = 'issued', 'Abgegeben'
+    CLOSED = 'closed', 'Abgeschlossen'
+
+    @property
+    def badge_class(self):
+        return {
+            'open': 'bg-blue-100 text-blue-800',
+            'in_progress': 'bg-yellow-100 text-yellow-800',
+            'issued': 'bg-green-100 text-green-800',
+            'closed': 'bg-gray-100 text-gray-700',
+        }[self.value]
+
+
+class StatementResult(models.TextChoices):
+    NONE = '', '– noch offen –'
+    NO_OBJECTION = 'no_objection', 'Keine Bedenken'
+    CONDITIONS = 'conditions', 'Keine Bedenken unter Auflagen'
+    OBJECTION = 'objection', 'Bedenken / Ablehnung'
+
+    @property
+    def badge_class(self):
+        return {
+            '': 'bg-gray-100 text-gray-700',
+            'no_objection': 'bg-green-100 text-green-800',
+            'conditions': 'bg-amber-100 text-amber-800',
+            'objection': 'bg-red-100 text-red-800',
+        }[self.value]
+
+
+def statement_upload_path(instance, filename):
+    return f"objektverwaltung/stellungnahmen/{instance.building_id}/{filename}"
+
+
+class FireSafetyStatement(AuditedModel):
+    """Brandschutztechnische Stellungnahme der Feuerwehr zu einem Objekt."""
+
+    OPEN_STATUSES = (StatementStatus.OPEN, StatementStatus.IN_PROGRESS)
+
+    building = models.ForeignKey(
+        BuildingObject, on_delete=models.CASCADE,
+        related_name='statements', verbose_name="Objekt"
+    )
+    statement_type = models.CharField(
+        max_length=30, choices=StatementType.choices,
+        default=StatementType.BAUANTRAG, verbose_name="Art"
+    )
+    subject = models.CharField(
+        max_length=250, verbose_name="Betreff / Vorhaben",
+        help_text="z.B. Umbau und Erweiterung der Sporthalle"
+    )
+    reference_number = models.CharField(
+        max_length=80, blank=True, verbose_name="Aktenzeichen (anfragende Stelle)"
+    )
+    our_reference = models.CharField(max_length=80, blank=True, verbose_name="Eigenes Zeichen")
+    requesting_authority = models.CharField(
+        max_length=200, blank=True, verbose_name="Anfragende Stelle",
+        help_text="z.B. Untere Bauaufsichtsbehörde"
+    )
+    applicant = models.CharField(max_length=200, blank=True, verbose_name="Antragsteller / Bauherr")
+
+    received_on = models.DateField(verbose_name="Eingang am")
+    due_on = models.DateField(null=True, blank=True, verbose_name="Frist")
+    issued_on = models.DateField(null=True, blank=True, verbose_name="Abgegeben am")
+
+    status = models.CharField(
+        max_length=20, choices=StatementStatus.choices,
+        default=StatementStatus.OPEN, verbose_name="Status"
+    )
+    result = models.CharField(
+        max_length=20, choices=StatementResult.choices, blank=True, default='',
+        verbose_name="Ergebnis"
+    )
+    text = models.TextField(
+        blank=True, verbose_name="Stellungnahme",
+        help_text="Inhalt der Stellungnahme; erscheint im PDF"
+    )
+    requirements = models.TextField(
+        blank=True, verbose_name="Auflagen / Forderungen",
+        help_text="Je Zeile eine Auflage; erscheint nummeriert im PDF"
+    )
+    clerk = models.CharField(max_length=150, blank=True, verbose_name="Bearbeiter/in")
+    request_file = models.FileField(
+        upload_to=statement_upload_path, blank=True, null=True,
+        verbose_name="Antragsunterlagen (Datei)"
+    )
+    file = models.FileField(
+        upload_to=statement_upload_path, blank=True, null=True,
+        verbose_name="Stellungnahme (Datei)",
+        help_text="z.B. das unterschriebene Schreiben als PDF"
+    )
+    notes = models.TextField(blank=True, verbose_name="Interne Notizen",
+                             help_text="Erscheint nicht im PDF")
+
+    class Meta:
+        verbose_name = "Stellungnahme"
+        verbose_name_plural = "Stellungnahmen"
+        ordering = ['-received_on', '-created_at']
+
+    def __str__(self):
+        return f"{self.get_statement_type_display()}: {self.subject}"
+
+    def get_absolute_url(self):
+        return reverse('objektverwaltung:detail', kwargs={'pk': self.building_id}) + '#stellungnahmen'
+
+    @property
+    def is_open(self):
+        return self.status in self.OPEN_STATUSES
+
+    @property
+    def is_overdue(self):
+        from django.utils import timezone
+        return bool(self.is_open and self.due_on and self.due_on < timezone.localdate())
+
+    @property
+    def status_badge_class(self):
+        return StatementStatus(self.status).badge_class
+
+    @property
+    def result_badge_class(self):
+        return StatementResult(self.result).badge_class
+
+    @property
+    def requirement_lines(self):
+        return [line.strip() for line in self.requirements.splitlines() if line.strip()]
+
+
+# ============================================================================
 # BRANDVERHÜTUNGSSCHAU (BVS)
 #
 # Fristen der Prüfsachverständigen (PSV), zentral gepflegte Mustersätze und

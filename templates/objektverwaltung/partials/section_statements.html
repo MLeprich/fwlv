@@ -1,0 +1,103 @@
+{# Stellungnahmen des vorbeugenden Brandschutzes zu einem Objekt #}
+<div class="bg-white rounded-lg shadow p-6" x-data="{ addOpen: false, filter: 'alle' }">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900">Stellungnahmen ({{ statements|length }})</h2>
+            <p class="text-xs text-gray-500">Brandschutztechnische Stellungnahmen zu Bauanträgen, Nutzungsänderungen, Brandschutzkonzepten und Veranstaltungen.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            {% if statements %}
+            <select x-model="filter" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+                <option value="alle">Alle</option>
+                <option value="offen">Nur offene</option>
+                <option value="erledigt">Nur abgegebene / abgeschlossene</option>
+            </select>
+            {% endif %}
+            {% if perms.objektverwaltung.change_buildingobject %}
+            <button @click="addOpen = !addOpen" class="text-sm text-primary-600 hover:text-primary-800 font-medium whitespace-nowrap">
+                <span x-show="!addOpen">+ Stellungnahme</span>
+                <span x-show="addOpen" x-cloak>Abbrechen</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if statements %}
+    <ul class="divide-y divide-gray-100">
+        {% for st in statements %}
+        <li x-show="filter === 'alle' || (filter === 'offen') === {{ st.is_open|yesno:'true,false' }}"
+            class="py-3 flex items-start justify-between gap-4 {% if st.is_overdue %}border-l-4 border-red-500 pl-3{% endif %}">
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-sm font-medium text-gray-900">{{ st.subject }}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ st.status_badge_class }}">{{ st.get_status_display }}</span>
+                    {% if st.result %}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ st.result_badge_class }}">{{ st.get_result_display }}</span>{% endif %}
+                    {% if st.is_overdue %}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Frist überschritten</span>{% endif %}
+                </div>
+                <p class="text-xs text-gray-500 mt-1">
+                    {{ st.get_statement_type_display }}
+                    {% if st.requesting_authority %} · {{ st.requesting_authority }}{% endif %}
+                    {% if st.reference_number %} · Az. {{ st.reference_number }}{% endif %}
+                    {% if st.our_reference %} · Unser Zeichen {{ st.our_reference }}{% endif %}
+                    {% if st.applicant %} · Antragsteller: {{ st.applicant }}{% endif %}
+                </p>
+                <p class="text-xs text-gray-500">
+                    Eingang {{ st.received_on|date:"d.m.Y" }}
+                    {% if st.due_on %} · Frist <span class="{% if st.is_overdue %}text-red-700 font-medium{% endif %}">{{ st.due_on|date:"d.m.Y" }}</span>{% endif %}
+                    {% if st.issued_on %} · Abgegeben {{ st.issued_on|date:"d.m.Y" }}{% endif %}
+                    {% if st.clerk %} · {{ st.clerk }}{% endif %}
+                </p>
+                {% if st.text %}<p class="text-xs text-gray-600 mt-1 whitespace-pre-line">{{ st.text|truncatechars:300 }}</p>{% endif %}
+                {% if st.requirement_lines %}
+                <p class="text-xs text-gray-500 mt-1">{{ st.requirement_lines|length }} Auflage{{ st.requirement_lines|length|pluralize:"n" }}</p>
+                {% endif %}
+                <div class="flex flex-wrap items-center gap-3 mt-1">
+                    <a href="{% url 'objektverwaltung:statement_pdf' st.pk %}" target="_blank" class="text-xs text-gray-600 hover:text-gray-900">📄 Stellungnahme (PDF)</a>
+                    {% if st.file %}<a href="{{ st.file.url }}" target="_blank" class="text-xs text-primary-600 hover:text-primary-800">Datei: Stellungnahme</a>{% endif %}
+                    {% if st.request_file %}<a href="{{ st.request_file.url }}" target="_blank" class="text-xs text-primary-600 hover:text-primary-800">Datei: Antragsunterlagen</a>{% endif %}
+                </div>
+            </div>
+            {% if perms.objektverwaltung.change_buildingobject %}
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <a href="{% url 'objektverwaltung:edit_statement' st.pk %}?tab=stellungnahmen" class="text-xs text-primary-600 hover:text-primary-800">Bearbeiten</a>
+                <form method="post" action="{% url 'objektverwaltung:delete_statement' st.pk %}"
+                      onsubmit="return confirm('Stellungnahme löschen?');">
+                    {% csrf_token %}<input type="hidden" name="tab" value="stellungnahmen">
+                    <button type="submit" class="text-xs text-red-600 hover:text-red-800">Löschen</button>
+                </form>
+            </div>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-500">Noch keine Stellungnahmen erfasst.</p>
+    {% endif %}
+
+    {% if perms.objektverwaltung.change_buildingobject %}
+    <form method="post" enctype="multipart/form-data" action="{% url 'objektverwaltung:add_statement' object.pk %}"
+          x-show="addOpen" x-cloak class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {% csrf_token %}<input type="hidden" name="tab" value="stellungnahmen">
+        <div><label class="block text-xs text-gray-500 mb-1">Art *</label>{{ statement_form.statement_type }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Betreff / Vorhaben *</label>{{ statement_form.subject }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Anfragende Stelle</label>{{ statement_form.requesting_authority }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Antragsteller / Bauherr</label>{{ statement_form.applicant }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Aktenzeichen (anfragende Stelle)</label>{{ statement_form.reference_number }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Eigenes Zeichen</label>{{ statement_form.our_reference }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Eingang am *</label>{{ statement_form.received_on }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Frist</label>{{ statement_form.due_on }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Status</label>{{ statement_form.status }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Ergebnis</label>{{ statement_form.result }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Abgegeben am</label>{{ statement_form.issued_on }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Bearbeiter/in</label>{{ statement_form.clerk }}</div>
+        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Stellungnahme (Text)</label>{{ statement_form.text }}</div>
+        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Auflagen / Forderungen (je Zeile eine)</label>{{ statement_form.requirements }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Antragsunterlagen (Datei)</label>{{ statement_form.request_file }}</div>
+        <div><label class="block text-xs text-gray-500 mb-1">Stellungnahme (Datei)</label>{{ statement_form.file }}</div>
+        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Interne Notizen</label>{{ statement_form.notes }}</div>
+        <div class="md:col-span-2 text-right">
+            <button type="submit" class="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-primary-700">Stellungnahme anlegen</button>
+        </div>
+    </form>
+    {% endif %}
+</div>

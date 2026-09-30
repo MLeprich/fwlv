@@ -35,10 +35,78 @@ class NotificationCategory(models.TextChoices):
     SYSTEM = 'system', _('System')
 
 
+class NotificationQuerySet(models.QuerySet):
+    """Custom QuerySet für Notifications"""
+
+    def unread(self):
+        """Nur ungelesene Benachrichtigungen"""
+        return self.filter(is_read=False, is_archived=False)
+
+    def read(self):
+        """Nur gelesene Benachrichtigungen"""
+        return self.filter(is_read=True, is_archived=False)
+
+    def archived(self):
+        """Nur archivierte Benachrichtigungen"""
+        return self.filter(is_archived=True)
+
+    def active(self):
+        """Nur aktive (nicht archivierte) Benachrichtigungen"""
+        return self.filter(is_archived=False)
+
+    def by_type(self, notification_type):
+        """Nach Typ filtern"""
+        return self.filter(notification_type=notification_type)
+
+    def by_category(self, category):
+        """Nach Kategorie filtern"""
+        return self.filter(category=category)
+
+    def high_priority(self):
+        """Nur hohe Priorität (>= 5)"""
+        return self.filter(priority__gte=5)
+
+    def mark_all_as_read(self):
+        """Alle als gelesen markieren"""
+        now = timezone.now()
+        return self.filter(is_read=False).update(is_read=True, read_at=now)
+
+
+# Custom Manager mit QuerySet
+class NotificationManager(models.Manager):
+    def get_queryset(self):
+        return NotificationQuerySet(self.model, using=self._db)
+
+    def unread(self):
+        return self.get_queryset().unread()
+
+    def read(self):
+        return self.get_queryset().read()
+
+    def archived(self):
+        return self.get_queryset().archived()
+
+    def active(self):
+        return self.get_queryset().active()
+
+    def by_type(self, notification_type):
+        return self.get_queryset().by_type(notification_type)
+
+    def by_category(self, category):
+        return self.get_queryset().by_category(category)
+
+    def high_priority(self):
+        return self.get_queryset().high_priority()
+
+
 class Notification(models.Model):
     """
     Benachrichtigung für Benutzer
     """
+
+    # Manager explizit im Klassenkörper: ein nachträgliches add_to_class() verliert
+    # gegen den automatisch angelegten Standard-Manager gleichen Namens.
+    objects = NotificationManager()
 
     # Empfänger
     recipient = models.ForeignKey(
@@ -272,70 +340,3 @@ class NotificationPreference(models.Model):
     def __str__(self):
         return f"{_('Einstellungen für')} {self.user.username}"
 
-
-class NotificationQuerySet(models.QuerySet):
-    """Custom QuerySet für Notifications"""
-
-    def unread(self):
-        """Nur ungelesene Benachrichtigungen"""
-        return self.filter(is_read=False, is_archived=False)
-
-    def read(self):
-        """Nur gelesene Benachrichtigungen"""
-        return self.filter(is_read=True, is_archived=False)
-
-    def archived(self):
-        """Nur archivierte Benachrichtigungen"""
-        return self.filter(is_archived=True)
-
-    def active(self):
-        """Nur aktive (nicht archivierte) Benachrichtigungen"""
-        return self.filter(is_archived=False)
-
-    def by_type(self, notification_type):
-        """Nach Typ filtern"""
-        return self.filter(notification_type=notification_type)
-
-    def by_category(self, category):
-        """Nach Kategorie filtern"""
-        return self.filter(category=category)
-
-    def high_priority(self):
-        """Nur hohe Priorität (>= 5)"""
-        return self.filter(priority__gte=5)
-
-    def mark_all_as_read(self):
-        """Alle als gelesen markieren"""
-        now = timezone.now()
-        return self.filter(is_read=False).update(is_read=True, read_at=now)
-
-
-# Custom Manager mit QuerySet
-class NotificationManager(models.Manager):
-    def get_queryset(self):
-        return NotificationQuerySet(self.model, using=self._db)
-
-    def unread(self):
-        return self.get_queryset().unread()
-
-    def read(self):
-        return self.get_queryset().read()
-
-    def archived(self):
-        return self.get_queryset().archived()
-
-    def active(self):
-        return self.get_queryset().active()
-
-    def by_type(self, notification_type):
-        return self.get_queryset().by_type(notification_type)
-
-    def by_category(self, category):
-        return self.get_queryset().by_category(category)
-
-    def high_priority(self):
-        return self.get_queryset().high_priority()
-
-
-# Manager zu Model hinzufügen
-Notification.add_to_class('objects', NotificationManager())

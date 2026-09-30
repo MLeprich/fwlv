@@ -163,6 +163,15 @@ class UserSettings(models.Model):
         verbose_name="Kompakt-Modus"
     )
 
+    # Tabellen: Spaltenreihenfolge und -sichtbarkeit je Liste
+    # { "<tabellen-key>": {"order": ["spalte", ...], "hidden": ["spalte", ...]} }
+    table_preferences = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Tabellen-Einstellungen",
+        help_text="Spaltenreihenfolge und Sichtbarkeit je Liste, vom Benutzer gespeichert"
+    )
+
     # Privacy Settings
     analytics_enabled = models.BooleanField(
         default=True,
@@ -199,3 +208,32 @@ class UserSettings(models.Model):
         """
         settings, created = cls.objects.get_or_create(user=user)
         return settings
+
+    # ------------------------------------------------------------------
+    # Tabellen-Einstellungen (Spalten)
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def get_table_preferences(cls, user, table_key):
+        """Gespeicherte Spalteneinstellungen einer Liste: {'order': [...], 'hidden': [...]}."""
+        if not user or not user.is_authenticated:
+            return {}
+        try:
+            prefs = cls.objects.only('table_preferences').get(user=user).table_preferences or {}
+        except cls.DoesNotExist:
+            return {}
+        value = prefs.get(table_key)
+        return value if isinstance(value, dict) else {}
+
+    @classmethod
+    def set_table_preferences(cls, user, table_key, value):
+        """Spalteneinstellungen speichern; ``value=None`` setzt die Liste zurück."""
+        settings, _ = cls.objects.get_or_create(user=user)
+        prefs = dict(settings.table_preferences or {})
+        if value is None:
+            prefs.pop(table_key, None)
+        else:
+            prefs[table_key] = value
+        settings.table_preferences = prefs
+        settings.save(update_fields=['table_preferences', 'updated_at'])
+        return prefs.get(table_key, {})

@@ -5,6 +5,7 @@ Haupt-Views wie Dashboard, Profile, Settings, Search, etc.
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView, UpdateView, View
 from django.urls import reverse_lazy
@@ -1878,3 +1879,34 @@ def backup_import(request):
         messages.error(request, f'Fehler beim Importieren des Backups: {str(e)}')
 
     return redirect('core:settings')
+
+
+# ============================================================================
+# TABELLEN-SPALTEN (Reihenfolge / Sichtbarkeit je Benutzer)
+# ============================================================================
+
+@login_required
+@require_POST
+def save_table_preferences(request, table_key):
+    """
+    Spalteneinstellungen einer Liste speichern (JSON-POST vom Spalten-Menü).
+
+    Nutzlast: {"order": ["spalte", ...], "hidden": ["spalte", ...]} oder {"reset": true}.
+    """
+    import json
+    from core.table_columns import clean_preferences
+
+    try:
+        payload = json.loads(request.body or b'{}')
+    except ValueError:
+        return JsonResponse({'error': 'Ungültige Daten'}, status=400)
+
+    if isinstance(payload, dict) and payload.get('reset'):
+        UserSettings.set_table_preferences(request.user, table_key, None)
+        return JsonResponse({'ok': True, 'reset': True})
+
+    cleaned = clean_preferences(payload)
+    if cleaned is None:
+        return JsonResponse({'error': 'Ungültige Daten'}, status=400)
+    saved = UserSettings.set_table_preferences(request.user, table_key, cleaned)
+    return JsonResponse({'ok': True, 'preferences': saved})

@@ -47,7 +47,7 @@
 
     {% with floors_n=object.floors.count routes_n=object.escape_routes.count bmz_n=object.fire_alarm_panels.count sys_n=object.suppression_systems.count fsd_n=object.key_depots.count comp_n=object.compensation_measures.count plans_n=object.plans.count %}
     <div x-data="{
-            tabs: ['uebersicht', 'gebaeude', 'technik', 'kompensation', 'plaene', {% if can_bvs %}'bvs', {% endif %}'akte'],
+            tabs: ['uebersicht', 'gebaeude', 'technik', 'stellungnahmen', 'kompensation', 'plaene', {% if can_bvs %}'bvs', {% endif %}'akte'],
             akteKind: 'alle',
             tab: 'uebersicht',
             init() {
@@ -76,6 +76,13 @@
                         class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-2">
                     Brandschutztechnik
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ bmz_n|add:sys_n|add:fsd_n }}</span>
+                </button>
+                <button type="button" @click="tab = 'stellungnahmen'"
+                        :class="tab === 'stellungnahmen' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-2">
+                    Stellungnahmen
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs {% if statements_overdue %}bg-red-100 text-red-800{% elif statements_open %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-600{% endif %}"
+                          title="{% if statements_open %}{{ statements_open }} offen{% if statements_overdue %}, {{ statements_overdue }} mit überschrittener Frist{% endif %}{% else %}Stellungnahmen{% endif %}">{{ statements|length }}</span>
                 </button>
                 <button type="button" @click="tab = 'kompensation'"
                         :class="tab === 'kompensation' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
@@ -132,7 +139,7 @@
                 </div>
 
                 <!-- Kurzübersicht der Bereiche -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     <button type="button" @click="tab = 'gebaeude'" class="bg-white rounded-lg shadow p-4 text-left hover:bg-gray-50">
                         <p class="text-xs text-gray-500">Etagen / Fluchtwege</p>
                         <p class="text-xl font-bold text-gray-900">{{ floors_n }} / {{ routes_n }}</p>
@@ -140,6 +147,10 @@
                     <button type="button" @click="tab = 'technik'" class="bg-white rounded-lg shadow p-4 text-left hover:bg-gray-50">
                         <p class="text-xs text-gray-500">BMZ / Löschanlagen / FSD</p>
                         <p class="text-xl font-bold text-gray-900">{{ bmz_n }} / {{ sys_n }} / {{ fsd_n }}</p>
+                    </button>
+                    <button type="button" @click="tab = 'stellungnahmen'" class="bg-white rounded-lg shadow p-4 text-left hover:bg-gray-50">
+                        <p class="text-xs text-gray-500">Stellungnahmen (offen)</p>
+                        <p class="text-xl font-bold {% if statements_overdue %}text-red-700{% elif statements_open %}text-blue-700{% else %}text-gray-900{% endif %}">{{ statements|length }} ({{ statements_open }})</p>
                     </button>
                     <button type="button" @click="tab = 'kompensation'" class="bg-white rounded-lg shadow p-4 text-left hover:bg-gray-50">
                         <p class="text-xs text-gray-500">Kompensationsmaßnahmen</p>
@@ -210,6 +221,11 @@
             {% include 'objektverwaltung/partials/section_fire_alarms.html' %}
             {% include 'objektverwaltung/partials/section_suppression.html' %}
             {% include 'objektverwaltung/partials/section_key_depots.html' %}
+        </div>
+
+        <!-- Stellungnahmen (vorbeugender Brandschutz) -->
+        <div x-show="tab === 'stellungnahmen'" x-cloak>
+            {% include 'objektverwaltung/partials/section_statements.html' %}
         </div>
 
         <!-- Kompensationsmaßnahmen -->

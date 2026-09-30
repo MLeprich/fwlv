@@ -1,0 +1,102 @@
+{% comment %}
+Spalten-Menü: Reihenfolge und Sichtbarkeit je Benutzer.
+Include mit: table_key (Slug), column_settings_json (aus core.table_columns.columns_json).
+Speichert per JSON-POST an core:table_preferences und lädt die Seite neu.
+Das JSON wird bewusst ohne |safe ausgegeben: im Attributwert dekodiert der Browser &quot; wieder zu ".
+{% endcomment %}
+<div class="relative" x-data="flvsColumnSettings({{ column_settings_json }}, '{% url 'core:table_preferences' table_key %}', '{{ csrf_token }}')">
+    <button type="button" @click="open = !open"
+            class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 inline-flex items-center gap-1"
+            title="Spalten anpassen: Reihenfolge und Sichtbarkeit">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+        Spalten
+    </button>
+    <div x-show="open" @click.away="open = false" @keydown.escape.window="open = false" x-cloak
+         class="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-3 text-left">
+        <p class="text-xs text-gray-500 mb-2">Reihenfolge per Ziehen oder Pfeiltasten ändern, Häkchen für die Sichtbarkeit. Die Einstellung wird für Ihr Benutzerkonto gespeichert.</p>
+        <ul class="space-y-1">
+            <template x-for="(col, i) in cols" :key="col.key">
+                <li draggable="true"
+                    @dragstart="dragStart($event, i)" @dragover.prevent="overIndex = i" @dragleave="overIndex = null"
+                    @drop.prevent="drop(i)" @dragend="dragIndex = null; overIndex = null"
+                    :class="{'opacity-50': dragIndex === i, 'border-primary-500 bg-primary-50': overIndex === i && dragIndex !== i}"
+                    class="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-transparent hover:bg-gray-50 cursor-move select-none">
+                    <span class="text-gray-300" aria-hidden="true">⋮⋮</span>
+                    <input type="checkbox" x-model="col.visible" :disabled="col.locked" :id="'col-' + col.key"
+                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                    <label :for="'col-' + col.key" class="flex-1 text-sm text-gray-800 cursor-pointer" x-text="col.label"></label>
+                    <button type="button" @click="move(i, -1)" :disabled="i === 0" :class="i === 0 ? 'opacity-30' : 'hover:text-gray-900'"
+                            class="text-gray-500 px-1" title="Nach oben" aria-label="Nach oben">▲</button>
+                    <button type="button" @click="move(i, 1)" :disabled="i === cols.length - 1" :class="i === cols.length - 1 ? 'opacity-30' : 'hover:text-gray-900'"
+                            class="text-gray-500 px-1" title="Nach unten" aria-label="Nach unten">▼</button>
+                </li>
+            </template>
+        </ul>
+        <p x-show="error" x-cloak class="mt-2 text-xs text-red-600" x-text="error"></p>
+        <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+            <button type="button" @click="reset()" class="text-xs text-gray-500 hover:text-gray-700">Standard wiederherstellen</button>
+            <button type="button" @click="save()" :disabled="saving"
+                    class="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-primary-700">
+                <span x-show="!saving">Übernehmen</span><span x-show="saving" x-cloak>Speichern…</span>
+            </button>
+        </div>
+    </div>
+</div>
+<script>
+if (!window.flvsColumnSettings) {
+    window.flvsColumnSettings = function (columns, url, csrfToken) {
+        return {
+            open: false,
+            saving: false,
+            error: '',
+            cols: columns.map(c => Object.assign({}, c)),
+            dragIndex: null,
+            overIndex: null,
+            dragStart(event, i) {
+                this.dragIndex = i;
+                if (event.dataTransfer) {
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', String(i));
+                }
+            },
+            drop(i) {
+                if (this.dragIndex === null || this.dragIndex === i) return;
+                const moved = this.cols.splice(this.dragIndex, 1)[0];
+                this.cols.splice(i, 0, moved);
+                this.dragIndex = null;
+                this.overIndex = null;
+            },
+            move(i, delta) {
+                const j = i + delta;
+                if (j < 0 || j >= this.cols.length) return;
+                const tmp = this.cols[i];
+                this.cols[i] = this.cols[j];
+                this.cols[j] = tmp;
+            },
+            post(payload) {
+                this.saving = true;
+                this.error = '';
+                return fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest'},
+                    body: JSON.stringify(payload),
+                }).then(r => {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                }).then(() => window.location.reload())
+                  .catch(() => { this.saving = false; this.error = 'Speichern fehlgeschlagen. Bitte erneut versuchen.'; });
+            },
+            save() {
+                this.post({
+                    order: this.cols.map(c => c.key),
+                    hidden: this.cols.filter(c => !c.visible && !c.locked).map(c => c.key),
+                });
+            },
+            reset() {
+                this.post({reset: true});
+            },
+        };
+    };
+}
+</script>

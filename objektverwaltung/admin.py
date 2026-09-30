@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import (
     BuildingObject, Floor, EscapeRoute, FireAlarmPanel,
     BuildingContact, BuildingPlan, FireSuppressionSystem, CompensationMeasure,
-    UsageCategory,
+    UsageCategory, FireSafetyStatement,
 )
 
 
@@ -109,6 +109,17 @@ class BuildingPlanAdmin(AuditSaveMixin, admin.ModelAdmin):
     list_display = ('title', 'building', 'plan_type', 'floor', 'created_at')
     list_filter = ('plan_type',)
     search_fields = ('title', 'building__name', 'building__object_number')
+
+
+@admin.register(FireSafetyStatement)
+class FireSafetyStatementAdmin(AuditSaveMixin, admin.ModelAdmin):
+    list_display = ('subject', 'building', 'statement_type', 'status', 'result', 'received_on', 'due_on', 'issued_on')
+    list_filter = ('statement_type', 'status', 'result')
+    search_fields = ('subject', 'reference_number', 'our_reference', 'requesting_authority',
+                     'applicant', 'building__name', 'building__object_number')
+    date_hierarchy = 'received_on'
+    raw_id_fields = ('building',)
+    readonly_fields = ('created_by', 'updated_by', 'created_at', 'updated_at')
 
 
 @admin.register(BuildingContact)

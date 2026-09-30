@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.utils.translation import gettext_lazy as _
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import Notification, NotificationPreference
 
@@ -188,13 +189,20 @@ def mark_all_as_read(request):
     from .utils import mark_all_as_read as mark_all
     count = mark_all(request.user)
 
-    if request.headers.get('HX-Request'):
-        return redirect('notifications:list')
-    else:
-        return JsonResponse({
-            'success': True,
-            'count': count
-        })
+    # Nur echte AJAX-Aufrufe bekommen JSON; das Formular in der Glocke und in der
+    # Liste ist ein normaler POST und soll zurück zur Seite führen.
+    wants_json = (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or 'application/json' in request.headers.get('Accept', '')
+    )
+    if wants_json and not request.headers.get('HX-Request'):
+        return JsonResponse({'success': True, 'count': count})
+    messages.success(request, f'{count} Benachrichtigung(en) als gelesen markiert.')
+    next_url = request.POST.get('next') or request.headers.get('Referer')
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()},
+                                                    require_https=request.is_secure()):
+        return redirect(next_url)
+    return redirect('notifications:list')
 
 
 @login_required

@@ -34,6 +34,7 @@ KIND_LABELS = {
     'kontakt': 'Ansprechpartner',
     'pruefung': 'Prüfungen',
     'kompensation': 'Kompensation',
+    'stellungnahme': 'Stellungnahmen',
     'dokument': 'Pläne & Dokumente',
     'bvs': 'Brandverhütungsschau',
     'export': 'Export / Import',
@@ -44,6 +45,7 @@ _KIND_BY_MODEL = {
     'buildingcontact': 'kontakt',
     'buildingplan': 'dokument',
     'compensationmeasure': 'kompensation',
+    'firesafetystatement': 'stellungnahme',
     'fsdinspectionreport': 'pruefung',
     'inspectionreport': 'pruefung',
     'firekeydepot': 'unterobjekt',
@@ -235,6 +237,17 @@ def build_timeline(building, include_bvs=True):
             entries.append(_entry(m.created_at, 'kompensation', f'{base} erfasst',
                                   detail=m.reason, action='kompensation',
                                   badge=m.get_status_display()))
+
+    for st in building.statements.all():
+        if st.issued_on:
+            entries.append(_entry(
+                _at(st.issued_on), 'stellungnahme',
+                f'Stellungnahme abgegeben: {st.get_statement_type_display()} „{st.subject}“',
+                detail=(st.get_result_display() if st.result else '') +
+                       (f' · {st.requesting_authority}' if st.requesting_authority else ''),
+                user=st.updated_by, action='stellungnahme',
+                url=_safe_reverse('objektverwaltung:statement_pdf', st.pk), badge='Abgegeben',
+            ))
 
     for plan in building.plans.all():
         entries.append(_entry(
