@@ -23,8 +23,11 @@
         </p>
         <div class="flex flex-wrap items-center justify-between gap-2">
             <p class="text-xs text-gray-400">{% if defect.phrase %}Mustersatz {{ defect.phrase.code }} – {{ defect.phrase.title }}{% else %}Freitext{% endif %}</p>
-            <button type="button" @click="bvs.nextGap($el.closest('form').querySelector('textarea'))"
-                    class="px-3 py-2 rounded-lg text-sm bg-yellow-50 text-yellow-800 hover:bg-yellow-100">Nächste Lücke „…“</button>
+            <div class="flex items-center gap-2">
+                {% include 'objektverwaltung/partials/placeholder_picker.html' with ph_target='textarea' %}
+                <button type="button" @click="bvs.nextGap($el.closest('form').querySelector('textarea'))"
+                        class="px-3 py-2 rounded-lg text-sm bg-yellow-50 text-yellow-800 hover:bg-yellow-100">Nächste Lücke „…“</button>
+            </div>
         </div>
     </form>
 </div>

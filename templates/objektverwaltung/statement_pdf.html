@@ -52,15 +52,15 @@
 
     <h2>Stellungnahme</h2>
     {% if statement.text %}
-    <div class="text">{{ statement.text }}</div>
+    <div class="text">{{ statement.rendered_text }}</div>
     {% else %}
     <p class="muted">Noch kein Text erfasst.</p>
     {% endif %}
 
-    {% if statement.requirement_lines %}
+    {% if statement.rendered_requirement_lines %}
     <h2>Auflagen / Forderungen</h2>
     <ol class="req">
-        {% for line in statement.requirement_lines %}<li>{{ line }}</li>{% endfor %}
+        {% for line in statement.rendered_requirement_lines %}<li>{{ line }}</li>{% endfor %}
     </ol>
     {% endif %}
 

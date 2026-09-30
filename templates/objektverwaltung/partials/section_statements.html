@@ -47,7 +47,7 @@
                     {% if st.issued_on %} · Abgegeben {{ st.issued_on|date:"d.m.Y" }}{% endif %}
                     {% if st.clerk %} · {{ st.clerk }}{% endif %}
                 </p>
-                {% if st.text %}<p class="text-xs text-gray-600 mt-1 whitespace-pre-line">{{ st.text|truncatechars:300 }}</p>{% endif %}
+                {% if st.text %}<p class="text-xs text-gray-600 mt-1 whitespace-pre-line">{{ st.rendered_text|truncatechars:300 }}</p>{% endif %}
                 {% if st.requirement_lines %}
                 <p class="text-xs text-gray-500 mt-1">{{ st.requirement_lines|length }} Auflage{{ st.requirement_lines|length|pluralize:"n" }}</p>
                 {% endif %}
@@ -90,8 +90,17 @@
         <div><label class="block text-xs text-gray-500 mb-1">Ergebnis</label>{{ statement_form.result }}</div>
         <div><label class="block text-xs text-gray-500 mb-1">Abgegeben am</label>{{ statement_form.issued_on }}</div>
         <div><label class="block text-xs text-gray-500 mb-1">Bearbeiter/in</label>{{ statement_form.clerk }}</div>
-        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Stellungnahme (Text)</label>{{ statement_form.text }}</div>
-        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Auflagen / Forderungen (je Zeile eine)</label>{{ statement_form.requirements }}</div>
+        <div class="md:col-span-2">
+            <div class="flex items-center justify-between mb-1"><label class="block text-xs text-gray-500">Stellungnahme (Text)</label>
+                {% include 'objektverwaltung/partials/placeholder_picker.html' with ph_target='textarea[name=text]' %}</div>
+            {{ statement_form.text }}
+            <p class="mt-1 text-xs text-gray-500">Platzhalter wie <code>{% templatetag openvariable %}objekt.adresse{% templatetag closevariable %}</code> oder <code>{% templatetag openvariable %}stellungnahme.frist{% templatetag closevariable %}</code> werden in Anzeige und PDF durch die aktuellen Daten ersetzt.</p>
+        </div>
+        <div class="md:col-span-2">
+            <div class="flex items-center justify-between mb-1"><label class="block text-xs text-gray-500">Auflagen / Forderungen (je Zeile eine)</label>
+                {% include 'objektverwaltung/partials/placeholder_picker.html' with ph_target='textarea[name=requirements]' %}</div>
+            {{ statement_form.requirements }}
+        </div>
         <div><label class="block text-xs text-gray-500 mb-1">Antragsunterlagen (Datei)</label>{{ statement_form.request_file }}</div>
         <div><label class="block text-xs text-gray-500 mb-1">Stellungnahme (Datei)</label>{{ statement_form.file }}</div>
         <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">Interne Notizen</label>{{ statement_form.notes }}</div>

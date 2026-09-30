@@ -35,7 +35,7 @@ from .models import (
     FireSafetyStatement,
 )
 from .resources import BuildingObjectResource
-from . import akte
+from . import akte, placeholders
 from audit.models import AuditAction
 from core.table_columns import resolve_columns, columns_json
 
@@ -268,6 +268,7 @@ class BuildingObjectDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['statements'] = statements
         context['statements_open'] = sum(1 for st in statements if st.is_open)
         context['statements_overdue'] = sum(1 for st in statements if st.is_overdue)
+        context['placeholder_groups'] = placeholders.catalogue('stellungnahme', building=self.object)
         can_bvs = self.request.user.has_perm('objektverwaltung.bvs_view')
         context['akte_entries'] = akte.build_timeline(self.object, include_bvs=can_bvs)
         context['due_assets'] = _building_due_assets(self.object)
@@ -500,14 +501,19 @@ class _EditChildView(LoginRequiredMixin, PermissionRequiredMixin, View):
             kwargs['building'] = child.building
         return self.form_class(**kwargs)
 
+    extra_context = None
+
     def _render(self, request, child, form):
-        return render(request, self.template_name, {
+        context = {
             'current_module': 'objektverwaltung',
             'building': child.building,
             'child': child,
             'form': form,
             'title': self.title,
-        })
+        }
+        if self.extra_context:
+            context.update(self.extra_context)
+        return render(request, self.template_name, context)
 
     def get(self, request, pk):
         child = get_object_or_404(self.model.objects.select_related('building'), pk=pk)
@@ -604,6 +610,12 @@ class EditStatementView(_EditChildView):
     form_class = FireSafetyStatementForm
     title = 'Stellungnahme bearbeiten'
     success_message = 'Stellungnahme aktualisiert.'
+    extra_context = {'placeholder_fields': ('text', 'requirements')}
+
+    def _render(self, request, child, form):
+        self.extra_context = dict(self.extra_context, placeholder_groups=placeholders.catalogue(
+            'stellungnahme', building=child.building, statement=child))
+        return super()._render(request, child, form)
 
     def before_save(self, child, request):
         child.updated_by = request.user

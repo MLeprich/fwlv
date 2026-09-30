@@ -159,7 +159,12 @@
             </button>
             <p class="text-xs text-gray-500" x-show="!open">Wird aus der letzten Brandverhütungsschau übernommen – nur bei Bedarf ändern.</p>
             <div x-show="open" x-cloak class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div class="md:col-span-2"><label class="block text-sm text-gray-600 mb-1">{{ form.recipient_address.label }}</label>{{ form.recipient_address }}</div>
+                <div class="md:col-span-2">
+                    <div class="flex items-center justify-between mb-1"><label class="block text-sm text-gray-600">{{ form.recipient_address.label }}</label>
+                        {% include 'objektverwaltung/partials/placeholder_picker.html' with ph_target='textarea[name=recipient_address]' %}</div>
+                    {{ form.recipient_address }}
+                    <p class="mt-1 text-xs text-gray-500">Platzhalter wie <code>{% templatetag openvariable %}objekt.adresse{% templatetag closevariable %}</code> werden in der Niederschrift durch die aktuellen Objektdaten ersetzt.</p>
+                </div>
                 <div><label class="block text-sm text-gray-600 mb-1">{{ form.clerk_name.label }}</label>{{ form.clerk_name }}</div>
                 <div><label class="block text-sm text-gray-600 mb-1">{{ form.our_reference.label }}</label>{{ form.our_reference }}</div>
                 <div><label class="block text-sm text-gray-600 mb-1">{{ form.clerk_phone.label }}</label>{{ form.clerk_phone }}</div>
@@ -269,6 +274,7 @@
 </div>
 
 {{ phrase_groups|json_script:"bvs-phrases" }}
+{{ placeholder_groups|json_script:"ph-catalogue" }}
 {% endblock %}
 
 {% block extra_js %}

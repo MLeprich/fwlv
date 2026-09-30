@@ -944,3 +944,98 @@ class TableColumnPreferenceTests(TestCase):
         other = User.objects.create_user(username='andere', password='pw')
         self.client.post(self.url, data='{"order": ["city"], "hidden": ["name"]}', content_type='application/json')
         self.assertEqual(UserSettings.get_table_preferences(other, 'objektverwaltung-objekte'), {})
+
+
+class PlaceholderTests(TestCase):
+    """Platzhalter in Stellungnahmen, Mängeln und Mustersätzen werden bei Anzeige/PDF aufgelöst."""
+
+    def setUp(self):
+        from datetime import date
+        from .models import FireSafetyStatement, FireSafetyInspection, FireSafetyDefect, BVSStatus
+        self.user = User.objects.create_user(username='modul', password='pw')
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label='objektverwaltung',
+                                       codename__in=['view_buildingobject', 'change_buildingobject',
+                                                     'bvs_view', 'bvs_edit', 'bvs_manage'])
+        )
+        self.client.force_login(self.user)
+        self.building = BuildingObject.objects.create(
+            object_number='OBJ-1', name='Rathaus', street='Marktplatz', house_number='1',
+            postal_code='46045', city='Oberhausen', created_by=self.user, updated_by=self.user,
+        )
+        BuildingContact.objects.create(building=self.building, name='Erna Muster', role='Hausmeisterin',
+                                       phone='0208-1', is_primary=True)
+        self.statement = FireSafetyStatement.objects.create(
+            building=self.building, subject='Anbau', received_on=date(2026, 9, 1), due_on=date(2026, 10, 15),
+            text='Objekt {{objekt.name}}, {{ objekt.adresse }}. Frist: {{stellungnahme.frist}}. '
+                 'Kontakt {{ansprechpartner.name}} ({{ansprechpartner.telefon}}). Unbekannt: {{foo.bar}}',
+            requirements='Bis {{stellungnahme.frist}} nachweisen\n{{objekt.nummer}} kennzeichnen',
+            created_by=self.user, updated_by=self.user,
+        )
+        self.inspection = FireSafetyInspection.objects.create(
+            building=self.building, inspection_date=date(2026, 9, 10), defect_deadline=date(2026, 12, 1),
+            recipient_address='{{ansprechpartner.name}}\n{{objekt.adresse}}', status=BVSStatus.DRAFT,
+            created_by=self.user, updated_by=self.user,
+        )
+        self.defect = FireSafetyDefect.objects.create(
+            inspection=self.inspection, position=1, number='1',
+            text='Mängel bis {{bvs.frist_maengel}} beseitigen ({{objekt.strasse}}).',
+        )
+
+    def test_resolve_values(self):
+        from . import placeholders
+        text = placeholders.resolve('{{objekt.adresse}} / {{heute}} / {{nix}}', building=self.building)
+        self.assertTrue(text.startswith('Marktplatz 1, 46045 Oberhausen / '))
+        self.assertTrue(text.endswith(' / {{nix}}'))
+        self.assertEqual(placeholders.resolve('', building=self.building), '')
+        self.assertEqual(placeholders.find_unknown('{{objekt.name}} {{foo.bar}}'), ['foo.bar'])
+
+    def test_statement_rendering_and_pdf(self):
+        self.assertEqual(
+            self.statement.rendered_text,
+            'Objekt Rathaus, Marktplatz 1, 46045 Oberhausen. Frist: 15.10.2026. '
+            'Kontakt Erna Muster (0208-1). Unbekannt: {{foo.bar}}')
+        self.assertEqual(self.statement.rendered_requirement_lines,
+                         ['Bis 15.10.2026 nachweisen', 'OBJ-1 kennzeichnen'])
+        response = self.client.get(self.building.get_absolute_url())
+        self.assertContains(response, 'Frist: 15.10.2026')
+        self.assertContains(response, 'id="ph-catalogue"')
+        self.assertContains(response, 'flvsPlaceholderPicker')
+        response = self.client.get(reverse('objektverwaltung:statement_pdf', args=[self.statement.pk]))
+        self.assertEqual(response.status_code, 200)
+        # Bearbeiten-Seite hat das Menü an Text und Auflagen
+        response = self.client.get(reverse('objektverwaltung:edit_statement', args=[self.statement.pk]))
+        self.assertContains(response, "flvsPlaceholderPicker('[name=text]')")
+        self.assertContains(response, "flvsPlaceholderPicker('[name=requirements]')")
+        self.assertContains(response, '"stellungnahme.frist"')
+
+    def test_bvs_rendering(self):
+        self.assertEqual(self.defect.rendered_text, 'Mängel bis 01.12.2026 beseitigen (Marktplatz 1).')
+        self.assertEqual(self.inspection.rendered_recipient_address, 'Erna Muster\nMarktplatz 1, 46045 Oberhausen')
+        # Vor-Ort-Schablone: Menü an der Mangelkarte und der Anschrift, Katalog mit BVS-Gruppe
+        response = self.client.get(reverse('objektverwaltung:bvs_detail', args=[self.inspection.pk]))
+        self.assertContains(response, "flvsPlaceholderPicker('textarea[name=recipient_address]')")
+        self.assertContains(response, '"bvs.frist_maengel"')
+        self.assertContains(response, '{{bvs.frist_maengel}}')  # Rohtext im Formular bleibt erhalten
+        # PDF
+        response = self.client.get(reverse('objektverwaltung:bvs_pdf', args=[self.inspection.pk, 'niederschrift']))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        # Abgeschlossen: Leseansicht zeigt aufgelösten Text
+        from .models import BVSStatus
+        self.inspection.status = BVSStatus.COMPLETED
+        self.inspection.save()
+        response = self.client.get(reverse('objektverwaltung:bvs_detail', args=[self.inspection.pk]))
+        self.assertContains(response, 'Mängel bis 01.12.2026 beseitigen (Marktplatz 1).')
+
+    def test_phrase_form_has_picker_without_object(self):
+        from . import placeholders
+        response = self.client.get(reverse('objektverwaltung:bvs_phrase_create'))
+        self.assertContains(response, "flvsPlaceholderPicker('[name=text]')")
+        groups = placeholders.catalogue('bvs')
+        self.assertIn('objekt', [g['key'] for g in groups])
+        self.assertIsNone(groups[0]['items'][0]['value'])
+        groups = placeholders.catalogue('bvs', building=self.building, inspection=self.inspection)
+        by_key = {it['key']: it['value'] for g in groups for it in g['items']}
+        self.assertEqual(by_key['bvs.frist_maengel'], '01.12.2026')
+        self.assertEqual(by_key['ansprechpartner.liste'], 'Erna Muster (Hausmeisterin), Tel. 0208-1')

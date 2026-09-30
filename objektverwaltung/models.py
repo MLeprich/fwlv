@@ -846,6 +846,19 @@ class FireSafetyStatement(AuditedModel):
     def requirement_lines(self):
         return [line.strip() for line in self.requirements.splitlines() if line.strip()]
 
+    # Platzhalter ({{objekt.adresse}} …) werden erst bei Anzeige/PDF aufgelöst
+    def _render(self, text):
+        from . import placeholders
+        return placeholders.resolve(text, building=self.building, statement=self)
+
+    @property
+    def rendered_text(self):
+        return self._render(self.text)
+
+    @property
+    def rendered_requirement_lines(self):
+        return [line.strip() for line in self._render(self.requirements).splitlines() if line.strip()]
+
 
 # ============================================================================
 # BRANDVERHÜTUNGSSCHAU (BVS)
@@ -1227,6 +1240,18 @@ class FireSafetyInspection(AuditedModel):
     def open_defects(self):
         return [d for d in self.defects.all() if not d.resolved_on]
 
+    def placeholder_values(self):
+        """Aufgelöste Platzhalter dieser Schau (einmal berechnen, für alle Mängel nutzen)."""
+        from . import placeholders
+        if not hasattr(self, '_placeholder_values'):
+            self._placeholder_values = placeholders.values(building=self.building, inspection=self)
+        return self._placeholder_values
+
+    @property
+    def rendered_recipient_address(self):
+        from . import placeholders
+        return placeholders.resolve(self.recipient_address, _values=self.placeholder_values())
+
     @property
     def follow_up_status(self):
         """Nachschau: 'overdue' | 'open' | '' (keine offenen Mängel mit Frist)."""
@@ -1267,3 +1292,11 @@ class FireSafetyDefect(TimeStampedModel):
     @property
     def has_gap(self):
         return any(marker in self.text for marker in self.GAP_MARKERS)
+
+    @property
+    def rendered_text(self):
+        """Mangeltext mit aufgelösten Platzhaltern (Objektdaten, Fristen …)."""
+        from . import placeholders
+        if '{{' not in self.text:
+            return self.text
+        return placeholders.resolve(self.text, _values=self.inspection.placeholder_values())

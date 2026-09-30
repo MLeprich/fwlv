@@ -36,6 +36,7 @@ from .forms_bvs import (
     BVSPhraseCategoryForm, BVSPhraseForm, FireSafetyDefectForm, FireSafetyInspectionForm,
     PSVCertificateForm, PSVInspectionTypeForm, PSVRequirementForm,
 )
+from . import placeholders
 from .models import (
     BuildingObject, BVSPhrase, BVSPhraseCategory, BVSStatus, FireSafetyDefect,
     FireSafetyInspection, ObjectStatus, PSVCertificate, PSVInspectionType,
@@ -231,11 +232,18 @@ class _BVSFormPage:
     """Einfaches Formular auf eigener Seite (Vorlage bvs/form_page.html)."""
     template_name = 'objektverwaltung/bvs/form_page.html'
 
+    #: Textfelder, die ein Platzhalter-Menü bekommen (z.B. Mustersatz-Text)
+    placeholder_fields = ()
+
     def render_form(self, request, form, title, back_url, subtitle='', building=None, submit='Speichern'):
-        return render(request, self.template_name, _ctx(
+        context = _ctx(
             request, form=form, title=title, subtitle=subtitle, back_url=back_url,
             building=building, submit_label=submit,
-        ))
+        )
+        if self.placeholder_fields:
+            context['placeholder_fields'] = self.placeholder_fields
+            context['placeholder_groups'] = placeholders.catalogue('bvs', building=building)
+        return render(request, self.template_name, context)
 
 
 class PSVRequirementEditView(_BVSMixin, _BVSFormPage, View):
@@ -494,6 +502,7 @@ class BVSDetailView(_BVSMixin, View):
                                                      'departure_object', 'arrival_station')],
                 defect_items=[(d, FireSafetyDefectForm(instance=d, prefix=f'd{d.pk}')) for d in defects],
                 phrase_groups=_phrase_catalogue(),
+                placeholder_groups=placeholders.catalogue('bvs', building=building, inspection=inspection),
             )
             return render(request, 'objektverwaltung/bvs/inspection_form.html', context)
         return render(request, 'objektverwaltung/bvs/inspection_detail.html', context)
@@ -859,6 +868,7 @@ class PhraseListView(_BVSMixin, TemplateView):
 
 class PhraseFormView(_BVSMixin, _BVSFormPage, View):
     permission_required = PERM_MANAGE
+    placeholder_fields = ('text',)
 
     def _instance(self, pk):
         return get_object_or_404(BVSPhrase, pk=pk) if pk else None

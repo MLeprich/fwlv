@@ -66,7 +66,7 @@
 
     <div class="main">
         <div class="sender">Stadt Oberhausen · Der Oberbürgermeister · Feuerwehr · Dorstener Str. 119 · 46145 Oberhausen</div>
-        <div class="address">{{ inspection.recipient_address }}</div>
+        <div class="address">{{ inspection.rendered_recipient_address }}</div>
 
         <h1>Niederschrift über die Brandverhütungsschau</h1>
         <p>Sehr geehrte Damen und Herren,</p>
@@ -134,7 +134,7 @@
             {% for d in defects %}
             <tr>
                 <td class="num">{{ d.number }}</td>
-                <td>{% if d.location %}<div class="loc">{{ d.location }}</div>{% endif %}<div class="dtext">{{ d.text }}</div></td>
+                <td>{% if d.location %}<div class="loc">{{ d.location }}</div>{% endif %}<div class="dtext">{{ d.rendered_text }}</div></td>
             </tr>
             {% endfor %}
         </tbody>
