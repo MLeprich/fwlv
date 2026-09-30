@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Gefahrenstelle löschen - FLVS{% endblock %}
+{% block breadcrumb %}{% include 'einsatzvorbereitung/_breadcrumb.html' with crumb='Löschen' %}{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Gefahrenstelle löschen</h1>
+        <p class="text-sm text-gray-700 mb-6">„{{ object.title }}“ ({{ object.location_display }}) wird endgültig gelöscht, einschließlich aller Rückmeldungen. Zum Abschließen ohne Löschen stattdessen „Beenden“ nutzen.</p>
+        <form method="post" class="flex items-center justify-between">{% csrf_token %}
+            <a href="{{ object.get_absolute_url }}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Abbrechen</a>
+            <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Endgültig löschen</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -478,6 +478,7 @@ class SettingsView(LoginRequiredMixin, View):
                 sys_settings.iuk_enabled = request.POST.get('iuk_enabled') == 'true'
                 sys_settings.dienstplan_enabled = request.POST.get('dienstplan_enabled') == 'true'
                 sys_settings.termine_enabled = request.POST.get('termine_enabled') == 'true'
+                sys_settings.einsatzvorbereitung_enabled = request.POST.get('einsatzvorbereitung_enabled') == 'true'
                 sys_settings.person_tab_duty_hours_visible = request.POST.get('person_tab_duty_hours_visible') == 'true'
                 sys_settings.person_tab_qualifications_visible = request.POST.get('person_tab_qualifications_visible') == 'true'
                 sys_settings.person_tab_inspections_visible = request.POST.get('person_tab_inspections_visible') == 'true'

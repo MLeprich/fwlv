@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Karte - Einsatzvorbereitung - FLVS{% endblock %}
+{% block breadcrumb %}{% include 'einsatzvorbereitung/_breadcrumb.html' with crumb='Karte' %}{% endblock %}
+{% block extra_css %}{% include 'einsatzvorbereitung/_map_assets.html' %}{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6" x-data="{ ended: false }">
+    {% include 'einsatzvorbereitung/_nav.html' with page_title='Karte' page_subtitle='Offline-Karte aus eigenen Kacheln – alle aktuellen Gefahrenstellen und Objekte mit Koordinaten' nav_active='map' %}
+    {% if not tiles.total %}
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg text-sm text-yellow-800 mb-4">
+        Es sind noch keine Kartenkacheln eingespielt – die Karte zeigt nur die Markierungen auf grauem Grund.
+        {% if can_manage %}Anleitung unter <a href="{% url 'einsatzvorbereitung:settings' %}" class="underline">Karteneinstellungen</a>.{% endif %}
+    </div>
+    {% endif %}
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex flex-wrap items-center gap-4 mb-3 text-sm">
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" x-model="ended" @change="window.flvsReloadMap(ended)" class="w-4 h-4 text-primary-600 border-gray-300 rounded"> Beendete Gefahrenstellen mit anzeigen</label>
+            <div class="flex flex-wrap items-center gap-3 ml-auto text-xs text-gray-600">
+                {% for value, label in type_choices %}<span>{% if value == 'baustelle' %}🚧{% elif value == 'sperrung' %}⛔{% elif value == 'teilsperrung' %}⚠️{% elif value == 'veranstaltung' %}🎪{% elif value == 'loeschwasser' %}💧{% elif value == 'gefahrstoff' %}☣️{% else %}📍{% endif %} {{ label }}</span>{% endfor %}
+                <span>⚪ Objekt</span>
+            </div>
+        </div>
+        <div id="overview-map" class="flvs-map" style="height: 70vh; min-height: 480px"></div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const map = flvsMap.create('overview-map', window.flvsMapConfig);
+    let layers = null;
+    window.flvsReloadMap = function (ended) {
+        fetch("{% url 'einsatzvorbereitung:map_data' %}" + (ended ? '?beendet=1' : ''), { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                if (layers) { map.removeLayer(layers.hazards); map.removeLayer(layers.objects); }
+                layers = flvsMap.renderData(map, data, { fit: !layers });
+            });
+    };
+    window.flvsReloadMap(false);
+});
+</script>
+{% endblock %}

@@ -40,6 +40,7 @@ class WidgetType(models.TextChoices):
     EVENTS = 'events', _('Termine/Kalender')
     DIENSTPLAN = 'dienstplan', _('Dienstplan / Führungsdienst')
     KALENDER = 'kalender', _('Kalender (Termine-Modul)')
+    GEFAHRENSTELLEN = 'gefahrenstellen', _('Gefahrenstellen (Einsatzvorbereitung)')
     CUSTOM = 'custom', _('Benutzerdefiniert')
 
 

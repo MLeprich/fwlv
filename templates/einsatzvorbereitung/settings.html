@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Karteneinstellungen - Einsatzvorbereitung - FLVS{% endblock %}
+{% block breadcrumb %}{% include 'einsatzvorbereitung/_breadcrumb.html' with crumb='Karteneinstellungen' %}{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    {% include 'einsatzvorbereitung/_nav.html' with page_title='Karteneinstellungen' page_subtitle='Kartenausschnitt, Zoomstufen und Offline-Kacheln' nav_active='settings' %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <form method="post" class="bg-white rounded-lg shadow p-6 space-y-4">{% csrf_token %}
+            <h2 class="text-lg font-semibold text-gray-900">Kartenausschnitt</h2>
+            {% if form.non_field_errors %}<div class="bg-red-50 border-l-4 border-red-400 p-3 text-sm text-red-700">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Mitte Breitengrad</label>{{ form.center_lat }}</div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Mitte Längengrad</label>{{ form.center_lng }}</div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Start-Zoom</label>{{ form.zoom }}</div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Zoom von / bis</label><div class="flex gap-2">{{ form.min_zoom }}{{ form.max_zoom }}</div>{% if form.max_zoom.errors %}<p class="text-sm text-red-600 mt-1">{{ form.max_zoom.errors.0 }}</p>{% endif %}</div>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Stadtgebiet (Süd,West,Nord,Ost)</label>{{ form.bbox }}<p class="text-xs text-gray-500 mt-1">{{ form.bbox.help_text }}</p>{% if form.bbox.errors %}<p class="text-sm text-red-600 mt-1">{{ form.bbox.errors.0 }}</p>{% endif %}</div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Quellenangabe der Kacheln</label>{{ form.attribution }}</div>
+            <label class="flex items-center gap-3 cursor-pointer">{{ form.show_objects }}<span class="text-sm text-gray-700">Objekte der Objektverwaltung (mit Koordinaten) auf der Übersichtskarte anzeigen</span></label>
+            <div class="pt-4 border-t border-gray-200 text-right"><button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Speichern</button></div>
+        </form>
+
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-2">Offline-Kacheln</h2>
+                <dl class="text-sm space-y-1 mb-3">
+                    <div><dt class="text-gray-500 inline">Ordner:</dt> <dd class="inline text-gray-900 font-mono text-xs">{{ tiles.dir }}</dd></div>
+                    <div><dt class="text-gray-500 inline">Bestand:</dt> <dd class="inline text-gray-900">{{ tiles.total }} Kacheln, {{ tiles.size_mb }} MB</dd></div>
+                    {% if tiles.zooms %}<div><dt class="text-gray-500 inline">Zoomstufen:</dt> <dd class="inline text-gray-900">{% for z, n in tiles.zooms %}{{ z }} ({{ n }}){% if not forloop.last %}, {% endif %}{% endfor %}</dd></div>{% endif %}
+                    {% if tile_estimate %}<div><dt class="text-gray-500 inline">Erwartet für Stadtgebiet und Zoom {{ config.min_zoom }}–{{ config.max_zoom }}:</dt> <dd class="inline text-gray-900">ca. {{ tile_estimate }} Kacheln</dd></div>{% endif %}
+                </dl>
+                {% if not tiles.total %}<p class="text-sm text-yellow-800 bg-yellow-50 rounded-lg px-3 py-2">Noch keine Kacheln vorhanden – die Karte zeigt Markierungen auf grauem Grund.</p>{% endif %}
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 text-sm text-gray-700 space-y-3">
+                <h2 class="text-lg font-semibold text-gray-900">So kommen die Kacheln auf die Offline-Maschine</h2>
+                <p><strong>1. Auf einem Rechner mit Internet</strong> (z.B. dieser Server) das Stadtgebiet herunterladen und als ZIP verpacken:</p>
+                <pre class="bg-gray-900 text-gray-100 rounded-lg p-3 text-xs overflow-x-auto">python manage.py tiles_download --bbox {{ config.bbox|default:"51.44,6.78,51.56,6.95" }} --zoom {{ config.min_zoom }}-{{ config.max_zoom }} --zip stadt-kacheln.zip</pre>
+                <p class="text-xs text-gray-500">Standardquelle ist <strong>TopPlusOpen</strong> des Bundesamts für Kartographie und Geodäsie (offene Daten, Quellenangabe „© GeoBasis-DE / BKG“). Alternativ das Luftbild von Geobasis NRW: <code>--url "https://www.wmts.nrw.de/geobasis/wmts_nw_dop/tiles/nw_dop/EPSG_3857_16/{z}/{y}/{x}"</code>. Der öffentliche OpenStreetMap-Server sperrt Massen-Downloads und liefert nur Sperrbilder.</p>
+                <p><strong>2. ZIP auf die Offline-Maschine kopieren</strong> (USB/Netzlaufwerk) und einspielen:</p>
+                <pre class="bg-gray-900 text-gray-100 rounded-lg p-3 text-xs overflow-x-auto">python manage.py tiles_import stadt-kacheln.zip</pre>
+                <p class="text-xs text-gray-500">Im Docker-Betrieb: <code>docker compose exec web python manage.py tiles_import /app/media/stadt-kacheln.zip</code> – die Kacheln liegen danach dauerhaft im Media-Volume.</p>
+                <p><strong>Größenordnung:</strong> Ein Stadtgebiet von ca. 10 × 12 km braucht bei Zoom 11–17 rund 6.000 Kacheln (≈ 60–120 MB).</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

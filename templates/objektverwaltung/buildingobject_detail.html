@@ -147,6 +147,21 @@
         <!-- Übersicht -->
         <div x-show="tab === 'uebersicht'" x-cloak class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 space-y-6">
+                {% if object_hazards %}
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
+                    <p class="text-sm font-semibold text-gray-900 mb-2">🚧 Aktuelle Gefahrenstellen im Umfeld ({{ object_hazards|length }})</p>
+                    <ul class="space-y-1">
+                        {% for h in object_hazards %}
+                        <li class="text-sm flex flex-wrap items-center gap-2">
+                            <a href="{{ h.hazard.get_absolute_url }}" class="font-medium text-gray-900 hover:text-primary-600">{{ h.hazard.icon }} {{ h.hazard.title }}</a>
+                            <span class="text-gray-500">{{ h.hazard.get_hazard_type_display }} · {{ h.hazard.period_display }}</span>
+                            {% if h.hazard.access_restricted %}<span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-red-100 text-red-800">Zufahrt eingeschränkt</span>{% endif %}
+                            <span class="text-xs text-gray-400">{{ h.reason }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
                 <!-- Adresse & Gebäudeinfo -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <h2 class="text-lg font-semibold text-gray-900 mb-3">Adresse &amp; Gebäude</h2>

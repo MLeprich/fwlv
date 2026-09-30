@@ -1,0 +1,29 @@
+{% load einsatz_tags %}
+<!-- Gefahrenstellen Widget (Einsatzvorbereitung) -->
+{% gefahren_widget widget as data %}
+<div class="h-full flex flex-col">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="text-xl font-bold flex items-center gap-2"><span class="text-2xl">🚧</span>{{ widget.title|default:"Gefahrenstellen" }}</h3>
+        <span class="text-sm opacity-70">{{ data.count }} aktuell{% if data.restricted %} · <span class="font-semibold text-red-600">{{ data.restricted }}× Zufahrt eingeschränkt</span>{% endif %}</span>
+    </div>
+    <div class="flex-1 overflow-auto p-4">
+        {% if not data.items %}
+        <p class="text-lg opacity-60 italic">Keine aktuellen Gefahrenstellen.</p>
+        {% else %}
+        <ul class="space-y-3">
+            {% for h in data.items %}
+            <li class="flex items-start gap-3 {% if h.access_restricted %}border-l-4 border-red-500 pl-3{% endif %}">
+                <span class="text-2xl leading-none">{{ h.icon }}</span>
+                <div class="min-w-0">
+                    <p class="text-xl font-semibold leading-tight">{{ h.title }}
+                        {% if h.effective_status == 'planned' %}<span class="text-sm font-normal opacity-70">(ab {{ h.start_date|date:"d.m." }})</span>{% endif %}</p>
+                    <p class="text-base opacity-80">{{ h.get_hazard_type_display }} · {{ h.location_display }} · {{ h.period_display }}</p>
+                    {% if h.access_restricted %}<p class="text-base font-semibold text-red-600">Zufahrt für Einsatzfahrzeuge eingeschränkt{% if h.detour %} – {{ h.detour|truncatechars:120 }}{% endif %}</p>{% endif %}
+                    {% if h.leitstelle_note %}<p class="text-base bg-yellow-100 text-yellow-900 rounded px-2 py-1 mt-1">{{ h.leitstelle_note }}</p>{% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>

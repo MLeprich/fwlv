@@ -264,6 +264,17 @@ class UserDetailView(UserManagementMixin, DetailView):
             if t_order.index(t_effective) > t_order.index(context['termine_level']) else ''
         )
 
+        # Einsatzvorbereitung: Zugriffsstufe über Gruppen
+        from einsatzvorbereitung import roles as einsatz_roles
+        context['einsatz_levels'] = einsatz_roles.EINSATZ_LEVELS
+        context['einsatz_level'] = einsatz_roles.group_level(user_obj)
+        e_order = [key for key, *_rest in einsatz_roles.EINSATZ_LEVELS]
+        e_effective = einsatz_roles.effective_level(user_obj)
+        context['einsatz_effective_label'] = (
+            dict((key, label) for key, label, *_rest in einsatz_roles.EINSATZ_LEVELS)[e_effective]
+            if e_order.index(e_effective) > e_order.index(context['einsatz_level']) else ''
+        )
+
         # Feuerwachen für WBF-Dropdown (Typ 'site' = Standort/Wache)
         context['wbf_locations'] = Location.objects.filter(
             location_type='site'
@@ -435,6 +446,25 @@ class UserTerminePermissionsView(UserManagementMixin, DetailView):
             return redirect('core:user_detail', pk=user_obj.pk)
         termine_roles.set_level(user_obj, level, assigned_by=request.user)
         messages.success(request, f'Termine für {user_obj.get_full_name() or user_obj.username}: „{labels[level]}“.')
+        return redirect('core:user_detail', pk=user_obj.pk)
+
+
+class UserEinsatzPermissionsView(UserManagementMixin, DetailView):
+    """Zugriffsstufe Einsatzvorbereitung setzen (genau eine Stufen-Gruppe)."""
+    model = User
+    required_permission = 'core.assign_roles'
+
+    def post(self, request, *args, **kwargs):
+        from einsatzvorbereitung import roles as einsatz_roles
+
+        user_obj = self.get_object()
+        level = request.POST.get('einsatz_level', '')
+        labels = {key: label for key, label, _group, _desc in einsatz_roles.EINSATZ_LEVELS}
+        if level not in labels:
+            messages.error(request, 'Bitte eine Zugriffsstufe auswählen.')
+            return redirect('core:user_detail', pk=user_obj.pk)
+        einsatz_roles.set_level(user_obj, level, assigned_by=request.user)
+        messages.success(request, f'Einsatzvorbereitung für {user_obj.get_full_name() or user_obj.username}: „{labels[level]}“.')
         return redirect('core:user_detail', pk=user_obj.pk)
 
 

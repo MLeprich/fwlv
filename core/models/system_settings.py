@@ -147,6 +147,12 @@ class SystemSettings(models.Model):
         help_text="Zentraler Kalender mit Kategorien; Widget „Kalender“ auf Info-Monitoren"
     )
 
+    einsatzvorbereitung_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Einsatzvorbereitung",
+        help_text="Baustellen, Sperrungen und Gefahrenstellen mit Offline-Karte; Widget „Gefahrenstellen“ für die Leitstelle"
+    )
+
     # ============================================================================
     # PERSONAL - TAB VISIBILITY
     # ============================================================================
@@ -397,4 +403,6 @@ class SystemSettings(models.Model):
             modules.append('dienstplan')
         if self.termine_enabled:
             modules.append('termine')
+        if self.einsatzvorbereitung_enabled:
+            modules.append('einsatzvorbereitung')
         return modules

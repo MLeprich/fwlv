@@ -138,6 +138,7 @@ urlpatterns = [
     path('umfragen/', include('surveys.urls')),
     path('dienstplan/', include('dienstplan.urls')),
     path('termine/', include('termine.urls')),
+    path('einsatzvorbereitung/', include('einsatzvorbereitung.urls')),
 
     # IUK App (Drohnenstaffel)
     path('iuk/', include('iuk.urls')),

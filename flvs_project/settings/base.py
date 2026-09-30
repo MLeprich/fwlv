@@ -108,6 +108,7 @@ LOCAL_APPS = [
     'iuk.apps.IukConfig',
     'dienstplan.apps.DienstplanConfig',
     'termine.apps.TermineConfig',
+    'einsatzvorbereitung.apps.EinsatzvorbereitungConfig',
     # Weitere Apps werden hier hinzugefuegt
 ]
 

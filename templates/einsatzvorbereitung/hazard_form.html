@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}{% if form.instance.pk %}Gefahrenstelle bearbeiten{% else %}Neue Gefahrenstelle{% endif %} - Einsatzvorbereitung - FLVS{% endblock %}
+{% block breadcrumb %}{% include 'einsatzvorbereitung/_breadcrumb.html' with crumb='Gefahrenstelle' %}{% endblock %}
+{% block extra_css %}{% include 'einsatzvorbereitung/_map_assets.html' %}{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-4">{% if form.instance.pk %}Gefahrenstelle bearbeiten{% else %}Neue Gefahrenstelle{% endif %}</h1>
+    <form method="post" enctype="multipart/form-data" id="hazard-form" class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {% csrf_token %}
+        {{ form.latitude }}{{ form.longitude }}{{ form.geometry }}
+        {% if form.non_field_errors %}<div class="lg:col-span-5 bg-red-50 border-l-4 border-red-400 p-3 text-sm text-red-700">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form.hidden_fields %}{% if field.errors %}<div class="lg:col-span-5 bg-red-50 border-l-4 border-red-400 p-3 text-sm text-red-700">{{ field.label }}: {{ field.errors.0 }}</div>{% endif %}{% endfor %}
+
+        <div class="lg:col-span-2 space-y-5">
+            <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                <h2 class="text-lg font-semibold text-gray-900">Was &amp; wann</h2>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Bezeichnung *</label>{{ form.title }}{% if form.title.errors %}<p class="text-sm text-red-600 mt-1">{{ form.title.errors.0 }}</p>{% endif %}</div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Art *</label>{{ form.hazard_type }}</div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Status</label>{{ form.status }}</div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Beginn *</label>{{ form.start_date }}{% if form.start_date.errors %}<p class="text-sm text-red-600 mt-1">{{ form.start_date.errors.0 }}</p>{% endif %}</div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Ende</label>{{ form.end_date }}<p class="text-xs text-gray-500 mt-1">leer = bis auf Weiteres</p>{% if form.end_date.errors %}<p class="text-sm text-red-600 mt-1">{{ form.end_date.errors.0 }}</p>{% endif %}</div>
+                </div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>{{ form.description }}</div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                <h2 class="text-lg font-semibold text-gray-900">Adresse (für betroffene Objekte)</h2>
+                <p class="text-xs text-gray-500">Objekte der Objektverwaltung in dieser Straße und im Hausnummernbereich werden automatisch als betroffen ausgewiesen.</p>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Straße</label>{{ form.street }}
+                    <datalist id="street-list">{% for s in street_list %}<option value="{{ s }}">{% endfor %}</datalist></div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Hausnr. von</label>{{ form.house_from }}</div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Hausnr. bis</label>{{ form.house_to }}{% if form.house_to.errors %}<p class="text-sm text-red-600 mt-1">{{ form.house_to.errors.0 }}</p>{% endif %}</div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Seite</label>{{ form.house_side }}</div>
+                </div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Ort</label>{{ form.city }}</div>
+                {% if affected_preview %}
+                <div class="bg-gray-50 rounded-lg p-3 text-sm">
+                    <p class="font-medium text-gray-900 mb-1">Derzeit betroffen ({{ affected_preview|length }}):</p>
+                    <p class="text-gray-700">{% for a in affected_preview %}{{ a.object.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                <h2 class="text-lg font-semibold text-gray-900">Einsatzrelevant</h2>
+                <label class="flex items-center gap-3 cursor-pointer">{{ form.access_restricted }}<span class="text-sm text-gray-700 font-medium">Zufahrt für Einsatzfahrzeuge eingeschränkt</span></label>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Umleitung / Anfahrt</label>{{ form.detour }}</div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Löschwasser / Hydranten</label>{{ form.hydrants_note }}</div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Hinweis für die Leitstelle</label>{{ form.leitstelle_note }}<p class="text-xs text-gray-500 mt-1">{{ form.leitstelle_note.help_text }}</p></div>
+                <label class="flex items-center gap-3 cursor-pointer">{{ form.show_on_monitor }}<span class="text-sm text-gray-700">Auf Info-Monitoren (Leitstelle) anzeigen</span></label>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                <h2 class="text-lg font-semibold text-gray-900">Kontakt, Quelle, Anlage</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Ansprechpartner</label>{{ form.contact_name }}</div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>{{ form.contact_phone }}</div>
+                </div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Quelle</label>{{ form.source }}<p class="text-xs text-gray-500 mt-1">{{ form.source.help_text }}</p></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Anlage (PDF/Bild)</label>{{ form.attachment }}</div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Interne Notizen</label>{{ form.internal_notes }}</div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-3">
+            <div class="bg-white rounded-lg shadow p-6 lg:sticky lg:top-20">
+                <h2 class="text-lg font-semibold text-gray-900 mb-1">Lage auf der Karte</h2>
+                <p class="text-xs text-gray-500 mb-3">Klick setzt den Punkt (Marker verschiebbar). Für Sperrstrecken oder Bereiche „Linie“ bzw. „Fläche“ wählen, Punkte anklicken und „Fertig“ drücken.</p>
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <button type="button" data-map-mode="point" class="flvs-map-mode px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">📍 Punkt</button>
+                    <button type="button" data-map-mode="line" class="flvs-map-mode px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">〰 Linie</button>
+                    <button type="button" data-map-mode="polygon" class="flvs-map-mode px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">⬠ Fläche</button>
+                    <button type="button" data-map-finish class="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200">Fertig</button>
+                    <button type="button" data-map-clear class="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 text-red-700 hover:bg-red-100">Lage entfernen</button>
+                    <div class="ml-auto flex items-center gap-2 text-sm text-gray-700"><label>Umkreis (m)</label><div class="w-28">{{ form.radius_m }}</div></div>
+                </div>
+                <div id="picker-map" class="flvs-map"></div>
+                <p class="text-xs text-gray-500 mt-2" data-map-status>Noch keine Lage gesetzt.</p>
+                <div class="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+                    <a href="{% if form.instance.pk %}{{ form.instance.get_absolute_url }}{% else %}{% url 'einsatzvorbereitung:list' %}{% endif %}" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Abbrechen</a>
+                    <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const map = flvsMap.create('picker-map', window.flvsMapConfig);
+    flvsMap.picker(map, document.getElementById('hazard-form'));
+});
+</script>
+{% endblock %}

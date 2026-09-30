@@ -665,6 +665,9 @@ class WidgetEditView(LoginRequiredMixin, View):
             from termine.models import EventCategory
             context['event_categories'] = EventCategory.objects.filter(is_active=True)
             context['event_sites'] = Location.objects.filter(location_type='site').order_by('name')
+        elif widget.widget_type == WidgetType.GEFAHRENSTELLEN:
+            from einsatzvorbereitung.models import HazardType
+            context['hazard_types'] = HazardType.choices
         return render(request, self.template_name, context)
 
     def post(self, request, widget_id):
@@ -719,6 +722,12 @@ class WidgetEditView(LoginRequiredMixin, View):
             widget.config['limit'] = request.POST.get('limit', '12')
             widget.config['categories'] = request.POST.getlist('categories')
             widget.config['sites'] = request.POST.getlist('sites')
+
+        elif widget.widget_type == WidgetType.GEFAHRENSTELLEN:
+            widget.config['limit'] = request.POST.get('limit', '10')
+            widget.config['types'] = request.POST.getlist('types')
+            widget.config['only_restricted'] = 'only_restricted' in request.POST
+            widget.config['include_planned'] = 'include_planned' in request.POST
 
         elif widget.widget_type == WidgetType.CLOCK:
             # Uhr-Einstellungen

@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}{{ hazard.title }} - Einsatzvorbereitung - FLVS{% endblock %}
+{% block breadcrumb %}{% include 'einsatzvorbereitung/_breadcrumb.html' with crumb=hazard.title|truncatechars:40 %}{% endblock %}
+{% block extra_css %}{% include 'einsatzvorbereitung/_map_assets.html' %}{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ hazard.icon }} {{ hazard.title }}</h1>
+            <div class="flex flex-wrap items-center gap-2 mt-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ hazard.type_badge_class }}">{{ hazard.get_hazard_type_display }}</span>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ hazard.status_badge_class }}">{{ hazard.effective_status_display }}</span>
+                {% if hazard.access_restricted %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Zufahrt für Einsatzfahrzeuge eingeschränkt</span>{% endif %}
+                <span class="text-sm text-gray-500">{{ hazard.period_display }}</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'einsatzvorbereitung:list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Liste</a>
+            {% if can_edit %}
+            <a href="{% url 'einsatzvorbereitung:edit' hazard.pk %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Bearbeiten</a>
+            {% if hazard.is_current %}
+            <form method="post" action="{% url 'einsatzvorbereitung:end' hazard.pk %}" onsubmit="return confirm('Gefahrenstelle als beendet markieren?');">{% csrf_token %}
+                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">Beenden</button>
+            </form>
+            {% endif %}
+            {% endif %}
+            {% if can_manage %}<a href="{% url 'einsatzvorbereitung:delete' hazard.pk %}" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700">Löschen</a>{% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-3">Lage</h2>
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-4">
+                    <div><dt class="text-gray-500 inline">Adresse:</dt> <dd class="text-gray-900 inline">{{ hazard.location_display|default:"–" }}</dd></div>
+                    <div><dt class="text-gray-500 inline">Koordinaten:</dt> <dd class="text-gray-900 inline">{% if hazard.has_point %}{{ hazard.latitude }}, {{ hazard.longitude }}{% if hazard.radius_m %} · Umkreis {{ hazard.radius_m }} m{% endif %}{% else %}–{% endif %}</dd></div>
+                    {% if hazard.geometry %}<div><dt class="text-gray-500 inline">Gezeichnet:</dt> <dd class="text-gray-900 inline">{% if hazard.geometry.type == 'polygon' %}Fläche{% else %}Linie{% endif %} mit {{ hazard.geometry.coords|length }} Punkten</dd></div>{% endif %}
+                </dl>
+                {% if hazard.has_point or hazard.geometry or map_data_json %}
+                <div id="hazard-map" class="flvs-map" style="height: 380px"></div>
+                {% endif %}
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6" id="objekte">
+                <h2 class="text-lg font-semibold text-gray-900 mb-1">Betroffene Objekte ({{ affected|length }})</h2>
+                <p class="text-xs text-gray-500 mb-3">Ermittelt aus Straße und Hausnummernbereich der Objektverwaltung sowie aus Umkreis, Linie oder Fläche bei Objekten mit Koordinaten.</p>
+                {% if affected %}
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50"><tr>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Objekt</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Anschrift</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nutzung</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Grund</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-gray-100">
+                    {% for a in affected %}
+                    <tr>
+                        <td class="px-3 py-2"><a href="{{ a.object.get_absolute_url }}" class="font-medium text-gray-900 hover:text-primary-600">{{ a.object.name }}</a><p class="text-xs text-gray-500">{{ a.object.object_number }}</p></td>
+                        <td class="px-3 py-2 text-gray-700">{{ a.object.full_address }}</td>
+                        <td class="px-3 py-2 text-gray-700">{{ a.object.get_usage_type_display }}</td>
+                        <td class="px-3 py-2 text-gray-500 text-xs">{{ a.reason }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<p class="text-sm text-gray-500">Keine Objekte der Objektverwaltung betroffen.</p>{% endif %}
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6" id="rueckmeldungen">
+                <h2 class="text-lg font-semibold text-gray-900 mb-1">Rückmeldungen ({{ notes|length }})</h2>
+                <p class="text-xs text-gray-500 mb-3">Austausch mit der Leitstelle: Kenntnisnahme, Hinweise, Änderungen an Alarm- und Ausrückeordnung.</p>
+                <form method="post" action="{% url 'einsatzvorbereitung:note_add' hazard.pk %}" class="mb-4 flex flex-col md:flex-row gap-2">
+                    {% csrf_token %}
+                    <div class="flex-1">{{ note_form.text }}</div>
+                    <button type="submit" class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 self-start">Rückmeldung speichern</button>
+                </form>
+                {% if notes %}
+                <ol class="divide-y divide-gray-100">
+                    {% for n in notes %}
+                    <li class="py-3">
+                        <p class="text-sm text-gray-900 whitespace-pre-line">{{ n.text }}</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ n.created_by.get_full_name|default:n.created_by.username|default:"–" }} · {{ n.created_at|date:"d.m.Y H:i" }}</p>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}<p class="text-sm text-gray-500">Noch keine Rückmeldungen.</p>{% endif %}
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Einsatzrelevant</h3>
+                <dl class="space-y-3 text-sm">
+                    {% if hazard.description %}<div><dt class="text-xs text-gray-500">Beschreibung</dt><dd class="text-gray-900 whitespace-pre-line">{{ hazard.description }}</dd></div>{% endif %}
+                    <div><dt class="text-xs text-gray-500">Zufahrt</dt><dd class="{% if hazard.access_restricted %}text-red-700 font-medium{% else %}text-gray-900{% endif %}">{% if hazard.access_restricted %}Für Einsatzfahrzeuge eingeschränkt{% else %}Nicht eingeschränkt{% endif %}</dd></div>
+                    {% if hazard.detour %}<div><dt class="text-xs text-gray-500">Umleitung / Anfahrt</dt><dd class="text-gray-900 whitespace-pre-line">{{ hazard.detour }}</dd></div>{% endif %}
+                    {% if hazard.hydrants_note %}<div><dt class="text-xs text-gray-500">Löschwasser / Hydranten</dt><dd class="text-gray-900 whitespace-pre-line">{{ hazard.hydrants_note }}</dd></div>{% endif %}
+                    {% if hazard.leitstelle_note %}<div><dt class="text-xs text-gray-500">Hinweis für die Leitstelle</dt><dd class="text-yellow-900 bg-yellow-50 rounded px-2 py-1 whitespace-pre-line">{{ hazard.leitstelle_note }}</dd></div>{% endif %}
+                </dl>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Kontakt &amp; Quelle</h3>
+                <dl class="space-y-2 text-sm">
+                    <div><dt class="text-xs text-gray-500">Ansprechpartner</dt><dd class="text-gray-900">{{ hazard.contact_name|default:"–" }}{% if hazard.contact_phone %} · {{ hazard.contact_phone }}{% endif %}</dd></div>
+                    <div><dt class="text-xs text-gray-500">Quelle</dt><dd class="text-gray-900">{{ hazard.source|default:"–" }}</dd></div>
+                    {% if hazard.attachment %}<div><dt class="text-xs text-gray-500">Anlage</dt><dd><a href="{{ hazard.attachment.url }}" target="_blank" class="text-primary-600 hover:text-primary-800">📄 {{ hazard.attachment.name|cut:"einsatzvorbereitung/"|truncatechars:40 }}</a></dd></div>{% endif %}
+                    <div><dt class="text-xs text-gray-500">Info-Monitore</dt><dd class="text-gray-900">{% if hazard.show_on_monitor %}wird angezeigt{% else %}nicht anzeigen{% endif %}</dd></div>
+                    {% if hazard.internal_notes %}<div><dt class="text-xs text-gray-500">Interne Notizen</dt><dd class="text-gray-900 whitespace-pre-line">{{ hazard.internal_notes }}</dd></div>{% endif %}
+                </dl>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Verwaltung</h3>
+                <dl class="space-y-2 text-sm">
+                    <div><dt class="text-xs text-gray-500">Angelegt</dt><dd class="text-gray-900">{{ hazard.created_at|date:"d.m.Y H:i" }}{% if hazard.created_by %} · {{ hazard.created_by.get_full_name|default:hazard.created_by.username }}{% endif %}</dd></div>
+                    <div><dt class="text-xs text-gray-500">Geändert</dt><dd class="text-gray-900">{{ hazard.updated_at|date:"d.m.Y H:i" }}{% if hazard.updated_by %} · {{ hazard.updated_by.get_full_name|default:hazard.updated_by.username }}{% endif %}</dd></div>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{{ map_data_json|json_script:"hazard-map-data" }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const el = document.getElementById('hazard-map');
+    if (!el) return;
+    const map = flvsMap.create('hazard-map', window.flvsMapConfig);
+    flvsMap.renderData(map, JSON.parse(document.getElementById('hazard-map-data').textContent));
+});
+</script>
+{% endblock %}

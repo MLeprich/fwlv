@@ -39,6 +39,7 @@ class Roles:
     MODUL_IUK = 'Modulverantwortlicher IUK'
     MODUL_DIENSTPLAN = 'Modulverantwortlicher Dienstplan'
     MODUL_TERMINE = 'Modulverantwortlicher Termine'
+    MODUL_EINSATZ = 'Modulverantwortlicher Einsatzvorbereitung'
 
     # Sachbearbeiter pro Modul (view + add)
     SACHBEARBEITER_MEDICAL = 'Sachbearbeiter Medical'
@@ -60,6 +61,7 @@ class Roles:
     SACHBEARBEITER_IUK = 'Sachbearbeiter IUK'
     SACHBEARBEITER_DIENSTPLAN = 'Sachbearbeiter Dienstplan'  # Dienstplan: ansehen + bearbeiten
     SACHBEARBEITER_TERMINE = 'Sachbearbeiter Termine'        # Termine: ansehen + bearbeiten
+    SACHBEARBEITER_EINSATZ = 'Sachbearbeiter Einsatzvorbereitung'  # Gefahrenstellen anlegen/bearbeiten
 
     # Freigabe-Gruppen (Procurement Approval)
     FREIGABE_STUFE_1 = 'Freigabe Stufe 1'  # bis 1.000€
@@ -81,6 +83,9 @@ class Roles:
 
     # Termine (eigene Rechte termine_*)
     TERMINE_LESER = 'Termine Leser'
+
+    # Einsatzvorbereitung (eigene Rechte einsatz_*)
+    EINSATZ_LESER = 'Einsatzvorbereitung Leser'
 
     # Operative Rollen
     BEREICHSLEITUNG = 'Bereichsleitung'
@@ -125,6 +130,7 @@ class Roles:
             cls.MODUL_IUK,
             cls.MODUL_DIENSTPLAN,
             cls.MODUL_TERMINE,
+            cls.MODUL_EINSATZ,
             cls.SACHBEARBEITER_MEDICAL,
             cls.SACHBEARBEITER_CLOTHING,
             cls.SACHBEARBEITER_MAGAZINE,
@@ -144,6 +150,7 @@ class Roles:
             cls.SACHBEARBEITER_IUK,
             cls.SACHBEARBEITER_DIENSTPLAN,
             cls.SACHBEARBEITER_TERMINE,
+            cls.SACHBEARBEITER_EINSATZ,
             cls.LST_INFOMONITOR,
             cls.LST_MAPPE,
             cls.BVS_LESER,
@@ -152,6 +159,7 @@ class Roles:
             cls.DIENSTPLAN_LESER,
             cls.DIENSTPLAN_STATISTIK,
             cls.TERMINE_LESER,
+            cls.EINSATZ_LESER,
             cls.FREIGABE_STUFE_1,
             cls.FREIGABE_STUFE_2,
             cls.FREIGABE_STUFE_3,
@@ -191,6 +199,7 @@ class Roles:
             cls.MODUL_IUK,
             cls.MODUL_DIENSTPLAN,
             cls.MODUL_TERMINE,
+            cls.MODUL_EINSATZ,
         ]
 
     @classmethod
@@ -216,6 +225,7 @@ class Roles:
             cls.SACHBEARBEITER_IUK,
             cls.SACHBEARBEITER_DIENSTPLAN,
             cls.SACHBEARBEITER_TERMINE,
+            cls.SACHBEARBEITER_EINSATZ,
         ]
 
     @classmethod
@@ -288,6 +298,9 @@ class Modules:
     # Termine
     TERMINE = 'termine'
 
+    # Einsatzvorbereitung
+    EINSATZVORBEREITUNG = 'einsatzvorbereitung'
+
     @classmethod
     def get_all_modules(cls):
         """Alle Module"""
@@ -323,6 +336,7 @@ class Modules:
             cls.IUK,
             cls.DIENSTPLAN,
             cls.TERMINE,
+            cls.EINSATZVORBEREITUNG,
         ]
 
     @classmethod

@@ -270,6 +270,7 @@ class BuildingObjectDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['statements_overdue'] = sum(1 for st in statements if st.is_overdue)
         context['placeholder_groups'] = placeholders.catalogue('stellungnahme', building=self.object)
         context['pdf_parts'] = object_pdf_parts(self.request.user)
+        context['object_hazards'] = _hazards_for_object(self.request, self.object)
         can_bvs = self.request.user.has_perm('objektverwaltung.bvs_view')
         context['akte_entries'] = akte.build_timeline(self.object, include_bvs=can_bvs)
         context['due_assets'] = _building_due_assets(self.object)
@@ -284,6 +285,20 @@ class BuildingObjectDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
             context['bvs_next'] = next((i.next_inspection for i in inspections
                                         if i.is_completed and i.next_inspection), None)
         return context
+
+
+def _hazards_for_object(request, building):
+    """Aktuelle Gefahrenstellen (Einsatzvorbereitung), die dieses Objekt betreffen – falls Modul aktiv."""
+    try:
+        from core.models import SystemSettings
+        if not SystemSettings.load().einsatzvorbereitung_enabled:
+            return []
+        if not request.user.has_perm('einsatzvorbereitung.einsatz_view'):
+            return []
+        from einsatzvorbereitung import services as einsatz_services
+        return einsatz_services.hazards_for_building(building)
+    except Exception:  # pragma: no cover
+        return []
 
 
 class BuildingObjectCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
