@@ -15,5 +15,9 @@ urlpatterns = [
     path('<int:pk>/beenden/', views.HazardEndView.as_view(), name='end'),
     path('<int:pk>/rueckmeldung/', views.HazardNoteCreateView.as_view(), name='note_add'),
     path('einstellungen/', views.MapConfigView.as_view(), name='settings'),
+    path('leitstelle/', views.HandoverListView.as_view(), name='handover'),
+    path('leitstelle/<int:pk>/erledigt/', views.HandoverDoneView.as_view(), name='handover_done'),
+    path('leitstelle/erledigt/', views.HandoverBulkDoneView.as_view(), name='handover_bulk_done'),
+    path('leitstelle/protokoll.pdf', views.HandoverPdfView.as_view(), name='handover_pdf'),
     path('tiles/<int:z>/<int:x>/<int:y>.png', views.TileView.as_view(), name='tile'),
 ]

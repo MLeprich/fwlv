@@ -243,3 +243,109 @@ class MapConfig(models.Model):
             'zoom': self.zoom, 'minZoom': self.min_zoom, 'maxZoom': self.max_zoom,
             'attribution': self.attribution,
         }
+
+
+# ============================================================================
+# ÜBERGABE AN DIE LEITSTELLE
+#
+# Alles, was die Leitstelle in ihr Einsatzleitsystem übernehmen muss (neue oder
+# geänderte Ansprechpartner, BMZ, FSD, Objekte, Gefahrenstellen), landet als
+# Punkt in der Übergabeliste und wird dort nach Eintragung abgehakt.
+# ============================================================================
+
+class HandoverKind(models.TextChoices):
+    OBJECT_NEW = 'object_new', 'Neues Objekt'
+    OBJECT_CHANGED = 'object_changed', 'Objekt geändert'
+    CONTACT_NEW = 'contact_new', 'Neuer Ansprechpartner'
+    CONTACT_CHANGED = 'contact_changed', 'Ansprechpartner geändert'
+    CONTACT_DELETED = 'contact_deleted', 'Ansprechpartner entfernt'
+    BMZ_NEW = 'bmz_new', 'Neue Brandmeldezentrale'
+    BMZ_CHANGED = 'bmz_changed', 'Brandmeldezentrale geändert'
+    BMZ_DELETED = 'bmz_deleted', 'Brandmeldezentrale entfernt'
+    FSD_NEW = 'fsd_new', 'Neues Schlüsseldepot'
+    FSD_CHANGED = 'fsd_changed', 'Schlüsseldepot geändert'
+    FSD_DELETED = 'fsd_deleted', 'Schlüsseldepot entfernt'
+    HAZARD_NEW = 'hazard_new', 'Neue Gefahrenstelle'
+    HAZARD_CHANGED = 'hazard_changed', 'Gefahrenstelle geändert'
+    HAZARD_ENDED = 'hazard_ended', 'Gefahrenstelle beendet'
+
+
+HANDOVER_GROUPS = {
+    'object': ('object_new', 'object_changed'),
+    'contact': ('contact_new', 'contact_changed', 'contact_deleted'),
+    'bmz': ('bmz_new', 'bmz_changed', 'bmz_deleted'),
+    'fsd': ('fsd_new', 'fsd_changed', 'fsd_deleted'),
+    'hazard': ('hazard_new', 'hazard_changed', 'hazard_ended'),
+}
+HANDOVER_GROUP_LABELS = {
+    'object': 'Objekte', 'contact': 'Ansprechpartner', 'bmz': 'Brandmeldezentralen',
+    'fsd': 'Schlüsseldepots', 'hazard': 'Gefahrenstellen',
+}
+
+
+class HandoverStatus(models.TextChoices):
+    OPEN = 'open', 'Offen'
+    DONE = 'done', 'Erledigt'
+
+
+class HandoverItem(models.Model):
+    kind = models.CharField('Art', max_length=20, choices=HandoverKind.choices)
+    ref = models.CharField('Bezug', max_length=60, db_index=True,
+                           help_text='Modell und ID des Auslösers, z.B. buildingcontact:12 (für Zusammenfassung)')
+    title = models.CharField('Titel', max_length=250)
+    details = models.TextField('Details', blank=True)
+    building = models.ForeignKey('objektverwaltung.BuildingObject', on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name='handover_items', verbose_name='Objekt')
+    hazard = models.ForeignKey(Hazard, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name='handover_items', verbose_name='Gefahrenstelle')
+    link_url = models.CharField('Link', max_length=300, blank=True)
+    urgent = models.BooleanField('Dringend', default=False)
+    status = models.CharField('Status', max_length=10, choices=HandoverStatus.choices, default=HandoverStatus.OPEN, db_index=True)
+    created_at = models.DateTimeField('Erstellt', auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField('Aktualisiert', auto_now=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='+', verbose_name='Ausgelöst von')
+    done_at = models.DateTimeField('Erledigt am', null=True, blank=True)
+    done_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='+', verbose_name='Erledigt von')
+    done_note = models.CharField('Vermerk', max_length=250, blank=True,
+                                 help_text='z.B. „im ELS eingetragen“')
+
+    class Meta:
+        verbose_name = 'Übergabepunkt Leitstelle'
+        verbose_name_plural = 'Übergabepunkte Leitstelle'
+        ordering = ['-created_at']
+        default_permissions = ()
+
+    def __str__(self):
+        return f'{self.get_kind_display()}: {self.title}'
+
+    @property
+    def group(self):
+        return self.kind.split('_', 1)[0]
+
+    @property
+    def group_label(self):
+        return HANDOVER_GROUP_LABELS.get(self.group, '')
+
+    @property
+    def is_done(self):
+        return self.status == HandoverStatus.DONE
+
+    @property
+    def icon(self):
+        return {'object': '🏢', 'contact': '👤', 'bmz': '🔔', 'fsd': '🔑', 'hazard': '🚧'}.get(self.group, '•')
+
+    def mark_done(self, user, note=''):
+        self.status = HandoverStatus.DONE
+        self.done_at = timezone.now()
+        self.done_by = user
+        self.done_note = note[:250]
+        self.save(update_fields=['status', 'done_at', 'done_by', 'done_note', 'updated_at'])
+
+    def reopen(self):
+        self.status = HandoverStatus.OPEN
+        self.done_at = None
+        self.done_by = None
+        self.done_note = ''
+        self.save(update_fields=['status', 'done_at', 'done_by', 'done_note', 'updated_at'])

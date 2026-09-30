@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Übergabeprotokoll Leitstelle</title>
+    <style>
+        @page { size: A4; margin: 18mm 16mm 18mm 16mm;
+            @bottom-right { content: "Seite " counter(page) " von " counter(pages); font-size: 8pt; color: #666; }
+            @bottom-left { content: "Übergabe an die Leitstelle · Stand {{ now|date:"d.m.Y H:i" }}"; font-size: 8pt; color: #666; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 9.5pt; color: #222; line-height: 1.35; }
+        h1 { font-size: 16pt; margin-bottom: 2mm; }
+        h2 { font-size: 11pt; margin: 6mm 0 2mm; padding-bottom: 1mm; border-bottom: 1px solid #999; page-break-after: avoid; }
+        .sub { color: #555; font-size: 9pt; margin-bottom: 5mm; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; font-size: 8pt; text-transform: uppercase; color: #666; border-bottom: 1px solid #999; padding: 1.2mm 1.5mm; }
+        td { border-bottom: 1px solid #ddd; padding: 1.8mm 1.5mm; vertical-align: top; }
+        tr { page-break-inside: avoid; }
+        td.box { width: 8mm; } .cb { display: inline-block; width: 4.5mm; height: 4.5mm; border: 0.8pt solid #000; }
+        td.kind { width: 34mm; font-size: 8.5pt; }
+        td.when { width: 22mm; font-size: 8.5pt; color: #555; white-space: nowrap; }
+        td.sign { width: 34mm; border-bottom: 1px solid #ddd; }
+        .details { font-size: 8.5pt; color: #444; white-space: pre-wrap; margin-top: 0.8mm; }
+        .urgent { color: #b91c1c; font-weight: bold; }
+        .foot { margin-top: 12mm; display: flex; gap: 20mm; }
+        .foot div { flex: 1; border-top: 0.6pt solid #000; padding-top: 1.5mm; font-size: 8.5pt; color: #555; }
+    </style>
+</head>
+<body>
+    <h1>Übergabe an die Leitstelle</h1>
+    <div class="sub">Offene Punkte aus Objektverwaltung und Einsatzvorbereitung · Stand {{ now|date:"d.m.Y H:i" }} Uhr · erstellt von {{ user.get_full_name|default:user.username }} · {{ items|length }} Punkte</div>
+    {% regroup items by group_label as grouped %}
+    {% for g in grouped %}
+    <h2>{{ g.grouper }} ({{ g.list|length }})</h2>
+    <table>
+        <thead><tr><th></th><th>Art</th><th>Punkt</th><th>Seit</th><th>Eingetragen (Kürzel/Datum)</th></tr></thead>
+        <tbody>
+        {% for item in g.list %}
+        <tr>
+            <td class="box"><span class="cb"></span></td>
+            <td class="kind">{{ item.get_kind_display }}{% if item.urgent %}<br><span class="urgent">DRINGEND</span>{% endif %}</td>
+            <td><strong>{{ item.title }}</strong>{% if item.details %}<div class="details">{{ item.details }}</div>{% endif %}</td>
+            <td class="when">{{ item.created_at|date:"d.m.Y" }}<br>{{ item.created_at|date:"H:i" }}{% if item.created_by %}<br>{{ item.created_by.get_full_name|default:item.created_by.username|truncatechars:18 }}{% endif %}</td>
+            <td class="sign"></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% empty %}
+    <p>Keine offenen Punkte.</p>
+    {% endfor %}
+    <div class="foot">
+        <div>Übergeben (Datum, Name)</div>
+        <div>Leitstelle – übernommen (Datum, Name)</div>
+    </div>
+</body>
+</html>

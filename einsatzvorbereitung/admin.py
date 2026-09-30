@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Hazard, HazardNote, MapConfig
+from .models import HandoverItem, Hazard, HazardNote, MapConfig
 
 
 class HazardNoteInline(admin.TabularInline):
@@ -29,3 +29,11 @@ class HazardAdmin(admin.ModelAdmin):
 @admin.register(MapConfig)
 class MapConfigAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'center_lat', 'center_lng', 'zoom', 'min_zoom', 'max_zoom', 'updated_at')
+
+
+@admin.register(HandoverItem)
+class HandoverItemAdmin(admin.ModelAdmin):
+    list_display = ('title', 'kind', 'status', 'urgent', 'created_at', 'done_at', 'done_by')
+    list_filter = ('status', 'kind', 'urgent')
+    search_fields = ('title', 'details', 'ref')
+    readonly_fields = ('created_at', 'updated_at')

@@ -6,6 +6,8 @@
     <div class="flex flex-wrap items-center gap-2">
         <a href="{% url 'einsatzvorbereitung:list' %}" class="px-3 py-2 rounded-lg text-sm font-medium {% if nav_active == 'list' %}bg-primary-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Liste</a>
         <a href="{% url 'einsatzvorbereitung:map' %}" class="px-3 py-2 rounded-lg text-sm font-medium {% if nav_active == 'map' %}bg-primary-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Karte</a>
+        <a href="{% url 'einsatzvorbereitung:handover' %}" class="px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 {% if nav_active == 'handover' %}bg-primary-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Leitstellen-Übergabe
+            {% if handover_open %}<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs {% if nav_active == 'handover' %}bg-white text-primary-700{% else %}bg-red-100 text-red-800{% endif %}">{{ handover_open }}</span>{% endif %}</a>
         {% if can_manage %}<a href="{% url 'einsatzvorbereitung:settings' %}" class="px-3 py-2 rounded-lg text-sm font-medium {% if nav_active == 'settings' %}bg-primary-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Karteneinstellungen</a>{% endif %}
         {% if can_edit %}<a href="{% url 'einsatzvorbereitung:create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-700 shadow-sm">+ Neue Gefahrenstelle</a>{% endif %}
     </div>

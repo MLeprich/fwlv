@@ -275,3 +275,131 @@ class RoleTests(TestCase):
         self.assertFalse(user.has_perm('einsatzvorbereitung.einsatz_manage'))
         roles.set_level(user, 'none')
         self.assertEqual(roles.group_level(User.objects.get(pk=user.pk)), 'none')
+
+
+class HandoverTests(TestCase):
+    """Übergabeliste für die Leitstelle: Punkte entstehen automatisch, werden zusammengefasst und abgehakt."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='modul', password='pw')
+        self.user.user_permissions.add(*Permission.objects.filter(
+            content_type__app_label='einsatzvorbereitung', codename__in=['einsatz_view', 'einsatz_edit']))
+        self.user.user_permissions.add(*Permission.objects.filter(
+            content_type__app_label='objektverwaltung', codename__in=['view_buildingobject', 'add_buildingobject', 'change_buildingobject']))
+        self.client.force_login(self.user)
+        self.building = _building(self.user, 'O-1', 'Schule', 'Hauptstraße', '12')
+        from core.models import SystemSettings
+        s = SystemSettings.load()
+        s.einsatzvorbereitung_enabled = True
+        s.save()
+
+    def _open(self):
+        from .models import HandoverItem, HandoverStatus
+        return list(HandoverItem.objects.filter(status=HandoverStatus.OPEN).order_by('pk'))
+
+    def test_contact_lifecycle_merges_and_cleans_up(self):
+        from objektverwaltung.models import BuildingContact
+        # Neu
+        self.client.post(reverse('objektverwaltung:add_contact', args=[self.building.pk]), {
+            'name': 'Erna Muster', 'role': 'Hausmeisterin', 'phone': '0208-1', 'mobile': '', 'email': '', 'notes': ''})
+        items = self._open()
+        self.assertEqual([i.kind for i in items], ['contact_new'])
+        self.assertIn('Schule: Erna Muster', items[0].title)
+        self.assertIn('Tel. 0208-1', items[0].details)
+        contact = BuildingContact.objects.get()
+        # Änderung vor der Übergabe: bleibt EIN Punkt („neu“), Inhalt aktualisiert
+        self.client.post(reverse('objektverwaltung:edit_contact', args=[contact.pk]), {
+            'name': 'Erna Muster', 'role': 'Hausmeisterin', 'phone': '0208-2', 'mobile': '', 'email': '', 'notes': ''})
+        items = self._open()
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].kind, 'contact_new')
+        # Löschen vor Übergabe: Punkt verschwindet ganz
+        self.client.post(reverse('objektverwaltung:delete_contact', args=[contact.pk]))
+        self.assertEqual(self._open(), [])
+
+    def test_change_after_done_creates_changed_item_and_collects(self):
+        from objektverwaltung.models import BuildingContact
+        self.client.post(reverse('objektverwaltung:add_contact', args=[self.building.pk]), {
+            'name': 'Erna', 'role': '', 'phone': '1', 'mobile': '', 'email': '', 'notes': ''})
+        item = self._open()[0]
+        response = self.client.post(reverse('einsatzvorbereitung:handover_done', args=[item.pk]), {'note': 'im ELS eingetragen'})
+        self.assertEqual(response.status_code, 302)
+        item.refresh_from_db()
+        self.assertTrue(item.is_done)
+        self.assertEqual(item.done_by, self.user)
+        self.assertEqual(item.done_note, 'im ELS eingetragen')
+        contact = BuildingContact.objects.get()
+        for phone in ('2', '3'):
+            self.client.post(reverse('objektverwaltung:edit_contact', args=[contact.pk]), {
+                'name': 'Erna', 'role': '', 'phone': phone, 'mobile': '', 'email': '', 'notes': ''})
+        items = self._open()
+        self.assertEqual([i.kind for i in items], ['contact_changed'])
+        self.assertIn('Telefon: 1 → 2', items[0].details)
+        self.assertIn('Telefon: 2 → 3', items[0].details)
+        # Entfernen nach Übergabe → eigener Punkt „entfernt“, der offene „geändert“-Punkt entfällt
+        self.client.post(reverse('objektverwaltung:delete_contact', args=[contact.pk]))
+        self.assertEqual([i.kind for i in self._open()], ['contact_deleted'])
+
+    def test_bmz_fsd_object_and_hazard_items(self):
+        self.client.post(reverse('objektverwaltung:add_fire_alarm_panel', args=[self.building.pk]), {
+            'designation': 'BMZ Haupteingang', 'location_description': 'EG', 'manufacturer': '', 'model': '',
+            'inspection_interval_months': 12, 'last_inspection': '', 'notes': ''})
+        self.client.post(reverse('objektverwaltung:add_key_depot', args=[self.building.pk]), {
+            'depot_type': 'fsd3', 'designation': 'FSD Nord', 'location_description': '', 'manufacturer': '',
+            'serial_number': '4711', 'installed_at': '', 'contents': '', 'inspection_interval_months': 12,
+            'last_inspection': '', 'is_active': 'on', 'notes': ''})
+        kinds = [i.kind for i in self._open()]
+        self.assertIn('bmz_new', kinds)
+        self.assertIn('fsd_new', kinds)
+        # Objekt-Änderung: nur relevante Felder
+        data = {'object_number': 'O-1', 'name': 'Schule', 'status': 'active', 'street': 'Hauptstraße', 'house_number': '12',
+                'postal_code': '', 'city': 'Oberhausen', 'floor_count': '', 'basement_count': '', 'notes': 'nur intern'}
+        self.client.post(reverse('objektverwaltung:update', args=[self.building.pk]), data)
+        self.assertNotIn('object_changed', [i.kind for i in self._open()])  # Hinweise sind nicht leitstellenrelevant
+        data['house_number'] = '14'
+        self.client.post(reverse('objektverwaltung:update', args=[self.building.pk]), data)
+        changed = [i for i in self._open() if i.kind == 'object_changed']
+        self.assertEqual(len(changed), 1)
+        self.assertIn('Hausnummer: 12 → 14', changed[0].details)
+        # Gefahrenstelle mit Zufahrtseinschränkung → dringend; Beenden → eigener Punkt
+        self.client.post(reverse('einsatzvorbereitung:create'), {
+            'title': 'Sperrung', 'hazard_type': 'sperrung', 'status': 'active', 'start_date': date.today().isoformat(),
+            'end_date': '', 'description': '', 'street': 'Hauptstraße', 'house_from': '', 'house_to': '',
+            'house_side': 'both', 'city': '', 'latitude': '', 'longitude': '', 'radius_m': '', 'geometry': '',
+            'detour': '', 'hydrants_note': '', 'leitstelle_note': '', 'contact_name': '', 'contact_phone': '',
+            'source': '', 'internal_notes': '', 'access_restricted': 'on', 'show_on_monitor': 'on'})
+        hazard = Hazard.objects.get()
+        item = [i for i in self._open() if i.kind == 'hazard_new'][0]
+        self.assertTrue(item.urgent)
+        self.assertIn('Zufahrt für Einsatzfahrzeuge eingeschränkt', item.details)
+        self.client.post(reverse('einsatzvorbereitung:handover_done', args=[item.pk]))
+        self.client.post(reverse('einsatzvorbereitung:end', args=[hazard.pk]))
+        self.assertEqual([i.kind for i in self._open() if i.hazard_id == hazard.pk], ['hazard_ended'])
+
+    def test_list_bulk_and_pdf(self):
+        for n in ('A', 'B', 'C'):
+            self.client.post(reverse('objektverwaltung:add_contact', args=[self.building.pk]), {
+                'name': n, 'role': '', 'phone': '', 'mobile': '', 'email': '', 'notes': ''})
+        response = self.client.get(reverse('einsatzvorbereitung:handover'))
+        self.assertContains(response, 'Schule: A')
+        self.assertContains(response, 'Leitstellen-Übergabe')
+        self.assertContains(response, 'Ausgewählte als erledigt markieren')
+        ids = [i.pk for i in self._open()[:2]]
+        response = self.client.post(reverse('einsatzvorbereitung:handover_bulk_done'), {'ids': ids, 'note': 'ELS'})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(self._open()), 1)
+        response = self.client.get(reverse('einsatzvorbereitung:handover'), {'status': 'erledigt'})
+        self.assertContains(response, '„ELS“')
+        self.assertContains(response, 'Wieder öffnen')
+        response = self.client.get(reverse('einsatzvorbereitung:handover_pdf'))
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        # Zähler in der Modul-Navigation und im Widget
+        response = self.client.get(reverse('einsatzvorbereitung:list'))
+        self.assertContains(response, 'Leitstellen-Übergabe')
+        from django.template import Context, Template
+
+        class W:
+            config = {}
+            title = ''
+        html = Template('{% include "info_monitors/widgets/gefahrenstellen.html" with widget=w %}').render(Context({'w': W()}))
+        self.assertIn('1 offene Übergabepunkte', html)

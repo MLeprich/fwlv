@@ -26,5 +26,7 @@ def gefahren_widget(widget):
         qs = qs.filter(access_restricted=True)
     qs = qs.order_by('-access_restricted', 'start_date', 'title')
     items = list(qs[:limit])
+    from .. import handover
     return {'items': items, 'count': qs.count(), 'today': timezone.localdate(),
-            'restricted': sum(1 for h in items if h.access_restricted)}
+            'restricted': sum(1 for h in items if h.access_restricted),
+            'handover_open': handover.open_count() if config.get('show_handover', True) not in (False, 'false', '0', 0) else None}

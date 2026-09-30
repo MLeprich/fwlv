@@ -6,6 +6,9 @@
         <h3 class="text-xl font-bold flex items-center gap-2"><span class="text-2xl">🚧</span>{{ widget.title|default:"Gefahrenstellen" }}</h3>
         <span class="text-sm opacity-70">{{ data.count }} aktuell{% if data.restricted %} · <span class="font-semibold text-red-600">{{ data.restricted }}× Zufahrt eingeschränkt</span>{% endif %}</span>
     </div>
+    {% if data.handover_open %}
+    <div class="px-4 py-2 bg-red-50 text-red-800 text-base font-semibold border-b border-red-100">📋 {{ data.handover_open }} offene Übergabepunkte für die Leitstelle</div>
+    {% endif %}
     <div class="flex-1 overflow-auto p-4">
         {% if not data.items %}
         <p class="text-lg opacity-60 italic">Keine aktuellen Gefahrenstellen.</p>

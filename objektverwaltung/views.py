@@ -320,6 +320,7 @@ class BuildingObjectCreateView(LoginRequiredMixin, PermissionRequiredMixin, Crea
         form.save_m2m()
         self.object = obj
         akte.log_created(self.request, obj, obj)
+        _handover('object', 'new', obj, obj, self.request)
         messages.success(self.request, f'Objekt „{obj.name}" wurde angelegt.', extra_tags='celebrate')
         return redirect(obj.get_absolute_url())
 
@@ -347,7 +348,12 @@ class BuildingObjectUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Upda
         obj.save()
         form.save_m2m()
         self.object = obj
-        akte.log_updated(self.request, obj, obj, akte.diff(obj, getattr(self, '_old_snapshot', {})))
+        changes = akte.diff(obj, getattr(self, '_old_snapshot', {}))
+        akte.log_updated(self.request, obj, obj, changes)
+        # Nur Änderungen, die die Leitstelle braucht (Adresse, Bezeichnung, Nummer, Nutzung, Status)
+        relevant = {k: v for k, v in changes.items() if k in HANDOVER_OBJECT_FIELDS}
+        if relevant:
+            _handover('object', 'changed', obj, obj, self.request, relevant)
         messages.success(self.request, 'Objekt wurde aktualisiert.', extra_tags='celebrate')
         return redirect(obj.get_absolute_url())
 
@@ -397,6 +403,21 @@ class ToggleFollowView(LoginRequiredMixin, View):
 _DETAIL_TABS = ('uebersicht', 'gebaeude', 'technik', 'stellungnahmen', 'kompensation', 'plaene', 'bvs')
 
 
+HANDOVER_OBJECT_FIELDS = ('Objektnummer', 'Bezeichnung', 'Nutzungsart', 'Straße', 'Hausnummer', 'PLZ', 'Ort', 'Status')
+
+
+def _handover(scope, action, obj, building, request, changes=None):
+    """Änderung an die Übergabeliste der Leitstelle melden (Modul Einsatzvorbereitung), nie blockierend."""
+    try:
+        from einsatzvorbereitung import handover
+        if scope == 'child':
+            handover.child_event(action, obj, building, user=request.user, changes=changes)
+        else:
+            handover.object_event(action, building, user=request.user, changes=changes)
+    except Exception:  # pragma: no cover
+        pass
+
+
 def _redirect_to_building(request, building):
     """Zurück zur Detailseite, im zuletzt aktiven Reiter (Feld 'tab' im POST)."""
     tab = request.POST.get('tab', '')
@@ -429,6 +450,7 @@ class _AddChildMixin(LoginRequiredMixin, PermissionRequiredMixin, View):
             self.before_save(child, request)
             child.save()
             akte.log_created(request, building, child)
+            _handover('child', 'new', child, building, request)
             messages.success(request, self.success_message)
         else:
             errors = '; '.join(
@@ -551,7 +573,10 @@ class _EditChildView(LoginRequiredMixin, PermissionRequiredMixin, View):
             form._update_errors(e)
             return self._render(request, child, form)
         obj.save()
-        akte.log_updated(request, child.building, obj, akte.diff(obj, old_snapshot))
+        changes = akte.diff(obj, old_snapshot)
+        akte.log_updated(request, child.building, obj, changes)
+        if changes:
+            _handover('child', 'changed', obj, child.building, request, changes)
         messages.success(request, self.success_message)
         return _redirect_to_building(request, child.building)
 
@@ -647,6 +672,7 @@ class _DeleteChildView(LoginRequiredMixin, PermissionRequiredMixin, View):
         child = get_object_or_404(self.model, pk=pk)
         building = child.building
         akte.log_deleted(request, building, child)
+        _handover('child', 'deleted', child, building, request)
         child.delete()
         messages.success(request, self.deleted_message)
         return _redirect_to_building(request, building)

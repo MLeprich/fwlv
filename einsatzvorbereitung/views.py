@@ -11,9 +11,9 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
-from . import services, tiles
+from . import handover, services, tiles
 from .forms import HazardForm, HazardNoteForm, MapConfigForm
-from .models import Hazard, HazardStatus, HazardType, MapConfig
+from .models import HANDOVER_GROUP_LABELS, Hazard, HazardStatus, HazardType, HandoverItem, HandoverStatus, MapConfig
 
 PERM_VIEW = 'einsatzvorbereitung.einsatz_view'
 PERM_EDIT = 'einsatzvorbereitung.einsatz_edit'
@@ -28,6 +28,7 @@ class _Mixin(LoginRequiredMixin, PermissionRequiredMixin):
         context['current_module'] = 'einsatzvorbereitung'
         context['can_edit'] = self.request.user.has_perm(PERM_EDIT)
         context['can_manage'] = self.request.user.has_perm(PERM_MANAGE)
+        context['handover_open'] = handover.open_count()
         return context
 
 
@@ -131,8 +132,11 @@ class _HazardFormMixin(_Mixin):
         form.instance.updated_by = self.request.user
         if created:
             form.instance.created_by = self.request.user
+        changed = [str(form.fields[f].label or f) for f in form.changed_data]
         response = super().form_valid(form)
         services.notify_leitstelle(self.object, created)
+        handover.hazard_event('new' if created else 'changed', self.object, user=self.request.user,
+                              changes=None if created else {f: {'old': '', 'new': 'geändert'} for f in changed})
         messages.success(self.request, f'Gefahrenstelle „{self.object.title}“ {"angelegt" if created else "gespeichert"}.',
                          extra_tags='celebrate')
         return response
@@ -171,6 +175,7 @@ class HazardEndView(_Mixin, View):
         hazard.updated_by = request.user
         hazard.save()
         services.notify_leitstelle(hazard, created=False)
+        handover.hazard_event('ended', hazard, user=request.user)
         messages.success(request, f'„{hazard.title}“ wurde beendet.')
         return redirect(hazard.get_absolute_url())
 
@@ -256,3 +261,85 @@ class TileView(LoginRequiredMixin, View):
 
     def get(self, request, z, x, y):
         return tiles.tile_response(z, x, y)
+
+
+# ============================================================================
+# ÜBERGABE AN DIE LEITSTELLE
+# ============================================================================
+
+class HandoverListView(_Mixin, TemplateView):
+    """Übergabeliste: offene Punkte abhaken, erledigte nachschlagen."""
+    template_name = 'einsatzvorbereitung/handover_list.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        status = self.request.GET.get('status', 'offen')
+        group = self.request.GET.get('bereich', '')
+        qs = HandoverItem.objects.select_related('building', 'hazard', 'created_by', 'done_by')
+        if status == 'erledigt':
+            qs = qs.filter(status=HandoverStatus.DONE).order_by('-done_at')[:200]
+        else:
+            qs = qs.filter(status=HandoverStatus.OPEN).order_by('-urgent', 'created_at')
+        items = [i for i in qs if not group or i.group == group]
+        days = []
+        for item in items:
+            key = timezone.localtime(item.done_at if status == 'erledigt' and item.done_at else item.created_at).date()
+            if days and days[-1]['date'] == key:
+                days[-1]['items'].append(item)
+            else:
+                days.append({'date': key, 'items': [item]})
+        context.update(
+            items=items, days=days, current_status=status, current_group=group,
+            group_choices=HANDOVER_GROUP_LABELS.items(),
+            open_total=handover.open_count(),
+            urgent_total=HandoverItem.objects.filter(status=HandoverStatus.OPEN, urgent=True).count(),
+        )
+        return context
+
+
+class HandoverDoneView(_Mixin, View):
+    """Einen Punkt abhaken (oder wieder öffnen)."""
+
+    def post(self, request, pk):
+        item = get_object_or_404(HandoverItem, pk=pk)
+        if request.POST.get('reopen'):
+            item.reopen()
+            messages.success(request, 'Punkt wieder geöffnet.')
+        else:
+            item.mark_done(request.user, request.POST.get('note', ''))
+            messages.success(request, f'„{item.title}“ als erledigt markiert.')
+        return redirect(request.POST.get('next') or reverse_lazy('einsatzvorbereitung:handover'))
+
+
+class HandoverBulkDoneView(_Mixin, View):
+    """Mehrere Punkte auf einmal abhaken."""
+
+    def post(self, request):
+        ids = [int(i) for i in request.POST.getlist('ids') if i.isdigit()]
+        note = request.POST.get('note', '')
+        count = 0
+        for item in HandoverItem.objects.filter(pk__in=ids, status=HandoverStatus.OPEN):
+            item.mark_done(request.user, note)
+            count += 1
+        messages.success(request, f'{count} Punkt(e) als erledigt markiert.')
+        return redirect('einsatzvorbereitung:handover')
+
+
+class HandoverPdfView(_Mixin, View):
+    """Übergabeprotokoll (offene Punkte) als PDF zum Ausdrucken/Abhaken."""
+
+    def get(self, request):
+        from django.http import HttpResponse
+        from django.template.loader import render_to_string
+        from weasyprint import HTML
+
+        items = list(HandoverItem.objects.filter(status=HandoverStatus.OPEN)
+                     .select_related('building', 'hazard', 'created_by').order_by('-urgent', 'kind', 'created_at'))
+        html = render_to_string('einsatzvorbereitung/handover_pdf.html', {
+            'items': items, 'now': timezone.localtime(), 'user': request.user,
+            'groups': HANDOVER_GROUP_LABELS,
+        }, request=request)
+        pdf = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf()
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="Uebergabe_Leitstelle_{timezone.localdate():%Y-%m-%d}.pdf"'
+        return response
