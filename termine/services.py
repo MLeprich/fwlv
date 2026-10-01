@@ -120,7 +120,7 @@ def group_by_day(items, range_from, range_to):
 # --- ICS ------------------------------------------------------------------
 
 def _ics_escape(text):
-    return str(text).replace('\\', '\\\\').replace(';', '\;').replace(',', '\\,').replace('\n', '\\n')
+    return str(text).replace('\\', '\\\\').replace(';', '\\;').replace(',', '\\,').replace('\n', '\\n')
 
 
 def export_ics(items, calendar_name='FLVS Termine'):
@@ -152,7 +152,7 @@ class IcsFormatError(Exception):
 
 
 def _unescape(text):
-    return text.replace('\\n', '\n').replace('\\,', ',').replace('\;', ';').replace('\\\\', '\\')
+    return text.replace('\\n', '\n').replace('\\,', ',').replace('\\;', ';').replace('\\\\', '\\')
 
 
 def parse_ics(raw):
