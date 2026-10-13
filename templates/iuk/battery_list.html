@@ -1,0 +1,138 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}Akkus{% endblock %}
+{% block iuk_heading %}Akkus{% endblock %}
+{% block iuk_subtitle %}Drohnen-Akkus mit Ladezyklen und Zustand{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:drone_list' %}" class="text-gray-500 hover:text-gray-700">Drohnen</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">Akkus</span></li>
+{% endblock %}
+
+{% block iuk_actions %}
+{% if can_add %}
+<a href="{% url 'iuk:battery_create' %}" class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Neuer Akku
+</a>
+{% endif %}
+{% endblock %}
+
+{% block iuk_content %}
+
+{% if attention_count %}
+<div class="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 mb-6 text-sm text-orange-900 flex items-start gap-3">
+    <span class="text-xl">🔋</span>
+    <div>
+        <strong>{{ attention_count }} Akku{{ attention_count|pluralize:"s" }}</strong> braucht{{ attention_count|pluralize:",en" }} Aufmerksamkeit:
+        defekt, Ladezyklen erreicht oder Zustand unter 70&nbsp;%.
+    </div>
+</div>
+{% endif %}
+
+<form method="get" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <input type="text" name="search" value="{{ search }}" placeholder="Bezeichnung, Typ, Seriennummer, Inventarnummer…"
+               class="md:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Status</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if active_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select name="drone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Drohnen</option>
+            <option value="pool" {% if active_drone == 'pool' %}selected{% endif %}>Nicht zugeordnet (Pool)</option>
+            {% for drone in drone_choices %}
+            <option value="{{ drone.pk }}" {% if active_drone == drone.pk|stringformat:"s" %}selected{% endif %}>{{ drone.designation }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">Filtern</button>
+    </div>
+</form>
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    {% if batteries %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bezeichnung</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Seriennummer</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Drohne</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ladezyklen</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zustand</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Letzte Pr&uuml;fung</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for battery in batteries %}
+                <tr class="hover:bg-gray-50 {% if battery.needs_attention %}bg-orange-50{% endif %}">
+                    <td class="px-5 py-3 text-sm font-medium text-gray-900">
+                        {{ battery.designation }}
+                        {% if battery.inventory_number %}<span class="block text-xs text-gray-400 font-normal">Inv. {{ battery.inventory_number }}</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-600">
+                        {{ battery.model|default:"—" }}
+                        {% if battery.capacity_mah %}<span class="block text-xs text-gray-400">{{ battery.capacity_mah }} mAh{% if battery.voltage %} &middot; {{ battery.voltage }} V{% endif %}</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm font-mono text-gray-600">{{ battery.serial_number|default:"—" }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{% if battery.drone %}{{ battery.drone.designation }}{% else %}<span class="text-gray-400">Pool</span>{% endif %}</td>
+                    <td class="px-5 py-3 text-sm text-gray-700 whitespace-nowrap">
+                        {% if battery.max_cycles %}
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium {% if battery.cycle_state == 'exhausted' %}text-red-700{% elif battery.cycle_state == 'warning' %}text-orange-700{% endif %}">{{ battery.cycle_count }}</span>
+                            <span class="text-xs text-gray-400">/ {{ battery.max_cycles }}</span>
+                            <span class="inline-block w-16 h-1.5 rounded-full bg-gray-200 overflow-hidden" title="{{ battery.cycle_percent }} % der Zyklen verbraucht">
+                                <span class="block h-full {% if battery.cycle_state == 'exhausted' %}bg-red-500{% elif battery.cycle_state == 'warning' %}bg-orange-500{% else %}bg-green-500{% endif %}" style="width: {{ battery.cycle_percent }}%"></span>
+                            </span>
+                        </div>
+                        {% else %}
+                        {{ battery.cycle_count }}
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm">
+                        {% if battery.health_percent is not None %}
+                        <span class="font-medium {% if battery.health_percent < 70 %}text-red-700{% elif battery.health_percent < 85 %}text-orange-700{% else %}text-green-700{% endif %}">{{ battery.health_percent }} %</span>
+                        {% else %}<span class="text-gray-400">—</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-600">{{ battery.last_check_date|date:"d.m.Y"|default:"—" }}</td>
+                    <td class="px-5 py-3 text-sm">
+                        <span class="text-xs px-2 py-0.5 rounded-full whitespace-nowrap
+                            {% if battery.status == 'einsatzbereit' %}bg-green-100 text-green-700
+                            {% elif battery.status == 'lagerung' %}bg-blue-100 text-blue-700
+                            {% elif battery.status == 'wartung' %}bg-yellow-100 text-yellow-700
+                            {% elif battery.status == 'defekt' %}bg-red-100 text-red-700
+                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ battery.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-5 py-3 text-right whitespace-nowrap">
+                        {% if can_change %}
+                        <a href="{% url 'iuk:battery_edit' battery.pk %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Bearbeiten</a>
+                        {% endif %}
+                        {% if can_delete %}
+                        <a href="{% url 'iuk:battery_delete' battery.pk %}" class="ml-3 text-red-600 hover:text-red-800 text-sm font-medium">L&ouml;schen</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <p class="text-base font-semibold text-gray-700 mb-1">Keine Akkus gefunden</p>
+        <p class="text-sm text-gray-500">Erfassen Sie die Akkus der Staffel einzeln mit Seriennummer, dann lassen sich Ladezyklen und Zustand nachhalten.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'iuk/_pagination.html' %}
+
+{% endblock %}

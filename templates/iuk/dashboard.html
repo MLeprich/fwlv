@@ -27,6 +27,35 @@
         </div>
     </div>
 
+    <!-- Akkus & SIM-Karten -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-700">Akkus &amp; SIM-Karten</h2>
+            <span class="flex gap-3">
+                {% if perms.iuk.view_dronebattery %}<a href="{% url 'iuk:battery_list' %}" class="text-xs font-medium text-blue-600 hover:text-blue-800">Akkus</a>{% endif %}
+                {% if perms.iuk.view_dronesimcard %}<a href="{% url 'iuk:simcard_list' %}" class="text-xs font-medium text-blue-600 hover:text-blue-800">SIM-Karten</a>{% endif %}
+            </span>
+        </div>
+        <div class="p-5 grid grid-cols-2 gap-4">
+            <div>
+                <p class="text-3xl font-bold text-gray-900">{{ battery_stats.total }}<span class="text-base font-medium text-gray-400"> Akkus</span></p>
+                <div class="mt-3 space-y-1 text-sm">
+                    <div class="flex justify-between"><span class="text-gray-600">Einsatzbereit</span><span class="font-semibold text-green-600">{{ battery_stats.einsatzbereit }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Defekt</span><span class="font-semibold text-red-600">{{ battery_stats.defekt }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Aufmerksamkeit</span><span class="font-semibold text-orange-600">{{ battery_stats.attention }}</span></div>
+                </div>
+            </div>
+            <div>
+                <p class="text-3xl font-bold text-gray-900">{{ simcard_stats.total }}<span class="text-base font-medium text-gray-400"> SIM</span></p>
+                <div class="mt-3 space-y-1 text-sm">
+                    <div class="flex justify-between"><span class="text-gray-600">Aktiv</span><span class="font-semibold text-green-600">{{ simcard_stats.aktiv }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Gesperrt</span><span class="font-semibold text-red-600">{{ simcard_stats.gesperrt }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Vertrag endet</span><span class="font-semibold text-orange-600">{{ simcard_stats.expiring }}</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Flugbuch -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div class="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-center justify-between">

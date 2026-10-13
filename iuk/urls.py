@@ -15,6 +15,18 @@ urlpatterns = [
     path('drohnen/<int:pk>/bearbeiten/', views.DroneUpdateView.as_view(), name='drone_edit'),
     path('drohnen/<int:pk>/loeschen/', views.DroneDeleteView.as_view(), name='drone_delete'),
 
+    # Akkus
+    path('drohnen/akkus/', views.DroneBatteryListView.as_view(), name='battery_list'),
+    path('drohnen/akkus/neu/', views.DroneBatteryCreateView.as_view(), name='battery_create'),
+    path('drohnen/akkus/<int:pk>/bearbeiten/', views.DroneBatteryUpdateView.as_view(), name='battery_edit'),
+    path('drohnen/akkus/<int:pk>/loeschen/', views.DroneBatteryDeleteView.as_view(), name='battery_delete'),
+
+    # SIM-Karten
+    path('drohnen/sim-karten/', views.DroneSimCardListView.as_view(), name='simcard_list'),
+    path('drohnen/sim-karten/neu/', views.DroneSimCardCreateView.as_view(), name='simcard_create'),
+    path('drohnen/sim-karten/<int:pk>/bearbeiten/', views.DroneSimCardUpdateView.as_view(), name='simcard_edit'),
+    path('drohnen/sim-karten/<int:pk>/loeschen/', views.DroneSimCardDeleteView.as_view(), name='simcard_delete'),
+
     # Drohnenführerscheine
     path('fuehrerscheine/', views.DroneLicenseListView.as_view(), name='license_list'),
     path('fuehrerscheine/neu/', views.DroneLicenseCreateView.as_view(), name='license_create'),

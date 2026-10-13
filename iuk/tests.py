@@ -10,7 +10,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from core.models import User
-from iuk.models import (CRITICAL_DAYS, WARNING_DAYS, Drone, DroneAccessory,
+from iuk.models import (CRITICAL_DAYS, WARNING_DAYS, BatteryCycleState, Drone,
+                        DroneAccessory, DroneBattery, DroneSimCard,
                         DroneChecklist, DroneLicense, DroneLicenseKind,
                         FlightLog, LicenseState, Voucher, VoucherEventType,
                         VoucherStatus)
@@ -613,6 +614,213 @@ def test_deleting_a_drone_removes_its_accessories(iuk_user):
     DroneAccessory.objects.create(drone=drone, name='Akku', category='akku')
     drone.delete()
     assert DroneAccessory.objects.count() == 0
+
+
+# ---------------------------------------------------------- Akkus / SIM
+
+def _battery_post_data(**overrides):
+    data = {
+        'designation': 'Akku 01', 'model': 'TB30', 'serial_number': 'AK-0001',
+        'inventory_number': '', 'drone': '', 'status': 'einsatzbereit',
+        'capacity_mah': '5880', 'voltage': '26.1', 'cycle_count': '12',
+        'max_cycles': '200', 'health_percent': '98', 'purchase_date': '',
+        'commissioned_date': '', 'last_check_date': '', 'location': '', 'notes': '',
+    }
+    data.update(overrides)
+    return data
+
+
+def _simcard_post_data(**overrides):
+    data = {
+        'designation': 'SIM Controller 1', 'provider': 'Telekom',
+        'phone_number': '+49 170 1234567', 'iccid': '8949 0000 1111 2222 333',
+        'pin': '', 'puk': '', 'tariff': '10 GB', 'contract_number': 'V-1',
+        'contract_start': '', 'contract_end': '', 'status': 'aktiv',
+        'drone': '', 'installed_in': 'Smart Controller', 'location': '', 'notes': '',
+    }
+    data.update(overrides)
+    return data
+
+
+def test_battery_cycle_state_thresholds():
+    battery = DroneBattery(designation='A', cycle_count=10)
+    assert battery.cycle_state == BatteryCycleState.UNKNOWN
+    assert battery.cycle_percent is None
+    battery.max_cycles = 200
+    assert battery.cycle_state == BatteryCycleState.OK
+    battery.cycle_count = 180
+    assert battery.cycle_state == BatteryCycleState.WARNING
+    battery.cycle_count = 200
+    assert battery.cycle_state == BatteryCycleState.EXHAUSTED
+    assert battery.cycle_percent == 100
+    assert battery.needs_attention
+
+
+def test_battery_needs_attention_for_low_health_or_defect():
+    assert DroneBattery(designation='A', health_percent=60).needs_attention
+    assert not DroneBattery(designation='A', health_percent=90).needs_attention
+    assert DroneBattery(designation='A', status='defekt').needs_attention
+
+
+@pytest.mark.django_db
+def test_battery_list_requires_permission(client, user):
+    client.force_login(user)
+    assert client.get(reverse('iuk:battery_list')).status_code == 403
+    assert client.get(reverse('iuk:simcard_list')).status_code == 403
+
+
+@pytest.mark.django_db
+def test_battery_create_and_assign_to_drone(client, iuk_user, drone):
+    client.force_login(iuk_user)
+    response = client.post(reverse('iuk:battery_create'),
+                           _battery_post_data(drone=str(drone.pk)))
+    assert response.status_code == 302
+    battery = DroneBattery.objects.get(serial_number='AK-0001')
+    assert battery.drone == drone
+    assert battery.created_by == iuk_user
+    assert battery.cycle_count == 12
+    assert drone.batteries.count() == 1
+
+    # Drohnenliste zeigt den Zähler, Filter nach Drohne greift
+    response = client.get(reverse('iuk:battery_list'), {'drone': drone.pk})
+    assert list(response.context['batteries']) == [battery]
+    response = client.get(reverse('iuk:battery_list'), {'drone': 'pool'})
+    assert list(response.context['batteries']) == []
+
+
+@pytest.mark.django_db
+def test_battery_serial_number_must_be_unique_when_set(client, iuk_user):
+    client.force_login(iuk_user)
+    assert client.post(reverse('iuk:battery_create'), _battery_post_data()).status_code == 302
+    response = client.post(reverse('iuk:battery_create'),
+                           _battery_post_data(designation='Akku 02'))
+    assert response.status_code == 200
+    assert DroneBattery.objects.count() == 1
+    # Ohne Seriennummer dürfen beliebig viele Akkus angelegt werden
+    for name in ('Akku 03', 'Akku 04'):
+        response = client.post(reverse('iuk:battery_create'),
+                               _battery_post_data(designation=name, serial_number=''))
+        assert response.status_code == 302
+    assert DroneBattery.objects.count() == 3
+
+
+@pytest.mark.django_db
+def test_battery_edit_and_delete(client, iuk_user):
+    battery = DroneBattery.objects.create(designation='Akku 05', cycle_count=3)
+    client.force_login(iuk_user)
+    response = client.post(reverse('iuk:battery_edit', args=[battery.pk]),
+                           _battery_post_data(designation='Akku 05', serial_number='',
+                                              cycle_count='44', status='wartung'))
+    assert response.status_code == 302
+    battery.refresh_from_db()
+    assert battery.cycle_count == 44
+    assert battery.status == 'wartung'
+    assert battery.updated_by == iuk_user
+
+    response = client.post(reverse('iuk:battery_delete', args=[battery.pk]))
+    assert response.status_code == 302
+    assert not DroneBattery.objects.filter(pk=battery.pk).exists()
+
+
+@pytest.mark.django_db
+def test_deleting_a_drone_keeps_its_batteries_and_sim_cards(drone):
+    battery = DroneBattery.objects.create(designation='Akku 06', drone=drone)
+    card = DroneSimCard.objects.create(designation='SIM 6', drone=drone)
+    drone.delete()
+    battery.refresh_from_db()
+    card.refresh_from_db()
+    assert battery.drone is None
+    assert card.drone is None
+
+
+def test_simcard_contract_state_uses_license_thresholds():
+    card = DroneSimCard(designation='S')
+    assert card.contract_state is None
+    card.contract_end = date.today() + timedelta(days=365)
+    assert card.contract_state == 'ok'
+    card.contract_end = date.today() + timedelta(days=WARNING_DAYS)
+    assert card.contract_state == 'warning'
+    card.contract_end = date.today() + timedelta(days=CRITICAL_DAYS)
+    assert card.contract_state == 'critical'
+    card.contract_end = date.today() - timedelta(days=1)
+    assert card.contract_state == 'expired'
+    card.status = 'gekuendigt'
+    assert card.contract_state is None
+
+
+def test_simcard_contract_end_must_follow_start():
+    card = DroneSimCard(designation='S', contract_start=date(2026, 5, 1),
+                        contract_end=date(2026, 4, 1))
+    with pytest.raises(ValidationError):
+        card.full_clean()
+
+
+@pytest.mark.django_db
+def test_simcard_create_normalises_iccid_and_filters(client, iuk_user, drone):
+    client.force_login(iuk_user)
+    response = client.post(reverse('iuk:simcard_create'),
+                           _simcard_post_data(drone=str(drone.pk)))
+    assert response.status_code == 302
+    card = DroneSimCard.objects.get()
+    assert card.iccid == '8949000011112222333'
+    assert card.drone == drone
+    assert card.created_by == iuk_user
+
+    # Suche findet die ICCID auch mit Leerzeichen
+    response = client.get(reverse('iuk:simcard_list'), {'search': '8949 0000 1111'})
+    assert list(response.context['sim_cards']) == [card]
+
+    # Zweite Karte mit gleicher ICCID wird abgewiesen
+    response = client.post(reverse('iuk:simcard_create'),
+                           _simcard_post_data(designation='Doppelt'))
+    assert response.status_code == 200
+    assert DroneSimCard.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_simcard_list_contract_filter(client, iuk_user):
+    soon = DroneSimCard.objects.create(
+        designation='Bald', contract_end=date.today() + timedelta(days=10))
+    DroneSimCard.objects.create(
+        designation='Lange', contract_end=date.today() + timedelta(days=400))
+    over = DroneSimCard.objects.create(
+        designation='Vorbei', contract_end=date.today() - timedelta(days=5))
+    client.force_login(iuk_user)
+    response = client.get(reverse('iuk:simcard_list'), {'contract': 'expiring'})
+    assert list(response.context['sim_cards']) == [soon]
+    response = client.get(reverse('iuk:simcard_list'), {'contract': 'expired'})
+    assert list(response.context['sim_cards']) == [over]
+
+
+@pytest.mark.django_db
+def test_dashboard_counts_batteries_and_sim_cards(client, iuk_user):
+    DroneBattery.objects.create(designation='A1', status='defekt')
+    DroneBattery.objects.create(designation='A2', cycle_count=200, max_cycles=200)
+    DroneBattery.objects.create(designation='A3')
+    DroneSimCard.objects.create(designation='S1', status='gesperrt')
+    DroneSimCard.objects.create(designation='S2',
+                                contract_end=date.today() + timedelta(days=5))
+    client.force_login(iuk_user)
+    response = client.get(reverse('iuk:dashboard'))
+    assert response.status_code == 200
+    assert response.context['battery_stats'] == {
+        'total': 3, 'einsatzbereit': 2, 'defekt': 1, 'attention': 2}
+    assert response.context['simcard_stats'] == {
+        'total': 2, 'aktiv': 1, 'gesperrt': 1, 'expiring': 1}
+
+
+@pytest.mark.django_db
+def test_drone_edit_shows_assigned_batteries_and_sim_cards(client, iuk_user, drone):
+    DroneBattery.objects.create(designation='Akku Sichtbar', drone=drone)
+    DroneSimCard.objects.create(designation='SIM Sichtbar', drone=drone)
+    client.force_login(iuk_user)
+    response = client.get(reverse('iuk:drone_edit', args=[drone.pk]))
+    html = response.content.decode()
+    assert 'Akku Sichtbar' in html
+    assert 'SIM Sichtbar' in html
+    response = client.get(reverse('iuk:drone_list'))
+    assert response.context['drones'][0].battery_count == 1
+    assert response.context['drones'][0].simcard_count == 1
 
 
 # ---------------------------------------------------------------- Flugbuch

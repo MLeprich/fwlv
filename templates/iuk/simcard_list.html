@@ -1,0 +1,128 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}SIM-Karten{% endblock %}
+{% block iuk_heading %}SIM-Karten{% endblock %}
+{% block iuk_subtitle %}SIM-Karten in Fernsteuerungen, Modems und Dongles{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:drone_list' %}" class="text-gray-500 hover:text-gray-700">Drohnen</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">SIM-Karten</span></li>
+{% endblock %}
+
+{% block iuk_actions %}
+{% if can_add %}
+<a href="{% url 'iuk:simcard_create' %}" class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Neue SIM-Karte
+</a>
+{% endif %}
+{% endblock %}
+
+{% block iuk_content %}
+
+<form method="get" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+        <input type="text" name="search" value="{{ search }}" placeholder="Bezeichnung, Rufnummer, ICCID, Anbieter, Vertragsnummer…"
+               class="md:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Status</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if active_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select name="drone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Alle Drohnen</option>
+            <option value="pool" {% if active_drone == 'pool' %}selected{% endif %}>Nicht zugeordnet</option>
+            {% for drone in drone_choices %}
+            <option value="{{ drone.pk }}" {% if active_drone == drone.pk|stringformat:"s" %}selected{% endif %}>{{ drone.designation }}</option>
+            {% endfor %}
+        </select>
+        <select name="contract" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Vertrag: alle</option>
+            <option value="expiring" {% if active_contract == 'expiring' %}selected{% endif %}>Endet in {{ warning_days }} Tagen</option>
+            <option value="expired" {% if active_contract == 'expired' %}selected{% endif %}>Vertragsende &uuml;berschritten</option>
+        </select>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">Filtern</button>
+    </div>
+</form>
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    {% if sim_cards %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bezeichnung</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Anbieter / Tarif</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rufnummer</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">ICCID</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Eingebaut in</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vertragsende</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for card in sim_cards %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-5 py-3 text-sm font-medium text-gray-900">
+                        {{ card.designation }}
+                        {% if card.contract_number %}<span class="block text-xs text-gray-400 font-normal">Vertrag {{ card.contract_number }}</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-600">
+                        {{ card.provider|default:"—" }}
+                        {% if card.tariff %}<span class="block text-xs text-gray-400">{{ card.tariff }}</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm font-mono text-gray-600">{{ card.phone_number|default:"—" }}</td>
+                    <td class="px-5 py-3 text-xs font-mono text-gray-600">{{ card.iccid|default:"—" }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-600">
+                        {{ card.installed_in|default:"—" }}
+                        {% if card.drone %}<span class="block text-xs text-gray-400">{{ card.drone.designation }}</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-600 whitespace-nowrap">
+                        {% if card.contract_end %}
+                        {{ card.contract_end|date:"d.m.Y" }}
+                        {% if card.contract_state == 'expired' %}
+                        <span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">&uuml;berschritten</span>
+                        {% elif card.contract_state == 'critical' %}
+                        <span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">noch {{ card.days_until_contract_end }} Tage</span>
+                        {% elif card.contract_state == 'warning' %}
+                        <span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">noch {{ card.days_until_contract_end }} Tage</span>
+                        {% endif %}
+                        {% else %}<span class="text-gray-400">unbefristet</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm">
+                        <span class="text-xs px-2 py-0.5 rounded-full whitespace-nowrap
+                            {% if card.status == 'aktiv' %}bg-green-100 text-green-700
+                            {% elif card.status == 'reserve' %}bg-blue-100 text-blue-700
+                            {% elif card.status == 'gesperrt' %}bg-red-100 text-red-700
+                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ card.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-5 py-3 text-right whitespace-nowrap">
+                        {% if can_change %}
+                        <a href="{% url 'iuk:simcard_edit' card.pk %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Bearbeiten</a>
+                        {% endif %}
+                        {% if can_delete %}
+                        <a href="{% url 'iuk:simcard_delete' card.pk %}" class="ml-3 text-red-600 hover:text-red-800 text-sm font-medium">L&ouml;schen</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <p class="text-base font-semibold text-gray-700 mb-1">Keine SIM-Karten gefunden</p>
+        <p class="text-sm text-gray-500">Erfassen Sie Rufnummer, ICCID und Vertragsende, damit Laufzeiten nicht verpasst werden.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'iuk/_pagination.html' %}
+
+{% endblock %}

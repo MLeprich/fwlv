@@ -18,15 +18,17 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic import (CreateView, DeleteView, DetailView, FormView,
                                   ListView, TemplateView, UpdateView)
 
-from .forms import (DroneAccessoryFormSet, DroneChecklistForm, DroneForm,
-                    DroneLicenseCreateForm, DroneLicenseForm,
-                    DroneLicenseKindForm, FlightLogCommentForm, FlightLogForm,
-                    VoucherAssignForm, VoucherForm, VoucherImportForm,
-                    VoucherUseForm)
-from .models import (CRITICAL_DAYS, WARNING_DAYS, ChecklistKind, Drone,
+from .forms import (DroneAccessoryFormSet, DroneBatteryForm, DroneChecklistForm,
+                    DroneForm, DroneLicenseCreateForm, DroneLicenseForm,
+                    DroneLicenseKindForm, DroneSimCardForm,
+                    FlightLogCommentForm, FlightLogForm, VoucherAssignForm,
+                    VoucherForm, VoucherImportForm, VoucherUseForm)
+from .models import (CRITICAL_DAYS, WARNING_DAYS, BatteryCycleState,
+                     BatteryStatus, ChecklistKind, Drone, DroneBattery,
                      DroneChecklist, DroneLicense, DroneLicenseKind,
-                     DroneStatus, FlightLog, FlightOperationType, LicenseState,
-                     Voucher, VoucherEventType, VoucherStatus)
+                     DroneSimCard, DroneStatus, FlightLog,
+                     FlightOperationType, LicenseState, SimCardStatus, Voucher,
+                     VoucherEventType, VoucherStatus)
 from .services import import_vouchers, parse_voucher_csv
 
 #: Session-Schlüssel-Präfix für die geprüfte Import-Vorschau.
@@ -114,6 +116,21 @@ class IukDashboardView(_IukMixin, TemplateView):
             FlightLog.objects.select_related('drone', 'pilot')
             .order_by('-flight_date', '-takeoff_time')[:5]
         )
+        batteries = list(DroneBattery.objects.all())
+        context['battery_stats'] = {
+            'total': len(batteries),
+            'einsatzbereit': sum(1 for b in batteries if b.status == BatteryStatus.EINSATZBEREIT),
+            'defekt': sum(1 for b in batteries if b.status == BatteryStatus.DEFEKT),
+            'attention': sum(1 for b in batteries if b.needs_attention),
+        }
+        sim_cards = list(DroneSimCard.objects.all())
+        context['simcard_stats'] = {
+            'total': len(sim_cards),
+            'aktiv': sum(1 for s in sim_cards if s.status == SimCardStatus.AKTIV),
+            'gesperrt': sum(1 for s in sim_cards if s.status == SimCardStatus.GESPERRT),
+            'expiring': sum(1 for s in sim_cards if s.contract_state in (
+                LicenseState.WARNING, LicenseState.CRITICAL, LicenseState.EXPIRED)),
+        }
         context['drones'] = drones.order_by('designation')[:5]
         context['warning_days'] = WARNING_DAYS
         context['critical_days'] = CRITICAL_DAYS
@@ -136,7 +153,11 @@ class DroneListView(_IukMixin, ListView):
         queryset = (
             Drone.objects.select_related('location')
             .prefetch_related('accessories')
-            .annotate(accessory_count=Count('accessories'))
+            .annotate(
+                accessory_count=Count('accessories', distinct=True),
+                battery_count=Count('batteries', distinct=True),
+                simcard_count=Count('sim_cards', distinct=True),
+            )
             # Explizit sortieren: durch die Annotation (GROUP BY) gilt die
             # Meta-Sortierung sonst als "unsortiert" und die Seitenzahlen wackeln.
             .order_by('designation')
@@ -226,6 +247,12 @@ class DroneUpdateView(_DroneAccessoryMixin, _IukMixin, UpdateView):
     permission_required = 'iuk.change_drone'
     success_url = reverse_lazy('iuk:drone_list')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['drone_batteries'] = self.object.batteries.order_by('designation')
+        context['drone_sim_cards'] = self.object.sim_cards.order_by('designation')
+        return context
+
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
         messages.success(self.request, f'Drohne "{form.instance.designation}" wurde aktualisiert.')
@@ -247,6 +274,224 @@ class DroneDeleteView(_IukMixin, DeleteView):
 
     def form_valid(self, form):
         messages.success(self.request, f'Drohne "{self.object}" wurde gelöscht.')
+        return super().form_valid(form)
+
+
+# ============================================================================
+# AKKUS
+# ============================================================================
+
+class DroneBatteryListView(_IukMixin, ListView):
+    model = DroneBattery
+    template_name = 'iuk/battery_list.html'
+    extra_context = {**MODULE_CONTEXT, 'iuk_tab': 'batteries'}
+    context_object_name = 'batteries'
+    permission_required = 'iuk.view_dronebattery'
+    paginate_by = 50
+
+    def get_queryset(self):
+        queryset = DroneBattery.objects.select_related('drone', 'location').order_by('designation')
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(designation__icontains=search)
+                | Q(model__icontains=search)
+                | Q(serial_number__icontains=search)
+                | Q(inventory_number__icontains=search)
+            )
+        status = self.request.GET.get('status')
+        if status in dict(BatteryStatus.choices):
+            queryset = queryset.filter(status=status)
+        drone = self.request.GET.get('drone')
+        if drone == 'pool':
+            queryset = queryset.filter(drone__isnull=True)
+        elif drone and drone.isdigit():
+            queryset = queryset.filter(drone_id=int(drone))
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search'] = self.request.GET.get('search', '')
+        context['active_status'] = self.request.GET.get('status', '')
+        context['active_drone'] = self.request.GET.get('drone', '')
+        context['status_choices'] = BatteryStatus.choices
+        context['drone_choices'] = Drone.objects.order_by('designation')
+        context['attention_count'] = sum(
+            1 for battery in DroneBattery.objects.all() if battery.needs_attention)
+        context['can_add'] = self.request.user.has_perm('iuk.add_dronebattery')
+        context['can_change'] = self.request.user.has_perm('iuk.change_dronebattery')
+        context['can_delete'] = self.request.user.has_perm('iuk.delete_dronebattery')
+        return context
+
+
+class DroneBatteryCreateView(_IukMixin, CreateView):
+    model = DroneBattery
+    form_class = DroneBatteryForm
+    template_name = 'iuk/battery_form.html'
+    extra_context = {**MODULE_CONTEXT, 'iuk_tab': 'batteries'}
+    permission_required = 'iuk.add_dronebattery'
+    success_url = reverse_lazy('iuk:battery_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        drone = self.request.GET.get('drone')
+        if drone and drone.isdigit():
+            initial['drone'] = int(drone)
+        return initial
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        messages.success(self.request, f'Akku "{form.instance.designation}" wurde angelegt.')
+        return super().form_valid(form)
+
+
+class DroneBatteryUpdateView(_IukMixin, UpdateView):
+    model = DroneBattery
+    form_class = DroneBatteryForm
+    template_name = 'iuk/battery_form.html'
+    extra_context = {**MODULE_CONTEXT, 'iuk_tab': 'batteries'}
+    permission_required = 'iuk.change_dronebattery'
+    success_url = reverse_lazy('iuk:battery_list')
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        messages.success(self.request, f'Akku "{form.instance.designation}" wurde aktualisiert.')
+        return super().form_valid(form)
+
+
+class DroneBatteryDeleteView(_IukMixin, DeleteView):
+    model = DroneBattery
+    template_name = 'iuk/confirm_delete.html'
+    permission_required = 'iuk.delete_dronebattery'
+    success_url = reverse_lazy('iuk:battery_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['object_label'] = 'Akku'
+        context['object_name'] = str(self.object)
+        context['cancel_url'] = reverse_lazy('iuk:battery_list')
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Akku "{self.object}" wurde gelöscht.')
+        return super().form_valid(form)
+
+
+# ============================================================================
+# SIM-KARTEN
+# ============================================================================
+
+#: Filterwerte für das Vertragsende in der SIM-Liste.
+SIMCARD_CONTRACT_FILTERS = {
+    'expiring': (LicenseState.WARNING, LicenseState.CRITICAL),
+    'expired': (LicenseState.EXPIRED,),
+}
+
+
+class DroneSimCardListView(_IukMixin, ListView):
+    model = DroneSimCard
+    template_name = 'iuk/simcard_list.html'
+    extra_context = {**MODULE_CONTEXT, 'iuk_tab': 'simcards'}
+    context_object_name = 'sim_cards'
+    permission_required = 'iuk.view_dronesimcard'
+    paginate_by = 50
+
+    def get_queryset(self):
+        queryset = DroneSimCard.objects.select_related('drone', 'location').order_by('designation')
+        search = self.request.GET.get('search')
+        if search:
+            compact = search.replace(' ', '')
+            queryset = queryset.filter(
+                Q(designation__icontains=search)
+                | Q(provider__icontains=search)
+                | Q(phone_number__icontains=search)
+                | Q(phone_number__icontains=compact)
+                | Q(iccid__icontains=compact)
+                | Q(contract_number__icontains=search)
+                | Q(installed_in__icontains=search)
+            )
+        status = self.request.GET.get('status')
+        if status in dict(SimCardStatus.choices):
+            queryset = queryset.filter(status=status)
+        drone = self.request.GET.get('drone')
+        if drone == 'pool':
+            queryset = queryset.filter(drone__isnull=True)
+        elif drone and drone.isdigit():
+            queryset = queryset.filter(drone_id=int(drone))
+        contract = self.request.GET.get('contract')
+        if contract in SIMCARD_CONTRACT_FILTERS:
+            wanted = SIMCARD_CONTRACT_FILTERS[contract]
+            ids = [card.pk for card in queryset if card.contract_state in wanted]
+            queryset = queryset.filter(pk__in=ids)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search'] = self.request.GET.get('search', '')
+        context['active_status'] = self.request.GET.get('status', '')
+        context['active_drone'] = self.request.GET.get('drone', '')
+        context['active_contract'] = self.request.GET.get('contract', '')
+        context['status_choices'] = SimCardStatus.choices
+        context['drone_choices'] = Drone.objects.order_by('designation')
+        context['warning_days'] = WARNING_DAYS
+        context['can_add'] = self.request.user.has_perm('iuk.add_dronesimcard')
+        context['can_change'] = self.request.user.has_perm('iuk.change_dronesimcard')
+        context['can_delete'] = self.request.user.has_perm('iuk.delete_dronesimcard')
+        return context
+
+
+class DroneSimCardCreateView(_IukMixin, CreateView):
+    model = DroneSimCard
+    form_class = DroneSimCardForm
+    template_name = 'iuk/simcard_form.html'
+    extra_context = {**MODULE_CONTEXT, 'iuk_tab': 'simcards'}
+    permission_required = 'iuk.add_dronesimcard'
+    success_url = reverse_lazy('iuk:simcard_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        drone = self.request.GET.get('drone')
+        if drone and drone.isdigit():
+            initial['drone'] = int(drone)
+        return initial
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        messages.success(self.request, f'SIM-Karte "{form.instance.designation}" wurde angelegt.')
+        return super().form_valid(form)
+
+
+class DroneSimCardUpdateView(_IukMixin, UpdateView):
+    model = DroneSimCard
+    form_class = DroneSimCardForm
+    template_name = 'iuk/simcard_form.html'
+    extra_context = {**MODULE_CONTEXT, 'iuk_tab': 'simcards'}
+    permission_required = 'iuk.change_dronesimcard'
+    success_url = reverse_lazy('iuk:simcard_list')
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        messages.success(self.request, f'SIM-Karte "{form.instance.designation}" wurde aktualisiert.')
+        return super().form_valid(form)
+
+
+class DroneSimCardDeleteView(_IukMixin, DeleteView):
+    model = DroneSimCard
+    template_name = 'iuk/confirm_delete.html'
+    permission_required = 'iuk.delete_dronesimcard'
+    success_url = reverse_lazy('iuk:simcard_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['object_label'] = 'SIM-Karte'
+        context['object_name'] = str(self.object)
+        context['cancel_url'] = reverse_lazy('iuk:simcard_list')
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'SIM-Karte "{self.object}" wurde gelöscht.')
         return super().form_valid(form)
 
 

@@ -1,0 +1,39 @@
+{% extends 'iuk/base_iuk.html' %}
+
+{% block iuk_title %}{% if object %}Akku bearbeiten{% else %}Neuer Akku{% endif %}{% endblock %}
+{% block iuk_heading %}{% if object %}Akku bearbeiten{% else %}Neuer Akku{% endif %}{% endblock %}
+{% block iuk_subtitle %}{% if object %}{{ object }}{% else %}Drohnen-Akku einzeln erfassen{% endif %}{% endblock %}
+
+{% block iuk_breadcrumb %}
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:drone_list' %}" class="text-gray-500 hover:text-gray-700">Drohnen</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><a href="{% url 'iuk:battery_list' %}" class="text-gray-500 hover:text-gray-700">Akkus</a></li>
+<li><span class="text-gray-400">/</span></li>
+<li><span class="text-gray-900 font-medium">{% if object %}Bearbeiten{% else %}Neu{% endif %}</span></li>
+{% endblock %}
+
+{% block iuk_content %}
+<form method="post" class="space-y-6">
+    {% csrf_token %}
+
+    {% if object and object.needs_attention %}
+    <div class="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 text-sm text-orange-900">
+        Dieser Akku braucht Aufmerksamkeit:
+        {% if object.status == 'defekt' %}er ist als defekt markiert.{% endif %}
+        {% if object.cycle_state == 'exhausted' %}die maximalen Ladezyklen sind erreicht.{% endif %}
+        {% if object.health_percent is not None and object.health_percent < 70 %}der Zustand liegt unter 70&nbsp;%.{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Akku</h2>
+        {% include 'iuk/_form_fields.html' %}
+    </div>
+
+    <div class="flex items-center gap-3">
+        <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">Speichern</button>
+        <a href="{% url 'iuk:battery_list' %}" class="px-5 py-2 rounded-lg text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors">Abbrechen</a>
+    </div>
+</form>
+{% endblock %}

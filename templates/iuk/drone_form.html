@@ -24,8 +24,13 @@
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 class="text-base font-semibold text-gray-900 mb-1">Zubeh&ouml;r</h2>
         <p class="text-sm text-gray-500 mb-4">
-            Akkus, Fernsteuerung, Kameras, Ladeger&auml;te, Koffer &hellip; &ndash; alles, was zur Drohne
+            Fernsteuerung, Kameras, Ladeger&auml;te, Koffer &hellip; &ndash; alles, was zur Drohne
             geh&ouml;rt und mitinventarisiert werden soll. Nicht ben&ouml;tigte Zeilen einfach leer lassen.
+            Akkus und SIM-Karten werden mit Ladezyklen bzw. Vertragsdaten einzeln unter
+            {% if perms.iuk.view_dronebattery %}<a href="{% url 'iuk:battery_list' %}" class="text-blue-600 hover:underline">Akkus</a>{% else %}Akkus{% endif %}
+            und
+            {% if perms.iuk.view_dronesimcard %}<a href="{% url 'iuk:simcard_list' %}" class="text-blue-600 hover:underline">SIM-Karten</a>{% else %}SIM-Karten{% endif %}
+            gef&uuml;hrt.
         </p>
 
         {{ accessory_formset.management_form }}
@@ -51,6 +56,61 @@
             Weiteres Zubeh&ouml;r
         </button>
     </div>
+
+    {% if object %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% if perms.iuk.view_dronebattery %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-base font-semibold text-gray-900">🔋 Zugeordnete Akkus</h2>
+                {% if perms.iuk.add_dronebattery %}
+                <a href="{% url 'iuk:battery_create' %}?drone={{ object.pk }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">Akku anlegen</a>
+                {% endif %}
+            </div>
+            {% if drone_batteries %}
+            <ul class="divide-y divide-gray-100 text-sm">
+                {% for battery in drone_batteries %}
+                <li class="py-2 flex items-center justify-between gap-3">
+                    <div>
+                        <a href="{% url 'iuk:battery_edit' battery.pk %}" class="font-medium text-gray-900 hover:text-blue-700">{{ battery.designation }}</a>
+                        <span class="text-xs text-gray-500">{{ battery.model }}{% if battery.serial_number %} &middot; SN {{ battery.serial_number }}{% endif %}</span>
+                    </div>
+                    <span class="text-xs text-gray-500 whitespace-nowrap">{{ battery.cycle_count }} Zyklen{% if battery.max_cycles %} / {{ battery.max_cycles }}{% endif %}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-sm text-gray-500">Noch kein Akku dieser Drohne zugeordnet.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if perms.iuk.view_dronesimcard %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-base font-semibold text-gray-900">📶 Zugeordnete SIM-Karten</h2>
+                {% if perms.iuk.add_dronesimcard %}
+                <a href="{% url 'iuk:simcard_create' %}?drone={{ object.pk }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">SIM-Karte anlegen</a>
+                {% endif %}
+            </div>
+            {% if drone_sim_cards %}
+            <ul class="divide-y divide-gray-100 text-sm">
+                {% for card in drone_sim_cards %}
+                <li class="py-2 flex items-center justify-between gap-3">
+                    <div>
+                        <a href="{% url 'iuk:simcard_edit' card.pk %}" class="font-medium text-gray-900 hover:text-blue-700">{{ card.designation }}</a>
+                        <span class="text-xs text-gray-500">{{ card.provider }}{% if card.phone_number %} &middot; {{ card.phone_number }}{% endif %}{% if card.installed_in %} &middot; {{ card.installed_in }}{% endif %}</span>
+                    </div>
+                    <span class="text-xs text-gray-500 whitespace-nowrap">{{ card.get_status_display }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-sm text-gray-500">Noch keine SIM-Karte dieser Drohne zugeordnet.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <div class="flex items-center gap-3">
         <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">Speichern</button>

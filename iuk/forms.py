@@ -8,10 +8,11 @@ from django.core.exceptions import ValidationError
 
 from personnel.models import Person
 
-from .models import (ChecklistKind, Drone, DroneAccessory, DroneChecklist,
-                     DroneLicense, DroneLicenseKind, FlightLog,
-                     FlightLogComment, FlightOperationType, LbaReport, Voucher,
-                     VoucherStatus, normalize_checklist_items)
+from .models import (ChecklistKind, Drone, DroneAccessory, DroneBattery,
+                     DroneChecklist, DroneLicense, DroneLicenseKind,
+                     DroneSimCard, FlightLog, FlightLogComment,
+                     FlightOperationType, LbaReport, Voucher, VoucherStatus,
+                     normalize_checklist_items)
 
 INPUT_CLASS = (
     'w-full px-3 py-2 border border-gray-300 rounded-lg '
@@ -122,6 +123,65 @@ DroneAccessoryFormSet = forms.inlineformset_factory(
     extra=2,
     can_delete=True,
 )
+
+
+class DroneBatteryForm(_StyledModelForm):
+    class Meta:
+        model = DroneBattery
+        fields = [
+            'designation', 'model', 'serial_number', 'inventory_number',
+            'drone', 'status', 'capacity_mah', 'voltage',
+            'cycle_count', 'max_cycles', 'health_percent',
+            'purchase_date', 'commissioned_date', 'last_check_date',
+            'location', 'notes',
+        ]
+        widgets = {
+            'purchase_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
+            'commissioned_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
+            'last_check_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
+            'notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['drone'].queryset = Drone.objects.order_by('designation')
+        self.fields['designation'].widget.attrs.setdefault('placeholder', 'z.B. Akku 01')
+        self.fields['model'].widget.attrs.setdefault('placeholder', 'z.B. DJI TB30')
+        self.fields['health_percent'].widget.attrs.update({'min': 0, 'max': 100})
+
+    def clean_serial_number(self):
+        return (self.cleaned_data.get('serial_number') or '').strip()
+
+
+class DroneSimCardForm(_StyledModelForm):
+    class Meta:
+        model = DroneSimCard
+        fields = [
+            'designation', 'provider', 'phone_number', 'iccid',
+            'pin', 'puk', 'tariff', 'contract_number',
+            'contract_start', 'contract_end', 'status',
+            'drone', 'installed_in', 'location', 'notes',
+        ]
+        widgets = {
+            'contract_start': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
+            'contract_end': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
+            'notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['drone'].queryset = Drone.objects.order_by('designation')
+        self.fields['designation'].widget.attrs.setdefault('placeholder', 'z.B. SIM Fernsteuerung 1')
+        self.fields['phone_number'].widget.attrs.setdefault('placeholder', '+49 170 1234567')
+        self.fields['iccid'].widget.attrs.setdefault('placeholder', '8949…')
+        for name in ('pin', 'puk'):
+            self.fields[name].widget.attrs.setdefault('autocomplete', 'off')
+
+    def clean_iccid(self):
+        return (self.cleaned_data.get('iccid') or '').replace(' ', '').strip()
+
+    def clean_phone_number(self):
+        return (self.cleaned_data.get('phone_number') or '').strip()
 
 
 class DroneLicenseForm(_StyledModelForm):

@@ -3,6 +3,7 @@ IUK-Modelle (Informations- und Kommunikationstechnik)
 
 Verwaltung der Drohnenstaffel:
 * Drohnen inkl. Seriennummer und LBA-Registrierung
+* Akkus (Ladezyklen, Zustand) und SIM-Karten (Vertragslaufzeit)
 * Drohnenführerscheine und weitere Nachweise (Nachweisarten frei pflegbar)
   mit Ablaufüberwachung
 * Gutscheincodes der Behörde, die beim LBA eingelöst werden
@@ -12,6 +13,7 @@ from datetime import date
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator
 from django.db import IntegrityError, models, transaction
 from django.db.models import Q
 from django.urls import reverse
@@ -46,6 +48,35 @@ class DroneAccessoryCategory(models.TextChoices):
     TRANSPORT = 'transport', _('Transportkoffer / Tasche')
     ERSATZTEIL = 'ersatzteil', _('Ersatzteil')
     SONSTIGES = 'sonstiges', _('Sonstiges')
+
+
+class BatteryStatus(models.TextChoices):
+    """Zustand eines Drohnen-Akkus."""
+    EINSATZBEREIT = 'einsatzbereit', _('Einsatzbereit')
+    LAGERUNG = 'lagerung', _('Eingelagert (Lagerladung)')
+    WARTUNG = 'wartung', _('In Prüfung / Wartung')
+    DEFEKT = 'defekt', _('Defekt')
+    AUSSER_DIENST = 'ausser_dienst', _('Außer Dienst')
+
+
+class SimCardStatus(models.TextChoices):
+    """Zustand einer SIM-Karte."""
+    AKTIV = 'aktiv', _('Aktiv')
+    RESERVE = 'reserve', _('Reserve / nicht eingebaut')
+    GESPERRT = 'gesperrt', _('Gesperrt')
+    GEKUENDIGT = 'gekuendigt', _('Gekündigt')
+
+
+class BatteryCycleState(models.TextChoices):
+    """Abgeleiteter Zustand der Ladezyklen (nicht gespeichert)."""
+    OK = 'ok', _('Im Rahmen')
+    WARNING = 'warning', _('Nähert sich der Grenze')
+    EXHAUSTED = 'exhausted', _('Zyklen erreicht')
+    UNKNOWN = 'unknown', _('Keine Grenze hinterlegt')
+
+
+#: Ab diesem Anteil der maximalen Ladezyklen gilt ein Akku als "bald am Ende".
+BATTERY_CYCLE_WARNING_RATIO = 0.9
 
 
 class DroneLicenseType(models.TextChoices):
@@ -415,6 +446,316 @@ class DroneAccessory(AuditedModel):
 
     def __str__(self):
         return f'{self.name} ({self.get_category_display()})'
+
+
+class DroneBattery(AuditedModel):
+    """
+    Akku der Drohnenstaffel.
+
+    Akkus werden einzeln geführt (Seriennummer, Ladezyklen, Zustand), weil sie
+    zwischen Geräten wechseln und eine eigene Lebensdauer haben. Die Zuordnung
+    zu einer Drohne ist deshalb nur eine Momentaufnahme und darf leer bleiben.
+    """
+
+    created_by = models.ForeignKey(
+        'core.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='iuk_dronebattery_created', verbose_name=_('Erstellt von'),
+    )
+    updated_by = models.ForeignKey(
+        'core.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='iuk_dronebattery_updated', verbose_name=_('Aktualisiert von'),
+    )
+
+    designation = models.CharField(
+        max_length=100,
+        verbose_name=_('Bezeichnung'),
+        help_text=_('Interne Bezeichnung, z.B. "Akku 01"'),
+    )
+    model = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Typ / Modell'),
+        help_text=_('z.B. "DJI TB30" oder "WB37"'),
+    )
+    serial_number = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        verbose_name=_('Seriennummer'),
+    )
+    inventory_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_('Inventarnummer'),
+    )
+    drone = models.ForeignKey(
+        'Drone',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='batteries',
+        verbose_name=_('Zugeordnete Drohne'),
+        help_text=_('Leer lassen, wenn der Akku zum Pool gehört'),
+    )
+    capacity_mah = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name=_('Kapazität (mAh)'),
+    )
+    voltage = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        null=True, blank=True,
+        verbose_name=_('Nennspannung (V)'),
+    )
+    cycle_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Ladezyklen'),
+        help_text=_('Stand laut App / Akku-Anzeige'),
+    )
+    max_cycles = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name=_('Max. Ladezyklen'),
+        help_text=_('Herstellerangabe; bei Erreichen wird der Akku markiert'),
+    )
+    health_percent = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MaxValueValidator(100)],
+        verbose_name=_('Zustand (%)'),
+        help_text=_('Akku-Gesundheit laut App, 100 = neuwertig'),
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=BatteryStatus.choices,
+        default=BatteryStatus.EINSATZBEREIT,
+        db_index=True,
+        verbose_name=_('Status'),
+    )
+    purchase_date = models.DateField(
+        null=True, blank=True,
+        verbose_name=_('Kaufdatum'),
+    )
+    commissioned_date = models.DateField(
+        null=True, blank=True,
+        verbose_name=_('In Dienst seit'),
+    )
+    last_check_date = models.DateField(
+        null=True, blank=True,
+        verbose_name=_('Letzte Prüfung'),
+        help_text=_('Sichtprüfung / Zellenspannung geprüft am'),
+    )
+    location = models.ForeignKey(
+        'locations.Location',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='iuk_drone_batteries',
+        verbose_name=_('Lagerort'),
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_('Notizen'),
+    )
+
+    class Meta:
+        verbose_name = _('Drohnen-Akku')
+        verbose_name_plural = _('Drohnen-Akkus')
+        ordering = ['designation']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['serial_number'],
+                condition=~Q(serial_number=''),
+                name='iuk_dronebattery_unique_serial',
+            ),
+        ]
+
+    def __str__(self):
+        if self.model:
+            return f'{self.designation} ({self.model})'
+        return self.designation
+
+    def get_absolute_url(self):
+        return reverse('iuk:battery_list')
+
+    @property
+    def cycle_percent(self):
+        """Anteil der verbrauchten Ladezyklen in Prozent (None ohne Grenze)."""
+        if not self.max_cycles:
+            return None
+        return min(100, round(self.cycle_count * 100 / self.max_cycles))
+
+    @property
+    def cycle_state(self):
+        """Abgeleiteter Zustand der Ladezyklen für Ampel und Filter."""
+        if not self.max_cycles:
+            return BatteryCycleState.UNKNOWN
+        if self.cycle_count >= self.max_cycles:
+            return BatteryCycleState.EXHAUSTED
+        if self.cycle_count >= self.max_cycles * BATTERY_CYCLE_WARNING_RATIO:
+            return BatteryCycleState.WARNING
+        return BatteryCycleState.OK
+
+    @property
+    def needs_attention(self):
+        """Defekt, Zyklen aufgebraucht oder deutlich gealtert."""
+        if self.status == BatteryStatus.DEFEKT:
+            return True
+        if self.cycle_state == BatteryCycleState.EXHAUSTED:
+            return True
+        return self.health_percent is not None and self.health_percent < 70
+
+
+class DroneSimCard(AuditedModel):
+    """
+    SIM-Karte der Drohnenstaffel (Fernsteuerung, LTE-Modem, Dongle …).
+
+    Neben Rufnummer und ICCID wird die Vertragslaufzeit überwacht, damit
+    Kündigungsfristen und Verlängerungen nicht verpasst werden.
+    """
+
+    created_by = models.ForeignKey(
+        'core.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='iuk_dronesimcard_created', verbose_name=_('Erstellt von'),
+    )
+    updated_by = models.ForeignKey(
+        'core.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='iuk_dronesimcard_updated', verbose_name=_('Aktualisiert von'),
+    )
+
+    designation = models.CharField(
+        max_length=100,
+        verbose_name=_('Bezeichnung'),
+        help_text=_('Interne Bezeichnung, z.B. "SIM Fernsteuerung 1"'),
+    )
+    provider = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Anbieter'),
+        help_text=_('z.B. Telekom, Vodafone, o2'),
+    )
+    phone_number = models.CharField(
+        max_length=30,
+        blank=True,
+        db_index=True,
+        verbose_name=_('Rufnummer'),
+    )
+    iccid = models.CharField(
+        max_length=30,
+        blank=True,
+        db_index=True,
+        verbose_name=_('ICCID (SIM-Nummer)'),
+        help_text=_('Aufgedruckte Kartennummer, 19–20 Stellen'),
+    )
+    pin = models.CharField(
+        max_length=12,
+        blank=True,
+        verbose_name=_('PIN'),
+    )
+    puk = models.CharField(
+        max_length=12,
+        blank=True,
+        verbose_name=_('PUK'),
+    )
+    tariff = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Tarif / Datenvolumen'),
+    )
+    contract_number = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Vertrags- / Kundennummer'),
+    )
+    contract_start = models.DateField(
+        null=True, blank=True,
+        verbose_name=_('Vertragsbeginn'),
+    )
+    contract_end = models.DateField(
+        null=True, blank=True,
+        db_index=True,
+        verbose_name=_('Vertragsende / Mindestlaufzeit bis'),
+        help_text=_('Leer lassen bei Prepaid oder unbefristetem Vertrag'),
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=SimCardStatus.choices,
+        default=SimCardStatus.AKTIV,
+        db_index=True,
+        verbose_name=_('Status'),
+    )
+    drone = models.ForeignKey(
+        'Drone',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='sim_cards',
+        verbose_name=_('Zugeordnete Drohne'),
+    )
+    installed_in = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Eingebaut in'),
+        help_text=_('z.B. Smart Controller, LTE-Dongle, Modem im Einsatzkoffer'),
+    )
+    location = models.ForeignKey(
+        'locations.Location',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='iuk_drone_sim_cards',
+        verbose_name=_('Standort'),
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_('Notizen'),
+    )
+
+    class Meta:
+        verbose_name = _('SIM-Karte')
+        verbose_name_plural = _('SIM-Karten')
+        ordering = ['designation']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['iccid'],
+                condition=~Q(iccid=''),
+                name='iuk_dronesimcard_unique_iccid',
+            ),
+        ]
+
+    def __str__(self):
+        if self.phone_number:
+            return f'{self.designation} ({self.phone_number})'
+        return self.designation
+
+    def get_absolute_url(self):
+        return reverse('iuk:simcard_list')
+
+    def clean(self):
+        super().clean()
+        if self.contract_start and self.contract_end and self.contract_end < self.contract_start:
+            raise ValidationError({
+                'contract_end': _('Das Vertragsende muss nach dem Vertragsbeginn liegen.'),
+            })
+
+    @property
+    def days_until_contract_end(self):
+        """Tage bis zum Vertragsende (negativ, wenn überschritten; None ohne Datum)."""
+        if not self.contract_end:
+            return None
+        return (self.contract_end - date.today()).days
+
+    @property
+    def contract_state(self):
+        """
+        Ampel für das Vertragsende, gleiche Schwellen wie bei den Führerscheinen.
+
+        Gekündigte Karten werden nicht mehr überwacht; ohne Datum gibt es
+        keinen Zustand (``None``).
+        """
+        days = self.days_until_contract_end
+        if days is None or self.status == SimCardStatus.GEKUENDIGT:
+            return None
+        if days < 0:
+            return LicenseState.EXPIRED
+        if days <= CRITICAL_DAYS:
+            return LicenseState.CRITICAL
+        if days <= WARNING_DAYS:
+            return LicenseState.WARNING
+        return LicenseState.OK
 
 
 def normalize_checklist_items(raw):

@@ -3,9 +3,9 @@
 from django import forms
 from django.contrib import admin
 
-from .models import (Drone, DroneAccessory, DroneChecklist, DroneLicense,
-                     DroneLicenseKind, FlightLog, FlightLogComment, Voucher,
-                     VoucherEvent)
+from .models import (Drone, DroneAccessory, DroneBattery, DroneChecklist,
+                     DroneLicense, DroneLicenseKind, DroneSimCard, FlightLog,
+                     FlightLogComment, Voucher, VoucherEvent)
 
 
 class _LicenseKindChoiceMixin:
@@ -55,6 +55,24 @@ class DroneAdmin(admin.ModelAdmin):
     list_display = ('designation', 'model', 'serial_number', 'lba_registration_number', 'status')
     list_filter = ('status',)
     search_fields = ('designation', 'model', 'serial_number', 'lba_registration_number')
+    readonly_fields = ('created_at', 'updated_at', 'created_by', 'updated_by')
+
+
+@admin.register(DroneBattery)
+class DroneBatteryAdmin(admin.ModelAdmin):
+    list_display = ('designation', 'model', 'serial_number', 'drone', 'cycle_count',
+                    'max_cycles', 'health_percent', 'status')
+    list_filter = ('status', 'drone')
+    search_fields = ('designation', 'model', 'serial_number', 'inventory_number')
+    readonly_fields = ('created_at', 'updated_at', 'created_by', 'updated_by')
+
+
+@admin.register(DroneSimCard)
+class DroneSimCardAdmin(admin.ModelAdmin):
+    list_display = ('designation', 'provider', 'phone_number', 'iccid', 'drone',
+                    'contract_end', 'status')
+    list_filter = ('status', 'provider')
+    search_fields = ('designation', 'provider', 'phone_number', 'iccid', 'contract_number')
     readonly_fields = ('created_at', 'updated_at', 'created_by', 'updated_by')
 
 
