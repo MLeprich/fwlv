@@ -4,6 +4,7 @@ Views für Organisationsstruktur-Verwaltung
 """
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import models
 from django.urls import reverse, reverse_lazy
@@ -430,7 +431,7 @@ class QualificationTemplateCreateView(LoginRequiredMixin, PermissionRequiredMixi
     form_class = QualificationTemplateForm
     template_name = 'organization/qualification_template_form.html'
     success_url = reverse_lazy('organization:qualification_template_list')
-    permission_required = 'organization.add_qualificationtemplate'
+    permission_required = 'personnel.add_qualificationtemplate'
 
     def form_valid(self, form):
         messages.success(
@@ -446,7 +447,7 @@ class QualificationTemplateUpdateView(LoginRequiredMixin, PermissionRequiredMixi
     form_class = QualificationTemplateForm
     template_name = 'organization/qualification_template_form.html'
     success_url = reverse_lazy('organization:qualification_template_list')
-    permission_required = 'organization.change_qualificationtemplate'
+    permission_required = 'personnel.change_qualificationtemplate'
 
     def form_valid(self, form):
         messages.success(
@@ -461,7 +462,7 @@ class QualificationTemplateDeleteView(LoginRequiredMixin, PermissionRequiredMixi
     model = QualificationTemplate
     template_name = 'organization/qualification_template_confirm_delete.html'
     success_url = reverse_lazy('organization:qualification_template_list')
-    permission_required = 'organization.delete_qualificationtemplate'
+    permission_required = 'personnel.delete_qualificationtemplate'
 
     def delete(self, request, *args, **kwargs):
         template = self.get_object()
@@ -529,7 +530,7 @@ class DutyHoursRequirementCreateView(LoginRequiredMixin, PermissionRequiredMixin
     form_class = DutyHoursRequirementForm
     template_name = 'organization/duty_hours_requirement_form.html'
     success_url = reverse_lazy('organization:duty_hours_requirement_list')
-    permission_required = 'organization.add_dutyhoursrequirement'
+    permission_required = 'personnel.add_dutyhoursrequirement'
 
     def form_valid(self, form):
         messages.success(
@@ -545,7 +546,7 @@ class DutyHoursRequirementUpdateView(LoginRequiredMixin, PermissionRequiredMixin
     form_class = DutyHoursRequirementForm
     template_name = 'organization/duty_hours_requirement_form.html'
     success_url = reverse_lazy('organization:duty_hours_requirement_list')
-    permission_required = 'organization.change_dutyhoursrequirement'
+    permission_required = 'personnel.change_dutyhoursrequirement'
 
     def form_valid(self, form):
         messages.success(
@@ -560,7 +561,7 @@ class DutyHoursRequirementDeleteView(LoginRequiredMixin, PermissionRequiredMixin
     model = DutyHoursRequirement
     template_name = 'organization/duty_hours_requirement_confirm_delete.html'
     success_url = reverse_lazy('organization:duty_hours_requirement_list')
-    permission_required = 'organization.delete_dutyhoursrequirement'
+    permission_required = 'personnel.delete_dutyhoursrequirement'
 
     def delete(self, request, *args, **kwargs):
         requirement = self.get_object()
@@ -575,6 +576,7 @@ class DutyHoursRequirementDeleteView(LoginRequiredMixin, PermissionRequiredMixin
 # Dashboard View
 # ===========================
 
+@login_required
 def organization_dashboard(request):
     """Organisation Dashboard"""
     from django.shortcuts import render
@@ -629,7 +631,7 @@ class DutyHoursCategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, C
     form_class = DutyHoursCategoryForm
     template_name = 'organization/duty_hours_category_form.html'
     success_url = reverse_lazy('organization:duty_hours_category_list')
-    permission_required = 'organization.add_dutyhourscategory'
+    permission_required = 'personnel.add_dutyhourscategory'
 
     def form_valid(self, form):
         messages.success(
@@ -644,7 +646,7 @@ class DutyHoursCategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, U
     form_class = DutyHoursCategoryForm
     template_name = 'organization/duty_hours_category_form.html'
     success_url = reverse_lazy('organization:duty_hours_category_list')
-    permission_required = 'organization.change_dutyhourscategory'
+    permission_required = 'personnel.change_dutyhourscategory'
 
     def form_valid(self, form):
         messages.success(
@@ -654,10 +656,11 @@ class DutyHoursCategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, U
         return super().form_valid(form)
 
 
-class DutyHoursCategoryDeleteView(LoginRequiredMixin, DeleteView):
+class DutyHoursCategoryDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = DutyHoursCategory
     template_name = 'organization/duty_hours_category_confirm_delete.html'
     success_url = reverse_lazy('organization:duty_hours_category_list')
+    permission_required = 'personnel.delete_dutyhourscategory'
 
     def delete(self, request, *args, **kwargs):
         category = self.get_object()
@@ -703,12 +706,13 @@ class QualificationTypeListView(LoginRequiredMixin, ListView):
         return context
 
 
-class QualificationTypeCreateView(LoginRequiredMixin, CreateView):
+class QualificationTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Qualifikationstyp erstellen"""
     model = QualificationType
     form_class = QualificationTypeForm
     template_name = 'organization/qualification_type_form.html'
     success_url = reverse_lazy('organization:qualification_type_list')
+    permission_required = 'personnel.add_qualificationtype'
 
     def form_valid(self, form):
         messages.success(
@@ -718,12 +722,13 @@ class QualificationTypeCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class QualificationTypeUpdateView(LoginRequiredMixin, UpdateView):
+class QualificationTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Qualifikationstyp bearbeiten"""
     model = QualificationType
     form_class = QualificationTypeForm
     template_name = 'organization/qualification_type_form.html'
     success_url = reverse_lazy('organization:qualification_type_list')
+    permission_required = 'personnel.change_qualificationtype'
 
     def form_valid(self, form):
         messages.success(
@@ -733,11 +738,12 @@ class QualificationTypeUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class QualificationTypeDeleteView(LoginRequiredMixin, DeleteView):
+class QualificationTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Qualifikationstyp löschen"""
     model = QualificationType
     template_name = 'organization/qualification_type_confirm_delete.html'
     success_url = reverse_lazy('organization:qualification_type_list')
+    permission_required = 'personnel.delete_qualificationtype'
 
     def delete(self, request, *args, **kwargs):
         qualification_type = self.get_object()
@@ -795,12 +801,13 @@ class SupplierDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'supplier'
 
 
-class SupplierCreateView(LoginRequiredMixin, CreateView):
+class SupplierCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Neuen Lieferanten erstellen"""
     model = Supplier
     form_class = SupplierForm
     template_name = 'organization/supplier_form.html'
     success_url = reverse_lazy('organization:supplier_list')
+    permission_required = 'inventory_base.add_supplier'
 
     def form_valid(self, form):
         # Set created_by and updated_by
@@ -814,12 +821,13 @@ class SupplierCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class SupplierUpdateView(LoginRequiredMixin, UpdateView):
+class SupplierUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Lieferant bearbeiten"""
     model = Supplier
     form_class = SupplierForm
     template_name = 'organization/supplier_form.html'
     success_url = reverse_lazy('organization:supplier_list')
+    permission_required = 'inventory_base.change_supplier'
 
     def form_valid(self, form):
         # Update updated_by
@@ -832,11 +840,12 @@ class SupplierUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class SupplierDeleteView(LoginRequiredMixin, DeleteView):
+class SupplierDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """Lieferant löschen"""
     model = Supplier
     template_name = 'organization/supplier_confirm_delete.html'
     success_url = reverse_lazy('organization:supplier_list')
+    permission_required = 'inventory_base.delete_supplier'
 
     def delete(self, request, *args, **kwargs):
         supplier = self.get_object()

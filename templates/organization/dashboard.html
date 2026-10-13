@@ -59,9 +59,11 @@
                 <a href="{% url 'organization:volunteer_unit_list' %}" class="block w-full px-4 py-2 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
                     FF-Einheiten verwalten
                 </a>
+                {% if perms.organization.add_volunteerunit %}
                 <a href="{% url 'organization:volunteer_unit_create' %}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
                     + Neue FF-Einheit
                 </a>
+                {% endif %}
             </div>
         </div>
 

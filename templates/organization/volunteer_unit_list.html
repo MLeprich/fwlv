@@ -33,9 +33,11 @@
                 <a href="{% url 'organization:dashboard' %}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
                     ← Dashboard
                 </a>
+                {% if perms.organization.add_volunteerunit %}
                 <a href="{% url 'organization:volunteer_unit_create' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
                     ➕ Neue FF-Einheit
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -170,12 +172,16 @@
                                         </td>
                                         <td class="px-4 py-3 text-right text-sm font-medium">
                                             <div class="flex items-center justify-end gap-1">
+                                                {% if perms.organization.change_volunteerunit %}
                                                 <a href="{% url 'organization:volunteer_unit_update' unit.pk %}" class="px-2 py-1 text-green-600 hover:bg-green-50 rounded" title="Bearbeiten">
                                                     ✏️
                                                 </a>
+                                                {% endif %}
+                                                {% if perms.organization.delete_volunteerunit %}
                                                 <a href="{% url 'organization:volunteer_unit_delete' unit.pk %}" class="px-2 py-1 text-red-600 hover:bg-red-50 rounded" title="Löschen">
                                                     🗑️
                                                 </a>
+                                                {% endif %}
                                             </div>
                                         </td>
                                     </tr>
@@ -193,9 +199,11 @@
                                             {% endif %}
                                         </p>
                                         {% if not search_query and not is_active_filter and not location_filter %}
+                                        {% if perms.organization.add_volunteerunit %}
                                         <a href="{% url 'organization:volunteer_unit_create' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
                                             ➕ Erste FF-Einheit anlegen
                                         </a>
+                                        {% endif %}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -241,12 +249,16 @@
 
                                 <!-- Actions -->
                                 <div class="flex gap-2 pt-3 border-t border-gray-200">
+                                    {% if perms.organization.change_volunteerunit %}
                                     <a href="{% url 'organization:volunteer_unit_update' unit.pk %}" class="flex-1 text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
                                         ✏️ Bearbeiten
                                     </a>
+                                    {% endif %}
+                                    {% if perms.organization.delete_volunteerunit %}
                                     <a href="{% url 'organization:volunteer_unit_delete' unit.pk %}" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium">
                                         🗑️
                                     </a>
+                                    {% endif %}
                                 </div>
                             </div>
                             {% endfor %}
@@ -262,9 +274,11 @@
                                 {% endif %}
                             </p>
                             {% if not search_query and not is_active_filter and not location_filter %}
+                            {% if perms.organization.add_volunteerunit %}
                             <a href="{% url 'organization:volunteer_unit_create' %}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
                                 ➕ Erste FF-Einheit anlegen
                             </a>
+                            {% endif %}
                             {% endif %}
                         </div>
                         {% endif %}

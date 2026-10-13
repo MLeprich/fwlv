@@ -4,7 +4,7 @@ bestehende Gruppen). Kann gefahrlos auf Produktion laufen, weil andere
 Gruppen nicht angefasst werden:
 
 - Personalverwalter   -> alle personnel.*-Rechte, KEINE Benutzer-/System-Rechte
-- FF Verwalter        -> FF-Verwaltung über alle Einheiten (+ Dienstgrade)
+- FF Verwalter        -> FF-Verwaltung über alle Einheiten (+ Dienstgrade, FF-Einheiten anlegen/bearbeiten)
 - Benutzerverwalter   -> Benutzerkonten und Rollen (core.manage_users, core.assign_roles)
 
 Außerdem bekommen FF Einheitsführer / FF Vertreter / Administrator das neue
@@ -30,6 +30,12 @@ FF_LEADER_CODENAMES = [
 FF_VERWALTER_CODENAMES = FF_LEADER_CODENAMES + [
     'add_rank', 'change_rank', 'delete_rank',
     'add_personrank', 'change_personrank', 'delete_personrank',
+]
+
+# FF Verwalter: FF-Einheiten (Züge) unter Organisation pflegen.
+# Bewusst ohne delete_volunteerunit – stilllegen über „Aktiv“, Löschen bleibt beim Administrator.
+FF_VERWALTER_ORGANIZATION_CODENAMES = [
+    'view_volunteerunit', 'add_volunteerunit', 'change_volunteerunit',
 ]
 
 BENUTZERVERWALTER_PERMS = [
@@ -61,7 +67,10 @@ def setup_verwaltungsrollen(out=None):
 
         # 2. FF Verwalter: alle Einheiten
         group, created = Group.objects.get_or_create(name=Roles.FF_VERWALTER)
-        ff_perms = _perms('personnel', FF_VERWALTER_CODENAMES)
+        ff_perms = (
+            _perms('personnel', FF_VERWALTER_CODENAMES)
+            + _perms('organization', FF_VERWALTER_ORGANIZATION_CODENAMES)
+        )
         group.permissions.set(ff_perms)
         log(f'  ✓ {Roles.FF_VERWALTER}: {"erstellt" if created else "aktualisiert"} ({len(ff_perms)} Rechte)')
 
