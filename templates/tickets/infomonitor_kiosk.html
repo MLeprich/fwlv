@@ -1136,7 +1136,9 @@ document.addEventListener('alpine:init', () => {
 function initAutoScroll(containerId, toggleId, storageKey) {
     const SCROLL_SPEED = 0.5;     // px pro Frame
     const PAUSE_FRAMES = 120;     // ~2 Sek. Pause am Ende (bei 60fps)
+    const END_TOLERANCE = 1;      // px – Browser runden scrollTop auf Gerätepixel
     let pauseCounter = 0;
+    let position = 0;             // Soll-Position (scrollTop verliert Halbpixel durch Rundung)
     let enabled = localStorage.getItem(storageKey) !== 'off';
     let syncedToggle = null;
 
@@ -1160,11 +1162,18 @@ function initAutoScroll(containerId, toggleId, storageKey) {
             if (pauseCounter > 0) {
                 pauseCounter--;
                 // Pause vorbei → zum Anfang springen
-                if (pauseCounter === 0) container.scrollTop = 0;
+                if (pauseCounter === 0) { position = 0; container.scrollTop = 0; }
             } else {
-                container.scrollTop += SCROLL_SPEED;
-                // Am Ende angekommen → pausieren
-                if (container.scrollTop + container.clientHeight >= container.scrollHeight) {
+                // Element neu gerendert, von Hand gescrollt oder Position nach Refresh wiederhergestellt
+                // → Soll-Position vom Browser übernehmen
+                if (Math.abs(container.scrollTop - position) > END_TOLERANCE) position = container.scrollTop;
+                const maxScroll = container.scrollHeight - container.clientHeight;
+                position = Math.min(position + SCROLL_SPEED, maxScroll);
+                container.scrollTop = position;
+                // Am Ende angekommen → pausieren. Mit Toleranz: bei skalierten Displays (z.B. 110 %)
+                // liegt das maximale scrollTop unter scrollHeight − clientHeight, ein exakter
+                // Vergleich würde nie zutreffen und die Kachel bliebe unten stehen.
+                if (container.scrollTop >= maxScroll - END_TOLERANCE) {
                     pauseCounter = PAUSE_FRAMES;
                 }
             }
