@@ -1,10 +1,12 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.shortcuts import resolve_url
 from django.urls import reverse
 
-from .models import (MappeKontakt, Grossereignis, InfoMonitor, BereitschaftPerson,
+from .models import (MappeKontakt, MappeLink, Grossereignis, InfoMonitor, BereitschaftPerson,
                      Ticket, TicketCategory)
 
 User = get_user_model()
@@ -183,14 +185,14 @@ class BereitschaftFreitextTests(TestCase):
         # vorherigen Tests im Cache, obwohl dessen Datenbank zurückgerollt wurde.
         from django.core.cache import cache
         cache.clear()
+        user = User.objects.create_user(username='v', password='pw')
+        user.user_permissions.add(Permission.objects.get(codename='view_infomonitor'))
+        self.client.force_login(user)
 
     def test_freitext_shown_on_display_and_kiosk(self):
         monitor = InfoMonitor.load()
         monitor.bereitschaft_freitext = 'Vertretung LNA ab 18 Uhr'
         monitor.save()
-        user = User.objects.create_user(username='v', password='pw')
-        user.user_permissions.add(Permission.objects.get(codename='view_infomonitor'))
-        self.client.force_login(user)
         self.assertContains(self.client.get(reverse('tickets:infomonitor_display')), 'Vertretung LNA ab 18 Uhr')
         self.assertContains(self.client.get(reverse('tickets:infomonitor_kiosk')), 'Vertretung LNA ab 18 Uhr')
 
@@ -219,6 +221,43 @@ class BereitschaftFreitextTests(TestCase):
         self.assertContains(resp, 'data-changed="%s"' % changed.strftime('%d.%m.%Y %H:%M'), count=1)
         self.assertContains(resp, 'data-note="Vertretung bis Freitag"')
         self.assertNotContains(resp, '&#x1F552;')
+
+
+class KioskZugriffTests(TestCase):
+    """Kiosk nur mit Login und Info-Monitor-Zugang; Zugangsdaten der Links als Kopier-Buttons."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.url = reverse('tickets:infomonitor_kiosk')
+        MappeLink.objects.create(title='Lagekarte', url='https://karte.example.de',
+                                 username='lst-user', password='Geheim&123')
+
+    def test_anonymous_redirected_to_login(self):
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(resp.url.startswith(resolve_url(settings.LOGIN_URL)))
+
+    def test_user_without_monitor_access_forbidden(self):
+        self.client.force_login(User.objects.create_user(username='x', password='pw'))
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+
+    def test_viewer_sees_copy_buttons(self):
+        user = User.objects.create_user(username='v', password='pw')
+        user.user_permissions.add(Permission.objects.get(codename='view_infomonitor'))
+        self.client.force_login(user)
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'data-copy="lst-user"')
+        self.assertContains(resp, 'data-copy="Geheim&amp;123"')
+        self.assertContains(resp, 'Passwort kopieren')
+
+    def test_link_without_credentials_has_no_buttons(self):
+        MappeLink.objects.all().update(username='', password='')
+        user = User.objects.create_user(username='v', password='pw')
+        user.user_permissions.add(Permission.objects.get(codename='view_infomonitor'))
+        self.client.force_login(user)
+        self.assertNotContains(self.client.get(self.url), 'data-copy=')
 
 
 class FFStammfahrzeugTests(TestCase):

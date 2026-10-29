@@ -25,7 +25,7 @@ class InfoMonitorAdmin(admin.ModelAdmin):
 
 @admin.register(MappeLink)
 class MappeLinkAdmin(admin.ModelAdmin):
-    list_display = ['title', 'url', 'is_active', 'order']
+    list_display = ['title', 'url', 'username', 'is_active', 'order']
     list_filter = ['is_active']
     list_editable = ['is_active', 'order']
 

@@ -676,11 +676,14 @@ class InfoMonitorEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         return reverse_lazy('tickets:infomonitor_display')
 
 
-class InfoMonitorKioskView(DetailView):
-    """Info-Monitor Kiosk-Vollbild (kein Login nötig)"""
+class InfoMonitorKioskView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+    """Info-Monitor Kiosk-Vollbild (Login mit Info-Monitor-Zugang nötig, enthält Kontakte und Zugangsdaten)"""
     model = InfoMonitor
     template_name = 'tickets/infomonitor_kiosk.html'
     context_object_name = 'monitor'
+
+    def test_func(self):
+        return _has_monitor_access(self.request.user)
 
     def get_object(self, queryset=None):
         return InfoMonitor.load()

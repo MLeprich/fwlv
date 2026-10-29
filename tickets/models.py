@@ -427,6 +427,9 @@ class MappeLink(models.Model):
     title = models.CharField(max_length=200, verbose_name=_('Titel'))
     url = models.URLField(max_length=500, verbose_name=_('URL'))
     description = models.CharField(max_length=500, blank=True, verbose_name=_('Beschreibung'))
+    # Klartext, weil der Kiosk die Zugangsdaten in die Zwischenablage kopiert
+    username = models.CharField(max_length=200, blank=True, verbose_name=_('Benutzername'))
+    password = models.CharField(max_length=200, blank=True, verbose_name=_('Passwort'))
     is_active = models.BooleanField(default=True, verbose_name=_('Aktiv'))
     order = models.PositiveIntegerField(default=0, verbose_name=_('Reihenfolge'))
 

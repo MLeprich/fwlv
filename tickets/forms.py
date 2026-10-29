@@ -332,11 +332,15 @@ class MappeLinkForm(forms.ModelForm):
 
     class Meta:
         model = MappeLink
-        fields = ['title', 'url', 'description', 'is_active', 'order']
+        fields = ['title', 'url', 'description', 'username', 'password', 'is_active', 'order']
         widgets = {
             'title': forms.TextInput(attrs={'class': TW, 'placeholder': 'Titel des Links'}),
             'url': forms.URLInput(attrs={'class': TW, 'placeholder': 'https://...'}),
             'description': forms.TextInput(attrs={'class': TW, 'placeholder': 'Optionale Beschreibung'}),
+            # autocomplete aus, sonst trägt der Browser den eigenen FLVS-Login ein
+            'username': forms.TextInput(attrs={'class': TW, 'placeholder': 'Optional', 'autocomplete': 'off'}),
+            'password': forms.PasswordInput(render_value=True,
+                                            attrs={'class': TW, 'placeholder': 'Optional', 'autocomplete': 'new-password'}),
             'is_active': forms.CheckboxInput(attrs={'class': TW_CB}),
             'order': forms.NumberInput(attrs={'class': TW, 'min': 0}),
         }
